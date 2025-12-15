@@ -1,28 +1,8 @@
-# SeNARS Development Roadmap
+# SeNARS Development Plan
 
-> **Status**: Living vision document  
-> **Last Updated**: 2025-12-14  
-> **Foundation**: Stream reasoner, modular premise formation, 7 NAL rules, 99.8% test pass rate
-
----
-
-## Table of Contents
-
-1. [Principles](#principles)
-2. [Leverage](#leverage)
-3. [Development Tree](#development-tree)
-4. [Simplifications](#simplifications)
-5. [Rule Engine Architecture](#rule-engine-architecture)
-6. [Next Actions](#next-actions)
-7. [Roadmap](#roadmap)
-8. [NAL](#nal)
-9. [Strategies](#strategies)
-10. [Memory](#memory)
-11. [LM](#lm)
-12. [Cross-Cutting](#cross-cutting)
-13. [Ecosystem](#ecosystem)
-14. [Domain Applications](#domain-applications)
-15. [Speculative](#speculative)
+> **Semantic Non-Axiomatic Reasoning System**  
+> **Status**: Phase 3 Complete | NAL-1 to NAL-6 + NAL-8 | 99.8% Test Pass Rate  
+> **Updated**: 2025-12-15
 
 ---
 
@@ -36,714 +16,2145 @@
 | **Composable** | Standard interfaces, plug-and-play |
 | **Observable** | Emit events, bounded retention |
 | **Resource-Aware** | Budgets, timeouts, graceful degradation |
+| **Leverage Existing** | Build on existing code, don't rewrite |
+| **Tensor-Native** | Neural operations as first-class terms |
 
 ---
 
-## Leverage
+## Quick Reference
 
-> **80/20 Principle**: Maximum impact from what's already built
-
-### Already Have (Use It!)
-
-| Asset | Location | Reuse For |
-|-------|----------|----------|
-| **Full Unification** | [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) | Extract → Unifier.js (2 hrs, not 6) |
-| **Backward Chaining** | [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js) | GoalDrivenStrategy = thin wrapper |
-| **Embeddings** | [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | SemanticStrategy = 50 lines |
-| **Term Predicates** | [Term.js](file:///home/me/senars10/core/src/term/Term.js) | Stop reimplementing `isVariable`, `equals` |
-| **RuleCompiler** | [RuleCompiler.js](file:///home/me/senars10/core/src/reason/rules/compiler/RuleCompiler.js) | ✅ Done |
-| **RuleExecutor** | [RuleExecutor.js](file:///home/me/senars10/core/src/reason/rules/executor/RuleExecutor.js) | ✅ Done |
-| **Discriminators** | [Discriminator.js](file:///home/me/senars10/core/src/reason/rules/compiler/Discriminator.js) | Extensible pattern matching |
-
-### Shortcuts
-
-| Task | Naive Effort | Shortcut | Actual Effort |
-|------|--------------|----------|---------------|
-| Unifier.js | 6 hrs (rewrite) | Extract from PrologStrategy | **2 hrs** |
-| GoalDrivenStrategy | 1 week (new) | Wrap PrologStrategy | **4 hrs** |
-| SemanticStrategy | 4 hrs (design) | Copy snippet, wire EmbeddingLayer | **2 hrs** |
-| Query matching | 4 hrs | Unifier + existing ResolutionStrategy | **2 hrs** |
-| NAL-8 basics | 1 week | Goal = Task with desire value, reuse planner | **2 days** |
+| I want to... | Command / Location |
+|--------------|-------------------|
+| Run reasoning | `const nar = new NAR(); nar.input('(a --> b).');` |
+| Start REPL | `node repl/src/Repl.js` |
+| Run demos | `node agent/src/demo/demoRunner.js` |
+| Start MCP server | `node agent/src/mcp/start-server.js` |
+| Run all tests | `npm test` |
 
 ---
 
-## Development Tree
-
-> **Dependency Map** — Foundational components unlock multiple downstream capabilities
-> 
-> **Note**: Temporal functionality (NAL-7, TemporalBuffer, CausalStrategy) is deferred until temporal representations are specified. All other NAL levels can proceed independently.
-
-```mermaid
-graph TD
-    subgraph Foundation["🏗️ FOUNDATIONAL COMPONENTS"]
-        UNI[Unification Engine]
-        EMB[Embedding Infrastructure]
-        IDX[Advanced Indexing]
-        TRC[Derivation Tracing]
-        SER[Serialization Layer]
-    end
-
-    subgraph FoundationDeferred["🏗️ DEFERRED FOUNDATION"]
-        EVT[Event/Temporal Buffer]
-    end
-
-    subgraph NAL["📐 NAL CAPABILITIES"]
-        NAL6[NAL-6: Variables]
-        NAL8[NAL-8: Goals/Planning]
-        NEG[Negation & Contradiction]
-    end
-
-    subgraph NALDeferred["📐 DEFERRED NAL"]
-        NAL7[NAL-7: Temporal]
-    end
-
-    subgraph Strategy["🎯 PREMISE STRATEGIES"]
-        SEM[Semantic Similarity]
-        ANA[Analogical Reasoning]
-        GOAL[Goal-Driven]
-    end
-
-    subgraph StrategyDeferred["🎯 DEFERRED STRATEGIES"]
-        TEMP[Temporal Chaining]
-    end
-
-    subgraph ML["🧠 ML INTEGRATION"]
-        HOP[Hopfield Memory]
-        GNN[Graph Neural Nets]
-        RL[Reinforcement Learning]
-        DIFF[Differentiable Logic]
-    end
-
-    subgraph DX["🛠️ DEVELOPER EXPERIENCE"]
-        VIS[Visual Debugger]
-        WHY[Why-Not Explainer]
-        PLAY[Web Playground]
-        BENCH[Benchmark Suite]
-    end
-
-    subgraph Eco["🌐 ECOSYSTEM"]
-        API[REST/GraphQL API]
-        MCP[MCP Server]
-        NL[NL Query Interface]
-        INGEST[Knowledge Ingestion]
-    end
-
-    UNI --> NAL6
-    NAL6 --> NAL8
-    EMB --> SEM
-    UNI --> ANA
-    NAL8 --> GOAL
-    EMB --> HOP
-    IDX --> GNN
-    TRC --> RL
-    UNI --> DIFF
-    TRC --> VIS
-    TRC --> WHY
-    SER --> PLAY
-    IDX --> BENCH
-    SER --> API
-    API --> MCP
-    EMB --> NL
-    SER --> INGEST
-    NEG --> WHY
-    
-    %% Deferred temporal dependencies
-    EVT -.-> NAL7
-    NAL7 -.-> NAL8
-    EVT -.-> TEMP
-    NAL7 -.-> TEMP
-```
-
-### Dependency Summary
-
-| Foundation | Status | Unlocks | ROI |
-|------------|--------|---------|-----|
-| **Unification Engine** | ✅ In PrologStrategy | NAL-6, Analogical, Differentiable | ⭐⭐⭐ |
-| **Embedding Infrastructure** | ✅ EmbeddingLayer | Semantic, Hopfield, NL queries | ⭐⭐⭐ |
-| **Rule Compiler** | ✅ Done | Pattern matching, NAL-4+ | ⭐⭐⭐ |
-| **Derivation Tracing** | 🟡 Needed | Debugger, Explainer, RL | ⭐⭐⭐ |
-| **Serialization Layer** | 🟡 Needed | API, Playground, Ingestion | ⭐⭐⭐ |
-| **Advanced Indexing** | Phase 4 | GNN, Benchmarks, Scaling | ⭐⭐ |
-| **Event/Temporal Buffer** | Deferred | NAL-7, Temporal chaining | ⭐⭐⭐ |
-
----
-
-## Simplifications
-
-### 1. Negation via Truth (Not Term)
-
-Negation = frequency inversion. Eliminates `NegationRule`, `NegationPairingStrategy`, negation operator.
+## Phase Roadmap
 
 ```
-Input:   --(bird --> flyer). %0.9%
-Stored:  (bird --> flyer). %0.1%    ← f' = 1 - f
-Display: f < 0.5 → show as --(term)
+Phase 4: Core Observability ─► Phase 5: Prolog Enhancements ─► Phase 6: Tensor Logic
+   (Tracing, Serialization)      (Functor, Builtins, Is)         (Pure Tensor Logic)
+                                                                       │
+                                                                       ▼
+                                                                Phase 7: RLFP
+                                                                (leverages Tensors)
+                                                                       │
+                                                                       ▼
+                                                                Phase 8: Interactive
+                                                                (Demo Runner, Playground)
+                                                                       │
+                                                                       ▼
+                                                                Phase 9: Scale ─► Phase 10: Temporal
 ```
 
-**Implementation**:
-1. [NarseseParser.js](file:///home/me/senars10/core/src/parser/NarseseParser.js): Detect `--` prefix
-2. Call `Truth.negation()` → [Truth.js#L85](file:///home/me/senars10/core/src/Truth.js#L85)
-3. Store positive term with inverted frequency
-4. `Task.toString()`: If f < 0.5, display with `--` prefix
+---
+
+## Foundation Status
+
+### Complete Systems
+
+| System | Location | README | Status |
+|--------|----------|--------|--------|
+| **Core NAR** | `core/src/nar/NAR.js` | — | ✅ |
+| **Unifier** | `core/src/term/Unifier.js` | — | ✅ |
+| **RuleCompiler** | `core/src/reason/rules/compiler/` | — | ✅ |
+| **All 10 Strategies** | `core/src/reason/strategy/` | [README](file:///home/me/senars10/core/src/reason/strategy/README.md) | ✅ |
+| **EmbeddingLayer** | `core/src/lm/EmbeddingLayer.js` | — | ✅ |
+| **MCP Server** | `agent/src/mcp/` | [README](file:///home/me/senars10/agent/src/mcp/README.md) | ✅ |
+| **Demo System** | `agent/src/demo/` | [README](file:///home/me/senars10/agent/src/demo/README.md) | ✅ |
+| **RLFP Framework** | `agent/src/rlfp/` | [README](file:///home/me/senars10/agent/src/rlfp/README.md) | Skeleton |
+| **Knowledge System** | `agent/src/know/` | [README](file:///home/me/senars10/agent/src/know/README.md) | ✅ |
+| **WebSocket API** | `agent/src/server/` | — | ✅ |
+| **REPL** | `repl/src/` | — | ✅ |
+| **Serialization** | NAR, Memory, Task, Term, Bag, Concept | — | ✅ |
+| **Events** | `IntrospectionEvents.js` | — | ✅ |
+
+### NAL Completion
+
+| Level | Status |
+|-------|--------|
+| NAL-1 to NAL-6 | ✅ |
+| NAL-7 (Temporal) | Deferred → Phase 9 |
+| NAL-8 (Goals) | ✅ |
+
+### Test Coverage: 105 files, 99.8% pass
 
 ---
 
-### 2. Use Existing Term Predicates
+## Phase 4: Core Observability & Data Infrastructure
 
-Term.js already provides these — replace all reimplementations:
+> **Goal**: Establish the foundational infrastructure for all future phases  
+> **Effort**: ~1-2 days  
+> **Unlocks**: Debugging, RLFP, Playground, API, Export/Import, Visualization
 
-| Method | Location | Use Instead Of |
-|--------|----------|----------------|
-| `term.isVariable` | [Term.js#L105](file:///home/me/senars10/core/src/term/Term.js#L105) | `_isVariable(term)` |
-| `term.isCompound` | [Term.js#L93](file:///home/me/senars10/core/src/term/Term.js#L93) | `_isCompound(term)` |
-| `term.equals(other)` | [Term.js#L165](file:///home/me/senars10/core/src/term/Term.js#L165) | `_termsEqual(t1, t2)` |
-| `term.subject` | [Term.js#L49](file:///home/me/senars10/core/src/term/Term.js#L49) | `term.components[0]` |
-| `term.predicate` | [Term.js#L53](file:///home/me/senars10/core/src/term/Term.js#L53) | `term.components[1]` |
+### Design Principles
+
+1. **Event-Driven**: All observability via existing `IntrospectionEvents`
+2. **Immutable Data**: Traces are append-only, exportable snapshots
+3. **Pluggable Formats**: JSON, Mermaid, DOT, HTML, custom
+4. **Zero Overhead When Disabled**: No tracing cost unless active
+5. **Composable**: Each component usable independently
 
 ---
 
-## Rule Engine Architecture
+### 4.1 DerivationTracer — Universal Observability Layer
 
-> **Insight**: 72+ `.nal` files imply hundreds of rules. Linear matching is too slow.
-> **Solution**: A **Rule Compiler** that transforms declarative patterns into an optimized **Discrimination Tree** (Rete-like).
+**File**: `core/src/util/DerivationTracer.js`  
+**Effort**: 4 hours  
+**Dependencies**: `TraceId.js`, `IntrospectionEvents`, `EventBus`
 
-### 1. Pattern Definitions (JS)
-
-Rules are defined as data, porting logic from `.nal` files:
+#### Interface
 
 ```javascript
-// core/src/reason/rules/nal/definitions/NAL4.js
-export const Exemplification = {
-  id: 'exemplification',
-  pattern: {
-    p: { operator: '-->', subject: '$S', predicate: '$M' },
-    s: { operator: '-->', subject: '$M', predicate: '$P' }
-  },
-  conclusion: (b, tf) => tf.inheritance(b.get('$P'), b.get('$S')),
-  truth: Truth.exemplification
-};
-```
-
-### 2. Rule Compiler (The Brain)
-
-Transforms a list of Patterns into an executable Decision Tree.
-
-**Responsibilities**:
-1.  **Guard Extraction**: Decompose patterns into atomic checks (e.g., `op==-->`, `arity==2`, `p.pred==s.subj`).
-2.  **Ranking**: Order checks by cost (cheap first) and selectivity (fail fast).
-    *   *Tier 1*: Operator checks, Literal equality (O(1))
-    *   *Tier 2*: Variable absorption/equality (O(1) pointer check)
-    *   *Tier 3*: Structural unification (Recursive)
-3.  **Deduplication**: Merge common prefixes. If 50 rules check `op==-->`, check it once.
-4.  **Tree Construction**: Build the execution graph.
-
-```javascript
-// core/src/reason/rules/compiler/RuleCompiler.js
-export class RuleCompiler {
-  compile(patterns) {
-    const root = new DecisionNode();
-    for (const pat of patterns) {
-      const guards = this.extractGuards(pat);
-      this.insertIntoTree(root, guards, pat);
-    }
-    return root; // Executable strategy pattern
-  }
-
-  extractGuards(pattern) {
-    // 1. Static Checks
-    const checks = [
-      { type: 'op', target: 'p', val: pattern.p.operator },
-      { type: 'op', target: 's', val: pattern.s.operator }
-    ];
-    // 2. Variable Topology (Absorption)
-    // If $M is in p.pred and s.subj, add equality constraint
-    if (pattern.p.predicate === pattern.s.subject) {
-      checks.push({ type: 'eq', t1: 'p.pred', t2: 's.subj' });
-    }
-    return this.rankChecks(checks);
-  }
-}
-```
-
-### 3. Runtime Execution
-
-The `RuleExecutor` traverses the compiled tree.
-
-```javascript
-// core/src/reason/rules/RuleExecutor.js
-export class RuleExecutor {
-  constructor(compiledTree, unifier) {
-    this.tree = compiledTree;
-    this.unifier = unifier;
-  }
-
-  execute(p, s, ctx) {
-    // 1. Fast Traversal (Guards)
-    const candidates = this.tree.query(p, s); 
-    
-    // 2. Full Unification (Only on survivors)
-    const results = [];
-    for (const rule of candidates) {
-      const match = this.unifier.match(rule.pattern, p, s);
-      if (match.success) {
-        results.push(rule.apply(match.bindings, ctx));
-      }
-    }
-    return results;
-  }
-}
-```
-
-**Critical Dependency**: `Unifier.js` (for the final binding step).
-
-> **Future-Proofing**: This architecture naturally extends to NAL-7 (Temporal) by adding temporal constraints to the Decision Tree, and NAL-8 (Goals) by allowing the tree to be traversed in reverse (finding rules that produce a desired conclusion).
-
----
-
----
-
-## Roadmap
-
-> **Phasing Rationale**: Temporal functionality (NAL-7) is deferred to Phase 3 because it requires specifying temporal representations. NAL-6 (Variables) and NAL-8 (Goals) can proceed independently.
-
-### Phase 2: Variables & Goals (**COMPLETE**)
-
-| Task | Effort | Shortcut | Unlocks |
-|------|--------|----------|---------|
-| NAL-6 Query matching | 4 hrs | Unifier + ResolutionStrategy | Questions |
-| Variable scope handling | 4 hrs | Track scope in bindings Map | Nested quantifiers |
-| Goal task handling | 2 days | Task with `desire` field | NAL-8 basics |
-| GoalDrivenStrategy | 4 hrs | Wrap PrologStrategy | Backward chaining |
-| AnalogicalStrategy | 3 days | Unifier structure mapping | Cross-domain |
-| Plan synthesis | 1 week | Chain GoalDrivenStrategy calls | Multi-step goals |
-
-### Phase 3: Temporal (Deferred until representations defined)
-
-> **Prerequisite**: Define temporal representations—timestamps, intervals, temporal operators (`=/>`, `=|>`, `=\>`), event ordering semantics.
-
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| Temporal representation design | 1 week | Foundation |
-| Temporal Discriminators | 2 hrs | NAL-7 support |
-| TemporalBuffer | 1 week | Event sequences |
-| NAL-7 operators | 1 week | Temporal rules |
-| CausalStrategy | 4 hrs | Multi-hop temporal |
-
-### Phase 4: Polish & Scale (Ongoing)
-
-| Task | Effort | Unlocks |
-|------|--------|---------|
-| Advanced Indexing | 1-2 weeks | 100K+ concepts |
-| Web Playground | 1 week | Developer adoption |
-| REST API | 3 days | Integration |
-| Benchmark Suite | 3 days | Performance validation |
-
----
-
-## Foundation
-
-### Unification Engine
-
-*Enables: NAL-6, Analogical reasoning, Differentiable logic, Prolog interop*
-
-**Status**: ✅ Exists in [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) — extract to `Unifier.js` (2 hrs)
-
-### Embedding Infrastructure
-
-*Enables: Semantic similarity, Hopfield memory, NL queries*
-
-**Interface**:
-```javascript
-class EmbeddingService {
-  async embed(text) → Float32Array
-  async embedBatch(texts) → Float32Array[]
-  async findSimilar(query, k, threshold?) → Array<{term, score}>
-}
-
-class VectorIndex {
-  add(id, vector) → void
-  remove(id) → void
-  search(query, k) → Array<{id, distance}>
-  size() → number
-}
-```
-
-### Event/Temporal Buffer
-
-*Enables: NAL-7 temporal, Temporal strategies, Causality*
-
-> **Deferred**: Requires temporal representation design. See [Phase 3](#phase-3-temporal-deferred-until-representations-defined).
-
-**Interface** (Tentative):
-```javascript
-class TemporalBuffer {
-  constructor(windowSize, resolution)
-  
-  add(event, timestamp?) → void
-  getWindow(start, end) → Event[]
-  findSequences(pattern, minGap, maxGap) → Sequence[]
-  detectCausality(a, b, threshold) → {correlation, lag}
-}
-
-class STMLinker {
-  link(event1, event2, relationType) → TemporalLink
-  getTemporalContext(event) → TemporalLink[]
-}
-```
-
-### Derivation Tracing
-
-*Enables: Debugger, Explainer, RL rewards*
-
-**Interface**:
-```javascript
+/**
+ * DerivationTracer - Captures and analyzes reasoning traces
+ * 
+ * Design: Subscribes to EventBus, records steps immutably, exports on demand.
+ * Thread-safe: Each trace has independent state.
+ * Memory-bounded: configurable step limit with LRU eviction.
+ */
 class DerivationTracer {
-  startTrace(task) → TraceId
-  recordStep(traceId, {rule, premises, conclusion, truthBefore, truthAfter})
-  recordSkip(traceId, {rule, reason})
-  endTrace(traceId) → DerivationGraph
-  export(traceId, format: 'json' | 'dot' | 'mermaid') → string
+    constructor(eventBus, options = {}) {
+        this.eventBus = eventBus;
+        this.options = {
+            maxSteps: options.maxSteps ?? 10000,
+            autoStart: options.autoStart ?? false,
+            recordSkips: options.recordSkips ?? true,
+            ...options
+        };
+        this.traces = new Map();      // traceId → Trace
+        this.activeTrace = null;
+        this._subscribed = false;
+    }
+
+    // === Lifecycle ===
+    
+    startTrace(initialTask = null) → string {
+        const traceId = TraceId.generate();
+        this.traces.set(traceId, {
+            id: traceId,
+            task: initialTask?.serialize?.() ?? null,
+            startTime: Date.now(),
+            endTime: null,
+            steps: [],
+            skips: [],
+            derivations: [],
+            metadata: {}
+        });
+        this.activeTrace = traceId;
+        this._ensureSubscribed();
+        return traceId;
+    }
+
+    endTrace(traceId = this.activeTrace) → Trace {
+        const trace = this.traces.get(traceId);
+        if (!trace) throw new Error(`Trace ${traceId} not found`);
+        trace.endTime = Date.now();
+        trace.metrics = this._computeMetrics(trace);
+        if (traceId === this.activeTrace) this.activeTrace = null;
+        return trace;
+    }
+
+    // === Recording (via EventBus) ===
+    
+    _ensureSubscribed() {
+        if (this._subscribed) return;
+        this.eventBus.on(IntrospectionEvents.RULE_FIRED, this._onRuleFired.bind(this));
+        this.eventBus.on(IntrospectionEvents.RULE_NOT_FIRED, this._onRuleSkipped.bind(this));
+        this.eventBus.on(IntrospectionEvents.REASONING_DERIVATION, this._onDerivation.bind(this));
+        this._subscribed = true;
+    }
+
+    _onRuleFired(event) {
+        if (!this.activeTrace) return;
+        const trace = this.traces.get(this.activeTrace);
+        trace.steps.push({
+            timestamp: Date.now(),
+            rule: event.ruleName,
+            premises: event.premises?.map(p => p.serialize?.() ?? p),
+            conclusion: event.conclusion?.serialize?.() ?? event.conclusion,
+            truth: event.truth ?? null,
+            depth: event.depth ?? 0
+        });
+    }
+
+    _onRuleSkipped(event) {
+        if (!this.activeTrace || !this.options.recordSkips) return;
+        const trace = this.traces.get(this.activeTrace);
+        trace.skips.push({
+            timestamp: Date.now(),
+            rule: event.ruleName,
+            reason: event.reason ?? 'precondition failed'
+        });
+    }
+
+    _onDerivation(event) {
+        if (!this.activeTrace) return;
+        const trace = this.traces.get(this.activeTrace);
+        trace.derivations.push(event.task?.serialize?.() ?? event);
+    }
+
+    // === Query ===
+    
+    getTrace(traceId) → Trace | null;
+    getActiveTrace() → Trace | null;
+    list() → string[];  // All trace IDs
+
+    // === Analysis ===
+    
+    findPath(traceId, fromTerm, toTerm) → Step[] {
+        // BFS through steps to find derivation path
+    }
+
+    whyNot(traceId, term) → Skip[] {
+        // Find skips that could have produced term
+    }
+
+    hotRules(traceId) → Map<string, number> {
+        // Rule → fire count
+    }
+
+    // === Export ===
+    
+    export(traceId, format: 'json' | 'mermaid' | 'dot' | 'html') → string {
+        const trace = this.traces.get(traceId);
+        switch (format) {
+            case 'json': return JSON.stringify(trace, null, 2);
+            case 'mermaid': return this._toMermaid(trace);
+            case 'dot': return this._toDot(trace);
+            case 'html': return this._toHTML(trace);
+        }
+    }
+
+    _toMermaid(trace) → string {
+        let md = 'graph TD\n';
+        trace.steps.forEach((step, i) => {
+            const from = step.premises.map(p => p.term || p).join(' + ');
+            const to = step.conclusion?.term || step.conclusion;
+            md += `  P${i}["${from}"] -->|${step.rule}| C${i}["${to}"]\n`;
+        });
+        return md;
+    }
+
+    // === Persistence ===
+    
+    save(traceId, path) → Promise<void>;
+    load(path) → Promise<Trace>;
+    
+    // === Metrics ===
+    
+    _computeMetrics(trace) → TraceMetrics {
+        return {
+            totalSteps: trace.steps.length,
+            totalSkips: trace.skips.length,
+            totalDerivations: trace.derivations.length,
+            uniqueRules: new Set(trace.steps.map(s => s.rule)).size,
+            maxDepth: Math.max(...trace.steps.map(s => s.depth), 0),
+            duration: trace.endTime - trace.startTime,
+            derivationsPerSecond: trace.derivations.length / ((trace.endTime - trace.startTime) / 1000)
+        };
+    }
+}
+```
+
+#### Trace Data Structure
+
+```javascript
+interface Trace {
+    id: string;
+    task: SerializedTask | null;
+    startTime: number;
+    endTime: number | null;
+    steps: Step[];
+    skips: Skip[];
+    derivations: SerializedTask[];
+    metadata: Record<string, any>;
+    metrics?: TraceMetrics;
+}
+
+interface Step {
+    timestamp: number;
+    rule: string;
+    premises: SerializedTask[];
+    conclusion: SerializedTask;
+    truth: { frequency: number, confidence: number } | null;
+    depth: number;
+}
+
+interface Skip {
+    timestamp: number;
+    rule: string;
+    reason: string;
+}
+
+interface TraceMetrics {
+    totalSteps: number;
+    totalSkips: number;
+    totalDerivations: number;
+    uniqueRules: number;
+    maxDepth: number;
+    duration: number;
+    derivationsPerSecond: number;
+}
+```
+
+#### Test Cases
+
+```javascript
+describe('DerivationTracer', () => {
+    test('captures rule firings', async () => {
+        const tracer = new DerivationTracer(nar.eventBus);
+        const traceId = tracer.startTrace();
+        await nar.input('(a --> b).');
+        await nar.input('(b --> c).');
+        await nar.runCycles(5);
+        const trace = tracer.endTrace();
+        expect(trace.steps.length).toBeGreaterThan(0);
+        expect(trace.metrics.uniqueRules).toBeGreaterThan(0);
+    });
+
+    test('exports mermaid format', () => {
+        const mermaid = tracer.export(traceId, 'mermaid');
+        expect(mermaid).toContain('graph TD');
+    });
+
+    test('findPath traces derivation chain', () => {
+        const path = tracer.findPath(traceId, 'a', 'c');
+        expect(path.length).toBe(2); // a→b, b→c
+    });
+});
+```
+
+---
+
+### 4.2 Serializer — Unified Data Exchange
+
+**File**: `core/src/util/Serializer.js`  
+**Effort**: 2 hours  
+**Dependencies**: Existing `serialize()` methods, `TermFactory`
+
+#### Interface
+
+```javascript
+/**
+ * Serializer - Unified data exchange facade
+ * 
+ * Design: Thin wrapper over existing serialize() methods.
+ * Supports JSON, Narsese, and auto-detection.
+ * Versioned state for future migrations.
+ */
+class Serializer {
+    static VERSION = '1.0.0';
+
+    // === Core Serialization ===
+    
+    static toJSON(entity, options = {}) → object {
+        if (entity.serialize) return entity.serialize();
+        if (entity instanceof Term) return TermSerializer.toJSON(entity);
+        throw new Error(`Cannot serialize ${entity.constructor.name}`);
+    }
+
+    static fromJSON(json, type: 'task' | 'term' | 'memory' | 'nar' | 'trace') → Entity {
+        switch (type) {
+            case 'task': return Task.deserialize(json);
+            case 'term': return TermFactory.fromJSON(json);
+            case 'memory': return Memory.deserialize(json);
+            case 'nar': return NAR.deserialize(json);
+            case 'trace': return json; // Already structured
+        }
+    }
+
+    // === Narsese ===
+    
+    static toNarsese(entity) → string {
+        if (entity instanceof Task) return entity.toNarsese();
+        if (entity instanceof Term) return TermSerializer.toString(entity);
+        throw new Error(`Cannot convert ${entity.constructor.name} to Narsese`);
+    }
+
+    static fromNarsese(str) → Term | Task {
+        return parse(str); // Uses existing parser
+    }
+
+    // === Detection ===
+    
+    static detect(input) → 'json' | 'narsese' | 'object' {
+        if (typeof input === 'string') {
+            try { JSON.parse(input); return 'json'; } catch {}
+            return 'narsese';
+        }
+        return 'object';
+    }
+
+    static parse(input, defaultType = 'task') → Entity {
+        const format = this.detect(input);
+        switch (format) {
+            case 'json': return this.fromJSON(JSON.parse(input), defaultType);
+            case 'narsese': return this.fromNarsese(input);
+            case 'object': return input;
+        }
+    }
+
+    // === State Management ===
+    
+    static exportState(nar) → NARState {
+        return {
+            version: this.VERSION,
+            timestamp: Date.now(),
+            nar: {
+                memory: nar.memory.serialize(),
+                taskManager: nar.taskManager.serialize(),
+                focus: nar.focus.serialize(),
+                config: nar.config.toJSON()
+            }
+        };
+    }
+
+    static importState(nar, state) → void {
+        state = this.migrate(state, this.VERSION);
+        nar.memory = Memory.deserialize(state.nar.memory);
+        nar.taskManager = TaskManager.deserialize(state.nar.taskManager);
+        nar.focus = Focus.deserialize(state.nar.focus);
+    }
+
+    // === Versioning ===
+    
+    static migrate(state, toVersion) → NARState {
+        // Future: handle version migrations
+        return state;
+    }
 }
 ```
 
 ---
 
-## NAL
+### 4.3 LMConfig — Provider Management
 
-### Implemented Rules
+**File**: `core/src/lm/LMConfig.js`  
+**Effort**: 2 hours  
+**Dependencies**: Existing provider patterns from `examples/lm-providers.js`
 
-| Rule | File | Pattern |
-|------|------|---------|
-| SyllogisticRule | [SyllogisticRule.js](file:///home/me/senars10/core/src/reason/rules/nal/SyllogisticRule.js) | Shared middle |
-| InductionRule | [InductionAbductionRule.js](file:///home/me/senars10/core/src/reason/rules/nal/InductionAbductionRule.js) | Shared subject |
-| AbductionRule | [InductionAbductionRule.js](file:///home/me/senars10/core/src/reason/rules/nal/InductionAbductionRule.js) | Shared predicate |
-| ConversionRule | [ConversionRule.js](file:///home/me/senars10/core/src/reason/rules/nal/ConversionRule.js) | Unary reversal |
-| ContrapositionRule | [ConversionRule.js](file:///home/me/senars10/core/src/reason/rules/nal/ConversionRule.js) | Unary negation |
-| ModusPonensRule | [ModusPonensRule.js](file:///home/me/senars10/core/src/reason/rules/nal/ModusPonensRule.js) | Detachment |
-| VariableIntroduction | [VariableIntroduction.js](file:///home/me/senars10/core/src/reason/rules/nal/VariableIntroduction.js) | Generalization |
-
-### NAL-4+ (Compiled Patterns)
-
-Implement via `PatternRule` definitions in JS, compiled at startup:
-
-- `Comparison`: Shared subject → similarity
-- `Exemplification`: p.subject === s.predicate
-- `Analogy`: (S↔M), (M→P) ⊢ (S→P)
-- `Intersection`/`Union`/`Difference`
-
-### NAL-6: Variables
-
-| Part | Status | Location |
-|------|--------|----------|
-| Variable terms | ✅ | [Term.js#L105](file:///home/me/senars10/core/src/term/Term.js#L105) |
-| VariableIntroduction | ✅ | [VariableIntroduction.js](file:///home/me/senars10/core/src/reason/rules/nal/VariableIntroduction.js) |
-| Unification | ⚠️ | [PrologStrategy.js#L288](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js#L288) |
-| Query matching | ❌ | Needs Unifier extraction |
-
-### NAL-7: Temporal
-
-*Implementation: `PatternRule` definitions compiled by `RuleCompiler`*
-
-> **Deferred**: Requires temporal representation design before implementation. See [Phase 3 Roadmap](#phase-3-temporal-deferred-until-representations-defined).
-
-**Prerequisites**:
-- [ ] Temporal representation specification (timestamps, intervals, ordering)
-- [ ] Temporal operator semantics (`=/>` predictive, `=|>` concurrent, `=\>` retrospective)
-
-**Implementation Tasks**:
-- [ ] Operators: `=/>`, `=|>`, `=\>`
-- [ ] TemporalBuffer (Event window)
-- [ ] TemporalInductionRule (Pattern: `(A, t1), (B, t2) ⊢ (A =/> B)`)
-
-### NAL-8: Goals
-*Implementation: Backward-chaining via `RuleExecutor` or `PrologStrategy`*
-
-- [ ] Goal representation (`Term` with desire value)
-- [ ] Plan synthesis (Reverse derivation)
-- [ ] Execution monitoring (Feedback loop)
-
----
-
-## Strategies
-
-### Strategy Interface
+#### Interface
 
 ```javascript
-class PremiseFormationStrategy {
-  constructor(config)
-  
-  // Yield candidate premise pairs
-  async* generateCandidates(task, memory, context) {
-    yield { premise1, premise2, priority, source: this.name }
-  }
-  
-  get name() → string
-  get priority() → number // 0-1, higher = try first
+/**
+ * LMConfig - Language Model provider configuration
+ * 
+ * Design: Singleton-ish config manager with persistence.
+ * Supports multiple providers, easy switching, validation.
+ */
+class LMConfig {
+    static PROVIDERS = Object.freeze({
+        TRANSFORMERS: 'transformers',
+        OLLAMA: 'ollama',
+        OPENAI: 'openai',
+        HUGGINGFACE: 'huggingface',
+        DUMMY: 'dummy'
+    });
+
+    constructor(options = {}) {
+        this.configs = new Map();
+        this.active = null;
+        this.persistPath = options.persistPath ?? '.senars-lm-config.json';
+        
+        // Default: Transformers.js (no API key needed)
+        this.setProvider(LMConfig.PROVIDERS.TRANSFORMERS, {
+            model: 'Xenova/all-MiniLM-L6-v2'
+        });
+    }
+
+    // === Configuration ===
+    
+    setProvider(name, config) → void {
+        this.configs.set(name, { name, ...config, enabled: true });
+    }
+
+    getProvider(name) → ProviderConfig | null {
+        return this.configs.get(name) ?? null;
+    }
+
+    setActive(name) → void {
+        if (!this.configs.has(name)) throw new Error(`Provider ${name} not configured`);
+        this.active = name;
+    }
+
+    getActive() → ProviderConfig {
+        return this.configs.get(this.active);
+    }
+
+    // === Validation ===
+    
+    async test(name = this.active) → Promise<{ success: boolean, message: string }> {
+        const config = this.getProvider(name);
+        // Attempt minimal operation with provider
+        try {
+            const provider = this._createProvider(config);
+            await provider.embed('test');
+            return { success: true, message: 'Connection successful' };
+        } catch (e) {
+            return { success: false, message: e.message };
+        }
+    }
+
+    // === Persistence ===
+    
+    save(path = this.persistPath) → void {
+        const data = {
+            active: this.active,
+            providers: Object.fromEntries(this.configs)
+        };
+        fs.writeFileSync(path, JSON.stringify(data, null, 2));
+    }
+
+    load(path = this.persistPath) → void {
+        if (!fs.existsSync(path)) return;
+        const data = JSON.parse(fs.readFileSync(path, 'utf-8'));
+        this.active = data.active;
+        this.configs = new Map(Object.entries(data.providers));
+    }
+
+    // === Factory ===
+    
+    createActiveProvider() → LMProvider {
+        return this._createProvider(this.getActive());
+    }
 }
 ```
 
-### Implemented
+---
 
-| Strategy | Base | Purpose |
-|----------|------|---------|
-| TaskMatchStrategy | PremiseFormationStrategy | Syllogistic patterns |
-| DecompositionStrategy | PremiseFormationStrategy | Extract subterms |
-| TermLinkStrategy | PremiseFormationStrategy | Associative links |
-| BagStrategy | Strategy | Priority sampling |
-| ExhaustiveStrategy | Strategy | Full search |
-| PrologStrategy | Strategy | Backward chaining + unification |
-| ResolutionStrategy | Strategy | Question answering |
+### Phase 4 Summary
 
-### Planned
+| Component | File | Effort | Unlocks |
+|-----------|------|--------|---------|
+| DerivationTracer | `core/src/util/DerivationTracer.js` | 4 hrs | Debugging, RLFP, Viz |
+| Serializer | `core/src/util/Serializer.js` | 2 hrs | API, Import/Export |
+| LMConfig | `core/src/lm/LMConfig.js` | 2 hrs | Provider switching |
+| **Total** | | **~8 hrs** | |
+---
 
-| Strategy | Depends | Priority | Phase | Purpose | Implementation Note |
-|----------|---------|----------|-------|---------|---------------------|
-| SemanticStrategy | EmbeddingLayer ✅ | High | 2 | Fuzzy matching | Wrap `EmbeddingLayer.findSimilar()` — 50 lines. |
-| AnalogicalStrategy | Unifier | High | 2 | Cross-domain mapping | Uses `Unifier` to map structures between domains `(S↔M)`. |
-| GoalDrivenStrategy | NAL-8 | High | 2 | Backward from goals | Thin wrapper around `PrologStrategy` backward-chaining. |
-| CausalStrategy | NAL-7 | Low | 3 | Multi-hop temporal | **Deferred**: Requires temporal representations. |
+## Phase 5: Prolog Enhancements — Refactor & Extend
 
-### Composition Pattern
+> **Goal**: Extract and extend existing PrologStrategy builtins into modular Functor system  
+> **Effort**: ~2 days (refactor, not greenfield)  
+> **Unlocks**: Custom functors, extensible builtins, Phase 6 Tensor Logic
+
+### Existing Code to Leverage
+
+**PrologStrategy.js already has**:
+- `_isBuiltIn()` — Checks for `is`, `>`, `<`, `>=`, `<=`, `=`, `\=` (line 99-102)
+- `_solveBuiltIn()` — Handles `is` operator and comparisons (line 113-173)
+- `_evalExpression()` — Evaluates `+`, `-`, `*`, `/` (line 176-202)
+
+**Strategy**: Extract → Generalize → Extend (not rebuild)
+
+### Why Before Tensor Logic?
+
+Phase 6 (Tensor Logic) requires:
+- **Functor interface** — TensorFunctor extends this base
+- **`is` operator** — Tensor expressions use `Out is matmul(A, B)`
+- **Registry pattern** — Plugin system for custom evaluators
+- **Extended operations** — sqrt, pow, sin, cos, etc.
+
+### Design Principles
+
+1. **Refactor First**: Extract existing code into Functor classes
+2. **Backward Compatible**: PrologStrategy continues to work unchanged
+3. **Extensible**: Registry pattern for runtime functor registration
+4. **Minimal Disruption**: Keep existing tests passing
+5. **Trace Integration**: All operations emit introspection events
+
+---
+
+### 5.1 Functor Base Class
+
+**File**: `core/src/functor/Functor.js`  
+**Effort**: 4 hours
 
 ```javascript
-// Negation handled via truth inversion, not separate strategy
-const composite = new CompositeStrategy([
-  { strategy: new TaskMatchStrategy(), weight: 1.0 },
-  { strategy: new SemanticStrategy(embeddingLayer), weight: 0.7 },
-  { strategy: new AnalogicalStrategy(unifier), weight: 0.5 }
-]);
+/**
+ * Functor - Abstract base for custom Prolog-like evaluators
+ * 
+ * Subclasses implement evaluate() to handle specific term operators.
+ * Used by PrologStrategy to extend evaluation capabilities.
+ */
+class Functor {
+    constructor(options = {}) {
+        this.name = options.name ?? this.constructor.name;
+        this.operators = new Set();  // Operators this functor handles
+    }
+
+    // === Abstract ===
+    
+    /**
+     * Evaluate a term with given bindings
+     * @param {Term} term - The term to evaluate
+     * @param {Map} bindings - Variable bindings
+     * @returns {*} - Result value or new Term
+     */
+    evaluate(term, bindings) {
+        throw new Error('Subclass must implement evaluate()');
+    }
+
+    /**
+     * Check if this functor can handle the term
+     */
+    canEvaluate(term) {
+        return this.operators.has(term.operator ?? term.name);
+    }
+
+    // === Utilities ===
+    
+    resolve(term, bindings) {
+        if (!term) return term;
+        if (term.isVariable && bindings.has(term.name)) {
+            return this.resolve(bindings.get(term.name), bindings);
+        }
+        return term;
+    }
+
+    resolveAll(terms, bindings) {
+        return terms.map(t => this.resolve(t, bindings));
+    }
+
+    // === Registration ===
+    
+    register(operator) {
+        this.operators.add(operator);
+        return this;
+    }
+
+    registerAll(operators) {
+        operators.forEach(op => this.operators.add(op));
+        return this;
+    }
+}
 ```
 
 ---
 
-## Memory
+### 5.2 ArithmeticFunctor — Math Operations
 
-### Scaling Tiers
+**File**: `core/src/functor/ArithmeticFunctor.js`  
+**Effort**: 3 hours
 
-| Scale | Strategy | Data Structures |
-|-------|----------|-----------------|
-| <10K | In-memory | Map, Set |
-| 10K-100K | Indexed | Trie, B-Tree, LRU |
-| 100K-1M | Sharded | Web Workers |
-| 1M+ | Distributed | External store |
+```javascript
+class ArithmeticFunctor extends Functor {
+    constructor() {
+        super({ name: 'Arithmetic' });
+        this.registerAll([
+            'add', 'sub', 'mul', 'div', 'mod',
+            'abs', 'neg', 'sqrt', 'pow', 'exp', 'log',
+            'sin', 'cos', 'tan', 'floor', 'ceil', 'round',
+            'min', 'max', 'random'
+        ]);
+    }
 
-### Memory Optimizations
+    evaluate(term, bindings) {
+        const op = term.operator ?? term.name;
+        const args = this.resolveAll(term.components ?? [], bindings);
+        
+        switch (op) {
+            // Binary
+            case 'add': return this.toNumber(args[0]) + this.toNumber(args[1]);
+            case 'sub': return this.toNumber(args[0]) - this.toNumber(args[1]);
+            case 'mul': return this.toNumber(args[0]) * this.toNumber(args[1]);
+            case 'div': return this.toNumber(args[0]) / this.toNumber(args[1]);
+            case 'mod': return this.toNumber(args[0]) % this.toNumber(args[1]);
+            case 'pow': return Math.pow(this.toNumber(args[0]), this.toNumber(args[1]));
+            case 'min': return Math.min(...args.map(a => this.toNumber(a)));
+            case 'max': return Math.max(...args.map(a => this.toNumber(a)));
+            
+            // Unary
+            case 'abs': return Math.abs(this.toNumber(args[0]));
+            case 'neg': return -this.toNumber(args[0]);
+            case 'sqrt': return Math.sqrt(this.toNumber(args[0]));
+            case 'exp': return Math.exp(this.toNumber(args[0]));
+            case 'log': return Math.log(this.toNumber(args[0]));
+            case 'sin': return Math.sin(this.toNumber(args[0]));
+            case 'cos': return Math.cos(this.toNumber(args[0]));
+            case 'floor': return Math.floor(this.toNumber(args[0]));
+            case 'ceil': return Math.ceil(this.toNumber(args[0]));
+            case 'round': return Math.round(this.toNumber(args[0]));
+            
+            // Zero-ary
+            case 'random': return Math.random();
+            
+            default:
+                throw new Error(`Unknown arithmetic op: ${op}`);
+        }
+    }
 
-| Optimization | Technique | Benefit |
-|--------------|-----------|---------|
-| Term interning | WeakMap cache | 40-60% memory |
-| Flyweight | Shared substructures | 20-30% memory |
-| Lazy parsing | Parse on access | Faster load |
-| LRU eviction | Bounded caches | Predictable memory |
+    toNumber(val) {
+        if (typeof val === 'number') return val;
+        if (val?.value !== undefined) return val.value;
+        throw new Error(`Cannot convert ${val} to number`);
+    }
+}
+```
 
-### Advanced Indexing
+---
 
-**Interface**:
+### 5.3 ComparisonFunctor — Relational Operations
+
+**File**: `core/src/functor/ComparisonFunctor.js`  
+**Effort**: 2 hours
+
+```javascript
+class ComparisonFunctor extends Functor {
+    constructor() {
+        super({ name: 'Comparison' });
+        this.registerAll([
+            'eq', 'neq', 'lt', 'lte', 'gt', 'gte',
+            '=:=', '=\\=', '<', '=<', '>', '>='
+        ]);
+    }
+
+    evaluate(term, bindings) {
+        const op = term.operator ?? term.name;
+        const [a, b] = this.resolveAll(term.components ?? [], bindings);
+        
+        switch (op) {
+            case 'eq': case '=:=': return a === b;
+            case 'neq': case '=\\=': return a !== b;
+            case 'lt': case '<': return a < b;
+            case 'lte': case '=<': return a <= b;
+            case 'gt': case '>': return a > b;
+            case 'gte': case '>=': return a >= b;
+            default:
+                throw new Error(`Unknown comparison op: ${op}`);
+        }
+    }
+}
+```
+
+---
+
+### 5.4 TypeFunctor — Type Predicates
+
+**File**: `core/src/functor/TypeFunctor.js`  
+**Effort**: 2 hours
+
+```javascript
+class TypeFunctor extends Functor {
+    constructor() {
+        super({ name: 'Type' });
+        this.registerAll([
+            'is_number', 'is_atom', 'is_var', 'is_compound',
+            'is_list', 'is_tensor', 'functor', 'arg', 'length'
+        ]);
+    }
+
+    evaluate(term, bindings) {
+        const op = term.operator ?? term.name;
+        const args = this.resolveAll(term.components ?? [], bindings);
+        
+        switch (op) {
+            case 'is_number': return typeof args[0] === 'number';
+            case 'is_atom': return args[0]?.isAtom ?? false;
+            case 'is_var': return args[0]?.isVariable ?? false;
+            case 'is_compound': return args[0]?.components?.length > 0;
+            case 'is_list': return Array.isArray(args[0]);
+            case 'is_tensor': return args[0]?.constructor?.name === 'Tensor';
+            case 'functor': return args[0]?.operator ?? args[0]?.name;
+            case 'arg': return args[0]?.components?.[args[1]];
+            case 'length': return args[0]?.length ?? args[0]?.components?.length ?? 0;
+            default:
+                throw new Error(`Unknown type op: ${op}`);
+        }
+    }
+}
+```
+
+---
+
+### 5.5 FunctorRegistry — Plugin System
+
+**File**: `core/src/functor/FunctorRegistry.js`  
+**Effort**: 2 hours
+
+```javascript
+/**
+ * FunctorRegistry - Central registry for all functors
+ */
+class FunctorRegistry {
+    constructor() {
+        this.functors = new Map();      // name → Functor
+        this.operatorIndex = new Map(); // operator → Functor
+    }
+
+    register(functor) {
+        this.functors.set(functor.name, functor);
+        for (const op of functor.operators) {
+            this.operatorIndex.set(op, functor);
+        }
+        return this;
+    }
+
+    get(name) {
+        return this.functors.get(name);
+    }
+
+    findForOperator(op) {
+        return this.operatorIndex.get(op);
+    }
+
+    canEvaluate(term) {
+        const op = term.operator ?? term.name;
+        return this.operatorIndex.has(op);
+    }
+
+    evaluate(term, bindings) {
+        const op = term.operator ?? term.name;
+        const functor = this.operatorIndex.get(op);
+        if (!functor) throw new Error(`No functor for operator: ${op}`);
+        return functor.evaluate(term, bindings);
+    }
+
+    // Create default registry with standard functors
+    static createDefault() {
+        return new FunctorRegistry()
+            .register(new ArithmeticFunctor())
+            .register(new ComparisonFunctor())
+            .register(new TypeFunctor());
+    }
+}
+```
+
+---
+
+### 5.6 PrologStrategy Integration
+
+**Extend**: `core/src/reason/strategy/PrologStrategy.js`  
+**Effort**: 4 hours
+
+```javascript
+class PrologStrategy {
+    constructor(options = {}) {
+        // ...existing code...
+        this.functorRegistry = options.functorRegistry ?? FunctorRegistry.createDefault();
+    }
+
+    // Enhanced 'is' operator with functor support
+    evaluateIs(lhs, rhs, bindings) {
+        let result;
+        
+        // Check if it's a registered functor operation
+        if (this.functorRegistry.canEvaluate(rhs)) {
+            result = this.functorRegistry.evaluate(rhs, bindings);
+        } else {
+            // Fallback to standard evaluation
+            result = this.evaluateExpression(rhs, bindings);
+        }
+        
+        return this.unify(lhs, result, bindings);
+    }
+
+    // Register custom functor at runtime
+    registerFunctor(functor) {
+        this.functorRegistry.register(functor);
+        return this;
+    }
+}
+```
+
+---
+
+### Phase 5 Summary
+
+| Component | File | Effort | Purpose |
+|-----------|------|--------|---------|
+| Functor base | `core/src/functor/Functor.js` | 4 hrs | Abstract base class |
+| ArithmeticFunctor | `core/src/functor/ArithmeticFunctor.js` | 3 hrs | +, -, *, /, sqrt, etc. |
+| ComparisonFunctor | `core/src/functor/ComparisonFunctor.js` | 2 hrs | <, >, =, etc. |
+| TypeFunctor | `core/src/functor/TypeFunctor.js` | 2 hrs | is_number, is_list, etc. |
+| FunctorRegistry | `core/src/functor/FunctorRegistry.js` | 2 hrs | Plugin system |
+| PrologStrategy ext | `core/src/reason/strategy/PrologStrategy.js` | 4 hrs | Integration |
+| **Total** | | **~17 hrs (~2 days)** | |
+
+---
+
+## Phase 6: Tensor Logic — Tiered Implementation
+
+> **Goal**: Implement [Tensor Logic](https://arxiv.org/abs/2510.12269) (Domingos, 2024) for unified neuro-symbolic AI  
+> **Effort**: ~2-3 weeks (tiered approach)  
+> **Prereqs**: Phase 5 (Functor infrastructure)  
+> **Unlocks**: Sound reasoning in embedding space, differentiable reasoning, RLFP ML strategies
+
+### Tiered Implementation Strategy
+
+| Tier | Scope | Effort | Deliverable |
+|------|-------|--------|-------------|
+| **Tier 1** | Forward-Only Ops | 1 week | TensorFunctor with matmul, relu, etc. |
+| **Tier 2** | Basic Autograd | 1 week | Gradient tracking for simple graphs |
+| **Tier 3** | Advanced (Future) | 2+ weeks | Einstein summation, full differentiable logic |
+
+**Rationale**: Start with working forward pass, add gradients incrementally. Each tier is independently valuable.
+
+---
+
+### Tensor Logic Foundation
+
+**Paper Reference**: [Tensor Logic: The Language of AI](https://arxiv.org/abs/2510.12269) (Domingos, arXiv:2510.12269)
+
+**Key Insight**: Logical rules and Einstein summation are fundamentally the same operation:
+- A logical rule `(A ∧ B) → C` can be expressed as tensor contraction
+- This unifies neural and symbolic AI at the mathematical level
+- Enables **sound reasoning in embedding space** — combining neural scalability with symbolic reliability
+
+**Core Concepts from Tensor Logic**:
+
+| Concept | Description | SeNARS Implementation |
+|---------|-------------|----------------------|
+| **Tensor Equations** | Unified representation for rules and neural ops | `TensorFunctor.evaluate()` |
+| **Einstein Summation** | Index-based tensor contraction | `einsum(subscripts, tensors)` op |
+| **Embedding Space Reasoning** | Sound inference over continuous vectors | Integration with `EmbeddingLayer` |
+| **Differentiable Logic** | Gradient flow through logical structure | Autograd in `Tensor` class |
+| **Probabilistic Semantics** | Tensor values as probabilities | Truth values as tensor entries |
+
+### Design Principles
+
+1. **Terms Are Tensors**: Neural ops expressed as Prolog-like terms
+2. **Rules Are Contractions**: Logical rules as tensor index operations
+3. **PrologStrategy Integration**: Leverage existing unification and backward chaining
+4. **Lazy Evaluation**: Tensors computed on demand during proof search
+5. **Gradient Flow**: Optional autograd through term structure
+6. **Backend Agnostic**: Abstract over tfjs, onnxruntime, native
+
+### Subsystems
+
+| Subsystem | Purpose | File |
+|-----------|---------|------|
+| **TensorFunctor** | Core evaluator | `core/src/functor/TensorFunctor.js` |
+| **Tensor** | N-d array with autograd | `core/src/functor/Tensor.js` |
+| **TensorBackend** | Backend abstraction | `core/src/functor/backends/` |
+| **EinsumEngine** | Einstein summation | `core/src/functor/EinsumEngine.js` |
+| **TensorRuleCompiler** | Rules → tensor ops | `core/src/functor/TensorRuleCompiler.js` |
+| **EmbeddingReasoner** | Sound embedding inference | `core/src/functor/EmbeddingReasoner.js` |
+
+---
+
+### 5.1 TensorFunctor Base — Core Operations
+
+**File**: `core/src/functor/TensorFunctor.js`  
+**Effort**: 3 days  
+**Dependencies**: PrologStrategy, Functor interface
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       TensorFunctor                              │
+├─────────────────────────────────────────────────────────────────┤
+│ evaluate(term, bindings) → Tensor | Term                         │
+│   │                                                              │
+│   ├─► tensor([1,2,3])           → Tensor([1,2,3])               │
+│   ├─► matmul(A, B)              → Tensor.matmul(A, B)           │
+│   ├─► relu(X)                   → Tensor.relu(X)                │
+│   ├─► layer(In, Out, W, B, Act) → Composed computation          │
+│   └─► grad(Y, X)                → Gradient of Y wrt X           │
+├─────────────────────────────────────────────────────────────────┤
+│ resolve(term) → Tensor|Value                                     │
+│ createTensor(data) → Tensor                                      │
+│ registerOp(name, fn) → void                                      │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       TensorBackend                              │
+├─────────────────────────────────────────────────────────────────┤
+│ matmul(a, b), add(a, b), mul(a, b)                               │
+│ relu(x), sigmoid(x), tanh(x), softmax(x), gelu(x)               │
+│ transpose(x), reshape(x, shape), concat(tensors, axis)          │
+│ sum(x, axis?), mean(x, axis?), max(x, axis?)                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Core Implementation
+
+```javascript
+/**
+ * TensorFunctor - Evaluates tensor operations as Prolog terms
+ * 
+ * Integrates with PrologStrategy for backward chaining.
+ * Supports lazy evaluation and gradient tracking.
+ */
+class TensorFunctor extends Functor {
+    constructor(backend = new NativeBackend()) {
+        super();
+        this.backend = backend;
+        this.ops = new Map();
+        this._registerBuiltins();
+    }
+
+    // === Core Evaluation ===
+    
+    evaluate(term, bindings) → Tensor | Term {
+        const op = term.operator ?? term.name;
+        
+        // Check if it's a registered op
+        if (this.ops.has(op)) {
+            const args = term.components.map(c => this.resolve(c, bindings));
+            return this.ops.get(op)(...args);
+        }
+
+        // Built-in ops
+        switch (op) {
+            case 'tensor':
+                return this.createTensor(term.components[0]);
+            
+            case 'matmul':
+                return this.backend.matmul(
+                    this.resolve(term.comp(0), bindings),
+                    this.resolve(term.comp(1), bindings)
+                );
+            
+            case 'add':
+                return this.backend.add(
+                    this.resolve(term.comp(0), bindings),
+                    this.resolve(term.comp(1), bindings)
+                );
+            
+            case 'mul':
+                return this.backend.mul(
+                    this.resolve(term.comp(0), bindings),
+                    this.resolve(term.comp(1), bindings)
+                );
+            
+            case 'transpose':
+                return this.backend.transpose(this.resolve(term.comp(0), bindings));
+            
+            // Activations
+            case 'relu':
+            case 'sigmoid':
+            case 'tanh':
+            case 'softmax':
+            case 'gelu':
+                return this.backend[op](this.resolve(term.comp(0), bindings));
+            
+            // Reduction
+            case 'sum':
+            case 'mean':
+            case 'max':
+                return this.backend[op](
+                    this.resolve(term.comp(0), bindings),
+                    term.comp(1)?.value  // optional axis
+                );
+            
+            // Gradient
+            case 'grad':
+                return this._gradient(term.comp(0), term.comp(1), bindings);
+            
+            case 'backward':
+                return this.resolve(term.comp(0), bindings).backward();
+            
+            default:
+                throw new Error(`Unknown tensor op: ${op}`);
+        }
+    }
+
+    resolve(term, bindings) → Tensor | number | number[] {
+        // Variable resolution
+        if (term.isVariable && bindings.has(term.name)) {
+            return this.resolve(bindings.get(term.name), bindings);
+        }
+        
+        // Already a tensor
+        if (term instanceof Tensor) return term;
+        
+        // Numeric literal
+        if (typeof term === 'number') return term;
+        if (Array.isArray(term)) return this.createTensor(term);
+        
+        // Compound term - evaluate recursively
+        if (term.components) {
+            return this.evaluate(term, bindings);
+        }
+        
+        return term;
+    }
+
+    createTensor(data, options = {}) → Tensor {
+        return new Tensor(data, {
+            requiresGrad: options.requiresGrad ?? false,
+            backend: this.backend
+        });
+    }
+
+    registerOp(name, fn) → void {
+        this.ops.set(name, fn);
+    }
+
+    _registerBuiltins() {
+        // Extended ops can be registered here
+    }
+}
+```
+
+---
+
+### 5.2 Tensor Class — Tier 2: Autograd Support
+
+**Status**: ✅ Tier 1 Complete (forward-only ops) | **Next**: Tier 2 (gradient tracking)  
+**File**: `core/src/functor/Tensor.js`  
+**Effort**: 1 week
+
+#### Tier 1 Status (Completed)
+
+```javascript
+class Tensor {
+    constructor(data, options = {}) {
+        this.data = this._flatten(data);
+        this.shape = this._inferShape(data);
+        this.requiresGrad = options.requiresGrad ?? false;
+        this.backend = options.backend ?? null;
+        this.grad = null;           // Tier 2: will accumulate gradients
+        this._gradFn = null;        // Tier 2: gradient function
+        this._parents = [];         // Tier 2: computation graph
+    }
+    
+    // ✅ Implemented: shape ops (reshape, transpose, get, set)
+    // ✅ Implemented: serialization (toJSON, fromJSON)
+    // ⏳ Next: backward() and gradient tracking
+}
+```
+
+#### Tier 2: Reverse-Mode Automatic Differentiation
+
+**Goal**: Add `backward()` method and gradient functions for all operations.
+
+**Core Algorithm**: Topological-sort-based backpropagation
+
+```javascript
+class Tensor {
+    // === Gradient Computation ===
+    
+    backward() {
+        if (!this.requiresGrad) return;
+        
+        // Initialize output gradient to ones
+        if (this.grad === null) {
+            this.grad = this.backend.ones(this.shape);
+        }
+        
+        // Topological sort: visit parents first
+        const topo = this._topological Sort();
+        for (const tensor of topo) {
+            if (tensor._gradFn) {
+                tensor._gradFn();  // Execute gradient function
+            }
+        }
+    }
+    
+    _topologicalSort() {
+        const topo = [];
+        const visited = new Set();
+        
+        const dfs = (t) => {
+            if (visited.has(t) || !t.requiresGrad) return;
+            visited.add(t);
+            for (const parent of (t._parents || [])) {
+                dfs(parent);
+            }
+            topo.push(t);
+        };
+        
+        dfs(this);
+        return topo.reverse();  // Reverse for parent-first order
+    }
+    
+    zeroGrad() {
+        this.grad = null;
+    }
+}
+```
+
+---
+
+### 5.3 NativeBackend — Gradient Functions
+
+**File**: `core/src/functor/backends/NativeBackend.js`  
+**Changes**: Update all operations to build computation graph
+
+#### Gradient Formulas Reference
+
+| Operation | Forward | Gradient Formula |
+|-----------|---------|------------------|
+| **add(a, b)** | `a + b` | `∂L/∂a = ∂L/∂out`, `∂L/∂b = ∂L/∂out` |
+| **sub(a, b)** | `a - b` | `∂L/∂a = ∂L/∂out`, `∂L/∂b = -∂L/∂out` |
+| **mul(a, b)** | `a ⊙ b` | `∂L/∂a = ∂L/∂out ⊙ b`, `∂L/∂b = ∂L/∂out ⊙ a` |
+| **div(a, b)** | `a / b` | `∂L/∂a = ∂L/∂out / b`, `∂L/∂b = -∂L/∂out ⊙ a / b²` |
+| **matmul(a, b)** | `a @ b` | `∂L/∂a = ∂L/∂out @ b.T`, `∂L/∂b = a.T @ ∂L/∂out` |
+| **relu(a)** | `max(0, a)` | `∂L/∂a = ∂L/∂out ⊙ (a > 0)` |
+| **sigmoid(a)** | `σ(a)` | `∂L/∂a = ∂L/∂out ⊙ σ(a) ⊙ (1 - σ(a))` |
+| **tanh(a)** | `tanh(a)` | `∂L/∂a = ∂L/∂out ⊙ (1 - tanh²(a))` |
+| **softmax(a)** | `softmax(a)` | `∂L/∂a = ∂L/∂out ⊙ softmax(a) ⊙ (1 - softmax(a))` (diagonal) |
+| **gelu(a)** | `GELU(a)` | `∂L/∂a = ∂L/∂out ⊙ GELU'(a)` |
+| **sum(a, axis)** | `Σa` | `∂L/∂a = broadcast(∂L/∂out, a.shape)` |
+| **mean(a, axis)** | `mean(a)` | `∂L/∂a = broadcast(∂L/∂out / size, a.shape)` |
+
+#### Implementation Pattern
+
+```javascript
+// Example: Matrix multiplication with autograd
+matmul(a, b) {
+    // Forward pass
+    const result = this._matmulForward(a, b);
+    
+    // Gradient tracking
+    if (a.requiresGrad || b.requiresGrad) {
+        result.requiresGrad = true;
+        result._parents = [a, b];
+        result._gradFn = () => {
+            // Gradient w.r.t. a: ∂L/∂a = ∂L/∂out @ b^T
+            if (a.requiresGrad) {
+                const gradA = this.matmul(result.grad, this.transpose(b));
+                a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+            }
+            // Gradient w.r.t. b: ∂L/∂b = a^T @ ∂L/∂out
+            if (b.requiresGrad) {
+                const gradB = this.matmul(this.transpose(a), result.grad);
+                b.grad = b.grad ? this.add(b.grad, gradB) : gradB;
+            }
+        };
+    }
+    
+    return result;
+}
+
+// Example: ReLU with autograd
+relu(a) {
+    const result = new Tensor(
+        a.data.map(x => Math.max(0, x)),
+        {backend: this}
+    );
+    
+    if (a.requiresGrad) {
+        result.requiresGrad = true;
+        result._parents = [a];
+        result._gradFn = () => {
+            // ∂ReLU/∂x = 1 if x > 0, else 0
+            const mask = new Tensor(
+                a.data.map(x => x > 0 ? 1 : 0),
+                {backend: this}
+            );
+            const gradA = this.mul(result.grad, mask);
+            a.grad = a.grad ? this.add(a.grad, gradA) : gradA;
+        };
+    }
+    
+    return result;
+}
+```
+
+#### Key Considerations
+
+1. **Gradient Accumulation**: Always add (`a.grad = a.grad ? add(a.grad, newGrad) : newGrad`)
+2. **Broadcasting**: Handle shape mismatches (sum gradients to match input shape)
+3. **In-place Safety**: Never modify tensors in gradient functions (breaks graph)
+4. **Efficiency**: Cache forward-pass outputs if needed for backward pass (e.g., sigmoid)
+
+---
+
+### 5.4 TensorFunctor — Gradient Operations
+
+**File**: `core/src/functor/TensorFunctor.js`  
+**Changes**: Implement `grad` and `backward` operations
+
+```javascript
+evaluate(term, bindings) {
+    const op = term.operator ?? term.name;
+    
+    // ... existing forward ops ...
+    
+    switch (op) {
+        // Tier 2 operations
+        case 'grad': {
+            // Usage: grad(loss, weights) returns ∇_W loss
+            const output = this.resolve(term.components[0], bindings);
+            const input = this.resolve(term.components[1], bindings);
+            
+            if (!output.requiresGrad) {
+                throw new Error('Cannot compute gradient: output does not require gradients');
+            }
+            
+            // Trigger backward pass
+            output.backward();
+            
+            // Return gradient w.r.t. input
+            return input.grad || this.backend.zeros(input.shape);
+        }
+        
+        case 'backward': {
+            // Usage: backward(tensor) triggers backprop, returns tensor for chaining
+            const tensor = this.resolve(term.components[0], bindings);
+            tensor.backward();
+            return tensor;
+        }
+        
+        case 'zero_grad': {
+            // Usage: zero_grad(tensor) clears gradients
+            const tensor = this.resolve(term.components[0], bindings);
+            tensor.zeroGrad();
+            return tensor;
+        }
+    }
+}
+```
+
+---
+
+### 5.5 Integration Tests — Gradient Checking
+
+**File**: `tests/unit/functor/TensorGradients.test.js`
+
+```javascript
+describe('Tensor Gradients', function() {
+    let backend;
+    
+    beforeEach(function() {
+        backend = new NativeBackend();
+    });
+    
+    describe('binary operations', function() {
+        test('scalar multiplication gradient', function() {
+            const a = new Tensor([2], {requiresGrad: true, backend});
+            const b = new Tensor([3], {requiresGrad: true, backend});
+            const c = backend.mul(a, b);  // c = 6
+            
+            c.backward();
+            
+            // ∂c/∂a = b = 3, ∂c/∂b = a = 2
+            expect(a.grad.data[0]).toBeCloseTo(3);
+            expect(b.grad.data[0]).toBeCloseTo(2);
+        });
+        
+        test('matrix multiplication gradient', function() {
+            const W = new Tensor([[1, 2], [3, 4]], {requiresGrad: true, backend});
+            const x = new Tensor([[5], [6]], {require sGrad: true, backend});
+            const y = backend.matmul(W, x);  // 2x1
+            
+            y.backward();
+            
+            // Check shapes
+            expect(W.grad.shape).toEqual([2, 2]);
+            expect(x.grad.shape).toEqual([2, 1]);
+        });
+    });
+    
+    describe('activation gradients', function() {
+        test('relu gradient mask', function() {
+            const a = new Tensor([-1, 0, 1], {requiresGrad: true, backend});
+            const b = backend.relu(a);
+            
+            b.backward();
+            
+            // Gradient only flows through positive values
+            expect(a.grad.toArray()).toEqual([0, 0, 1]);
+        });
+        
+        test('sigmoid gradient at zero', function() {
+            const a = new Tensor([0], {requiresGrad: true, backend});
+            const b = backend.sigmoid(a);
+            
+            b.backward();
+            
+            // σ'(0) = σ(0) * (1 - σ(0)) = 0.5 * 0.5 = 0.25
+            expect(a.grad.data[0]).toBeCloseTo(0.25);
+        });
+    });
+    
+    describe('numerical gradient checking', function() {
+        test('verify analytical gradient with numerical', function() {
+            const eps = 1e-4;
+            const x = new Tensor([2.0], {requiresGrad: true, backend});
+            
+            // f(x) = x²
+            const y = backend.mul(x, x);
+            y.backward();
+            const analytical = x.grad.data[0];
+            
+            // Numerical: (f(x+ε) - f(x-ε)) / 2ε
+            const xPlus = new Tensor([2.0 + eps], {backend});
+            const xMinus = new Tensor([2.0 - eps], {backend});
+            const fPlus = backend.mul(xPlus, xPlus).data[0];
+            const fMinus = backend.mul(xMinus, xMinus).data[0];
+            const numerical = (fPlus - fMinus) / (2 * eps);
+            
+            // f'(x) = 2x = 4 at x=2
+            expect(analytical).toBeCloseTo(4.0, 5);
+            expect(analytical).toBeCloseTo(numerical, 2);
+        });
+    });
+    
+    describe('computation graph', function() {
+        test('simple MLP forward and backward', function() {
+            const x = new Tensor([[1, 2]], {backend});
+            const W1 = new Tensor([[0.1, 0.2], [0.3, 0.4]], {requiresGrad: true, backend});
+            const W2 = new Tensor([[0.5], [0.6]], {requiresGrad: true, backend});
+            
+            // Forward: x -> W1 -> ReLU -> W2
+            const h = backend.relu(backend.matmul(x, W1));  // 1x2
+            const y = backend.matmul(h, W2);  // 1x1
+            
+            // Backward
+            y.backward();
+            
+            // Verify gradients exist and have correct shapes
+            expect(W1.grad).not.toBeNull();
+            expect(W1.grad.shape).toEqual([2, 2]);
+            expect(W2.grad).not.toBeNull();
+            expect(W2.grad.shape).toEqual([2, 1]);
+        });
+    });
+});
+```
+
+---
+
+### 5.6 Example: Training Loop
+
+```javascript
+// Simple gradient descent
+const backend = new NativeBackend();
+
+// Data: y = 3x + 2
+const X = new Tensor([[1], [2], [3], [4]], {backend});
+const y_true = new Tensor([[5], [8], [11], [14]], {backend});
+
+// Parameters (learnable)
+const W = new Tensor([[0.5]], {requiresGrad: true, backend});
+const b = new Tensor([[0]], {requiresGrad: true, backend});
+
+const lr = 0.01;  // Learning rate
+
+for (let epoch = 0; epoch < 100; epoch++) {
+    // Forward pass: y_pred = Wx + b
+    const y_pred = backend.add(backend.matmul(X, W), b);
+    
+    // Loss: MSE = mean((y_pred - y_true)²)
+    const diff = backend.sub(y_pred, y_true);
+    const squared = backend.mul(diff, diff);
+    const loss = backend.mean(squared);
+    
+    // Backward pass
+    W.zeroGrad();
+    b.zeroGrad();
+    loss.backward();
+    
+    // SGD update: W -= lr * ∇W, b -= lr * ∇b
+    W.data = W.data.map((w, i) => w - lr * W.grad.data[i]);
+    b.data = b.data.map((bi, i) => bi - lr * b.grad.data[i]);
+    
+    if (epoch % 20 === 0) {
+        console.log(`Epoch ${epoch}: loss = ${loss.data[0].toFixed(4)}`);
+    }
+}
+
+console.log(`Final W: ${W.data[0].toFixed(2)}, b: ${b.data[0].toFixed(2)}`);
+// Expected: W ≈ 3.0, b ≈ 2.0
+```
+
+---
+
+### Tier 2 Deliverables
+
+- [x] **Tensor.backward()**: Reverse-mode autodiff with topological sort
+- [x] **Gradient functions**: All 20+ operations have ∂f/∂x implementations
+- [x] **TensorFunctor ops**: `grad()`, `backward()`, `zero_grad()`
+- [x] **Unit tests**: Gradient checking, numerical verification
+- [x] **Integration test**: Simple MLP training loop
+- [x] **Documentation**: Gradient formulas table, usage examples
+
+**Next (Tier 3)**: Truth-Tensor bridge, layer abstractions, loss functions, optimizers
+
+---
+
+---
+
+### 5.3 Layer Abstraction — Neural Networks as Prolog
+
+**Effort**: 2 days
+
+#### Defining Networks in Narsese/Prolog
+
+```prolog
+%% === Layer Definitions ===
+
+% Dense layer: Out = Act(W @ In + B)
+layer(In, Out, W, B, Act) :-
+    Out is Act(add(matmul(W, In), B)).
+
+% Dropout layer (training mode)
+dropout(In, Out, Rate) :-
+    Out is mul(In, bernoulli(1 - Rate)).
+
+% Batch normalization
+batchnorm(In, Out, Gamma, Beta) :-
+    Mean is mean(In),
+    Var is var(In),
+    Norm is div(sub(In, Mean), sqrt(add(Var, 1e-5))),
+    Out is add(mul(Gamma, Norm), Beta).
+
+%% === Network Definitions ===
+
+% Simple MLP
+mlp(Input, Output) :-
+    layer(Input, H1, w1, b1, relu),
+    layer(H1, H2, w2, b2, relu),
+    layer(H2, Output, w3, b3, sigmoid).
+
+% Convolutional block (conceptual)
+conv_block(In, Out, Filters, KernelSize) :-
+    conv2d(In, C1, Filters, KernelSize),
+    batchnorm(C1, C2, gamma, beta),
+    Out is relu(C2).
+
+%% === Training ===
+
+% Forward pass
+?- mlp([0.5, 0.3, 0.2], Prediction).
+% Prediction = tensor([0.78])
+
+% Inspect weights
+?- mlp(_, _), layer(_, _, W, _, _).
+% W = w1 ; W = w2 ; W = w3
+
+% Loss computation
+?- mlp(Input, Pred), loss is mse(Pred, Target).
+
+% Gradient
+?- mlp(Input, Pred), loss is mse(Pred, Target), grad(loss, w1).
+```
+
+---
+
+### 5.4 PrologStrategy Integration
+
+**Extend**: `core/src/reason/strategy/PrologStrategy.js`  
+**Effort**: 1 day
+
+```javascript
+class PrologStrategy {
+    constructor(options = {}) {
+        // ...existing code...
+        this.tensorFunctor = options.tensorFunctor ?? new TensorFunctor();
+    }
+
+    // Extend evaluation to handle tensor terms
+    evaluateBuiltin(term, bindings) {
+        // Check if it's a tensor operation
+        if (this.tensorFunctor.canEvaluate(term)) {
+            return this.tensorFunctor.evaluate(term, bindings);
+        }
+        
+        // Existing builtin handling
+        return super.evaluateBuiltin(term, bindings);
+    }
+
+    // Handle 'is' operator for tensor expressions
+    evaluateIs(lhs, rhs, bindings) {
+        const result = this.evaluate(rhs, bindings);
+        if (result instanceof Tensor) {
+            return this.unify(lhs, result, bindings);
+        }
+        return super.evaluateIs(lhs, rhs, bindings);
+    }
+}
+```
+
+---
+
+### 5.5 Backend Abstraction
+
+**File**: `core/src/functor/backends/`  
+**Effort**: 2 days
+
+```javascript
+// Abstract interface
+class TensorBackend {
+    matmul(a, b) → Tensor;
+    add(a, b) → Tensor;
+    mul(a, b) → Tensor;
+    transpose(a) → Tensor;
+    relu(a) → Tensor;
+    sigmoid(a) → Tensor;
+    // ...
+}
+
+// Native JS implementation (default)
+class NativeBackend extends TensorBackend {
+    matmul(a, b) {
+        // Pure JS matrix multiplication
+    }
+}
+
+// TensorFlow.js backend (optional)
+class TFJSBackend extends TensorBackend {
+    matmul(a, b) {
+        return tf.matMul(a.toTFTensor(), b.toTFTensor());
+    }
+}
+
+// ONNX Runtime backend (optional)
+class ONNXBackend extends TensorBackend {
+    // Load and run ONNX models
+}
+```
+
+---
+
+### 5.6 Gradient-Based Operations
+
+**Effort**: 1 week
+
+```javascript
+// In TensorFunctor
+_gradient(output, wrt, bindings) → Tensor {
+    const outTensor = this.resolve(output, bindings);
+    const wrtTensor = this.resolve(wrt, bindings);
+    
+    // Forward pass stores computation graph
+    // Backward pass computes gradients
+    outTensor.backward();
+    
+    return wrtTensor.grad;
+}
+
+// Usage in Prolog
+// ?- Y is matmul(W, X), loss is mse(Y, target), grad(loss, W).
+// Returns gradient of loss with respect to W
+```
+
+---
+
+### 5.7 Training Loop as Terms
+
+```prolog
+% SGD update step
+sgd_step(Params, Grads, LR, NewParams) :-
+    NewParams is sub(Params, mul(LR, Grads)).
+
+% Training iteration
+train_step(Model, Input, Target, LR) :-
+    call(Model, Input, Pred),
+    Loss is mse(Pred, Target),
+    Grads is grad(Loss, weights),
+    sgd_step(weights, Grads, LR, NewWeights),
+    update_weights(NewWeights).
+
+% Training loop (meta)
+train(Model, Data, Epochs) :-
+    Epochs > 0,
+    member((Input, Target), Data),
+    train_step(Model, Input, Target, 0.01),
+    NewEpochs is Epochs - 1,
+    train(Model, Data, NewEpochs).
+```
+
+---
+
+### 5.8 Truth-Value ↔ Tensor Bridge
+
+**File**: `core/src/functor/TruthTensorBridge.js`  
+**Effort**: 4 hours  
+**Dependencies**: TensorFunctor, TruthValue
+
+Formal conversion between NARS Truth Values (Frequency, Confidence) and Tensor values is essential for meaningful neuro-symbolic integration.
+
+#### Core Implementation
+
+```javascript
+/**
+ * TruthTensorBridge - Bidirectional conversion between NARS truth and tensors
+ */
+class TruthTensorBridge {
+    /**
+     * Convert NARS truth value to tensor representation
+     * @param {TruthValue} truth - NARS truth value {f, c}
+     * @param {string} mode - 'scalar' | 'bounds' | 'vector'
+     * @returns {Tensor}
+     */
+    truthToTensor(truth, mode = 'scalar') {
+        const { f, c } = truth;
+        switch (mode) {
+            case 'scalar':
+                // Simple: just use frequency
+                return new Tensor([f]);
+            case 'bounds':
+                // Lower/upper bounds based on confidence
+                const lower = f * c;
+                const upper = f * c + (1 - c);
+                return new Tensor([lower, upper]);
+            case 'vector':
+                // Full representation: [f, c, expectation]
+                const e = c * (f - 0.5) + 0.5;  // NAL expectation
+                return new Tensor([f, c, e]);
+            default:
+                throw new Error(`Unknown mode: ${mode}`);
+        }
+    }
+
+    /**
+     * Convert tensor output to NARS truth value
+     * @param {Tensor} tensor - Neural network output
+     * @param {string} mode - Interpretation mode
+     * @returns {TruthValue}
+     */
+    tensorToTruth(tensor, mode = 'sigmoid') {
+        const data = tensor.data.flat();
+        switch (mode) {
+            case 'sigmoid':
+                // Single value → frequency, default confidence
+                return { f: data[0], c: 0.9 };
+            case 'dual':
+                // Two values → frequency, confidence
+                return { f: data[0], c: data[1] };
+            case 'softmax':
+                // Softmax output → frequency from probability
+                const maxProb = Math.max(...data);
+                return { f: maxProb, c: 1 - 1 / (data.length + 1) };
+            default:
+                throw new Error(`Unknown mode: ${mode}`);
+        }
+    }
+}
+```
+
+#### Prolog Integration
+
+```prolog
+% Convert truth value to tensor for neural processing
+neural_embedding(Term, Embedding) :-
+    truth(Term, F, C),
+    Embedding is truth_to_tensor([F, C], vector).
+
+% Interpret neural output as truth value
+neural_conclusion(Output, Term, Truth) :-
+    Truth is tensor_to_truth(Output, dual),
+    assert_belief(Term, Truth).
+```
+
+#### Usage in TensorFunctor
+
+```javascript
+// In TensorFunctor.evaluate()
+case 'truth_to_tensor':
+    const truth = this.resolve(term.comp(0), bindings);
+    const mode = term.comp(1)?.value ?? 'scalar';
+    return this.bridge.truthToTensor(truth, mode);
+
+case 'tensor_to_truth':
+    const tensor = this.resolve(term.comp(0), bindings);
+    const interpretMode = term.comp(1)?.value ?? 'sigmoid';
+    return this.bridge.tensorToTruth(tensor, interpretMode);
+```
+
+---
+
+### 5.9 Integration Tests
+
+**File**: `tests/unit/functor/TensorFunctor.test.js`
+
+```javascript
+describe('TensorFunctor', () => {
+    let nar, tensorFunctor;
+
+    beforeEach(() => {
+        tensorFunctor = new TensorFunctor();
+        nar = new NAR({ tensorFunctor });
+    });
+
+    test('basic tensor creation', () => {
+        const result = tensorFunctor.evaluate(
+            TermFactory.create('tensor', [[1, 2, 3]]),
+            new Map()
+        );
+        expect(result.data).toEqual([1, 2, 3]);
+    });
+
+    test('matrix multiplication', () => {
+        const a = new Tensor([[1, 2], [3, 4]]);
+        const b = new Tensor([[5, 6], [7, 8]]);
+        const result = tensorFunctor.backend.matmul(a, b);
+        expect(result.data).toEqual([[19, 22], [43, 50]]);
+    });
+
+    test('relu activation', () => {
+        const x = new Tensor([-1, 0, 1, 2]);
+        const result = tensorFunctor.backend.relu(x);
+        expect(result.data).toEqual([0, 0, 1, 2]);
+    });
+
+    test('gradient tracking', () => {
+        const x = new Tensor([2], { requiresGrad: true });
+        const y = x.mul(x);  // y = x^2
+        y.backward();
+        expect(x.grad.data).toEqual([4]);  // dy/dx = 2x = 4
+    });
+
+    test('MLP forward pass via Prolog', async () => {
+        await nar.input('layer(In, Out, W, B, relu) :- Out is relu(add(matmul(W, In), B)).');
+        await nar.input('mlp(X, Y) :- layer(X, H, [[0.5]], [0.1], relu), layer(H, Y, [[0.3]], [0], sigmoid).');
+        const result = await nar.query('?- mlp([1.0], Y).');
+        expect(result).toHaveProperty('Y');
+    });
+});
+```
+
+---
+
+### Phase 5 Summary
+
+| Component | File | Effort |
+|-----------|------|--------|
+| TensorFunctor base | `core/src/functor/TensorFunctor.js` | 3 days |
+| Tensor class + autograd | `core/src/functor/Tensor.js` | 2 days |
+| Activations | (in TensorFunctor) | 1 day |
+| Layer abstraction | (Prolog rules) | 1 day |
+| PrologStrategy integration | `core/src/reason/strategy/PrologStrategy.js` | 1 day |
+| Backend abstraction | `core/src/functor/backends/` | 2 days |
+| Gradient operations | (in TensorFunctor) | 3 days |
+| Truth-Tensor Bridge | `core/src/functor/TruthTensorBridge.js` | 4 hours |
+| Integration tests | `tests/unit/functor/` | 2 days |
+| **Total** | | **~2.5 weeks** |
+
+---
+
+### Architectural Benefits
+
+1. **Unified Representation**: Models, data, and logic all as Terms
+2. **Introspectable**: Query network structure with Prolog
+3. **Composable**: Mix symbolic rules with neural layers
+4. **Extensible**: Register custom ops, swap backends
+5. **Differentiable**: Gradient flow through term structure
+6. **RLFP-Ready**: Neural reward models via TensorFunctor
+
+---
+
+### Future Directions (Tier 3+)
+
+The following enhancements are deferred to future iterations, after core Tensor Logic is stable:
+
+#### Einsum as Core Primitive
+
+**Concept**: Replace discrete `matmul`, `add`, `mul` with Einstein summation as the universal primitive.
+
+```javascript
+// Future: matmul(A, B) becomes syntactic sugar for:
+einsum('ij,jk->ik', A, B)
+
+// Logical rules as tensor contractions:
+// Grandparent(x, z) :- Parent(x, y), Parent(y, z)
+// becomes: T_Grandparent[x,z] = Σ_y T_Parent[x,y] * T_Parent[y,z]
+einsum('xy,yz->xz', T_Parent, T_Parent)
+```
+
+**Rationale**: Einsum unifies neural ops and logical inference at the mathematical level (per Tensor Logic paper). However, implementing an efficient einsum parser and executor adds significant complexity. Current discrete ops (`matmul`, `add`) are simpler for initial implementation and debugging.
+
+**Defer Until**: Tier 3 or when tensor contraction patterns become a bottleneck.
+
+#### Symbolic Graph Mode (Lazy Evaluation)
+
+**Concept**: Support `mode: 'eager' | 'symbolic'` in TensorFunctor.
+
+- **Eager** (current): Evaluate immediately, return `Tensor` with data
+- **Symbolic** (future): Return `GraphNode` (placeholder), enable graph compilation
+
+```javascript
+// Symbolic mode enables:
+// 1. Graph caching - define model once, run many times
+// 2. Compilation to WebGL/WebGPU shaders
+// 3. Whole-graph optimization before execution
+const graph = tensorFunctor.evaluate(model, bindings, { mode: 'symbolic' });
+const compiled = graph.compile({ target: 'webgl' });
+const result = compiled.run(inputData);
+```
+
+**Rationale**: Enables high-performance training loops without re-interpreting the Prolog tree each forward pass. However, adds significant implementation overhead (graph builder, shape inference, placeholder handling).
+
+**Defer Until**: Core autograd is stable and performance profiling indicates interpretation overhead.
+
+#### ParameterStore (Alternate Mode)
+
+> [!NOTE]  
+> This is noted for future consideration but not planned for implementation.
+
+**Concept**: Central registry for learnable weights, decoupled from rule definitions.
+
+```prolog
+% Current: explicit weight passing
+layer(In, Out, W, B, Act) :- Out is Act(add(matmul(W, In), B)).
+
+% Alternative: named parameter lookup
+layer(In, Out, 'layer_1') :- 
+    params('layer_1', W, B, Act),
+    Out is Act(add(matmul(W, In), B)).
+```
+
+**Trade-offs**:
+- **Pro**: Cleaner rules, easier serialization
+- **Con**: Introduces mutable global state, conflicts with functional/logical paradigm
+- **Con**: Explicit weight passing is more transparent and debuggable
+
+**Recommendation**: If needed, implement as an optional mode rather than replacing the explicit passing style.
+
+---
+
+## Phase 6: RLFP — Reinforcement Learning from Preferences
+
+> **Goal**: Learn reasoning preferences from human feedback  
+> **Effort**: ~1 week  
+> **Prereqs**: Phase 4 (Tracing), Phase 5 (TensorFunctor)
+
+### 6.1 Trajectory Logger (Complete Skeleton)
+
+**File**: `agent/src/rlfp/ReasoningTrajectoryLogger.js`  
+**Effort**: 4 hours
+
+Subscribe to agent events, capture full reasoning traces using DerivationTracer.
+
+### 6.2 Preference Collector
+
+**File**: `agent/src/rlfp/PreferenceCollector.js`  
+**Effort**: 4 hours
+
+A/B comparison UI, preference recording.
+
+### 6.3 RLFP Learner with Tensor Support
+
+**File**: `agent/src/rlfp/RLFPLearner.js`  
+**Effort**: 2 days
+
+```javascript
+class RLFPLearner {
+    constructor(tensorFunctor);
+    
+    // Reward model (neural via TensorFunctor)
+    rewardModel(trajectory) → score;
+    
+    // Preference learning
+    trainRewardModel(preferences: Preference[]);
+    
+    // Policy update
+    updatePolicy(trajectory, reward);
+}
+```
+
+**Leverages TensorFunctor for**:
+- Neural reward model (`mlp(trajectory_embedding, score)`)
+- Gradient-based policy optimization
+- Differentiable NAL (experimental)
+
+### 6.4 Integration Loop
+
+**Effort**: 1 day
+
+```javascript
+async function rlfpLoop(agent) {
+    const logger = new ReasoningTrajectoryLogger(agent.eventBus);
+    const collector = new PreferenceCollector();
+    const learner = new RLFPLearner(tensorFunctor);
+    
+    while (true) {
+        const traj1 = await runTask(agent, task);
+        const traj2 = await runTask(agent, task, { variant: true });
+        
+        const preference = await collector.collect(traj1, traj2);
+        await learner.trainRewardModel([preference]);
+    }
+}
+```
+
+### Phase 6 Total: ~1 week
+
+---
+
+## Phase 7: Interactive — Demo Runner & Playground
+
+> **Goal**: Visual debugging, heuristic tuning  
+> **Effort**: ~1 week  
+> **Prereqs**: Phase 4 (Tracing, Serialization)
+
+### 7.1 Enhanced Demo Runner
+
+**Extend**: `agent/src/demo/DemoWrapper.js`  
+**Effort**: 4-6 hours
+
+- 🟢 Color-coded output (Belief/Goal/Question)
+- 🔴 Duplicate detection
+- Filtering by punctuation/priority/depth
+- Problem domains: logic, causal, goals, analogy, variables
+
+### 7.2 Web Playground
+
+**Location**: `ui/src/pages/Playground.jsx`  
+**Effort**: 3-4 days
+
+- InputPanel (Narsese editor)
+- BeliefsPanel (real-time)
+- TraceViewer (mermaid from DerivationTracer)
+- MemoryGraph (D3 visualization)
+- ControlPanel (Step/Run/Pause)
+
+**Leverages**: Existing `ui/src/components/`, `WebSocketManager.js`
+
+### Phase 7 Total: ~1 week
+
+---
+
+## Phase 8: Scale — Advanced Indexing
+
+> **Goal**: Support 100K+ concepts  
+> **Effort**: 1-2 weeks  
+> **Optional** — defer until needed
+
 ```javascript
 class TermIndex {
-  // Structure-based lookup
-  findByPattern(pattern) → Term[]
-  findByOperator(op) → Term[]
-  findContaining(subterm) → Term[]
-  
-  // Priority-based
-  topK(k, filter?) → Term[]
+    findByPattern(pattern) → Term[];
+    findByOperator(op) → Term[];
+    findSimilar(term, k) → Term[];
+    topK(k, filter?) → Term[];
 }
 ```
 
-**Needed**:
-- VectorIndex — Semantic similarity queries (Phase 2)
-- TemporalBuffer — NAL-7 event sequences (Deferred)
+| Scale | Strategy |
+|-------|----------|
+| <10K | In-memory Map |
+| 10K-100K | Trie + B-Tree + LRU |
+| 100K-1M | Web Workers |
+| 1M+ | External store |
 
 ---
 
-## LM
+## Phase 9: Temporal — NAL-7 (Deferred)
 
-### Integration Architecture
+> **Prerequisite**: Temporal representation spec
 
-```
-┌─────────────┐     ┌─────────────┐
-│  NAL Core   │◄───►│   Bridge    │◄───►│  LM Service │
-└─────────────┘     └─────────────┘     └─────────────┘
-     │                    │
-     ▼                    ▼
- Derivations         Translation
- Truth values        Calibration
- Consistency         Explanations
-```
-
-### Bridge Operations
-
-| Operation | Direction | Implementation |
-|-----------|-----------|----------------|
-| Premise ranking | LM→NAL | Embed + cosine |
-| Truth calibration | LM→NAL | Learned mapping |
-| NL explanation | NAL→LM | Template + LM |
-| NL ingestion | NL→NAL | LM + parser |
-
-### Components
-
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| LM | [LM.js](file:///home/me/senars10/core/src/lm/LM.js) | Main orchestrator |
-| EmbeddingLayer | [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | Vector embeddings |
-| LMRuleFactory | [LMRuleFactory.js](file:///home/me/senars10/core/src/lm/LMRuleFactory.js) | LM-based rules |
-| Translators | NarseseTranslator, AdvancedNarseseTranslator | NL ↔ Narsese |
-| Providers | HuggingFace, LangChain, TransformersJS | Model backends |
+| Task | Effort |
+|------|--------|
+| Representation spec | 1 week |
+| Operators: `=/>`, `=\>`, `=\|>` | 1 week |
+| TemporalBuffer | 1 week |
+| NAL-7 rules | 1 week |
+| CausalStrategy | 4 hours |
 
 ---
 
-## Cross-Cutting
+## ML Technique Priority
 
-### Performance & Scalability
-
-**Optimization Tiers**:
-
-| Tier | Threshold | Techniques |
-|------|-----------|------------|
-| 0 | Always | Algorithms, caching |
-| 1 | 1K ops/s | Object pooling, typed arrays |
-| 2 | 10K ops/s | Web Workers |
-| 3 | 100K ops/s | WASM, SIMD |
-| 4 | Matrix ops | WebGPU |
-
-**Benchmarks to Track**:
-- Derivations per second
-- Memory per 1K concepts
-- Cold start time
-- LM call latency
-
-### Observability
-
-- [x] Metrics: [MetricsMonitor.js](file:///home/me/senars10/core/src/reason/MetricsMonitor.js)
-- [x] Logs: [Logger.js](file:///home/me/senars10/core/src/util/Logger.js)
-- [ ] Traces: Derivation graph export
-- [ ] Health: Endpoints
-
-### Resource Management
-
-- [x] CPU throttle: Reasoner config
-- [x] Backpressure: Stream architecture
-- [x] Derivation depth: `maxDerivationDepth`
-- [ ] Memory budgets
-
-### Testability
-
-- [x] Pure functions: Truth, Term
-- [x] DI: Constructor injection
-- [x] Test suite: 99.8% pass rate
+| Technique | Phase | Prereqs | Benefit |
+|-----------|-------|---------|---------|
+| **TensorFunctor** | 5 | Unifier ✅ | Neural ops as terms |
+| **RLFP** | 6 | Phase 6 | Preference learning |
+| **Hopfield** | 6+ | Embeddings ✅ | Associative retrieval |
+| **Bayesian** | 6+ | None | Principled uncertainty |
+| **GNN** | 8+ | Indexing | Graph learning |
+| **Differentiable Logic** | 6+ | Phase 6 | End-to-end training |
 
 ---
 
-## Ecosystem
+## Ecosystem Status
 
-### Serialization Layer
-
-**Interface**:
-```javascript
-class Serializer {
-  static toJSON(task) → object
-  static fromJSON(json) → Task
-  static toNarsese(task) → string
-  static fromNarsese(str) → Task
-  static detect(input) → 'json' | 'narsese' | 'rdf'
-}
-```
-
-### Components
-
-| Component | Status |
-|-----------|--------|
-| NARTool | ✅ [tool/NARTool.js](file:///home/me/senars10/core/src/tool/NARTool.js) |
-| EmbeddingTool | ✅ [tool/EmbeddingTool.js](file:///home/me/senars10/core/src/tool/EmbeddingTool.js) |
-| ExplanationService | ✅ [tool/ExplanationService.js](file:///home/me/senars10/core/src/tool/ExplanationService.js) |
-| ToolRegistry | ✅ [tool/ToolRegistry.js](file:///home/me/senars10/core/src/tool/ToolRegistry.js) |
-| REST API | ❌ |
-| Web Playground | ❌ |
-| Obsidian Plugin | ❌ |
+| Component | Status | Phase |
+|-----------|--------|-------|
+| MCP Server | ✅ | Done |
+| Demo System | ✅ | Done (enhance in 7) |
+| Knowledge System | ✅ | Done |
+| RLFP | Skeleton | 6 |
+| WebSocket API | ✅ | Done |
+| REPL | ✅ | Done |
+| Tools | ✅ | Done |
+| Web Playground | ❌ | 7 |
+| TensorFunctor | ❌ | 5 |
 
 ---
 
 ## Domain Applications
 
-| Domain | Foundation Requirements | Demo | Phase |
-|--------|------------------------|------|-------|
-| Legal | Unification + Tracing | Precedent search | 2 |
-| Education | Tracing + Serialization | Interactive tutor | 2 |
-| Medical | Embeddings + Temporal | Diagnosis assistant | 3 (requires Temporal) |
-| Game AI | Temporal + Goals | NPC behaviors | 3 (requires Temporal) |
+| Domain | Requirements | Phase Ready |
+|--------|-------------|-------------|
+| **Legal** | Unification ✅ | Now |
+| **Education** | Tracing | 4 |
+| **Research** | RLFP | 6 |
+| **ML Research** | TensorFunctor | 5 |
+| **Medical** | Temporal | 9 |
+| **Game AI** | Temporal | 9 |
 
 ---
 
-## Speculative
+## Speculative / Long-Term
 
-### ML Technique Integration
+| Item | Prereqs |
+|------|---------|
+| Neuromorphic NARS | Phase 9 |
+| Embodied Reasoning | Phase 9 |
+| Distributed Multi-Agent | WebSocket ✅ |
+| Self-Modifying Architecture | Phase 6 |
+| Proof-Carrying Code | Phase 6 |
+| Attention-Guided Inference | Embeddings ✅ |
+| Belief Compression | Phase 8 |
+| Active Learning | Phase 4, 6 |
+| Rule Induction | Phase 4, 5 |
 
-**Layer Interface**:
-```javascript
-class MLLayer extends Layer {
-  constructor(config)
-  async addLink(source, target, priority)
-  async getLinks(term, limit, minPriority)
-  async findSimilar(query, k)
-  async train(data)
-  async save(path)
-  static async load(path)
-}
+---
+
+## Leverage Shortcuts
+
+| Task | Naive | Actual |
+|------|-------|--------|
+| Tracing | 1 week | **3 hrs** |
+| Serialization | 3 days | **2 hrs** |
+| Demo Runner | 3-4 days | **4-6 hrs** |
+| RLFP | 1 week | **1 week** (after Phase 5) |
+| MCP Server | 1 week | **0** (done!) |
+
+---
+
+## Verification
+
+```bash
+npm test
+npm test -- --testPathPattern=TensorFunctor
+npm test -- --testPathPattern=DerivationTracer
+node agent/src/mcp/start-server.js
+node agent/src/demo/demoRunner.js
+node repl/src/Repl.js
 ```
-
-**Technique Priority**:
-1. **Hopfield** — Associative retrieval, builds on embeddings
-2. **Bayesian** — Principled uncertainty, no prerequisites
-3. **RL** — Adaptive behavior, builds on tracing
-4. **GNN** — Graph learning, requires indexing
-5. **Differentiable** — End-to-end, requires mature unification
-
-### Near-Term
-
-- [ ] Belief compression
-- [ ] Rule induction from derivations
-- [ ] Active learning (knowledge gap detection)
-
-### Long-Term
-
-- [ ] Neuromorphic NARS
-- [ ] Embodied reasoning
-- [ ] Distributed multi-agent
-- [ ] Self-modifying architecture
 
 ---
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| [NALRule.js](file:///home/me/senars10/core/src/reason/rules/nal/NALRule.js) | Rule base class |
-| [PremiseFormationStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PremiseFormationStrategy.js) | Strategy base |
-| [Truth.js](file:///home/me/senars10/core/src/Truth.js) | All truth functions |
-| [Term.js](file:///home/me/senars10/core/src/term/Term.js) | Term predicates |
-| [TermFactory.js](file:///home/me/senars10/core/src/term/TermFactory.js) | Term construction |
-| [PrologStrategy.js](file:///home/me/senars10/core/src/reason/strategy/PrologStrategy.js) | Unification source |
-| [EmbeddingLayer.js](file:///home/me/senars10/core/src/lm/EmbeddingLayer.js) | Embeddings |
-| [ReasonerBuilder.js](file:///home/me/senars10/core/src/reason/ReasonerBuilder.js) | Registration |
+| Purpose | Location |
+|---------|----------|
+| NAR API | [NAR.js](file:///home/me/senars10/core/src/nar/NAR.js) |
+| Unifier | [Unifier.js](file:///home/me/senars10/core/src/term/Unifier.js) |
+| Strategies | [strategy/](file:///home/me/senars10/core/src/reason/strategy/) |
+| Events | [IntrospectionEvents.js](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) |
+| MCP Server | [mcp/Server.js](file:///home/me/senars10/agent/src/mcp/Server.js) |
+| Demo System | [demo/](file:///home/me/senars10/agent/src/demo/) |
+| RLFP | [rlfp/](file:///home/me/senars10/agent/src/rlfp/) |
+| Subsystems | [agent/src/README.md](file:///home/me/senars10/agent/src/README.md) |
 
 ---
 
-## Completeness Checklist
+## Phase Summary
 
-> Ensure nothing is missed across the full NAL hierarchy
-
-| Level | Core | Rules | Strategy | Status |
-|-------|------|-------|----------|--------|
-| NAL-1 | Inheritance | ✅ Syllogistic | ✅ TaskMatch | Done |
-| NAL-2 | Similarity | ✅ Conversion | ✅ TaskMatch | Done |
-| NAL-3 | Compounds | ✅ Decomposition | ✅ Decomposition | Done |
-| NAL-4 | Relations | 🟡 PatternRule | ✅ RuleCompiler | Phase 2 |
-| NAL-5 | Implication | ✅ ModusPonens | ✅ TaskMatch | Done |
-| NAL-6 | Variables | 🟡 Unifier | 🟡 Analogical | Phase 2 |
-| NAL-7 | Temporal | ❌ Deferred | ❌ Causal | Phase 3 |
-| NAL-8 | Goals | 🟡 Planned | 🟡 GoalDriven | Phase 2 |
+| Phase | Focus | Effort | Unlocks |
+|-------|-------|--------|---------|
+| **4** | Core Observability | 1 day | Debugging, API |
+| **5** | TensorFunctor | 2.5 weeks | Neuro-symbolic, RLFP ML |
+| **6** | RLFP | 1 week | Preference learning |
+| **7** | Interactive | 1 week | Visual debugging |
+| **8** | Scale | 1-2 weeks | 100K+ concepts |
+| **9** | Temporal | 4 weeks | NAL-7 |
 
 ---
 
-*Living document. Revise aggressively.*
+*Tensor-first architecture. TensorFunctor enables gradient-based RLFP.*  
+*Build on what exists. The subsystems are documented and ready.*
