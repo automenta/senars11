@@ -1,6 +1,3 @@
-/**
- * N-dimensional array with optional gradient tracking (Tier 2)
- */
 export class Tensor {
     constructor(data, options = {}) {
         this.data = this._flatten(data);
@@ -12,10 +9,8 @@ export class Tensor {
         this._parents = [];
     }
 
-
     _inferShape(data) {
-        if (typeof data === 'number') return [1];
-        if (!Array.isArray(data)) return [1];
+        if (typeof data === 'number' || !Array.isArray(data)) return [1];
 
         const shape = [];
         let current = data;
@@ -27,17 +22,12 @@ export class Tensor {
     }
 
     _flatten(data) {
-        if (typeof data === 'number') return [data];
-        if (!Array.isArray(data)) return [data];
+        if (typeof data === 'number' || !Array.isArray(data)) return [data];
 
         const result = [];
         const flatten = (arr) => {
             for (const item of arr) {
-                if (Array.isArray(item)) {
-                    flatten(item);
-                } else {
-                    result.push(Number(item));
-                }
+                Array.isArray(item) ? flatten(item) : result.push(Number(item));
             }
         };
         flatten(data);
@@ -57,7 +47,6 @@ export class Tensor {
         return result;
     }
 
-
     get ndim() {
         return this.shape.length;
     }
@@ -65,7 +54,6 @@ export class Tensor {
     get size() {
         return this.shape.reduce((a, b) => a * b, 1);
     }
-
 
     reshape(newShape) {
         const newSize = newShape.reduce((a, b) => a * b, 1);
@@ -82,15 +70,10 @@ export class Tensor {
     }
 
     transpose(axes) {
-        if (!axes) {
-            if (this.ndim === 2) {
-                axes = [1, 0];
-            } else {
-                axes = Array.from({ length: this.ndim }, (_, i) => this.ndim - 1 - i);
-            }
-        }
+        axes = axes ?? (this.ndim === 2
+            ? [1, 0]
+            : Array.from({ length: this.ndim }, (_, i) => this.ndim - 1 - i));
 
-        // Validate axes
         if (axes.length !== this.ndim) {
             throw new Error(`Transpose axes must match ndim ${this.ndim}`);
         }
@@ -98,13 +81,11 @@ export class Tensor {
         const newShape = axes.map(i => this.shape[i]);
         const newData = new Array(this.size);
 
-        // Compute strides for old and new layout
         const oldStrides = this._computeStrides(this.shape);
         const newStrides = this._computeStrides(newShape);
 
         for (let newIdx = 0; newIdx < this.size; newIdx++) {
             const newCoords = this._indexToCoords(newIdx, newStrides);
-            // Map new coordinates to old coordinates: oldCoords[axes[i]] = newCoords[i]
             const oldCoords = new Array(this.ndim);
             for (let i = 0; i < this.ndim; i++) {
                 oldCoords[axes[i]] = newCoords[i];
@@ -141,7 +122,6 @@ export class Tensor {
         return coords.reduce((sum, coord, i) => sum + coord * strides[i], 0);
     }
 
-
     toJSON() {
         return {
             data: this._unflatten(this.data, this.shape),
@@ -156,7 +136,6 @@ export class Tensor {
         });
     }
 
-
     toArray() {
         return this._unflatten(this.data, this.shape);
     }
@@ -164,7 +143,6 @@ export class Tensor {
     toString() {
         return `Tensor(shape=${this.shape.join('x')}, data=${JSON.stringify(this.toArray())})`;
     }
-
 
     get(indices) {
         if (!Array.isArray(indices)) indices = [indices];
@@ -179,9 +157,6 @@ export class Tensor {
         const index = this._coordsToIndex(indices, strides);
         this.data[index] = value;
     }
-
-
-    // === Autograd (Tier 2) ===
 
     backward() {
         if (!this.requiresGrad) return;
@@ -215,4 +190,3 @@ export class Tensor {
         this._parents?.forEach(parent => parent.zeroGrad?.());
     }
 }
-

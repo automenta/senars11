@@ -4,9 +4,6 @@ import { TruthTensorBridge } from './TruthTensorBridge.js';
 import { LossFunctor } from './LossFunctor.js';
 import { SGDOptimizer, AdamOptimizer } from './Optimizer.js';
 
-/**
- * Evaluates tensor operations as Prolog terms
- */
 export class TensorFunctor {
     constructor(backend = null) {
         this.backend = backend || new NativeBackend();
@@ -91,7 +88,6 @@ export class TensorFunctor {
                 return tensor;
             }
 
-            // Tier 3: Truth-Tensor Bridge
             case 'truth_to_tensor': {
                 const truth = this.resolve(term.components[0], bindings);
                 const mode = term.components[1] ? this.resolve(term.components[1], bindings)?.value || this.resolve(term.components[1], bindings) : 'scalar';
@@ -104,7 +100,6 @@ export class TensorFunctor {
                 return this.bridge.tensorToTruth(tensor, mode);
             }
 
-            // Tier 3: Loss Functions
             case 'mse': {
                 const pred = this.resolve(term.components[0], bindings);
                 const target = this.resolve(term.components[1], bindings);
@@ -131,7 +126,6 @@ export class TensorFunctor {
                 return this.loss.crossEntropy(pred, target, eps);
             }
 
-            // Tier 3: Optimizer Steps
             case 'sgd_step': {
                 const param = this.resolve(term.components[0], bindings);
                 const lr = this.resolve(term.components[1], bindings);

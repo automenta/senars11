@@ -142,6 +142,7 @@ through dynamic sampling strategies and configurable reasoning approaches:
 | **Core NAR** | `core/src/nar/NAR.js` | Main reasoning API |
 | **Strategies** | `core/src/reason/strategy/` | Premise selection algorithms |
 | **Rules** | `core/src/reason/rules/nal/` | NAL inference rules |
+| **Tensor Logic** | `core/src/functor/` | Neural-symbolic AI with differentiable tensors |
 | **LM Integration** | `core/src/lm/` | Language model providers, embeddings |
 | **MCP Server** | `agent/src/mcp/` | AI assistant integration |
 | **Demo System** | `agent/src/demo/` | Remote-controlled demos |
@@ -573,6 +574,40 @@ The RLFP system operates through three functional layers:
 
 The RLFP framework enables SeNARS to develop increasingly effective and trustworthy reasoning patterns through
 continuous learning from human preferences.
+
+---
+
+## Tensor Logic: Neural-Symbolic AI Foundation
+
+SeNARS integrates **Tensor Logic** (Domingos, 2024) - a unified mathematical framework that treats neural operations and logical reasoning as the same fundamental process using tensor mathematics. This enables true neural-symbolic integration with differentiable reasoning.
+
+**Core Capabilities:**
+
+- **Differentiable Tensors**: N-dimensional arrays with automatic differentiation (autograd)
+- **Neural Networks in Prolog**: Express deep learning architectures as logical predicates
+- **Truth-Tensor Bridge**: Seamless conversion between symbolic truth values and continuous representations
+- **End-to-End Learning**: Gradient descent with MSE, cross-entropy, SGD, Adam, RMSprop
+- **Hybrid Reasoning**: Symbolic logic and neural computation in the same framework
+
+**Quick Example:**
+
+```prolog
+% Define a neural network in Prolog
+network(Input, Output) :-
+    H is relu(add(matmul(w1, Input), b1)),
+    Output is sigmoid(add(matmul(w2, H), b2)).
+
+% Train with gradient descent
+train(Input, Target) :-
+    network(Input, Pred),
+    Loss is mse(Pred, Target),
+    backward(Loss),
+    W1_new is adam_step(w1, 0.01).
+```
+
+**Implementation Status**: ✅ Complete (910 lines, 690+ tests passing)
+
+See [`core/src/functor/README.md`](core/src/functor/README.md) for full documentation and examples.
 
 ---
 
