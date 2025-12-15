@@ -21,106 +21,55 @@ export class PrologStrategy extends Strategy {
         this.prologParser = new PrologParser(config.termFactory || new TermFactory());
         this.termFactory = this.prologParser.termFactory;
         this.unifier = new Unifier(this.termFactory);
-        this.goalStack = []; // For backtracking
-        this.knowledgeBase = new Map(); // Store facts and rules for resolution
-        this.substitutionStack = []; // Track variable bindings during resolution
-        this.variableCounter = 0; // For generating unique variable names
-
-        // Functor registry for extensible operations
+        this.goalStack = [];
+        this.knowledgeBase = new Map();
+        this.substitutionStack = [];
+        this.variableCounter = 0;
         this.functorRegistry = config.functorRegistry ?? new FunctorRegistry();
         this._registerPrologOperatorAliases();
-
-        // Configuration for Prolog-style reasoning
-        this.config = {
-            maxDepth: 10,
-            maxSolutions: 5,
-            backtrackingEnabled: true,
-            ...config
-        };
+        this.config = { maxDepth: 10, maxSolutions: 5, backtrackingEnabled: true, ...config };
     }
 
-    /**
-     * Register Prolog-specific operator aliases
-     * Maps symbolic operators (+, -, *, /, >, <, etc.) to functor registry
-     * @private
-     */
     _registerPrologOperatorAliases() {
-        // Comparison operators
-        this.functorRegistry.registerFunctorDynamic('>', (a, b) => Number(a) > Number(b), {
-            arity: 2,
-            category: 'comparison',
-            description: 'Greater than'
-        });
+        const ops = [
+            ['>', (a, b) => Number(a) > Number(b), 'Greater than'],
+            ['<', (a, b) => Number(a) < Number(b), 'Less than'],
+            ['>=', (a, b) => Number(a) >= Number(b), 'Greater than or equal', ['=<']],
+            ['<=', (a, b) => Number(a) <= Number(b), 'Less than or equal'],
+            ['=', (a, b) => a === b, 'Equality', ['=:=']],
+            ['\\=', (a, b) => a !== b, 'Inequality', ['=\\=']]
+        ];
 
-        this.functorRegistry.registerFunctorDynamic('<', (a, b) => Number(a) < Number(b), {
-            arity: 2,
-            category: 'comparison',
-            description: 'Less than'
-        });
+        ops.forEach(([op, fn, desc, aliases]) =>
+            this.functorRegistry.registerFunctorDynamic(op, fn, {
+                arity: 2,
+                category: 'comparison',
+                description: desc,
+                ...(aliases && { aliases })
+            })
+        );
 
-        this.functorRegistry.registerFunctorDynamic('>=', (a, b) => Number(a) >= Number(b), {
-            arity: 2,
-            category: 'comparison',
-            description: 'Greater than or equal',
-            aliases: ['=<']  // Prolog uses =< for >=
-        });
+        const arith = [
+            ['+', (a, b) => Number(a) + Number(b), 'Addition'],
+            ['-', (a, b) => Number(a) - Number(b), 'Subtraction'],
+            ['*', (a, b) => Number(a) * Number(b), 'Multiplication'],
+            ['/', (a, b) => Number(a) / Number(b), 'Division']
+        ];
 
-        this.functorRegistry.registerFunctorDynamic('<=', (a, b) => Number(a) <= Number(b), {
-            arity: 2,
-            category: 'comparison',
-            description: 'Less than or equal'
-        });
-
-        this.functorRegistry.registerFunctorDynamic('=', (a, b) => a === b, {
-            arity: 2,
-            category: 'comparison',
-            description: 'Equality',
-            aliases: ['=:=']
-        });
-
-        this.functorRegistry.registerFunctorDynamic('\\=', (a, b) => a !== b, {
-            arity: 2,
-            category: 'comparison',
-            description: 'Inequality',
-            aliases: ['=\\=']
-        });
-
-        // Arithmetic operators (symbolic forms)
-        this.functorRegistry.registerFunctorDynamic('+', (a, b) => Number(a) + Number(b), {
-            arity: 2,
-            category: 'arithmetic',
-            description: 'Addition'
-        });
-
-        this.functorRegistry.registerFunctorDynamic('-', (a, b) => Number(a) - Number(b), {
-            arity: 2,
-            category: 'arithmetic',
-            description: 'Subtraction'
-        });
-
-        this.functorRegistry.registerFunctorDynamic('*', (a, b) => Number(a) * Number(b), {
-            arity: 2,
-            category: 'arithmetic',
-            description: 'Multiplication'
-        });
-
-        this.functorRegistry.registerFunctorDynamic('/', (a, b) => Number(a) / Number(b), {
-            arity: 2,
-            category: 'arithmetic',
-            description: 'Division'
-        });
+        arith.forEach(([op, fn, desc]) =>
+            this.functorRegistry.registerFunctorDynamic(op, fn, {
+                arity: 2,
+                category: 'arithmetic',
+                description: desc
+            })
+        );
     }
 
-    /**
-     * Override the parent method to implement Prolog-style goal-driven reasoning
-     */
     async selectSecondaryPremises(primaryPremise) {
-        if (!isQuestion(primaryPremise)) {
-            return super.selectSecondaryPremises(primaryPremise);
-        }
+        if (!isQuestion(primaryPremise)) return super.selectSecondaryPremises(primaryPremise);
 
         try {
-            this.memory && this.updateKnowledgeBase(this._getAvailableTasks());
+            this.memory?.updateKnowledgeBase?.(this._getAvailableTasks());
             const results = await this._resolveGoal(primaryPremise);
             return results.map(r => r.task);
         } catch (error) {
@@ -129,11 +78,6 @@ export class PrologStrategy extends Strategy {
         }
     }
 
-    /**
-     * Resolve a goal using Prolog-style backward chaining
-     * Returns array of {substitution, task}
-     * @private
-     */
     async _resolveGoal(goalTask, currentDepth = 0, substitution = {}) {
         if (currentDepth >= this.config.maxDepth) return [];
 
@@ -252,10 +196,6 @@ export class PrologStrategy extends Strategy {
         throw new Error("Cannot evaluate term: " + term.toString());
     }
 
-    /**
-     * Standardize variables in a rule to ensure they are unique for this instantiation
-     * @private
-     */
     _standardizeRuleVariables(rule) {
         const mapping = {};
         const suffix = `_${this.variableCounter++}`;
@@ -283,11 +223,6 @@ export class PrologStrategy extends Strategy {
         };
     }
 
-    /**
-     * Resolve the body of a rule (a conjunction of goals)
-     * Returns array of substitutions
-     * @private
-     */
     async _resolveRuleBody(goals, initialSubstitution, currentDepth) {
         if (goals.length === 0) return [initialSubstitution];
 
@@ -313,19 +248,11 @@ export class PrologStrategy extends Strategy {
         return allSolutions;
     }
 
-    /**
-     * Find applicable rules/facts that could match the goal
-     * @private
-     */
     _findApplicableRules(goal) {
         const goalPredicate = this._getPredicateName(goal.term);
         return this.knowledgeBase.get(goalPredicate) || [];
     }
 
-    /**
-     * Get the predicate name from a term
-     * @private
-     */
     _getPredicateName(term) {
         return term?.getPredicate?.()?.toString()
             ?? term?.term?.getPredicate?.()?.toString()
@@ -337,10 +264,6 @@ export class PrologStrategy extends Strategy {
 
 
 
-    /**
-     * Apply substitution to a task
-     * @private
-     */
     _applySubstitutionToTask(task, substitution) {
         if (!task || !substitution) return task;
 
@@ -352,10 +275,6 @@ export class PrologStrategy extends Strategy {
         });
     }
 
-    /**
-     * Create a task from a term
-     * @private
-     */
     _createTaskFromTerm(term, punctuation = '?', truth = null) {
         return new Task({
             term: term,
@@ -365,10 +284,6 @@ export class PrologStrategy extends Strategy {
         });
     }
 
-    /**
-     * Update the knowledge base with new facts/rules from memory
-     * @public
-     */
     updateKnowledgeBase(tasks) {
         for (const task of tasks) {
             if (task.punctuation !== '.') continue;
@@ -396,10 +311,6 @@ export class PrologStrategy extends Strategy {
         }
     }
 
-    /**
-     * Add a Prolog rule to the knowledge base
-     * @public
-     */
     addPrologRule(prologRuleString) {
         try {
             this.updateKnowledgeBase(this.prologParser.parseProlog(prologRuleString));
@@ -408,18 +319,10 @@ export class PrologStrategy extends Strategy {
         }
     }
 
-    /**
-     * Parse and add Prolog facts to the knowledge base
-     * @public
-     */
     addPrologFacts(prologFactsString) {
         this.addPrologRule(prologFactsString);
     }
 
-    /**
-     * Get strategy status information
-     * @public
-     */
     getStatus() {
         return {
             ...super.getStatus(),
@@ -431,14 +334,6 @@ export class PrologStrategy extends Strategy {
         };
     }
 
-    /**
-     * Register a custom functor for runtime extension
-     * @public
-     * @param {string} name - Functor name
-     * @param {Function} fn - Functor function
-     * @param {object} properties - Functor properties (arity, etc.)
-     * @returns {PrologStrategy} - For chaining
-     */
     registerFunctor(name, fn, properties = {}) {
         this.functorRegistry.registerFunctorDynamic(name, fn, properties);
         return this;
