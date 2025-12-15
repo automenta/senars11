@@ -181,6 +181,14 @@ export class ReasonerBuilder {
                  parser: dependencies.parser
              });
              ruleExecutor.register(elaborationRule);
+
+             const {createAnalogicalReasoningRule} = await import('./rules/lm/LMAnalogicalReasoningRule.js');
+             const analogyRule = createAnalogicalReasoningRule({
+                 lm: dependencies.lm,
+                 memory: dependencies.memory,
+                 embeddingLayer: dependencies.embeddingLayer
+             });
+             ruleExecutor.register(analogyRule);
         }
     }
 }
