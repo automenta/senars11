@@ -56,6 +56,11 @@ export class TestNAR {
         return this;
     }
 
+    inspect(callback) {
+        this.operations.push({ type: 'inspect', callback });
+        return this;
+    }
+
     // Provide convenience methods for consistent API
     expectWithPunct(termStr, punct) {
         return this.expect(new TaskMatch(termStr).withPunctuation(punct));
@@ -135,6 +140,11 @@ export class TestNAR {
                     case 'expect':
                         expectations.push(op);
                         break;
+
+                    case 'inspect':
+                        // Store inspection callbacks to be executed later
+                        // We don't execute them here because we want to run them after all reasoning cycles
+                        break;
                 }
             }
 
@@ -188,6 +198,17 @@ export class TestNAR {
             }
 
             allTasks = uniqueTasks;
+
+            // Execute inspection callbacks
+            for (const op of this.operations) {
+                if (op.type === 'inspect' && typeof op.callback === 'function') {
+                    try {
+                        await op.callback(this.nar, allTasks);
+                    } catch (error) {
+                        throw new Error(`Inspection failed: ${error.message}`);
+                    }
+                }
+            }
 
             // Validate expectations
             for (const exp of expectations) {

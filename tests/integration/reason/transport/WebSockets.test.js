@@ -1,10 +1,3 @@
-/**
- * @file WebSockets.test.js
- * @description Unit tests for WebSocket pathway using TestNARRemote
- *              Verifies that WebSocket communication pathway produces identical results
- *              to direct reasoner tests, ensuring UI/REPL functionality is preserved.
- */
-
 import { TestNAR } from '../../../../core/src/testing/TestNAR.js';
 import { TestNARRemote } from '../../../../core/src/testing/TestNARRemote.js';
 import { RemoteTaskMatch } from '../../../../core/src/testing/TaskMatch.js';
@@ -12,8 +5,6 @@ import { RemoteTaskMatch } from '../../../../core/src/testing/TaskMatch.js';
 describe('WebSocket Pathway Tests', () => {
     // Basic inheritance chain verification
     test('Basic inheritance chain via WebSocket - should match repl:test behavior', async () => {
-        // This test replicates the exact same logic as repl:test default case
-        // Input: <a ==> b> and <b ==> c>, expect derivation of <a ==> c>
         await new TestNARRemote()
             .input('<a ==> b>', 1.0, 0.9)
             .input('<b ==> c>', 1.0, 0.9)
@@ -23,7 +14,6 @@ describe('WebSocket Pathway Tests', () => {
     }, 30000); // Increased timeout for WS
 
     test('Continuous execution via *run command', async () => {
-        // Verifies that the continuous execution loop works without locking up
         await new TestNARRemote()
             .command('*run') // Start running continuously
             .input('<cat ==> animal>', 1.0, 0.9)
@@ -34,7 +24,6 @@ describe('WebSocket Pathway Tests', () => {
     }, 30000);
 
     test('Virtual UI Verification - Graph and Console', async () => {
-        // Verifies that the headless UI components (VirtualGraph, VirtualConsole) are populated correctly
         await new TestNARRemote()
             .input('<cat ==> animal>', 1.0, 0.9)
             .command('<dog ==> animal>.', 'narsese') // Test command/input method

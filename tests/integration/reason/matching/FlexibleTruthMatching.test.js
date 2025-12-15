@@ -9,7 +9,7 @@ describe('Flexible Truth Matching Tests', () => {
             .run(1)
             .expect(
                 new TaskMatch('b')
-                    .withFlexibleTruth(0.72, 0.65, 0.05) // freq=0.72±0.05, conf=0.65±0.05
+                    .withFlexibleTruth(0.72, 0.65, 0.05)
             )
             .execute();
 

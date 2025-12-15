@@ -1,7 +1,5 @@
 /**
  * Basic syllogism tests using the new TestNAR framework.
- * Adapted from v9 implementation.
- * Updated to use flexible truth matching for better resilience to implementation changes.
  */
 
 import { TaskMatch, TestNAR } from '../../../../core/src/testing/TestNAR.js';
@@ -11,8 +9,8 @@ describe('Syllogistic Reasoning Tests', () => {
         const result = await new TestNAR()
             .input('(a ==> b)', 0.9, 0.9)
             .input('(b ==> c)', 0.8, 0.8)
-            .run(1) // Reduced cycles - syllogism should derive quickly
-            .expect(new TaskMatch('(a ==> c)').withFlexibleTruth(0.71, 0.51, 0.25)) // Original expected: 0.71,0.51 with wider tolerance for algorithm changes
+            .run(1)
+            .expect(new TaskMatch('(a ==> c)').withFlexibleTruth(0.71, 0.51, 0.25))
             .expectNot('(c ==> a)')
             .execute();
 
