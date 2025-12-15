@@ -1,5 +1,8 @@
 import { Tensor } from './Tensor.js';
 import { NativeBackend } from './backends/NativeBackend.js';
+import { TruthTensorBridge } from './TruthTensorBridge.js';
+import { LossFunctor } from './LossFunctor.js';
+import { SGDOptimizer, AdamOptimizer } from './Optimizer.js';
 
 /**
  * Evaluates tensor operations as Prolog terms
@@ -7,6 +10,8 @@ import { NativeBackend } from './backends/NativeBackend.js';
 export class TensorFunctor {
     constructor(backend = null) {
         this.backend = backend || new NativeBackend();
+        this.bridge = new TruthTensorBridge(this.backend);
+        this.loss = new LossFunctor(this.backend);
         this.ops = new Map();
         this._registerBuiltins();
     }
@@ -39,7 +44,8 @@ export class TensorFunctor {
             case 'reshape': {
                 const tensor = this.resolve(term.components[0], bindings);
                 const shape = this.resolve(term.components[1], bindings);
-                return this.backend.reshape(tensor, Array.isArray(shape) ? shape : shape.toArray?.() ?? [shape]);
+                const normalizedShape = Array.isArray(shape) ? shape : (shape.toArray?.() ?? [shape]);
+                return this.backend.reshape(tensor, normalizedShape);
             }
 
             case 'softmax': {
@@ -85,6 +91,76 @@ export class TensorFunctor {
                 return tensor;
             }
 
+            // Tier 3: Truth-Tensor Bridge
+            case 'truth_to_tensor': {
+                const truth = this.resolve(term.components[0], bindings);
+                const mode = term.components[1] ? this.resolve(term.components[1], bindings)?.value || this.resolve(term.components[1], bindings) : 'scalar';
+                return this.bridge.truthToTensor(truth, mode);
+            }
+
+            case 'tensor_to_truth': {
+                const tensor = this.resolve(term.components[0], bindings);
+                const mode = term.components[1] ? this.resolve(term.components[1], bindings)?.value || this.resolve(term.components[1], bindings) : 'sigmoid';
+                return this.bridge.tensorToTruth(tensor, mode);
+            }
+
+            // Tier 3: Loss Functions
+            case 'mse': {
+                const pred = this.resolve(term.components[0], bindings);
+                const target = this.resolve(term.components[1], bindings);
+                return this.loss.mse(pred, target);
+            }
+
+            case 'mae': {
+                const pred = this.resolve(term.components[0], bindings);
+                const target = this.resolve(term.components[1], bindings);
+                return this.loss.mae(pred, target);
+            }
+
+            case 'binary_cross_entropy': {
+                const pred = this.resolve(term.components[0], bindings);
+                const target = this.resolve(term.components[1], bindings);
+                const eps = term.components[2] ? this.resolve(term.components[2], bindings) : 1e-7;
+                return this.loss.binaryCrossEntropy(pred, target, eps);
+            }
+
+            case 'cross_entropy': {
+                const pred = this.resolve(term.components[0], bindings);
+                const target = this.resolve(term.components[1], bindings);
+                const eps = term.components[2] ? this.resolve(term.components[2], bindings) : 1e-7;
+                return this.loss.crossEntropy(pred, target, eps);
+            }
+
+            // Tier 3: Optimizer Steps
+            case 'sgd_step': {
+                const param = this.resolve(term.components[0], bindings);
+                const lr = this.resolve(term.components[1], bindings);
+                const momentum = term.components[2] ? this.resolve(term.components[2], bindings) : 0;
+
+                if (!(param instanceof Tensor)) throw new Error('sgd_step: parameter must be a Tensor');
+                if (!param.grad) return param;
+
+                const optimizer = new SGDOptimizer(lr, momentum);
+                const params = new Map([['param', param]]);
+                optimizer.step(params);
+                return param;
+            }
+
+            case 'adam_step': {
+                const param = this.resolve(term.components[0], bindings);
+                const lr = this.resolve(term.components[1], bindings);
+                const beta1 = term.components[2] ? this.resolve(term.components[2], bindings) : 0.9;
+                const beta2 = term.components[3] ? this.resolve(term.components[3], bindings) : 0.999;
+
+                if (!(param instanceof Tensor)) throw new Error('adam_step: parameter must be a Tensor');
+                if (!param.grad) return param;
+
+                const optimizer = new AdamOptimizer(lr, beta1, beta2);
+                const params = new Map([['param', param]]);
+                optimizer.step(params);
+                return param;
+            }
+
             default:
                 return term;
         }
@@ -94,14 +170,13 @@ export class TensorFunctor {
         if (term instanceof Tensor) return term;
         if (typeof term === 'number') return term;
         if (Array.isArray(term)) return term;
-        if (term && term.isVariable) {
+
+        if (term?.isVariable) {
             const varName = term.name || term.toString();
-            if (bindings.has(varName)) {
-                return this.resolve(bindings.get(varName), bindings);
-            }
-            return term;
+            return bindings.has(varName) ? this.resolve(bindings.get(varName), bindings) : term;
         }
-        if (term && term.components) return this.evaluate(term, bindings);
+
+        if (term?.components) return this.evaluate(term, bindings);
         return term;
     }
 
@@ -151,12 +226,15 @@ export class TensorFunctor {
             'relu', 'sigmoid', 'tanh', 'softmax', 'gelu',
             'sum', 'mean', 'max', 'min',
             'zeros', 'ones', 'random',
-            'grad', 'backward', 'zero_grad' // Tier 2
+            'grad', 'backward', 'zero_grad', // Tier 2
+            'truth_to_tensor', 'tensor_to_truth', // Tier 3: Truth-Tensor
+            'mse', 'mae', 'binary_cross_entropy', 'cross_entropy', // Tier 3: Loss
+            'sgd_step', 'adam_step' // Tier 3: Optimizers
         ];
         return tensorOps.includes(op);
     }
 
     _registerBuiltins() {
-        // Future: layer compositions, loss functions
+        // Tier 3 operations registered via evaluate() switch statement
     }
 }
