@@ -1,57 +1,37 @@
-import {ChatOllama} from "@langchain/ollama";
-import {TransformersJSModel} from './TransformersJSModel.js';
+import { LMConfig } from './LMConfig.js';
 
-function bindTools(agent, lmProvider) {
-    if (!agent?.tools?.registry) {
-        lmProvider.tools = [];
-        return;
-    }
-
-    const registeredTools = agent.tools.registry.getDiscoveredTools() || [];
-    const tools = registeredTools.map(tool => ({
-        name: tool.id,
-        description: tool.description,
-        schema: tool.parameters ?? tool.schema,
-        invoke: async (args) => {
-            const result = await agent.tools.executeTool(tool.id, args);
-            if (result && typeof result.result !== 'undefined') {
-                return typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
-            }
-            return JSON.stringify(result);
-        }
-    }));
-
-    lmProvider.tools = tools;
-
-    if (typeof lmProvider.bindTools === 'function') {
-        lmProvider.bindTools(tools);
-    }
-}
-
+/**
+ * @deprecated Use LMConfig.createActiveProvider() and LMConfig.bindTools() instead
+ * 
+ * LMProviderBuilder is deprecated as of Phase 4. Provider creation is now
+ * handled by LMConfig, and tool binding is available as a static method.
+ * 
+ * Migration:
+ *   const provider = LMProviderBuilder.create(agent, lmConfig);
+ * 
+ * Becomes:
+ *   const config = new LMConfig();
+ *   config.setProvider('ollama', lmConfig);
+ *   config.setActive('ollama');
+ *   const provider = config.createActiveProvider();
+ *   LMConfig.bindTools(provider, agent);
+ */
 export class LMProviderBuilder {
-    static create(agent, lmConfig) {
-        const providerName = lmConfig.provider ?? 'ollama';
-        let lmProvider = null;
+    static create(agent, lmConfigData) {
+        console.warn('[DEPRECATED] LMProviderBuilder is deprecated. Use LMConfig.createActiveProvider() and LMConfig.bindTools() instead.');
 
-        if (providerName === 'ollama') {
-            lmProvider = new ChatOllama({
-                model: lmConfig.modelName,
-                baseUrl: lmConfig.baseUrl,
-                temperature: lmConfig.temperature,
-            });
-            lmProvider.name = 'ollama';
-        } else if (providerName === 'transformers') {
-            lmProvider = new TransformersJSModel({
-                modelName: lmConfig.modelName,
-                temperature: lmConfig.temperature,
-            });
-            lmProvider.name = 'transformers';
-        }
+        const config = new LMConfig();
+        const providerType = lmConfigData.provider || 'ollama';
 
-        if (lmProvider) {
-            bindTools(agent, lmProvider);
-        }
+        config.setProvider(providerType, {
+            ...lmConfigData,
+            type: providerType
+        });
+        config.setActive(providerType);
 
-        return lmProvider;
+        const provider = config.createActiveProvider();
+        LMConfig.bindTools(provider, agent);
+
+        return provider;
     }
 }
