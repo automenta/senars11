@@ -1,4 +1,4 @@
-import { TaskMatch, TestNAR } from '../../../core/src/testing/TestNAR.js';
+import { TaskMatch, TestNAR } from '../../../../core/src/testing/TestNAR.js';
 
 describe('Modus Ponens', () => {
     test('derive b from (a ==> b) and a', async () => {

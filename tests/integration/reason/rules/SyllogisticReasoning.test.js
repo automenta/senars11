@@ -4,7 +4,7 @@
  * Updated to use flexible truth matching for better resilience to implementation changes.
  */
 
-import {TaskMatch, TestNAR} from '../../../core/src/testing/TestNAR.js';
+import { TaskMatch, TestNAR } from '../../../../core/src/testing/TestNAR.js';
 
 describe('Syllogistic Reasoning Tests', () => {
     it('should derive (a ==> c) from (a ==> b) and (b ==> c) with correct truth value', async () => {

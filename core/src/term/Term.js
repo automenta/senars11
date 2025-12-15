@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import {freeze} from '../util/common.js';
+import { freeze } from '../util/common.js';
 
 export const TermType = Object.freeze({
     ATOM: 'atom',
@@ -23,7 +23,7 @@ export class Term {
         this._components = freeze(type === TermType.ATOM && !components.length ? [name] : components);
 
         this._complexity = this._calculateComplexity();
-        this._id = type === TermType.ATOM ? name : `${operator}_${name}`;
+        this._id = name;
         this._hash = Term.hash(this._id);
         this._semanticType = this._determineSemanticType();
 
@@ -116,7 +116,7 @@ export class Term {
 
     static fromJSON(data) {
         if (!data) throw new Error('Term.fromJSON requires valid data object');
-        const {type, name, components = [], operator} = data;
+        const { type, name, components = [], operator } = data;
         return new Term(type, name, components, operator);
     }
 

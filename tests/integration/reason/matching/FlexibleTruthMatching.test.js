@@ -1,5 +1,5 @@
-import {TaskMatch, TestNAR} from '../../../core/src/testing/TestNAR.js';
-import {flexible} from '../../support/testOrganizer.js';
+import { TaskMatch, TestNAR } from '../../../../core/src/testing/TestNAR.js';
+import { flexible } from '../../../support/testOrganizer.js';
 
 describe('Flexible Truth Matching Tests', () => {
     it('should match truth values with tolerance using new withFlexibleTruth method', async () => {
