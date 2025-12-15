@@ -10,6 +10,7 @@ import { Task } from '../../task/Task.js';
 import { Truth } from '../../Truth.js';
 import { TermFactory } from '../../term/TermFactory.js';
 import { Unifier } from '../../term/Unifier.js';
+import { FunctorRegistry } from '../FunctorRegistry.js';
 import { isQuestion } from '../RuleHelpers.js';
 import { isVariable, isCompound, termsEqual, getComponents, getOperator, getVariableName } from '../../term/TermUtils.js';
 
@@ -25,6 +26,10 @@ export class PrologStrategy extends Strategy {
         this.substitutionStack = []; // Track variable bindings during resolution
         this.variableCounter = 0; // For generating unique variable names
 
+        // Functor registry for extensible operations
+        this.functorRegistry = config.functorRegistry ?? new FunctorRegistry();
+        this._registerPrologOperatorAliases();
+
         // Configuration for Prolog-style reasoning
         this.config = {
             maxDepth: 10,
@@ -32,6 +37,78 @@ export class PrologStrategy extends Strategy {
             backtrackingEnabled: true,
             ...config
         };
+    }
+
+    /**
+     * Register Prolog-specific operator aliases
+     * Maps symbolic operators (+, -, *, /, >, <, etc.) to functor registry
+     * @private
+     */
+    _registerPrologOperatorAliases() {
+        // Comparison operators
+        this.functorRegistry.registerFunctorDynamic('>', (a, b) => Number(a) > Number(b), {
+            arity: 2,
+            category: 'comparison',
+            description: 'Greater than'
+        });
+
+        this.functorRegistry.registerFunctorDynamic('<', (a, b) => Number(a) < Number(b), {
+            arity: 2,
+            category: 'comparison',
+            description: 'Less than'
+        });
+
+        this.functorRegistry.registerFunctorDynamic('>=', (a, b) => Number(a) >= Number(b), {
+            arity: 2,
+            category: 'comparison',
+            description: 'Greater than or equal',
+            aliases: ['=<']  // Prolog uses =< for >=
+        });
+
+        this.functorRegistry.registerFunctorDynamic('<=', (a, b) => Number(a) <= Number(b), {
+            arity: 2,
+            category: 'comparison',
+            description: 'Less than or equal'
+        });
+
+        this.functorRegistry.registerFunctorDynamic('=', (a, b) => a === b, {
+            arity: 2,
+            category: 'comparison',
+            description: 'Equality',
+            aliases: ['=:=']
+        });
+
+        this.functorRegistry.registerFunctorDynamic('\\=', (a, b) => a !== b, {
+            arity: 2,
+            category: 'comparison',
+            description: 'Inequality',
+            aliases: ['=\\=']
+        });
+
+        // Arithmetic operators (symbolic forms)
+        this.functorRegistry.registerFunctorDynamic('+', (a, b) => Number(a) + Number(b), {
+            arity: 2,
+            category: 'arithmetic',
+            description: 'Addition'
+        });
+
+        this.functorRegistry.registerFunctorDynamic('-', (a, b) => Number(a) - Number(b), {
+            arity: 2,
+            category: 'arithmetic',
+            description: 'Subtraction'
+        });
+
+        this.functorRegistry.registerFunctorDynamic('*', (a, b) => Number(a) * Number(b), {
+            arity: 2,
+            category: 'arithmetic',
+            description: 'Multiplication'
+        });
+
+        this.functorRegistry.registerFunctorDynamic('/', (a, b) => Number(a) / Number(b), {
+            arity: 2,
+            category: 'arithmetic',
+            description: 'Division'
+        });
     }
 
     /**
@@ -98,7 +175,7 @@ export class PrologStrategy extends Strategy {
 
     _isBuiltIn(term) {
         const pred = this._getPredicateName(term);
-        return ['is', '>', '<', '>=', '<=', '=', '\\='].includes(pred);
+        return this.functorRegistry.has(pred) || pred === 'is';
     }
 
     _getPredicateArgs(term) {
@@ -122,7 +199,7 @@ export class PrologStrategy extends Strategy {
 
         try {
             if (pred === 'is') {
-                // X is Expr
+                // X is Expr — evaluate expression and unify with LHS
                 const value = this._evalExpression(arg2);
                 const valueTerm = this.termFactory.atomic(String(value));
 
@@ -136,35 +213,18 @@ export class PrologStrategy extends Strategy {
                 return [];
             }
 
-            // Comparisons
-            const val1 = this._evalExpression(arg1);
-            const val2 = this._evalExpression(arg2);
-            let success = false;
+            // Use functor registry for comparisons
+            if (this.functorRegistry.has(pred)) {
+                const val1 = this._evalExpression(arg1);
+                const val2 = this._evalExpression(arg2);
+                const success = this.functorRegistry.execute(pred, val1, val2);
 
-            switch (pred) {
-                case '>':
-                    success = val1 > val2;
-                    break;
-                case '<':
-                    success = val1 < val2;
-                    break;
-                case '>=':
-                    success = val1 >= val2;
-                    break;
-                case '<=':
-                    success = val1 <= val2;
-                    break;
-                case '=':
-                    success = val1 === val2;
-                    break;
-                case '\\=':
-                    success = val1 !== val2;
-                    break;
+                if (success) {
+                    return [{ substitution, task: goalTask }];
+                }
+                return [];
             }
 
-            if (success) {
-                return [{ substitution, task: goalTask }];
-            }
             return [];
 
         } catch (e) {
@@ -178,24 +238,15 @@ export class PrologStrategy extends Strategy {
         const val = parseFloat(term.name);
         if (!isNaN(val)) return val;
 
-        // Compound expression
+        // Compound expression — use functor registry
         if (isCompound(term)) {
             const pred = this._getPredicateName(term);
-            const args = this._getPredicateArgs(term); // Use getPredicateArgs to handle ^ structure in expressions too!
+            const args = this._getPredicateArgs(term);
 
-            if (args.length === 2) {
+            if (this.functorRegistry.has(pred) && args.length === 2) {
                 const v1 = this._evalExpression(args[0]);
                 const v2 = this._evalExpression(args[1]);
-                switch (pred) {
-                    case '+':
-                        return v1 + v2;
-                    case '-':
-                        return v1 - v2;
-                    case '*':
-                        return v1 * v2;
-                    case '/':
-                        return v1 / v2;
-                }
+                return this.functorRegistry.execute(pred, v1, v2);
             }
         }
         throw new Error("Cannot evaluate term: " + term.toString());
@@ -378,6 +429,19 @@ export class PrologStrategy extends Strategy {
             config: this.config,
             variableCounter: this.variableCounter
         };
+    }
+
+    /**
+     * Register a custom functor for runtime extension
+     * @public
+     * @param {string} name - Functor name
+     * @param {Function} fn - Functor function
+     * @param {object} properties - Functor properties (arity, etc.)
+     * @returns {PrologStrategy} - For chaining
+     */
+    registerFunctor(name, fn, properties = {}) {
+        this.functorRegistry.registerFunctorDynamic(name, fn, properties);
+        return this;
     }
 
     async ask(task) {
