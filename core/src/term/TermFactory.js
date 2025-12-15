@@ -450,4 +450,10 @@ export class TermFactory extends BaseComponent {
     isSystemAtom(term) {
         return term?.isAtomic && ['True', 'False', 'Null'].includes(term.name);
     }
+    async _dispose() {
+        this.clearCache();
+        this._cache = null;
+        this._complexityCache = null;
+        this._cognitiveDiversity = null;
+    }
 }
