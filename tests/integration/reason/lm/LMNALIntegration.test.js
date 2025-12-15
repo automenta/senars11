@@ -1,13 +1,13 @@
-import { afterAll, beforeAll, describe, expect, jest, test } from '@jest/globals';
-import { App } from '../../../../agent/src/app/App.js';
-import { Punctuation, Task } from '../../../../core/src/task/Task.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { responses } from './mockEmbeddingsData.js';
+import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
+import {App} from '../../../../agent/src/app/App.js';
+import {Punctuation, Task} from '../../../../core/src/task/Task.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {responses} from './mockEmbeddingsData.js';
 
 jest.setTimeout(30000);
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const config = { lm: { provider: 'transformers', modelName: 'mock-model', enabled: true }, subsystems: { lm: true } };
+const config = {lm: {provider: 'transformers', modelName: 'mock-model', enabled: true}, subsystems: {lm: true}};
 const mockLM = prompt => {
     for (const [pattern, response] of Object.entries(responses)) {
         if (prompt.includes(pattern)) return response;
@@ -17,10 +17,10 @@ const mockLM = prompt => {
 
 const setupAgent = async () => {
     const app = new App(config);
-    const agent = await app.start({ startAgent: true });
+    const agent = await app.start({startAgent: true});
     await wait(1000);
     jest.spyOn(agent.lm, 'generateText').mockImplementation(mockLM);
-    return { app, agent, termFactory: new TermFactory() };
+    return {app, agent, termFactory: new TermFactory()};
 };
 
 const getTerms = agent => [
@@ -36,8 +36,11 @@ const hasTermMatch = (terms, ...patterns) =>
 describe('LM-NAL Multi-Step Reasoning Integration', () => {
     let app, agent, termFactory;
 
-    beforeAll(async () => ({ app, agent, termFactory } = await setupAgent()));
-    afterAll(async () => { if (app) await app.shutdown(); jest.restoreAllMocks(); });
+    beforeAll(async () => ({app, agent, termFactory} = await setupAgent()));
+    afterAll(async () => {
+        if (app) await app.shutdown();
+        jest.restoreAllMocks();
+    });
 
     /**
      * Scenario 1: Concept Elaboration → Syllogistic Inference
@@ -61,8 +64,8 @@ describe('LM-NAL Multi-Step Reasoning Integration', () => {
         await agent.input(new Task({
             term: termFactory.atomic('"Activity correlates with results"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         }));
         await wait(2000);
         await agent.input('exercise.');
@@ -80,8 +83,8 @@ describe('LM-NAL Multi-Step Reasoning Integration', () => {
         await agent.input(new Task({
             term: termFactory.atomic('write_book'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         }));
         await wait(3000);
 
@@ -95,8 +98,8 @@ describe('LM-NAL Multi-Step Reasoning Integration', () => {
         await agent.input(new Task({
             term: termFactory.atomic('"Value is $X"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 0.9, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 0.9, confidence: 0.9}
         }));
         await wait(3000);
 
@@ -112,8 +115,8 @@ describe('LM-NAL Multi-Step Reasoning Integration', () => {
         const problemGoal = new Task({
             term: termFactory.atomic('solve_complex_problem'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         await agent.input(problemGoal);
@@ -167,10 +170,10 @@ describe('Focus (STM) Content Verification', () => {
 
     beforeAll(async () => {
         app = new App({
-            lm: { provider: 'transformers', modelName: 'mock-model', enabled: true },
-            subsystems: { lm: true }
+            lm: {provider: 'transformers', modelName: 'mock-model', enabled: true},
+            subsystems: {lm: true}
         });
-        agent = await app.start({ startAgent: true });
+        agent = await app.start({startAgent: true});
         await new Promise(r => setTimeout(r, 1000));
 
         jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {

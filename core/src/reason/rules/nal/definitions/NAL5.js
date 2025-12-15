@@ -1,11 +1,11 @@
 /**
  * NAL5.js
- * 
+ *
  * NAL-5: Statement Rules
  * Includes Implication, Equivalence, Negation
  */
 
-import { Truth } from '../../../../Truth.js';
+import {Truth} from '../../../../Truth.js';
 
 export const NAL5 = [
     // Implication: (S ==> P)
@@ -13,17 +13,17 @@ export const NAL5 = [
     {
         id: 'implication_deduction',
         pattern: {
-            p: { operator: '==>', subject: '$M', predicate: '$P' },
-            s: { operator: '==>', subject: '$S', predicate: '$M' }
+            p: {operator: '==>', subject: '$M', predicate: '$P'},
+            s: {operator: '==>', subject: '$S', predicate: '$M'}
         },
-        conclusion: (bindings, p, s, { termFactory }) => {
+        conclusion: (bindings, p, s, {termFactory}) => {
             const S = bindings['?$S'];
             const P = bindings['?$P'];
 
             const term = termFactory.implication(S, P);
             const truth = Truth.deduction(p.truth, s.truth);
 
-            return { term, truth, punctuation: '.' };
+            return {term, truth, punctuation: '.'};
         }
     },
 
@@ -32,17 +32,17 @@ export const NAL5 = [
     {
         id: 'equivalence_analogy',
         pattern: {
-            p: { operator: '<=>', subject: '$S', predicate: '$M' },
-            s: { operator: '<=>', subject: '$M', predicate: '$P' }
+            p: {operator: '<=>', subject: '$S', predicate: '$M'},
+            s: {operator: '<=>', subject: '$M', predicate: '$P'}
         },
-        conclusion: (bindings, p, s, { termFactory }) => {
+        conclusion: (bindings, p, s, {termFactory}) => {
             const S = bindings['?$S'];
             const P = bindings['?$P'];
 
             const term = termFactory.equivalence(S, P);
             const truth = Truth.analogy(p.truth, s.truth);
 
-            return { term, truth, punctuation: '.' };
+            return {term, truth, punctuation: '.'};
         }
     },
 
@@ -51,10 +51,10 @@ export const NAL5 = [
     {
         id: 'conditional_deduction',
         pattern: {
-            p: { operator: '==>', subject: '$S', predicate: '$P' },
+            p: {operator: '==>', subject: '$S', predicate: '$P'},
             s: '$S' // S (any term that matches $S)
         },
-        conclusion: (bindings, p, s, { termFactory, unifier }) => {
+        conclusion: (bindings, p, s, {termFactory, unifier}) => {
             // Special case: s is just $S.
             // But our pattern matcher expects structure.
             // If s is atomic, pattern needs to match it.

@@ -1,8 +1,11 @@
-import { VariableIntroductionRule, DependentVariableIntroductionRule } from '../../../../../core/src/reason/rules/nal/VariableIntroduction.js';
-import { TermFactory } from '../../../../../core/src/term/TermFactory.js';
-import { Task } from '../../../../../core/src/task/Task.js';
-import { Truth } from '../../../../../core/src/Truth.js';
-import { Stamp } from '../../../../../core/src/Stamp.js';
+import {
+    DependentVariableIntroductionRule,
+    VariableIntroductionRule
+} from '../../../../../core/src/reason/rules/nal/VariableIntroduction.js';
+import {TermFactory} from '../../../../../core/src/term/TermFactory.js';
+import {Task} from '../../../../../core/src/task/Task.js';
+import {Truth} from '../../../../../core/src/Truth.js';
+import {Stamp} from '../../../../../core/src/Stamp.js';
 
 
 describe('VariableIntroduction Rules', () => {
@@ -39,7 +42,7 @@ describe('VariableIntroduction Rules', () => {
 
             expect(rule.canApply(task1, task2, {})).toBe(true);
 
-            const results = rule.apply(task1, task2, { termFactory: factory });
+            const results = rule.apply(task1, task2, {termFactory: factory});
 
             expect(results.length).toBeGreaterThanOrEqual(1);
             // Should contain a variable in subject position
@@ -58,7 +61,7 @@ describe('VariableIntroduction Rules', () => {
 
             expect(rule.canApply(task1, task2, {})).toBe(true);
 
-            const results = rule.apply(task1, task2, { termFactory: factory });
+            const results = rule.apply(task1, task2, {termFactory: factory});
 
             expect(results.length).toBeGreaterThanOrEqual(1);
             // Should contain a variable in predicate position
@@ -93,7 +96,7 @@ describe('VariableIntroduction Rules', () => {
             const task1 = createTask(term1, new Truth(0.9, 0.9));
             const task2 = createTask(term2, new Truth(0.9, 0.9));
 
-            const results = rule.apply(task1, task2, { termFactory: factory });
+            const results = rule.apply(task1, task2, {termFactory: factory});
 
             expect(results.length).toBeGreaterThanOrEqual(1);
             // Confidence should be reduced or maintained (generalization is inductive)
@@ -115,7 +118,7 @@ describe('VariableIntroduction Rules', () => {
 
             expect(rule.canApply(task, null, {})).toBe(true);
 
-            const results = rule.apply(task, null, { termFactory: factory });
+            const results = rule.apply(task, null, {termFactory: factory});
 
             expect(results.length).toBe(1);
             const derivedTerm = results[0].term;
@@ -137,7 +140,7 @@ describe('VariableIntroduction Rules', () => {
             const term = factory.inheritance(factory.atomic('cat'), factory.atomic('animal'));
             const task = createTask(term, new Truth(0.9, 0.9));
 
-            const results = rule.apply(task, null, { termFactory: factory });
+            const results = rule.apply(task, null, {termFactory: factory});
 
             expect(results.length).toBe(1);
             // Should be weakened (doubly weakening may still produce reasonable confidence)

@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { Unifier } from '../../core/src/term/Unifier.js';
-import { RuleCompiler } from '../../core/src/reason/rules/compiler/RuleCompiler.js';
-import { RuleExecutor } from '../../core/src/reason/rules/executor/RuleExecutor.js';
-import { StandardDiscriminators } from '../../core/src/reason/rules/Discriminators.js';
-import { NAL4 } from '../../core/src/reason/rules/nal/definitions/NAL4.js';
-import { NAL5 } from '../../core/src/reason/rules/nal/definitions/NAL5.js';
-import { Truth } from '../../core/src/Truth.js';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Unifier} from '../../core/src/term/Unifier.js';
+import {RuleCompiler} from '../../core/src/reason/rules/compiler/RuleCompiler.js';
+import {RuleExecutor} from '../../core/src/reason/rules/executor/RuleExecutor.js';
+import {StandardDiscriminators} from '../../core/src/reason/rules/Discriminators.js';
+import {NAL4} from '../../core/src/reason/rules/nal/definitions/NAL4.js';
+import {NAL5} from '../../core/src/reason/rules/nal/definitions/NAL5.js';
+import {Truth} from '../../core/src/Truth.js';
 
 describe('Phase 1: Rule Engine', () => {
     let termFactory;
@@ -53,7 +53,7 @@ describe('Phase 1: Rule Engine', () => {
                 truth: new Truth(1.0, 0.9)
             };
 
-            const context = { termFactory };
+            const context = {termFactory};
             const results = executor.execute(p, s, context);
 
             expect(results.length).toBeGreaterThan(0);
@@ -82,7 +82,7 @@ describe('Phase 1: Rule Engine', () => {
                 truth: new Truth(1.0, 0.9)
             };
 
-            const context = { termFactory };
+            const context = {termFactory};
             const results = executor.execute(p, s, context);
 
             expect(results.length).toBeGreaterThan(0);

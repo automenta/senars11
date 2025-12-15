@@ -1,5 +1,5 @@
-import { parse } from './peggy-parser.js';
-import { TermFactory } from '../term/TermFactory.js';
+import {parse} from './peggy-parser.js';
+import {TermFactory} from '../term/TermFactory.js';
 
 /**
  * Unified Narsese Parser
@@ -33,7 +33,7 @@ export class NarseseParser {
         }
 
         try {
-            const result = parse(input, { termFactory: this.termFactory });
+            const result = parse(input, {termFactory: this.termFactory});
 
             // Post-processing for Negation Simplification
             // If term is --(A), replace with A and invert truth

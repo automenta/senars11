@@ -1,5 +1,5 @@
-import { PrologStrategy } from './PrologStrategy.js';
-import { Task } from '../../task/Task.js';
+import {PrologStrategy} from './PrologStrategy.js';
+import {Task} from '../../task/Task.js';
 
 export class GoalDrivenStrategy extends PrologStrategy {
     constructor(config = {}) {
@@ -20,9 +20,9 @@ export class GoalDrivenStrategy extends PrologStrategy {
     }
 
     async findGoalSupportingPremises(goalTask) {
-        const queryTask = goalTask.clone({ punctuation: '?', truth: null });
+        const queryTask = goalTask.clone({punctuation: '?', truth: null});
         const solutions = await this._resolveGoal(queryTask);
-        return solutions.map(({ task }) => task);
+        return solutions.map(({task}) => task);
     }
 
     async synthesizePlan(goal) {

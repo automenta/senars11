@@ -1,7 +1,7 @@
-import { Task } from '../task/Task.js';
-import { TermFactory } from '../term/TermFactory.js';
-import { NarseseParser } from '../parser/NarseseParser.js';
-import { TermSerializer } from '../term/TermSerializer.js';
+import {Task} from '../task/Task.js';
+import {TermFactory} from '../term/TermFactory.js';
+import {NarseseParser} from '../parser/NarseseParser.js';
+import {TermSerializer} from '../term/TermSerializer.js';
 
 export class Serializer {
     static VERSION = '1.0.0';
@@ -29,12 +29,22 @@ export class Serializer {
         }
 
         switch (type) {
-            case 'task': return Task.fromJSON(json);
-            case 'term': return TermFactory.fromJSON?.(json) ?? TermSerializer.fromJSON(json);
-            case 'memory': return global.Memory?.deserialize?.(json) ?? (() => { throw new Error('Memory deserialization not available'); })();
-            case 'nar': return global.NAR?.deserialize?.(json) ?? (() => { throw new Error('NAR deserialization not available'); })();
-            case 'trace': return json;
-            default: throw new Error(`Unknown type: ${type}`);
+            case 'task':
+                return Task.fromJSON(json);
+            case 'term':
+                return TermFactory.fromJSON?.(json) ?? TermSerializer.fromJSON(json);
+            case 'memory':
+                return global.Memory?.deserialize?.(json) ?? (() => {
+                    throw new Error('Memory deserialization not available');
+                })();
+            case 'nar':
+                return global.NAR?.deserialize?.(json) ?? (() => {
+                    throw new Error('NAR deserialization not available');
+                })();
+            case 'trace':
+                return json;
+            default:
+                throw new Error(`Unknown type: ${type}`);
         }
     }
 
@@ -60,7 +70,12 @@ export class Serializer {
 
     static detect(input) {
         if (typeof input === 'string') {
-            try { JSON.parse(input); return 'json'; } catch { return 'narsese'; }
+            try {
+                JSON.parse(input);
+                return 'json';
+            } catch {
+                return 'narsese';
+            }
         }
         if (typeof input === 'object' && input !== null) return 'object';
         throw new Error(`Cannot detect format of ${typeof input}`);
@@ -101,12 +116,12 @@ export class Serializer {
         state = this.migrate(state, this.VERSION);
 
         const imports = [
-            { component: nar.memory, data: state.nar.memory },
-            { component: nar.taskManager, data: state.nar.taskManager },
-            { component: nar.focus, data: state.nar.focus }
+            {component: nar.memory, data: state.nar.memory},
+            {component: nar.taskManager, data: state.nar.taskManager},
+            {component: nar.focus, data: state.nar.focus}
         ];
 
-        for (const { component, data } of imports) {
+        for (const {component, data} of imports) {
             if (data && component?.constructor?.deserialize) {
                 await component.constructor.deserialize(data);
             }

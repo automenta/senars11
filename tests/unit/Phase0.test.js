@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { Unifier } from '../../core/src/term/Unifier.js';
-import { NarseseParser } from '../../core/src/parser/NarseseParser.js';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Unifier} from '../../core/src/term/Unifier.js';
+import {NarseseParser} from '../../core/src/parser/NarseseParser.js';
 import * as TermUtils from '../../core/src/term/TermUtils.js';
 
 describe('Phase 0 Implementation', () => {

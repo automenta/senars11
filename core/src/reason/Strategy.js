@@ -1,17 +1,15 @@
-import { Bag } from '../memory/Bag.js';
-import { Task } from '../task/Task.js';
-import { Truth } from '../Truth.js';
-import { Stamp } from '../Stamp.js';
-import { Logger } from '../util/Logger.js';
+import {Bag} from '../memory/Bag.js';
+import {Task} from '../task/Task.js';
+import {Logger} from '../util/Logger.js';
 
 /**
  * Strategy component handles premise pairing and budget management.
- * 
+ *
  * Supports multiple premise formation strategies:
  * - DecompositionStrategy: extracts subterms for pairing
  * - TermLinkStrategy: uses conceptual associations
  * - TaskMatchStrategy: pairs with existing tasks
- * 
+ *
  * Strategies are mixed via priority-weighted Bag sampling.
  */
 export class Strategy {
@@ -122,7 +120,7 @@ export class Strategy {
                             const candidateEntry = {
                                 ...candidate,
                                 strategy: strategy,
-                                budget: { priority: candidate.priority || 0.5 },
+                                budget: {priority: candidate.priority || 0.5},
                                 toString: () => candidate.term?.name || 'candidate'
                             };
                             this.candidateBag.add(candidateEntry);
@@ -309,13 +307,13 @@ export class Strategy {
         const [primarySubject, primaryObject] = primaryComponents;
 
         // Use reduce to categorize tasks in a single pass for better performance
-        const { highlyCompatible, compatible, lessCompatible } = secondaryTasks.reduce(
+        const {highlyCompatible, compatible, lessCompatible} = secondaryTasks.reduce(
             (acc, task) => {
                 const category = this._categorizeTaskCompatibility(task, primarySubject, primaryObject);
                 acc[category].push(task);
                 return acc;
             },
-            { highlyCompatible: [], compatible: [], lessCompatible: [] }
+            {highlyCompatible: [], compatible: [], lessCompatible: []}
         );
 
         // Return in order: highly compatible first, then compatible, then less compatible

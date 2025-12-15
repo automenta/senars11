@@ -3,9 +3,9 @@
  * Tests custom functor registration and runtime extensibility
  */
 
-import { PrologStrategy } from '../../../core/src/reason/strategy/PrologStrategy.js';
-import { Task } from '../../../core/src/task/Task.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {PrologStrategy} from '../../../core/src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('PrologStrategy Functor Integration', () => {
     let strategy;
@@ -13,7 +13,7 @@ describe('PrologStrategy Functor Integration', () => {
 
     beforeEach(() => {
         termFactory = new TermFactory();
-        strategy = new PrologStrategy({ termFactory });
+        strategy = new PrologStrategy({termFactory});
     });
 
     test('should use functor registry for arithmetic operations', async () => {
@@ -87,8 +87,8 @@ describe('PrologStrategy Functor Integration', () => {
 
     test('should chain custom functors', () => {
         // Register multiple custom functors
-        strategy.registerFunctor('square', (x) => Number(x) ** 2, { arity: 1 });
-        strategy.registerFunctor('half', (x) => Number(x) / 2, { arity: 1 });
+        strategy.registerFunctor('square', (x) => Number(x) ** 2, {arity: 1});
+        strategy.registerFunctor('half', (x) => Number(x) / 2, {arity: 1});
 
         // Test chaining: half(square(4)) = half(16) = 8
         const squareResult = strategy.functorRegistry.execute('square', 4);
@@ -101,17 +101,17 @@ describe('PrologStrategy Functor Integration', () => {
     test('should maintain backward compatibility with existing operators', async () => {
         // Test all original operators still work
         const operators = [
-            { rule: 'test1(X) :- X is 5 + 3.', expected: true },
-            { rule: 'test2(X) :- X is 10 - 4.', expected: true },
-            { rule: 'test3(X) :- X is 3 * 4.', expected: true },
-            { rule: 'test4(X) :- X is 20 / 4.', expected: true },
-            { rule: 'test5 :- 10 > 5.', expected: true },
-            { rule: 'test6 :- 3 < 7.', expected: true },
-            { rule: 'test7 :- 5 >= 5.', expected: true },
-            { rule: 'test8 :- 4 <= 8.', expected: true }
+            {rule: 'test1(X) :- X is 5 + 3.', expected: true},
+            {rule: 'test2(X) :- X is 10 - 4.', expected: true},
+            {rule: 'test3(X) :- X is 3 * 4.', expected: true},
+            {rule: 'test4(X) :- X is 20 / 4.', expected: true},
+            {rule: 'test5 :- 10 > 5.', expected: true},
+            {rule: 'test6 :- 3 < 7.', expected: true},
+            {rule: 'test7 :- 5 >= 5.', expected: true},
+            {rule: 'test8 :- 4 <= 8.', expected: true}
         ];
 
-        for (const { rule } of operators) {
+        for (const {rule} of operators) {
             strategy.addPrologRule(rule);
         }
 

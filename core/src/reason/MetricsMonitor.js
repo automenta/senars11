@@ -2,9 +2,9 @@
  * MetricsMonitor for the new reason system
  * Provides comprehensive monitoring and metrics collection for the reasoning process
  */
-import { Logger } from '../util/Logger.js';
-import { logError } from './utils/error.js';
-import { getMemoryUsage } from '../util/common.js';
+import {Logger} from '../util/Logger.js';
+import {logError} from './utils/error.js';
+import {getMemoryUsage} from '../util/common.js';
 
 export class MetricsMonitor {
     constructor(config = {}) {
@@ -558,7 +558,7 @@ export class MetricsMonitor {
 
             return optimizations;
         } catch (error) {
-            logError(error, { context: 'self_optimization' }, 'error');
+            logError(error, {context: 'self_optimization'}, 'error');
             return [];
         }
     }

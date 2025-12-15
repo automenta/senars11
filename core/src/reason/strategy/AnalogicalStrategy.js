@@ -1,5 +1,5 @@
-import { PremiseFormationStrategy } from './PremiseFormationStrategy.js';
-import { Unifier } from '../../term/Unifier.js';
+import {PremiseFormationStrategy} from './PremiseFormationStrategy.js';
+import {Unifier} from '../../term/Unifier.js';
 
 const SIMILARITY_OPERATORS = new Set(['<->', '↔', 'similarity']);
 const IMPLICATION_OPERATORS = new Set(['-->', '==>', 'inheritance']);
@@ -40,7 +40,7 @@ export class AnalogicalStrategy extends PremiseFormationStrategy {
                         premise2: implication,
                         priority: this._calculateAnalogicalPriority(similarity, implication),
                         source: this.name,
-                        metadata: { type: 'analogical', mapping: analogy.mapping }
+                        metadata: {type: 'analogical', mapping: analogy.mapping}
                     };
                 }
             }

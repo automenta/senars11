@@ -1,8 +1,8 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { Serializer } from '../../../core/src/util/Serializer.js';
-import { Task, Punctuation } from '../../../core/src/task/Task.js';
-import { Truth } from '../../../core/src/Truth.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {Serializer} from '../../../core/src/util/Serializer.js';
+import {Punctuation, Task} from '../../../core/src/task/Task.js';
+import {Truth} from '../../../core/src/Truth.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('Serializer', () => {
     let termFactory;
@@ -76,7 +76,7 @@ describe('Serializer', () => {
         });
 
         test('detects object format', () => {
-            const input = { term: 'a' };
+            const input = {term: 'a'};
             expect(Serializer.detect(input)).toBe('object');
         });
     });
@@ -88,7 +88,7 @@ describe('Serializer', () => {
         });
 
         test('passes through objects', () => {
-            const obj = { term: 'a' };
+            const obj = {term: 'a'};
             const result = Serializer.parse(obj);
             expect(result).toBe(obj);
         });
@@ -98,10 +98,10 @@ describe('Serializer', () => {
         test('exports NAR state structure', () => {
             const mockNAR = {
                 memory: {
-                    serialize: () => ({ concepts: [] })
+                    serialize: () => ({concepts: []})
                 },
                 config: {
-                    toJSON: () => ({ debug: false })
+                    toJSON: () => ({debug: false})
                 }
             };
 
@@ -126,7 +126,7 @@ describe('Serializer', () => {
     describe('Versioning', () => {
         test('migrates legacy state without version', () => {
             const legacyState = {
-                nar: { memory: {} }
+                nar: {memory: {}}
             };
 
             const migrated = Serializer.migrate(legacyState, '1.0.0');
@@ -136,7 +136,7 @@ describe('Serializer', () => {
         test('preserves current version state', () => {
             const state = {
                 version: '1.0.0',
-                nar: { memory: {} }
+                nar: {memory: {}}
             };
 
             const migrated = Serializer.migrate(state, '1.0.0');

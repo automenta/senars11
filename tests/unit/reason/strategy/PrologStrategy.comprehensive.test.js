@@ -2,10 +2,10 @@
  * Comprehensive tests for PrologStrategy with actual reasoning scenarios
  */
 
-import { PrologStrategy } from '../../../../core/src/reason/strategy/PrologStrategy.js';
-import { Task } from '../../../../core/src/task/Task.js';
-import { Truth } from '../../../../core/src/Truth.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
+import {PrologStrategy} from '../../../../core/src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../../../core/src/task/Task.js';
+import {Truth} from '../../../../core/src/Truth.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
 
 describe('PrologStrategy - Comprehensive Tests', () => {
     let strategy;
@@ -40,10 +40,10 @@ describe('PrologStrategy - Comprehensive Tests', () => {
 
     test.skip('should correctly identify variable terms', () => {
         // Test various ways variables might be represented
-        const var1 = { name: '?X' };
-        const var2 = { name: 'X' };  // Uppercase typically represents variables
-        const var3 = { name: '_Temp' };  // Underscore prefix typically represents variables
-        const constant = { name: 'tom' };  // Lowercase typically represents constants
+        const var1 = {name: '?X'};
+        const var2 = {name: 'X'};  // Uppercase typically represents variables
+        const var3 = {name: '_Temp'};  // Underscore prefix typically represents variables
+        const constant = {name: 'tom'};  // Lowercase typically represents constants
 
         expect(strategy._isVariable(var1)).toBe(true);
         expect(strategy._isVariable(var2)).toBe(true);
@@ -53,8 +53,8 @@ describe('PrologStrategy - Comprehensive Tests', () => {
 
     test.skip('should perform simple unification', () => {
         // Test variable to constant unification
-        const varTerm = { name: '?X' };
-        const constTerm = { name: 'tom' };
+        const varTerm = {name: '?X'};
+        const constTerm = {name: 'tom'};
 
         const result = strategy._unify(varTerm, constTerm, {});
 
@@ -68,12 +68,12 @@ describe('PrologStrategy - Comprehensive Tests', () => {
         const parentTerm = {
             name: '^',
             components: [
-                { name: 'parent' },
+                {name: 'parent'},
                 {
                     name: ',',
                     components: [
-                        { name: '?X' },
-                        { name: 'bob' }
+                        {name: '?X'},
+                        {name: 'bob'}
                     ]
                 }
             ]
@@ -82,12 +82,12 @@ describe('PrologStrategy - Comprehensive Tests', () => {
         const anotherTerm = {
             name: '^',
             components: [
-                { name: 'parent' },
+                {name: 'parent'},
                 {
                     name: ',',
                     components: [
-                        { name: 'tom' },
-                        { name: 'bob' }
+                        {name: 'tom'},
+                        {name: 'bob'}
                     ]
                 }
             ]
@@ -112,8 +112,8 @@ describe('PrologStrategy - Comprehensive Tests', () => {
     });
 
     test.skip('should apply substitutions to terms', () => {
-        const termWithVar = { name: '?X' };
-        const substitution = { '?X': { name: 'substituted_value' } };
+        const termWithVar = {name: '?X'};
+        const substitution = {'?X': {name: 'substituted_value'}};
 
         const result = strategy._applySubstitutionToTerm(termWithVar, substitution);
 

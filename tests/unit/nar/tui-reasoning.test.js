@@ -1,5 +1,5 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { FormattingUtils } from '../../../core/src/util/FormattingUtils.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
 
 describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
     let nar;
@@ -143,7 +143,7 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         await nar.step();
 
         // Verify it can be formatted properly
-        const events = { capturedTasks: [] };
+        const events = {capturedTasks: []};
         nar.on('task.focus', (task) => {
             const formatted = FormattingUtils.formatTask(task);
             events.capturedTasks.push(formatted);

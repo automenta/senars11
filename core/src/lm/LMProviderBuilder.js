@@ -1,14 +1,14 @@
-import { LMConfig } from './LMConfig.js';
+import {LMConfig} from './LMConfig.js';
 
 /**
  * @deprecated Use LMConfig.createActiveProvider() and LMConfig.bindTools() instead
- * 
+ *
  * LMProviderBuilder is deprecated as of Phase 4. Provider creation is now
  * handled by LMConfig, and tool binding is available as a static method.
- * 
+ *
  * Migration:
  *   const provider = LMProviderBuilder.create(agent, lmConfig);
- * 
+ *
  * Becomes:
  *   const config = new LMConfig();
  *   config.setProvider('ollama', lmConfig);

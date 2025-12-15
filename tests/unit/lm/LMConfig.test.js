@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { LMConfig } from '../../../core/src/lm/LMConfig.js';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {LMConfig} from '../../../core/src/lm/LMConfig.js';
 import fs from 'fs';
 
 describe('LMConfig', () => {
@@ -7,7 +7,7 @@ describe('LMConfig', () => {
     const testConfigPath = '.test-lm-config.json';
 
     beforeEach(() => {
-        config = new LMConfig({ persistPath: testConfigPath });
+        config = new LMConfig({persistPath: testConfigPath});
     });
 
     afterEach(() => {
@@ -90,18 +90,18 @@ describe('LMConfig', () => {
 
     describe('Persistence', () => {
         test('save writes config to file', () => {
-            config.setProvider('custom', { type: 'dummy' });
+            config.setProvider('custom', {type: 'dummy'});
             config.save(testConfigPath);
 
             expect(fs.existsSync(testConfigPath)).toBe(true);
         });
 
         test('load reads config from file', () => {
-            config.setProvider('custom', { type: 'dummy', data: 'test' });
+            config.setProvider('custom', {type: 'dummy', data: 'test'});
             config.setActive('custom');
             config.save(testConfigPath);
 
-            const config2 = new LMConfig({ persistPath: testConfigPath });
+            const config2 = new LMConfig({persistPath: testConfigPath});
             config2.load(testConfigPath);
 
             expect(config2.getActiveProviderName()).toBe('custom');
@@ -116,11 +116,11 @@ describe('LMConfig', () => {
             config.setProvider('roundtrip', {
                 type: 'dummy',
                 value: 42,
-                nested: { key: 'value' }
+                nested: {key: 'value'}
             });
             config.save(testConfigPath);
 
-            const config2 = new LMConfig({ persistPath: testConfigPath });
+            const config2 = new LMConfig({persistPath: testConfigPath});
             config2.load(testConfigPath);
 
             const restored = config2.getProvider('roundtrip');
@@ -138,7 +138,7 @@ describe('LMConfig', () => {
         });
 
         test('createActiveProvider throws for unconfigured type', () => {
-            config.setProvider('unsupported', { type: 'unsupported-type' });
+            config.setProvider('unsupported', {type: 'unsupported-type'});
             config.setActive('unsupported');
 
             expect(() => config.createActiveProvider()).toThrow();
@@ -168,7 +168,7 @@ describe('LMConfig', () => {
         });
 
         test('fromJSON deserializes configuration', () => {
-            config.setProvider('test', { type: 'dummy' });
+            config.setProvider('test', {type: 'dummy'});
             const json = config.toJSON();
 
             const restored = LMConfig.fromJSON(json);

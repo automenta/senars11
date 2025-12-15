@@ -1,16 +1,16 @@
 /**
  * @file TermLinkStrategy.js
  * @description Premise formation strategy that uses TermLayer links for candidates.
- * 
+ *
  * This strategy leverages existing term associations in the TermLayer
  * to find premise candidates based on conceptual links.
  */
 
-import { PremiseFormationStrategy } from './PremiseFormationStrategy.js';
+import {PremiseFormationStrategy} from './PremiseFormationStrategy.js';
 
 /**
  * Strategy that uses TermLayer links for premise candidate generation.
- * 
+ *
  * When a task involves term A, this strategy yields all terms linked to A
  * in the TermLayer, enabling associative premise formation.
  */
@@ -37,7 +37,7 @@ export class TermLinkStrategy extends PremiseFormationStrategy {
     async* generateCandidates(primaryTask, context) {
         if (!this.enabled) return;
 
-        const { termLayer } = context;
+        const {termLayer} = context;
         const term = primaryTask?.term;
         if (!termLayer || !term) return;
 
@@ -55,7 +55,7 @@ export class TermLinkStrategy extends PremiseFormationStrategy {
      * Get links for a specific term from the TermLayer.
      * @private
      */
-    *_getLinksForTerm(sourceTerm, termLayer) {
+    * _getLinksForTerm(sourceTerm, termLayer) {
         const links = termLayer.get(sourceTerm);
         if (!links || links.length === 0) return;
 

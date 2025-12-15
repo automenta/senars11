@@ -1,15 +1,15 @@
 /**
  * SemanticStrategy.js
- * 
+ *
  * A strategy that uses vector embeddings to find semantically similar premises.
  * It wraps the EmbeddingLayer to provide fuzzy matching capabilities.
  */
 
-import { PremiseFormationStrategy } from './PremiseFormationStrategy.js';
+import {PremiseFormationStrategy} from './PremiseFormationStrategy.js';
 
 export class SemanticStrategy extends PremiseFormationStrategy {
     constructor(embeddingLayer, config = {}) {
-        super({ priority: config.priority ?? 0.7, ...config });
+        super({priority: config.priority ?? 0.7, ...config});
         this._name = 'Semantic';
         this.embeddings = embeddingLayer;
         this.threshold = config.threshold ?? 0.7;

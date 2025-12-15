@@ -1,5 +1,5 @@
-import { PremiseSource } from './PremiseSource.js';
-import { Logger } from '../util/Logger.js';
+import {PremiseSource} from './PremiseSource.js';
+import {Logger} from '../util/Logger.js';
 
 /**
  * A Bag of PremiseSources that samples from the sources based on configurable objectives.
@@ -40,7 +40,7 @@ export class PremiseSources extends PremiseSource {
      * @param {number} priority - Priority of the source (default: 1.0).
      */
     addSource(source, priority = 1.0) {
-        this.sources.push({ source, priority });
+        this.sources.push({source, priority});
     }
 
     /**
@@ -117,7 +117,7 @@ export class PremiseSources extends PremiseSource {
                 Logger.error('Error in PremiseSources stream:', error);
                 // Wait before continuing to avoid tight error loop
                 await new Promise(resolve => setTimeout(resolve, 10));
-                continue;
+
             }
         }
     }

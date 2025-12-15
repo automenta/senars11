@@ -1,11 +1,11 @@
 /**
  * NAL4.js
- * 
+ *
  * NAL-4: Transformation Rules
  * Includes Intersection, Union, Difference, Product, Image
  */
 
-import { Truth } from '../../../../Truth.js';
+import {Truth} from '../../../../Truth.js';
 
 export const NAL4 = [
     // Intersection: (S --> M) & (P --> M) |- ((S|P) --> M)
@@ -17,10 +17,10 @@ export const NAL4 = [
     {
         id: 'intersection_composition',
         pattern: {
-            p: { operator: '-->', subject: '$M', predicate: '$T' },
-            s: { operator: '-->', subject: '$M', predicate: '$P' }
+            p: {operator: '-->', subject: '$M', predicate: '$T'},
+            s: {operator: '-->', subject: '$M', predicate: '$P'}
         },
-        conclusion: (bindings, p, s, { termFactory }) => {
+        conclusion: (bindings, p, s, {termFactory}) => {
             const T = bindings['?$T'];
             const P = bindings['?$P'];
             const M = bindings['?$M'];
@@ -30,7 +30,7 @@ export const NAL4 = [
             const term = termFactory.inheritance(M, compound);
             const truth = Truth.intersection(p.truth, s.truth);
 
-            return { term, truth, punctuation: '.' };
+            return {term, truth, punctuation: '.'};
         }
     },
 
@@ -38,10 +38,10 @@ export const NAL4 = [
     {
         id: 'union_composition',
         pattern: {
-            p: { operator: '-->', subject: '$T', predicate: '$M' },
-            s: { operator: '-->', subject: '$P', predicate: '$M' }
+            p: {operator: '-->', subject: '$T', predicate: '$M'},
+            s: {operator: '-->', subject: '$P', predicate: '$M'}
         },
-        conclusion: (bindings, p, s, { termFactory }) => {
+        conclusion: (bindings, p, s, {termFactory}) => {
             const T = bindings['?$T'];
             const P = bindings['?$P'];
             const M = bindings['?$M'];
@@ -51,7 +51,7 @@ export const NAL4 = [
             const term = termFactory.inheritance(compound, M);
             const truth = Truth.union(p.truth, s.truth);
 
-            return { term, truth, punctuation: '.' };
+            return {term, truth, punctuation: '.'};
         }
     },
 
@@ -59,10 +59,10 @@ export const NAL4 = [
     {
         id: 'difference',
         pattern: {
-            p: { operator: '-->', subject: '$M', predicate: '$T' },
-            s: { operator: '-->', subject: '$M', predicate: '$P' }
+            p: {operator: '-->', subject: '$M', predicate: '$T'},
+            s: {operator: '-->', subject: '$M', predicate: '$P'}
         },
-        conclusion: (bindings, p, s, { termFactory }) => {
+        conclusion: (bindings, p, s, {termFactory}) => {
             const T = bindings['?$T'];
             const P = bindings['?$P'];
             const M = bindings['?$M'];
@@ -72,7 +72,7 @@ export const NAL4 = [
             const term = termFactory.inheritance(M, compound);
             const truth = Truth.diff(p.truth, s.truth);
 
-            return { term, truth, punctuation: '.' };
+            return {term, truth, punctuation: '.'};
         }
     }
 ];

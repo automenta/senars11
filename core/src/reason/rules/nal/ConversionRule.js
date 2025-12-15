@@ -1,13 +1,13 @@
 /**
  * @file ConversionRule.js
  * @description Conversion and Contraposition inference rules.
- * 
+ *
  * Conversion: (P --> S) |- (S --> P) [with reduced confidence]
  * Contraposition: (S --> P) |- (--P --> --S) [with reduced confidence]
  */
 
-import { NALRule } from './NALRule.js';
-import { Truth } from '../../../Truth.js';
+import {NALRule} from './NALRule.js';
+import {Truth} from '../../../Truth.js';
 
 /**
  * Conversion Rule: Reverse subject and predicate
@@ -22,14 +22,14 @@ export class ConversionRule extends NALRule {
     canApply(primaryPremise, secondaryPremise, context) {
         if (!primaryPremise || secondaryPremise) return false; // Unary rule
 
-        const { term } = primaryPremise;
+        const {term} = primaryPremise;
         return term?.isCompound && term.operator === '-->' && term.subject && term.predicate;
     }
 
     apply(primaryPremise, secondaryPremise, context) {
         if (!this.canApply(primaryPremise, secondaryPremise, context)) return [];
 
-        const { term, truth } = primaryPremise;
+        const {term, truth} = primaryPremise;
         const termFactory = context?.termFactory;
 
         if (!termFactory || !truth) return [];
@@ -57,14 +57,14 @@ export class ContrapositionRule extends NALRule {
     canApply(primaryPremise, secondaryPremise, context) {
         if (!primaryPremise || secondaryPremise) return false; // Unary rule
 
-        const { term } = primaryPremise;
+        const {term} = primaryPremise;
         return term?.isCompound && term.operator === '==>' && term.subject && term.predicate;
     }
 
     apply(primaryPremise, secondaryPremise, context) {
         if (!this.canApply(primaryPremise, secondaryPremise, context)) return [];
 
-        const { term, truth } = primaryPremise;
+        const {term, truth} = primaryPremise;
         const termFactory = context?.termFactory;
 
         if (!termFactory || !truth) return [];

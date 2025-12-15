@@ -1,15 +1,15 @@
-import { LMConfig } from './LMConfig.js';
+import {LMConfig} from './LMConfig.js';
 
 /**
  * @deprecated Use LMConfig.interactive() or LMConfig.quickSelect() instead
- * 
+ *
  * LMConfigurator is deprecated as of Phase 4. All functionality has been
  * consolidated into LMConfig for a unified configuration API.
- * 
+ *
  * Migration:
  *   const configurator = new LMConfigurator();
  *   const result = await configurator.configure();
- * 
+ *
  * Becomes:
  *   const config = new LMConfig();
  *   const result = await config.interactive();

@@ -3,8 +3,8 @@
  * @description Shared helper functions for reasoning rules, enhanced for stream-based architecture.
  */
 
-import { Logger } from '../util/Logger.js';
-import { Punctuation } from '../task/Task.js';
+import {Logger} from '../util/Logger.js';
+import {Punctuation} from '../task/Task.js';
 
 export function extractPrimaryTask(primaryPremise, secondaryPremise, context) {
     return primaryPremise ?? null;
@@ -27,7 +27,7 @@ export function isAsyncRule(rule) {
 }
 
 export function parseListFromResponse(lmResponse, options = {}) {
-    const { removeEmpty = true } = options;
+    const {removeEmpty = true} = options;
     if (!lmResponse) return [];
 
     const lines = lmResponse
@@ -40,7 +40,7 @@ export function parseListFromResponse(lmResponse, options = {}) {
 }
 
 // Alias for backward compatibility - use parseListFromResponse instead
-export const parseSubGoals = (lmResponse) => parseListFromResponse(lmResponse, { removeEmpty: false });
+export const parseSubGoals = (lmResponse) => parseListFromResponse(lmResponse, {removeEmpty: false});
 
 const INVALID_PATTERNS = ['sorry', 'cannot', 'unable'];
 const INVALID_TEXT_PATTERNS = [...INVALID_PATTERNS, 'no information'];
@@ -90,7 +90,7 @@ export function createDerivedTask(originalTask, newProps) {
 
 export function deriveTruthValue(originalTruth, confidenceMultiplier = 0.9) {
     if (!originalTruth) {
-        return { frequency: 0.5, confidence: 0.9 };
+        return {frequency: 0.5, confidence: 0.9};
     }
 
     return {
@@ -141,7 +141,7 @@ export function tryParseNarsese(text, parser) {
     try {
         return parser.parse(toParse);
     } catch (error) {
-        Logger.debug('Failed to parse Narsese text', { text: toParse, error: error.message });
+        Logger.debug('Failed to parse Narsese text', {text: toParse, error: error.message});
         return null;
     }
 }
@@ -160,7 +160,7 @@ export function createFallbackTerm(text, termFactory) {
         }
         return termStr;
     } catch (error) {
-        Logger.debug('Failed to create atomic term', { termStr, error: error.message });
+        Logger.debug('Failed to create atomic term', {termStr, error: error.message});
         return termStr;
     }
 }

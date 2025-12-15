@@ -1,5 +1,5 @@
-import { TraceId } from './TraceId.js';
-import { IntrospectionEvents } from './IntrospectionEvents.js';
+import {TraceId} from './TraceId.js';
+import {IntrospectionEvents} from './IntrospectionEvents.js';
 
 export class DerivationTracer {
     constructor(eventBus, options = {}) {
@@ -110,12 +110,12 @@ export class DerivationTracer {
         const trace = this.traces.get(traceId);
         if (!trace) return [];
 
-        const queue = [{ term: fromTerm, path: [] }];
+        const queue = [{term: fromTerm, path: []}];
         const visited = new Set();
         const targetStr = this._toTermString(toTerm);
 
         while (queue.length > 0) {
-            const { term, path } = queue.shift();
+            const {term, path} = queue.shift();
             const termStr = this._toTermString(term);
 
             if (visited.has(termStr)) continue;
@@ -124,7 +124,7 @@ export class DerivationTracer {
 
             for (const step of trace.steps) {
                 if (step.premises.some(p => this._toTermString(p) === termStr)) {
-                    queue.push({ term: this._toTermString(step.conclusion), path: [...path, step] });
+                    queue.push({term: this._toTermString(step.conclusion), path: [...path, step]});
                 }
             }
         }

@@ -1,6 +1,6 @@
-import { NALRule } from './NALRule.js';
-import { Truth } from '../../../Truth.js';
-import { logError } from '../../utils/error.js';
+import {NALRule} from './NALRule.js';
+import {Truth} from '../../../Truth.js';
+import {logError} from '../../utils/error.js';
 
 /**
  * Implements the Modus Ponens inference rule for the stream reasoner.

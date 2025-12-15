@@ -1,7 +1,7 @@
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
-import { InputProcessor } from '../../../core/src/nar/InputProcessor.js';
-import { NarseseParser } from '../../../core/src/parser/NarseseParser.js';
-import { Task } from '../../../core/src/task/Task.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {InputProcessor} from '../../../core/src/nar/InputProcessor.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
+import {Task} from '../../../core/src/task/Task.js';
 
 describe('Negation Handling', () => {
     let termFactory;
@@ -11,7 +11,7 @@ describe('Negation Handling', () => {
     beforeEach(() => {
         termFactory = new TermFactory();
         parser = new NarseseParser(termFactory);
-        inputProcessor = new InputProcessor({}, { parser, termFactory });
+        inputProcessor = new InputProcessor({}, {parser, termFactory});
     });
 
     describe('TermFactory Reductions', () => {

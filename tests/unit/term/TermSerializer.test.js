@@ -1,6 +1,5 @@
-import { jest } from '@jest/globals';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
-import { TermSerializer } from '../../../core/src/term/TermSerializer.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {TermSerializer} from '../../../core/src/term/TermSerializer.js';
 
 describe('TermSerializer', () => {
     let factory;

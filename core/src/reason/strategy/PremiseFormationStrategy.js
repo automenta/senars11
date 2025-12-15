@@ -1,7 +1,7 @@
 /**
  * @file PremiseFormationStrategy.js
  * @description Base interface for premise formation strategies.
- * 
+ *
  * Premise formation strategies generate secondary premise candidates for pairing
  * with a primary task. This enables flexible, modular, and composable premise
  * formation that can be controlled by high-level reasoning controllers.
@@ -52,12 +52,21 @@ export class PremiseFormationStrategy {
     }
 
     get stats() {
-        return { ...this._stats };
+        return {...this._stats};
+    }
+
+    /**
+     * Calculate effectiveness ratio for adaptive control.
+     * @returns {number} Ratio of successful pairs to candidates generated
+     */
+    get effectiveness() {
+        if (this._stats.candidatesGenerated === 0) return 0;
+        return this._stats.successfulPairs / this._stats.candidatesGenerated;
     }
 
     /**
      * Generate secondary premise candidates for a primary task.
-     * 
+     *
      * @param {Task} primaryTask - The primary premise task
      * @param {object} context - Context for candidate generation
      * @param {TermFactory} context.termFactory - Factory for creating terms
@@ -86,15 +95,6 @@ export class PremiseFormationStrategy {
      */
     recordSuccess() {
         this._stats.successfulPairs++;
-    }
-
-    /**
-     * Calculate effectiveness ratio for adaptive control.
-     * @returns {number} Ratio of successful pairs to candidates generated
-     */
-    get effectiveness() {
-        if (this._stats.candidatesGenerated === 0) return 0;
-        return this._stats.successfulPairs / this._stats.candidatesGenerated;
     }
 
     /**

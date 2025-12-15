@@ -8,8 +8,8 @@
  *
  * NAL-6 Enhancement: Integrated Unifier for variable unification in query matching.
  */
-import { Strategy } from '../Strategy.js';
-import { Unifier } from '../../term/Unifier.js';
+import {Strategy} from '../Strategy.js';
+import {Unifier} from '../../term/Unifier.js';
 
 export class ResolutionStrategy extends Strategy {
     /**

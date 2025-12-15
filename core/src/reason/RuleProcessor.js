@@ -1,15 +1,15 @@
-import { mergeConfig, processDerivation, sleep } from './utils/common.js';
-import { Logger } from '../util/Logger.js';
-import { logError, ReasonerError } from './utils/error.js';
-import { Queue } from '../util/Queue.js';
-import { ArrayStamp } from '../Stamp.js';
-import { isSynchronousRule } from './RuleHelpers.js';
-import { RuleCompiler } from './rules/compiler/RuleCompiler.js';
-import { RuleExecutor as PatternRuleExecutor } from './rules/executor/RuleExecutor.js';
-import { Unifier } from '../term/Unifier.js';
-import { StandardDiscriminators } from './rules/Discriminators.js';
-import { NAL4 } from './rules/nal/definitions/NAL4.js';
-import { NAL5 } from './rules/nal/definitions/NAL5.js';
+import {mergeConfig, processDerivation, sleep} from './utils/common.js';
+import {Logger} from '../util/Logger.js';
+import {logError, ReasonerError} from './utils/error.js';
+import {Queue} from '../util/Queue.js';
+import {ArrayStamp} from '../Stamp.js';
+import {isSynchronousRule} from './RuleHelpers.js';
+import {RuleCompiler} from './rules/compiler/RuleCompiler.js';
+import {RuleExecutor as PatternRuleExecutor} from './rules/executor/RuleExecutor.js';
+import {Unifier} from '../term/Unifier.js';
+import {StandardDiscriminators} from './rules/Discriminators.js';
+import {NAL4} from './rules/nal/definitions/NAL4.js';
+import {NAL5} from './rules/nal/definitions/NAL5.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
@@ -98,7 +98,7 @@ export class RuleProcessor {
                             }
                         }
                     } catch (error) {
-                        logError(error, { context: 'pattern_rule_processing' }, 'warn');
+                        logError(error, {context: 'pattern_rule_processing'}, 'warn');
                     }
                 }
 
@@ -107,8 +107,8 @@ export class RuleProcessor {
 
             yield* this._processRemainingAsyncResults(timeoutMs, startTime, signal);
         } catch (error) {
-            logError(error, { context: 'rule_processor_stream' });
-            throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', { originalError: error });
+            logError(error, {context: 'rule_processor_stream'});
+            throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', {originalError: error});
         }
     }
 
@@ -173,7 +173,7 @@ export class RuleProcessor {
                 .map(this._processDerivation.bind(this))
                 .filter(Boolean);
         } catch (error) {
-            logError(error, { ruleId: rule.id ?? rule.name, context: 'async_rule_execution' }, 'error');
+            logError(error, {ruleId: rule.id ?? rule.name, context: 'async_rule_execution'}, 'error');
             return [];
         }
     }

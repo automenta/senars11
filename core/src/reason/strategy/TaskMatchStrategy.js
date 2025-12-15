@@ -1,16 +1,16 @@
 /**
  * @file TaskMatchStrategy.js
  * @description Premise formation strategy that pairs with existing tasks in focus/memory.
- * 
+ *
  * This strategy implements the current SeNARS behavior of finding compatible
  * tasks from the focus set for syllogistic and other reasoning patterns.
  */
 
-import { PremiseFormationStrategy } from './PremiseFormationStrategy.js';
+import {PremiseFormationStrategy} from './PremiseFormationStrategy.js';
 
 /**
  * Strategy that finds existing tasks as premise candidates.
- * 
+ *
  * Scores tasks based on syllogistic compatibility:
  * - High score for (A->M) + (M->B) patterns (shared middle term)
  * - Medium score for shared subject or predicate
@@ -43,7 +43,7 @@ export class TaskMatchStrategy extends PremiseFormationStrategy {
     async* generateCandidates(primaryTask, context) {
         if (!this.enabled) return;
 
-        const { focus, memory } = context;
+        const {focus, memory} = context;
         const tasks = this._getAvailableTasks(focus, memory);
 
         for (const task of tasks) {
@@ -84,13 +84,13 @@ export class TaskMatchStrategy extends PremiseFormationStrategy {
      * @private
      */
     _scoreCompatibility(primary, secondary) {
-        const { term: p } = primary;
-        const { term: s } = secondary;
+        const {term: p} = primary;
+        const {term: s} = secondary;
 
         if (!p?.isCompound || !s?.isCompound) return this.lowCompatibilityScore;
 
-        const { subject: pSubj, predicate: pPred } = p;
-        const { subject: sSubj, predicate: sPred } = s;
+        const {subject: pSubj, predicate: pPred} = p;
+        const {subject: sSubj, predicate: sPred} = s;
 
         if (!pSubj || !pPred || !sSubj || !sPred) return this.lowCompatibilityScore;
 

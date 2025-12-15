@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { DerivationTracer } from '../../../core/src/util/DerivationTracer.js';
-import { EventBus } from '../../../core/src/util/EventBus.js';
-import { IntrospectionEvents } from '../../../core/src/util/IntrospectionEvents.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {DerivationTracer} from '../../../core/src/util/DerivationTracer.js';
+import {EventBus} from '../../../core/src/util/EventBus.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('DerivationTracer', () => {
     let eventBus;
@@ -47,9 +47,9 @@ describe('DerivationTracer', () => {
 
             eventBus.emit(IntrospectionEvents.RULE_FIRED, {
                 ruleName: 'TestRule',
-                premises: [{ term: 'a', serialize: () => ({ term: 'a' }) }],
-                conclusion: { term: 'b', serialize: () => ({ term: 'b' }) },
-                truth: { frequency: 1.0, confidence: 0.9 },
+                premises: [{term: 'a', serialize: () => ({term: 'a'})}],
+                conclusion: {term: 'b', serialize: () => ({term: 'b'})},
+                truth: {frequency: 1.0, confidence: 0.9},
                 depth: 1
             });
 
@@ -77,7 +77,7 @@ describe('DerivationTracer', () => {
             const traceId = tracer.startTrace();
 
             eventBus.emit(IntrospectionEvents.REASONING_DERIVATION, {
-                task: { term: 'c', serialize: () => ({ term: 'c' }) }
+                task: {term: 'c', serialize: () => ({term: 'c'})}
             });
 
             const trace = tracer.getTrace(traceId);
@@ -85,7 +85,7 @@ describe('DerivationTracer', () => {
         });
 
         test('respects recordSkips option', () => {
-            tracer = new DerivationTracer(eventBus, { recordSkips: false });
+            tracer = new DerivationTracer(eventBus, {recordSkips: false});
             const traceId = tracer.startTrace();
 
             eventBus.emit(IntrospectionEvents.RULE_NOT_FIRED, {
@@ -261,7 +261,7 @@ describe('DerivationTracer', () => {
             });
 
             eventBus.emit(IntrospectionEvents.REASONING_DERIVATION, {
-                task: { term: 'c' }
+                task: {term: 'c'}
             });
 
             const trace = tracer.endTrace(traceId);

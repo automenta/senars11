@@ -1,11 +1,10 @@
-import { jest } from '@jest/globals';
-import { DecompositionStrategy } from '../../../../core/src/reason/strategy/DecompositionStrategy.js';
-import { TermLinkStrategy } from '../../../../core/src/reason/strategy/TermLinkStrategy.js';
-import { TaskMatchStrategy } from '../../../../core/src/reason/strategy/TaskMatchStrategy.js';
-import { PremiseFormationStrategy } from '../../../../core/src/reason/strategy/PremiseFormationStrategy.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { Task } from '../../../../core/src/task/Task.js';
-import { Truth } from '../../../../core/src/Truth.js';
+import {DecompositionStrategy} from '../../../../core/src/reason/strategy/DecompositionStrategy.js';
+import {TermLinkStrategy} from '../../../../core/src/reason/strategy/TermLinkStrategy.js';
+import {TaskMatchStrategy} from '../../../../core/src/reason/strategy/TaskMatchStrategy.js';
+import {PremiseFormationStrategy} from '../../../../core/src/reason/strategy/PremiseFormationStrategy.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {Task} from '../../../../core/src/task/Task.js';
+import {Truth} from '../../../../core/src/Truth.js';
 
 let factory;
 
@@ -15,7 +14,7 @@ beforeEach(() => {
 
 describe('PremiseFormationStrategy base class', () => {
     test('should have configurable priority', () => {
-        const strategy = new PremiseFormationStrategy({ priority: 0.7 });
+        const strategy = new PremiseFormationStrategy({priority: 0.7});
         expect(strategy.priority).toBe(0.7);
 
         strategy.priority = 0.5;
@@ -31,7 +30,7 @@ describe('PremiseFormationStrategy base class', () => {
     });
 
     test('should be toggleable', () => {
-        const strategy = new PremiseFormationStrategy({ enabled: false });
+        const strategy = new PremiseFormationStrategy({enabled: false});
         expect(strategy.enabled).toBe(false);
 
         strategy.enabled = true;
@@ -43,7 +42,7 @@ describe('DecompositionStrategy', () => {
     test('should decompose inheritance statement to subject and predicate', async () => {
         const strategy = new DecompositionStrategy();
         const term = factory.inheritance(factory.atomic('cat'), factory.atomic('animal'));
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
         const candidates = [];
         for await (const c of strategy.generateCandidates(task, {})) {
@@ -60,7 +59,7 @@ describe('DecompositionStrategy', () => {
     test('should decompose implication statement', async () => {
         const strategy = new DecompositionStrategy();
         const term = factory.implication(factory.atomic('rain'), factory.atomic('wet'));
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.8, 0.8) });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.8, 0.8)});
 
         const candidates = [];
         for await (const c of strategy.generateCandidates(task, {})) {
@@ -75,7 +74,7 @@ describe('DecompositionStrategy', () => {
     test('should decompose conjunction to components', async () => {
         const strategy = new DecompositionStrategy();
         const term = factory.conjunction([factory.atomic('A'), factory.atomic('B'), factory.atomic('C')]);
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
         const candidates = [];
         for await (const c of strategy.generateCandidates(task, {})) {
@@ -89,7 +88,7 @@ describe('DecompositionStrategy', () => {
     test('should not decompose atomic terms', async () => {
         const strategy = new DecompositionStrategy();
         const term = factory.atomic('simple');
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
         const candidates = [];
         for await (const c of strategy.generateCandidates(task, {})) {
@@ -100,9 +99,9 @@ describe('DecompositionStrategy', () => {
     });
 
     test('should respect enabled flag', async () => {
-        const strategy = new DecompositionStrategy({ enabled: false });
+        const strategy = new DecompositionStrategy({enabled: false});
         const term = factory.inheritance(factory.atomic('a'), factory.atomic('b'));
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
         const candidates = [];
         for await (const c of strategy.generateCandidates(task, {})) {
@@ -121,8 +120,8 @@ describe('TaskMatchStrategy', () => {
         const term1 = factory.inheritance(factory.atomic('A'), factory.atomic('M'));
         const term2 = factory.inheritance(factory.atomic('M'), factory.atomic('B'));
 
-        const task1 = new Task({ term: term1, punctuation: '.', truth: new Truth(0.9, 0.9), budget: { priority: 0.8 } });
-        const task2 = new Task({ term: term2, punctuation: '.', truth: new Truth(0.8, 0.8), budget: { priority: 0.7 } });
+        const task1 = new Task({term: term1, punctuation: '.', truth: new Truth(0.9, 0.9), budget: {priority: 0.8}});
+        const task2 = new Task({term: term2, punctuation: '.', truth: new Truth(0.8, 0.8), budget: {priority: 0.7}});
 
         // Mock focus with task2
         const mockFocus = {
@@ -130,7 +129,7 @@ describe('TaskMatchStrategy', () => {
         };
 
         const candidates = [];
-        for await (const c of strategy.generateCandidates(task1, { focus: mockFocus })) {
+        for await (const c of strategy.generateCandidates(task1, {focus: mockFocus})) {
             candidates.push(c);
         }
 
@@ -145,13 +144,13 @@ describe('TaskMatchStrategy', () => {
         const term1 = factory.inheritance(factory.atomic('A'), factory.atomic('M'));
         const term2 = factory.inheritance(factory.atomic('A'), factory.atomic('B'));
 
-        const task1 = new Task({ term: term1, punctuation: '.', truth: new Truth(0.9, 0.9), budget: { priority: 0.8 } });
-        const task2 = new Task({ term: term2, punctuation: '.', truth: new Truth(0.8, 0.8), budget: { priority: 0.7 } });
+        const task1 = new Task({term: term1, punctuation: '.', truth: new Truth(0.9, 0.9), budget: {priority: 0.8}});
+        const task2 = new Task({term: term2, punctuation: '.', truth: new Truth(0.8, 0.8), budget: {priority: 0.7}});
 
-        const mockFocus = { getTasks: () => [task2] };
+        const mockFocus = {getTasks: () => [task2]};
 
         const candidates = [];
-        for await (const c of strategy.generateCandidates(task1, { focus: mockFocus })) {
+        for await (const c of strategy.generateCandidates(task1, {focus: mockFocus})) {
             candidates.push(c);
         }
 
@@ -163,12 +162,12 @@ describe('TaskMatchStrategy', () => {
         const strategy = new TaskMatchStrategy();
 
         const term = factory.inheritance(factory.atomic('A'), factory.atomic('B'));
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.9, 0.9), budget: { priority: 0.8 } });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.9, 0.9), budget: {priority: 0.8}});
 
-        const mockFocus = { getTasks: () => [task] }; // Focus only contains the same task
+        const mockFocus = {getTasks: () => [task]}; // Focus only contains the same task
 
         const candidates = [];
-        for await (const c of strategy.generateCandidates(task, { focus: mockFocus })) {
+        for await (const c of strategy.generateCandidates(task, {focus: mockFocus})) {
             candidates.push(c);
         }
 
@@ -182,20 +181,20 @@ describe('TermLinkStrategy', () => {
 
         const sourceTerm = factory.atomic('cat');
         const targetTerm = factory.atomic('animal');
-        const task = new Task({ term: sourceTerm, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term: sourceTerm, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
         // Mock TermLayer
         const mockTermLayer = {
             get: (term) => {
                 if (term.name === 'cat') {
-                    return [{ target: targetTerm, data: { priority: 0.8 } }];
+                    return [{target: targetTerm, data: {priority: 0.8}}];
                 }
                 return [];
             }
         };
 
         const candidates = [];
-        for await (const c of strategy.generateCandidates(task, { termLayer: mockTermLayer })) {
+        for await (const c of strategy.generateCandidates(task, {termLayer: mockTermLayer})) {
             candidates.push(c);
         }
 
@@ -208,12 +207,12 @@ describe('TermLinkStrategy', () => {
         const strategy = new TermLinkStrategy();
 
         const term = factory.atomic('unknown');
-        const task = new Task({ term, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
-        const mockTermLayer = { get: () => [] };
+        const mockTermLayer = {get: () => []};
 
         const candidates = [];
-        for await (const c of strategy.generateCandidates(task, { termLayer: mockTermLayer })) {
+        for await (const c of strategy.generateCandidates(task, {termLayer: mockTermLayer})) {
             candidates.push(c);
         }
 
@@ -221,20 +220,20 @@ describe('TermLinkStrategy', () => {
     });
 
     test('should respect minLinkPriority', async () => {
-        const strategy = new TermLinkStrategy({ minLinkPriority: 0.5 });
+        const strategy = new TermLinkStrategy({minLinkPriority: 0.5});
 
         const sourceTerm = factory.atomic('cat');
-        const task = new Task({ term: sourceTerm, punctuation: '.', truth: new Truth(0.9, 0.9) });
+        const task = new Task({term: sourceTerm, punctuation: '.', truth: new Truth(0.9, 0.9)});
 
         const mockTermLayer = {
             get: () => [
-                { target: factory.atomic('high'), data: { priority: 0.8 } },
-                { target: factory.atomic('low'), data: { priority: 0.3 } }
+                {target: factory.atomic('high'), data: {priority: 0.8}},
+                {target: factory.atomic('low'), data: {priority: 0.3}}
             ]
         };
 
         const candidates = [];
-        for await (const c of strategy.generateCandidates(task, { termLayer: mockTermLayer })) {
+        for await (const c of strategy.generateCandidates(task, {termLayer: mockTermLayer})) {
             candidates.push(c);
         }
 

@@ -1,12 +1,11 @@
 /**
  * RuleCompiler.js
- * 
+ *
  * Compiles declarative rule patterns into an optimized decision tree (Rete-like)
  * for efficient matching against the stream.
  */
 
-import { getOperator, getComponents, isVariable, getVariableName } from '../../../term/TermUtils.js';
-import { Term } from '../../../term/Term.js';
+import {Term} from '../../../term/Term.js';
 
 /**
  * Check if an object is already a Term instance or a mock term object
@@ -39,7 +38,7 @@ export class RuleCompiler {
 
     /**
      * Compile a list of pattern rules into a decision tree.
-     * @param {Array<PatternRule>} rules 
+     * @param {Array<PatternRule>} rules
      * @returns {DecisionNode} Root of the execution tree
      */
     compile(rules) {
@@ -67,7 +66,7 @@ export class RuleCompiler {
 
         if (typeof patternObj === 'string') {
             if (!this.termFactory?.variable || !this.termFactory?.atomic) {
-                return { isTerm: true, name: patternObj, toString: () => patternObj };
+                return {isTerm: true, name: patternObj, toString: () => patternObj};
             }
             if (patternObj.startsWith('$')) return this.termFactory.variable(patternObj);
             return this.termFactory.atomic(patternObj);
@@ -75,7 +74,7 @@ export class RuleCompiler {
 
         if (patternObj.operator) {
             if (!this.termFactory?.create) {
-                return { isTerm: true, name: JSON.stringify(patternObj), toString: () => JSON.stringify(patternObj) };
+                return {isTerm: true, name: JSON.stringify(patternObj), toString: () => JSON.stringify(patternObj)};
             }
 
             // Assuming binary operators for now if subject/predicate are present
@@ -110,7 +109,7 @@ export class RuleCompiler {
 
     getOrCreateChild(node, checkType, value) {
         if (!node.check) {
-            node.check = { type: checkType };
+            node.check = {type: checkType};
         }
 
         let child = node.children.get(value);

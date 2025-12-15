@@ -4,14 +4,14 @@ Structured knowledge management, templates, and external KB integration.
 
 ## Components
 
-| File | Purpose |
-|------|---------|
-| `Knowing.js` | Core knowledge operations |
-| `Knowledge.js` | Base knowledge representation |
-| `KnowledgeBaseConnector.js` | External KB integration |
-| `NarseseTemplate.js` | Template-based Narsese generation |
-| `DataTableKnowledge.js` | Tabular data as knowledge |
-| `SoftwareKnowledge.js` | Code/API knowledge extraction |
+| File                        | Purpose                           |
+|-----------------------------|-----------------------------------|
+| `Knowing.js`                | Core knowledge operations         |
+| `Knowledge.js`              | Base knowledge representation     |
+| `KnowledgeBaseConnector.js` | External KB integration           |
+| `NarseseTemplate.js`        | Template-based Narsese generation |
+| `DataTableKnowledge.js`     | Tabular data as knowledge         |
+| `SoftwareKnowledge.js`      | Code/API knowledge extraction     |
 
 ## Usage
 
@@ -86,6 +86,7 @@ const knowledge = await sk.fromSourceFile('MyClass.js');
 ## Templates
 
 NarseseTemplate supports:
+
 - Variable substitution: `{varName}`
 - Default values
 - Conditional sections

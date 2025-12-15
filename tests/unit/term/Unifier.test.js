@@ -1,13 +1,13 @@
 /**
  * Unifier.test.js
- * 
+ *
  * Comprehensive test suite for the Unifier class.
  * Tests both two-way unification and one-way pattern matching.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { Unifier } from '../../../core/src/term/Unifier.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {Unifier} from '../../../core/src/term/Unifier.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('Unifier', () => {
     let unifier;
@@ -86,7 +86,7 @@ describe('Unifier', () => {
             const v = tf.variable('X');
             const t1 = tf.atomic('bird');
             const t2 = tf.atomic('bird');
-            const existingSub = { '?X': t1 };
+            const existingSub = {'?X': t1};
             const result = unifier.unify(v, t2, existingSub);
             expect(result.success).toBe(true);
             expect(result.substitution['?X']).toEqual(t1);
@@ -96,7 +96,7 @@ describe('Unifier', () => {
             const v = tf.variable('X');
             const t1 = tf.atomic('bird');
             const t2 = tf.atomic('cat');
-            const existingSub = { '?X': t1 };
+            const existingSub = {'?X': t1};
             const result = unifier.unify(v, t2, existingSub);
             expect(result.success).toBe(false);
         });
@@ -196,7 +196,7 @@ describe('Unifier', () => {
         it('should respect existing substitution in pattern matching', () => {
             const pattern = tf.variable('X');
             const term = tf.atomic('bird');
-            const existingSub = { '?X': tf.atomic('bird') };
+            const existingSub = {'?X': tf.atomic('bird')};
             const result = unifier.match(pattern, term, existingSub);
             expect(result.success).toBe(true);
         });
@@ -204,7 +204,7 @@ describe('Unifier', () => {
         it('should fail when pattern variable is bound to different term', () => {
             const pattern = tf.variable('X');
             const term = tf.atomic('cat');
-            const existingSub = { '?X': tf.atomic('bird') };
+            const existingSub = {'?X': tf.atomic('bird')};
             const result = unifier.match(pattern, term, existingSub);
             expect(result.success).toBe(false);
         });
@@ -228,7 +228,7 @@ describe('Unifier', () => {
     describe('applySubstitution', () => {
         it('should apply substitution to variable', () => {
             const v = tf.variable('X');
-            const sub = { '?X': tf.atomic('bird') };
+            const sub = {'?X': tf.atomic('bird')};
             const result = unifier.applySubstitution(v, sub);
             expect(result.name).toBe('bird');
         });
@@ -245,7 +245,7 @@ describe('Unifier', () => {
 
         it('should apply substitution to compound terms', () => {
             const term = tf.inheritance(tf.variable('X'), tf.atomic('animal'));
-            const sub = { '?X': tf.atomic('bird') };
+            const sub = {'?X': tf.atomic('bird')};
             const result = unifier.applySubstitution(term, sub);
             expect(result.components[0].name).toBe('bird');
             expect(result.components[1].name).toBe('animal');
@@ -253,14 +253,14 @@ describe('Unifier', () => {
 
         it('should not modify term when no substitution applies', () => {
             const term = tf.atomic('bird');
-            const sub = { '?X': tf.atomic('cat') };
+            const sub = {'?X': tf.atomic('cat')};
             const result = unifier.applySubstitution(term, sub);
             expect(result).toEqual(term);
         });
 
         it('should apply partial substitutions in compound terms', () => {
             const term = tf.inheritance(tf.variable('X'), tf.variable('Y'));
-            const sub = { '?X': tf.atomic('bird') };
+            const sub = {'?X': tf.atomic('bird')};
             const result = unifier.applySubstitution(term, sub);
             expect(result.components[0].name).toBe('bird');
             expect(result.components[1].name).toBe('?Y');

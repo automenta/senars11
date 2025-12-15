@@ -1,6 +1,6 @@
-import { Truth } from '../Truth.js';
-import { ArrayStamp } from '../Stamp.js';
-import { Term } from '../term/Term.js';
+import {Truth} from '../Truth.js';
+import {ArrayStamp} from '../Stamp.js';
+import {Term} from '../term/Term.js';
 
 export const Punctuation = Object.freeze({
     BELIEF: '.',
@@ -18,17 +18,17 @@ const TYPE_TO_PUNCTUATION = Object.freeze({
     'GOAL': Punctuation.GOAL,
     'QUESTION': Punctuation.QUESTION
 });
-const DEFAULT_BUDGET = Object.freeze({ priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10 });
+const DEFAULT_BUDGET = Object.freeze({priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10});
 
 export class Task {
     constructor({
-        term,
-        punctuation = '.',
-        truth = null,
-        budget = DEFAULT_BUDGET,
-        stamp = null,
-        metadata = null
-    }) {
+                    term,
+                    punctuation = '.',
+                    truth = null,
+                    budget = DEFAULT_BUDGET,
+                    stamp = null,
+                    metadata = null
+                }) {
         if (!(term instanceof Term)) throw new Error('Task must be initialized with a valid Term object.');
 
         let finalTerm = term;
@@ -67,7 +67,7 @@ export class Task {
         }
 
         this.truth = this._createTruth(finalTruth);
-        this.budget = Object.freeze({ ...budget });
+        this.budget = Object.freeze({...budget});
         this.stamp = stamp ?? ArrayStamp.createInput();
         this.metadata = metadata;
         Object.freeze(this);
@@ -84,7 +84,7 @@ export class Task {
 
         const reconstructedTerm = data.term ?
             (typeof data.term === 'string' ?
-                { toString: () => data.term, equals: (other) => other.toString && other.toString() === data.term } :
+                {toString: () => data.term, equals: (other) => other.toString && other.toString() === data.term} :
                 data.term) :
             null;
 
@@ -92,7 +92,7 @@ export class Task {
             term: reconstructedTerm,
             punctuation: data.punctuation,
             truth: data.truth ? new Truth(data.truth.frequency || data.truth.f, data.truth.confidence || data.truth.c) : null,
-            budget: data.budget || { priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10 }
+            budget: data.budget || {priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10}
         });
     }
 
@@ -113,7 +113,7 @@ export class Task {
             term: this.term,
             punctuation: this.punctuation,
             truth: this.truth,
-            budget: { ...this.budget }, // Shallow copy budget to avoid reference issues
+            budget: {...this.budget}, // Shallow copy budget to avoid reference issues
             stamp: this.stamp,
             ...overrides,
         });

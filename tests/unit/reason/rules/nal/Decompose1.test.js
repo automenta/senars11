@@ -1,9 +1,8 @@
-import { jest } from '@jest/globals';
-import { Decompose1 } from '../../../../../core/src/reason/rules/nal/Decompose1.js';
-import { TermFactory } from '../../../../../core/src/term/TermFactory.js';
-import { Task } from '../../../../../core/src/task/Task.js';
-import { Truth } from '../../../../../core/src/Truth.js';
-import { Stamp } from '../../../../../core/src/Stamp.js';
+import {Decompose1} from '../../../../../core/src/reason/rules/nal/Decompose1.js';
+import {TermFactory} from '../../../../../core/src/term/TermFactory.js';
+import {Task} from '../../../../../core/src/task/Task.js';
+import {Truth} from '../../../../../core/src/Truth.js';
+import {Stamp} from '../../../../../core/src/Stamp.js';
 
 describe('Decompose1 Rule', () => {
     let rule;
@@ -13,7 +12,7 @@ describe('Decompose1 Rule', () => {
     beforeEach(() => {
         rule = new Decompose1();
         termFactory = new TermFactory();
-        context = { termFactory };
+        context = {termFactory};
     });
 
     test('should decompose (A && B)', () => {

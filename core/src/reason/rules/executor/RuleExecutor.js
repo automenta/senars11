@@ -1,10 +1,8 @@
 /**
  * RuleExecutor.js
- * 
+ *
  * Executes the compiled rule tree against incoming tasks.
  */
-
-import { getOperator, getComponents } from '../../../term/TermUtils.js';
 
 export class RuleExecutor {
     constructor(compiledTree, unifier, discriminators = []) {

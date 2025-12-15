@@ -1,14 +1,14 @@
 /**
  * @file ComprehensiveRuleCoverage.test.js
- * @description Comprehensive tests covering all LM and NAL rules, 
+ * @description Comprehensive tests covering all LM and NAL rules,
  * including bidirectional interactions (NAL → LM and LM → NAL).
  */
 
-import { afterAll, beforeAll, describe, expect, jest, test } from '@jest/globals';
-import { App } from '../../../../agent/src/app/App.js';
-import { Punctuation, Task } from '../../../../core/src/task/Task.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { responses } from './mockEmbeddingsData.js';
+import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
+import {App} from '../../../../agent/src/app/App.js';
+import {Punctuation, Task} from '../../../../core/src/task/Task.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {responses} from './mockEmbeddingsData.js';
 
 jest.setTimeout(30000);
 
@@ -52,10 +52,10 @@ describe('NAL → LM Bidirectional Reasoning', () => {
 
     beforeAll(async () => {
         app = new App({
-            lm: { provider: 'transformers', modelName: 'mock-model', enabled: true },
-            subsystems: { lm: true }
+            lm: {provider: 'transformers', modelName: 'mock-model', enabled: true},
+            subsystems: {lm: true}
         });
-        agent = await app.start({ startAgent: true });
+        agent = await app.start({startAgent: true});
         termFactory = new TermFactory();
         await new Promise(r => setTimeout(r, 1000));
 
@@ -123,7 +123,7 @@ describe('NAL → LM Bidirectional Reasoning', () => {
 
     /**
      * NAL → LM: NAL abduction produces hypothesis that LM validates/extends
-     * Chain: (P --> M), (S --> M) → NAL abduces (S --> P) 
+     * Chain: (P --> M), (S --> M) → NAL abduces (S --> P)
      */
     test('NAL abduction output available for LM processing', async () => {
         // Shared predicate pattern for abduction
@@ -165,10 +165,10 @@ describe('LM Rule Complete Coverage', () => {
 
     beforeAll(async () => {
         app = new App({
-            lm: { provider: 'transformers', modelName: 'mock-model', enabled: true },
-            subsystems: { lm: true }
+            lm: {provider: 'transformers', modelName: 'mock-model', enabled: true},
+            subsystems: {lm: true}
         });
-        agent = await app.start({ startAgent: true });
+        agent = await app.start({startAgent: true});
         termFactory = new TermFactory();
         await new Promise(r => setTimeout(r, 1000));
 
@@ -224,8 +224,8 @@ describe('LM Rule Complete Coverage', () => {
         const goalTask = new Task({
             term: termFactory.atomic('write_book'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         await agent.input(goalTask);
@@ -247,8 +247,8 @@ describe('LM Rule Complete Coverage', () => {
         const beliefTask = new Task({
             term: termFactory.atomic('"Activity correlates with results"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         await agent.input(beliefTask);
@@ -272,8 +272,8 @@ describe('LM Rule Complete Coverage', () => {
         const variableTask = new Task({
             term: termFactory.atomic('"Value is $X"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 0.9, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 0.9, confidence: 0.9}
         });
 
         await agent.input(variableTask);
@@ -296,8 +296,8 @@ describe('LM Rule Complete Coverage', () => {
         const problemTask = new Task({
             term: termFactory.atomic('solve_complex_problem'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         await agent.input(problemTask);
@@ -323,10 +323,10 @@ describe('NAL Rule Complete Coverage', () => {
 
     beforeAll(async () => {
         app = new App({
-            lm: { provider: 'transformers', modelName: 'mock-model', enabled: false },
-            subsystems: { lm: false }  // Pure NAL tests
+            lm: {provider: 'transformers', modelName: 'mock-model', enabled: false},
+            subsystems: {lm: false}  // Pure NAL tests
         });
-        agent = await app.start({ startAgent: true });
+        agent = await app.start({startAgent: true});
         await new Promise(r => setTimeout(r, 500));
     });
 
@@ -429,10 +429,10 @@ describe('Full Bidirectional LM ↔ NAL Cycle', () => {
 
     beforeAll(async () => {
         app = new App({
-            lm: { provider: 'transformers', modelName: 'mock-model', enabled: true },
-            subsystems: { lm: true }
+            lm: {provider: 'transformers', modelName: 'mock-model', enabled: true},
+            subsystems: {lm: true}
         });
-        agent = await app.start({ startAgent: true });
+        agent = await app.start({startAgent: true});
         termFactory = new TermFactory();
         await new Promise(r => setTimeout(r, 1000));
 

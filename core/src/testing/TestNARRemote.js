@@ -426,7 +426,7 @@ export class TestNARRemote {
                         }
                         if (!exp.shouldExist && this.taskQueue.length > 0) {
                             safeResolve();
-                            return;
+
                         }
                     }
                     // Check logs
@@ -443,7 +443,7 @@ export class TestNARRemote {
 
                         if (found && exp.shouldExist) {
                             safeResolve();
-                            return;
+
                         }
                     }
                     // Check nodes
@@ -451,7 +451,7 @@ export class TestNARRemote {
                         if (this.virtualGraph.hasNode(exp.idOrTerm)) {
                             if (exp.shouldExist) {
                                 safeResolve();
-                                return;
+
                             }
                         }
                     }

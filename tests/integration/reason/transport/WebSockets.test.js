@@ -1,6 +1,6 @@
-import { TestNAR } from '../../../../core/src/testing/TestNAR.js';
-import { TestNARRemote } from '../../../../core/src/testing/TestNARRemote.js';
-import { RemoteTaskMatch } from '../../../../core/src/testing/TaskMatch.js';
+import {TestNAR} from '../../../../core/src/testing/TestNAR.js';
+import {TestNARRemote} from '../../../../core/src/testing/TestNARRemote.js';
+import {RemoteTaskMatch} from '../../../../core/src/testing/TaskMatch.js';
 
 describe('WebSocket Pathway Tests', () => {
     // Basic inheritance chain verification

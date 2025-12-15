@@ -1,9 +1,9 @@
-import { EventEmitter } from 'eventemitter3';
-import { Logger } from '../util/Logger.js';
-import { getHeapUsed } from '../util/common.js';
-import { SimpleRunner } from './runner/SimpleRunner.js';
-import { PipelineRunner } from './runner/PipelineRunner.js';
-import { isAsyncRule, isSynchronousRule } from './RuleHelpers.js';
+import {EventEmitter} from 'eventemitter3';
+import {Logger} from '../util/Logger.js';
+import {getHeapUsed} from '../util/common.js';
+import {SimpleRunner} from './runner/SimpleRunner.js';
+import {PipelineRunner} from './runner/PipelineRunner.js';
+import {isAsyncRule, isSynchronousRule} from './RuleHelpers.js';
 
 /**
  * The main Reasoner class that manages the continuous reasoning pipeline.
@@ -253,10 +253,10 @@ export class Reasoner extends EventEmitter {
 
         if (typeof component.getStatus === 'function') {
             try {
-                return { ...status, ...component.getStatus() };
+                return {...status, ...component.getStatus()};
             } catch (e) {
                 Logger.warn(`Error getting ${componentName} status:`, e.message);
-                return { ...status, error: e.message };
+                return {...status, error: e.message};
             }
         }
 

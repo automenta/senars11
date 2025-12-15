@@ -1,24 +1,24 @@
 /**
  * @file VariableIntroduction.js
  * @description NAL rule for introducing variables to generalize knowledge.
- * 
+ *
  * This rule implements the NARS generalization pattern:
  * Given: (cat --> animal), (dog --> animal)
  * Derive: ($x --> animal) with reduced confidence
- * 
+ *
  * Variable introduction enables:
  * 1. Generalization from specific instances
  * 2. Pattern recognition across similar statements
  * 3. Hypothesis formation for category membership
  */
 
-import { NALRule } from './NALRule.js';
-import { Truth } from '../../../Truth.js';
+import {NALRule} from './NALRule.js';
+import {Truth} from '../../../Truth.js';
 
 
 /**
  * Introduces independent variables ($) to generalize patterns.
- * 
+ *
  * Patterns detected:
  * - Shared predicate: (A --> P), (B --> P) => ($x --> P)
  * - Shared subject: (S --> A), (S --> B) => (S --> $x)
@@ -187,7 +187,7 @@ export class VariableIntroductionRule extends NALRule {
 
 /**
  * Introduces dependent variables (#) for existential generalization.
- * 
+ *
  * Pattern: (A --> B), derived from context
  * Result: (#x --> B) - "something has property B"
  */

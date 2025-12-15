@@ -30,7 +30,7 @@ async function test() {
         console.log('✓ Tight compound works');
     } catch (e) {
         console.log('✗ Tight compound failed:', e.message);
-        return;
+
     }
 }
 

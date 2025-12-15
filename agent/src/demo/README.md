@@ -52,30 +52,31 @@ const demos = demo.getAvailableDemos();
 
 ## WebSocket Messages
 
-| Message Type | Direction | Description |
-|--------------|-----------|-------------|
+| Message Type   | Direction     | Description                  |
+|----------------|---------------|------------------------------|
 | `demo.control` | Client→Server | start/stop/pause/resume/step |
-| `demo.list` | Server→Client | Available demos |
-| `demo.state` | Server→Client | Current demo state |
-| `demo.step` | Server→Client | Step completed |
-| `demo.metrics` | Server→Client | Performance metrics |
+| `demo.list`    | Server→Client | Available demos              |
+| `demo.state`   | Server→Client | Current demo state           |
+| `demo.step`    | Server→Client | Step completed               |
+| `demo.metrics` | Server→Client | Performance metrics          |
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `DemoWrapper.js` | Main controller with WebSocket integration |
-| `DemosManager.js` | Demo registration and lookup |
-| `BuiltinDemoSource.js` | Built-in demo definitions |
-| `FileSystemDemoSource.js` | Load demos from filesystem |
-| `DemoStateManager.js` | Track demo execution state |
-| `DemoValidator.js` | Validate demo configurations |
-| `ProcessDemoRunner.js` | Run demos in subprocess |
-| `demoRunner.js` | CLI entry point |
+| File                      | Purpose                                    |
+|---------------------------|--------------------------------------------|
+| `DemoWrapper.js`          | Main controller with WebSocket integration |
+| `DemosManager.js`         | Demo registration and lookup               |
+| `BuiltinDemoSource.js`    | Built-in demo definitions                  |
+| `FileSystemDemoSource.js` | Load demos from filesystem                 |
+| `DemoStateManager.js`     | Track demo execution state                 |
+| `DemoValidator.js`        | Validate demo configurations               |
+| `ProcessDemoRunner.js`    | Run demos in subprocess                    |
+| `demoRunner.js`           | CLI entry point                            |
 
 ## Extending
 
 Add custom demos:
+
 ```javascript
 demo.registerDemo('my-demo', {
     name: 'My Custom Demo',

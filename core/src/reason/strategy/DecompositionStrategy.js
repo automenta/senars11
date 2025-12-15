@@ -1,13 +1,13 @@
 /**
  * @file DecompositionStrategy.js
  * @description Premise formation strategy that extracts subterms from compound statements.
- * 
+ *
  * This strategy implements the core insight from Java NARS DecomposeTerm:
  * Decomposition is for PREMISE FORMATION (pairing task with subterm),
  * NOT for standalone derivation of components.
  */
 
-import { PremiseFormationStrategy } from './PremiseFormationStrategy.js';
+import {PremiseFormationStrategy} from './PremiseFormationStrategy.js';
 
 /**
  * Operators that can be decomposed to extract subterms for premise pairing.
@@ -18,11 +18,11 @@ const ALL_DECOMPOSABLE = new Set([...STATEMENT_OPERATORS, ...COMPOUND_OPERATORS]
 
 /**
  * Strategy that decomposes compound terms to extract subterms for premise pairing.
- * 
+ *
  * For statements (A --> B):
  *   - Yields subject A and predicate B as candidates
  *   - Enables rules that need (statement, subject) or (statement, predicate) pairs
- * 
+ *
  * For compounds (A && B):
  *   - Yields all components as candidates
  *   - Enables rules that operate on conjuncts
@@ -70,8 +70,8 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
      * Decompose a statement to yield subject and predicate.
      * @private
      */
-    *_decomposeStatement(term) {
-        const { subject, predicate, operator } = term;
+    * _decomposeStatement(term) {
+        const {subject, predicate, operator} = term;
 
         if (this.includeSubject && subject) {
             this._recordCandidate();
@@ -100,7 +100,7 @@ export class DecompositionStrategy extends PremiseFormationStrategy {
      * Decompose a compound to yield all components.
      * @private
      */
-    *_decomposeCompound(term) {
+    * _decomposeCompound(term) {
         const components = term.components;
         if (!components?.length) return;
 

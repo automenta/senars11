@@ -1,6 +1,6 @@
 /**
  * TermUtils.js
- * 
+ *
  * Provides a consistent API for common term operations, abstracting away
  * direct property access and providing null-safety.
  */

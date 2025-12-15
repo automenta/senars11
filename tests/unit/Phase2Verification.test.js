@@ -1,18 +1,18 @@
 /**
  * Phase2Verification.test.js
- * 
+ *
  * Integration tests for Phase 2: Variables & Goals
  * Tests NAL-6 query matching and NAL-8 goal-driven reasoning
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { Unifier } from '../../core/src/term/Unifier.js';
-import { ResolutionStrategy } from '../../core/src/reason/strategy/ResolutionStrategy.js';
-import { GoalDrivenStrategy } from '../../core/src/reason/strategy/GoalDrivenStrategy.js';
-import { AnalogicalStrategy } from '../../core/src/reason/strategy/AnalogicalStrategy.js';
-import { Task } from '../../core/src/task/Task.js';
-import { Truth } from '../../core/src/Truth.js';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Unifier} from '../../core/src/term/Unifier.js';
+import {ResolutionStrategy} from '../../core/src/reason/strategy/ResolutionStrategy.js';
+import {GoalDrivenStrategy} from '../../core/src/reason/strategy/GoalDrivenStrategy.js';
+import {AnalogicalStrategy} from '../../core/src/reason/strategy/AnalogicalStrategy.js';
+import {Task} from '../../core/src/task/Task.js';
+import {Truth} from '../../core/src/Truth.js';
 
 describe('Phase 2: Variables & Goals', () => {
     let tf;
@@ -31,7 +31,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: queryTerm,
                 punctuation: '?',
                 truth: null,
-                budget: { priority: 0.9, durability: 0.8, quality: 0.9 }
+                budget: {priority: 0.9, durability: 0.8, quality: 0.9}
             });
 
             // Belief: (bird --> animal).
@@ -40,7 +40,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: beliefTerm,
                 punctuation: '.',
                 truth: new Truth(0.9, 0.9),
-                budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
+                budget: {priority: 0.8, durability: 0.7, quality: 0.8}
             });
 
             // Test unification
@@ -79,7 +79,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: goalTerm,
                 punctuation: '!',
                 truth: new Truth(1.0, 0.9), // Desire value
-                budget: { priority: 1.0, durability: 0.9, quality: 1.0 }
+                budget: {priority: 1.0, durability: 0.9, quality: 1.0}
             });
 
             expect(goal.isGoal()).toBe(true);
@@ -105,7 +105,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: goalTerm,
                 punctuation: '!',
                 truth: new Truth(1.0, 0.9),
-                budget: { priority: 1.0, durability: 0.9, quality: 1.0 }
+                budget: {priority: 1.0, durability: 0.9, quality: 1.0}
             });
 
             const query = goal.clone({
@@ -144,7 +144,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: similarityTerm,
                 punctuation: '.',
                 truth: new Truth(0.7, 0.8),
-                budget: { priority: 0.7, durability: 0.7, quality: 0.7 }
+                budget: {priority: 0.7, durability: 0.7, quality: 0.7}
             });
 
             expect(strategy._isSimilarityRelation(similarity)).toBe(true);
@@ -164,7 +164,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: implicationTerm,
                 punctuation: '.',
                 truth: new Truth(0.9, 0.9),
-                budget: { priority: 0.8, durability: 0.8, quality: 0.8 }
+                budget: {priority: 0.8, durability: 0.8, quality: 0.8}
             });
 
             expect(strategy._isImplication(implication)).toBe(true);
@@ -187,7 +187,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: knowledgeTerm,
                 punctuation: '.',
                 truth: new Truth(0.9, 0.9),
-                budget: { priority: 0.8, durability: 0.8, quality: 0.8 }
+                budget: {priority: 0.8, durability: 0.8, quality: 0.8}
             });
 
             const transferred = strategy.mapKnowledge(sourcePattern, targetPattern, knowledge);
@@ -208,7 +208,7 @@ describe('Phase 2: Variables & Goals', () => {
                 term: queryTerm,
                 punctuation: '?',
                 truth: null,
-                budget: { priority: 0.9, durability: 0.8, quality: 0.9 }
+                budget: {priority: 0.9, durability: 0.8, quality: 0.9}
             });
 
             // 2. NAL-8: Goal to achieve
@@ -217,13 +217,13 @@ describe('Phase 2: Variables & Goals', () => {
                 term: goalTerm,
                 punctuation: '!',
                 truth: new Truth(1.0, 0.9),
-                budget: { priority: 1.0, durability: 0.9, quality: 1.0 }
+                budget: {priority: 1.0, durability: 0.9, quality: 1.0}
             });
 
             // 3. Create strategies
-            const resolutionStrategy = new ResolutionStrategy({ termFactory: tf });
-            const goalStrategy = new GoalDrivenStrategy({ termFactory: tf });
-            const analogyStrategy = new AnalogicalStrategy({ termFactory: tf });
+            const resolutionStrategy = new ResolutionStrategy({termFactory: tf});
+            const goalStrategy = new GoalDrivenStrategy({termFactory: tf});
+            const analogyStrategy = new AnalogicalStrategy({termFactory: tf});
 
             expect(resolutionStrategy.unifier).toBeDefined();
             expect(goalStrategy).toBeDefined();

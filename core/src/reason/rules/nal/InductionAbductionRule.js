@@ -1,13 +1,13 @@
 /**
  * @file InductionAbductionRule.js
  * @description Induction and Abduction inference rules.
- * 
+ *
  * Induction: (M --> P), (M --> S) |- (S --> P)  [shared subject]
  * Abduction: (P --> M), (S --> M) |- (S --> P)  [shared predicate]
  */
 
-import { NALRule } from './NALRule.js';
-import { Truth } from '../../../Truth.js';
+import {NALRule} from './NALRule.js';
+import {Truth} from '../../../Truth.js';
 
 /**
  * Induction Rule: Shared subject pattern
@@ -21,8 +21,8 @@ export class InductionRule extends NALRule {
     canApply(primaryPremise, secondaryPremise, context) {
         if (!primaryPremise || !secondaryPremise) return false;
 
-        const { term: t1 } = primaryPremise;
-        const { term: t2 } = secondaryPremise;
+        const {term: t1} = primaryPremise;
+        const {term: t2} = secondaryPremise;
 
         if (!t1?.isCompound || !t2?.isCompound) return false;
         if (t1.operator !== '-->' || t2.operator !== '-->') return false;
@@ -34,8 +34,8 @@ export class InductionRule extends NALRule {
     apply(primaryPremise, secondaryPremise, context) {
         if (!this.canApply(primaryPremise, secondaryPremise, context)) return [];
 
-        const { term: t1, truth: truth1 } = primaryPremise;
-        const { term: t2, truth: truth2 } = secondaryPremise;
+        const {term: t1, truth: truth1} = primaryPremise;
+        const {term: t2, truth: truth2} = secondaryPremise;
         const termFactory = context?.termFactory;
 
         if (!termFactory || !truth1 || !truth2) return [];
@@ -63,8 +63,8 @@ export class AbductionRule extends NALRule {
     canApply(primaryPremise, secondaryPremise, context) {
         if (!primaryPremise || !secondaryPremise) return false;
 
-        const { term: t1 } = primaryPremise;
-        const { term: t2 } = secondaryPremise;
+        const {term: t1} = primaryPremise;
+        const {term: t2} = secondaryPremise;
 
         if (!t1?.isCompound || !t2?.isCompound) return false;
         if (t1.operator !== '-->' || t2.operator !== '-->') return false;
@@ -76,8 +76,8 @@ export class AbductionRule extends NALRule {
     apply(primaryPremise, secondaryPremise, context) {
         if (!this.canApply(primaryPremise, secondaryPremise, context)) return [];
 
-        const { term: t1, truth: truth1 } = primaryPremise;
-        const { term: t2, truth: truth2 } = secondaryPremise;
+        const {term: t1, truth: truth1} = primaryPremise;
+        const {term: t2, truth: truth2} = secondaryPremise;
         const termFactory = context?.termFactory;
 
         if (!termFactory || !truth1 || !truth2) return [];

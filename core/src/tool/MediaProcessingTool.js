@@ -389,11 +389,11 @@ export class MediaProcessingTool extends BaseTool {
         const ext = path.extname(filePath).toLowerCase();
         if (['.txt', '.md', '.csv', '.json', '.xml', '.html', '.htm'].includes(ext)) {
             // For text files, also check the text length
-             // Will be checked when reading the file
+            // Will be checked when reading the file
         }
 
         // Use stats to check file size for non-text files
-         // Size check happens after access validation
+        // Size check happens after access validation
     }
 
     /**

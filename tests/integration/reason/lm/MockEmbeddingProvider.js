@@ -16,7 +16,7 @@ export class MockEmbeddingProvider {
 
     async getEmbedding(term) {
         const key = String(term);
-        this.calls.push({ type: 'embedding', key });
+        this.calls.push({type: 'embedding', key});
         return this.embeddings[key] ?? this._generateDefaultEmbedding(key);
     }
 
@@ -47,7 +47,7 @@ export class MockEmbeddingProvider {
 
     _generateDefaultEmbedding(key) {
         const hash = this._hash(key);
-        return Array.from({ length: 64 }, (_, i) => Math.sin(hash + i * 0.1) * 0.5 + 0.5);
+        return Array.from({length: 64}, (_, i) => Math.sin(hash + i * 0.1) * 0.5 + 0.5);
     }
 
     _hash(str) {
@@ -59,10 +59,20 @@ export class MockEmbeddingProvider {
         return Math.abs(hash);
     }
 
-    enable() { this.enabled = true; }
-    disable() { this.enabled = false; }
-    clearCache() { }
-    getStats() { return { calls: this.calls.length, enabled: this.enabled }; }
+    enable() {
+        this.enabled = true;
+    }
+
+    disable() {
+        this.enabled = false;
+    }
+
+    clearCache() {
+    }
+
+    getStats() {
+        return {calls: this.calls.length, enabled: this.enabled};
+    }
 }
 
 /**
@@ -76,7 +86,7 @@ export class MockLMProvider {
     }
 
     async generateText(prompt) {
-        this.calls.push({ prompt, timestamp: Date.now() });
+        this.calls.push({prompt, timestamp: Date.now()});
 
         for (const [pattern, response] of Object.entries(this.responses)) {
             if (prompt.includes(pattern)) {
@@ -86,10 +96,21 @@ export class MockLMProvider {
         return '';
     }
 
-    isAvailable() { return this.enabled; }
-    getStats() { return { calls: this.calls.length, enabled: this.enabled }; }
-    getCalls() { return this.calls; }
-    reset() { this.calls = []; }
+    isAvailable() {
+        return this.enabled;
+    }
+
+    getStats() {
+        return {calls: this.calls.length, enabled: this.enabled};
+    }
+
+    getCalls() {
+        return this.calls;
+    }
+
+    reset() {
+        this.calls = [];
+    }
 }
 
 /**

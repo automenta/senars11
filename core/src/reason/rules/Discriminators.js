@@ -1,11 +1,11 @@
 /**
  * Discriminators.js
- * 
+ *
  * Defines the logic for extracting values from patterns and terms
  * to build and traverse the decision tree.
  */
 
-import { getOperator, getComponents } from '../../term/TermUtils.js';
+import {getComponents, getOperator} from '../../term/TermUtils.js';
 
 /**
  * @typedef {Object} Discriminator
@@ -17,7 +17,7 @@ import { getOperator, getComponents } from '../../term/TermUtils.js';
 export const Discriminators = {
     /**
      * Creates a discriminator for the operator of the target term (p or s).
-     * @param {'p'|'s'} target 
+     * @param {'p'|'s'} target
      * @returns {Discriminator}
      */
     operator: (target) => ({
@@ -34,7 +34,7 @@ export const Discriminators = {
 
     /**
      * Creates a discriminator for the arity (component count) of the target term.
-     * @param {'p'|'s'} target 
+     * @param {'p'|'s'} target
      * @returns {Discriminator}
      */
     arity: (target) => ({
