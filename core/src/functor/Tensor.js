@@ -10,36 +10,26 @@ export class Tensor {
     }
 
     _inferShape(data) {
-        if (typeof data === 'number' || !Array.isArray(data)) return [1];
+        if (!Array.isArray(data)) return [1];
         const shape = [];
-        let current = data;
-        while (Array.isArray(current)) {
+        for (let current = data; Array.isArray(current); current = current[0])
             shape.push(current.length);
-            current = current[0];
-        }
         return shape;
     }
 
     _flatten(data) {
-        if (typeof data === 'number' || !Array.isArray(data)) return [data];
-        const result = [];
-        const flatten = (arr) => {
-            for (const item of arr) {
-                Array.isArray(item) ? flatten(item) : result.push(Number(item));
-            }
-        };
+        if (!Array.isArray(data)) return [Number(data)];
+        const result = [], flatten = arr => arr.forEach(item =>
+            Array.isArray(item) ? flatten(item) : result.push(Number(item)));
         flatten(data);
         return result;
     }
 
     _unflatten(flat, shape) {
         if (shape.length === 1) return flat.slice(0, shape[0]);
-        const result = [];
         const stride = shape.slice(1).reduce((a, b) => a * b, 1);
-        for (let i = 0; i < shape[0]; i++) {
-            result.push(this._unflatten(flat.slice(i * stride, (i + 1) * stride), shape.slice(1)));
-        }
-        return result;
+        return Array.from({ length: shape[0] }, (_, i) =>
+            this._unflatten(flat.slice(i * stride, (i + 1) * stride), shape.slice(1)));
     }
 
     get ndim() { return this.shape.length; }
@@ -90,9 +80,8 @@ export class Tensor {
     _computeStrides(shape) {
         const strides = Array(shape.length);
         strides[strides.length - 1] = 1;
-        for (let i = strides.length - 2; i >= 0; i--) {
+        for (let i = strides.length - 2; i >= 0; i--)
             strides[i] = strides[i + 1] * shape[i + 1];
-        }
         return strides;
     }
 
