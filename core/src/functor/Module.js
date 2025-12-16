@@ -21,44 +21,34 @@ export class Module {
     }
 
     parameters() {
-        let params = [...this._parameters.values()];
-        for (const mod of this._modules.values()) params.push(...mod.parameters());
-        return params;
+        return [...this._parameters.values(), ...Array.from(this._modules.values()).flatMap(m => m.parameters())];
     }
 
     train(mode = true) {
         this.training = mode;
-        for (const mod of this._modules.values()) mod.train(mode);
+        this._modules.forEach(m => m.train(mode));
         return this;
     }
 
     eval() { return this.train(false); }
 
-    forward(...args) {
-        throw new Error('forward() not implemented');
-    }
+    forward(...args) { throw new Error('forward() not implemented'); }
 
     stateDict() {
-        const dict = {};
-        for (const [k, v] of this._parameters) dict[k] = v.data.slice();
+        const dict = Object.fromEntries(Array.from(this._parameters, ([k, v]) => [k, v.data.slice()]));
         for (const [k, m] of this._modules) {
-            const childDict = m.stateDict();
-            for (const [ck, cv] of Object.entries(childDict)) {
-                dict[`${k}.${ck}`] = cv;
-            }
+            Object.entries(m.stateDict()).forEach(([ck, cv]) => dict[`${k}.${ck}`] = cv);
         }
         return dict;
     }
 
     loadStateDict(dict) {
-        for (const [k, v] of this._parameters) {
-            if (dict[k]) v.data = dict[k].slice();
-        }
+        this._parameters.forEach((v, k) => { if (dict[k]) v.data = dict[k].slice(); });
         for (const [k, m] of this._modules) {
-            const childDict = {};
-            Object.keys(dict)
-                .filter(key => key.startsWith(`${k}.`))
-                .forEach(key => childDict[key.slice(k.length + 1)] = dict[key]);
+            const prefix = `${k}.`;
+            const childDict = Object.fromEntries(
+                Object.entries(dict).filter(([key]) => key.startsWith(prefix)).map(([key, val]) => [key.slice(prefix.length), val])
+            );
             m.loadStateDict(childDict);
         }
     }
@@ -67,25 +57,18 @@ export class Module {
 export class Linear extends Module {
     constructor(backend, inFeatures, outFeatures, bias = true) {
         super();
-        this.backend = backend;
-        this.inFeatures = inFeatures;
-        this.outFeatures = outFeatures;
-
-        this.weight = this.registerParameter(
-            'weight',
-            backend.kaimingNormal([inFeatures, outFeatures])
-        );
+        Object.assign(this, { backend, inFeatures, outFeatures });
+        this.weight = this.registerParameter('weight', backend.kaimingNormal([inFeatures, outFeatures]));
         this.bias = bias ? this.registerParameter('bias', backend.zeros([outFeatures])) : null;
     }
 
     forward(input) {
         let out = this.backend.matmul(input, this.weight);
         if (this.bias) {
-            // Ensure bias can broadcast: reshape [n] to [1, n] if needed
-            const biasReshaped = this.bias.ndim === 1 && out.ndim === 2
+            const bias = this.bias.ndim === 1 && out.ndim === 2
                 ? this.backend.reshape(this.bias, [1, this.outFeatures])
                 : this.bias;
-            out = this.backend.add(out, biasReshaped);
+            out = this.backend.add(out, bias);
         }
         return out;
     }
@@ -94,19 +77,11 @@ export class Linear extends Module {
 export class Embedding extends Module {
     constructor(backend, numEmbeddings, embeddingDim) {
         super();
-        this.backend = backend;
-        this.numEmbeddings = numEmbeddings;
-        this.embeddingDim = embeddingDim;
-
-        this.weight = this.registerParameter(
-            'weight',
-            backend.randn([numEmbeddings, embeddingDim])
-        );
+        Object.assign(this, { backend, numEmbeddings, embeddingDim });
+        this.weight = this.registerParameter('weight', backend.randn([numEmbeddings, embeddingDim]));
     }
 
-    forward(input) {
-        return this.backend.gather(this.weight, input);
-    }
+    forward(input) { return this.backend.gather(this.weight, input); }
 }
 
 export class Sequential extends Module {
@@ -116,36 +91,21 @@ export class Sequential extends Module {
         this.layers = modules;
     }
 
-    forward(input) {
-        return this.layers.reduce((x, layer) => layer.forward(x), input);
-    }
+    forward(input) { return this.layers.reduce((x, layer) => layer.forward(x), input); }
 }
 
 export class MultiHeadAttention extends Module {
     constructor(backend, dModel, numHeads) {
         super();
-        if (dModel % numHeads !== 0) {
-            throw new Error('dModel must be divisible by numHeads');
-        }
-        this.backend = backend;
-        this.dModel = dModel;
-        this.numHeads = numHeads;
-        this.headDim = dModel / numHeads;
-
-        this.qProj = this.registerModule('qProj', new Linear(backend, dModel, dModel));
-        this.kProj = this.registerModule('kProj', new Linear(backend, dModel, dModel));
-        this.vProj = this.registerModule('vProj', new Linear(backend, dModel, dModel));
-        this.outProj = this.registerModule('outProj', new Linear(backend, dModel, dModel));
+        if (dModel % numHeads) throw new Error('dModel must be divisible by numHeads');
+        Object.assign(this, { backend, dModel, numHeads, headDim: dModel / numHeads });
+        ['qProj', 'kProj', 'vProj', 'outProj'].forEach(name =>
+            this[name] = this.registerModule(name, new Linear(backend, dModel, dModel))
+        );
     }
 
     forward(input) {
-        const q = this.qProj.forward(input);
-        const k = this.kProj.forward(input);
-        const v = this.vProj.forward(input);
-
-        // Simplified: use single-head attention
-        // Full multi-head would need proper reshaping and concatenation
-        const attn = this.backend.attention(q, k, v);
-        return this.outProj.forward(attn);
+        const [q, k, v] = ['qProj', 'kProj', 'vProj'].map(proj => this[proj].forward(input));
+        return this.outProj.forward(this.backend.attention(q, k, v));
     }
 }

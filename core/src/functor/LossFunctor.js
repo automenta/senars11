@@ -14,9 +14,7 @@ export class LossFunctor {
 
     _attachGradient(loss, parents, gradFn) {
         if (parents.some(p => p.requiresGrad)) {
-            loss.requiresGrad = true;
-            loss._parents = parents;
-            loss._gradFn = gradFn;
+            Object.assign(loss, { requiresGrad: true, _parents: parents, _gradFn: gradFn });
         }
     }
 
@@ -35,7 +33,6 @@ export class LossFunctor {
         const logP = this.backend.log(clipped);
         const oneMinusClipped = this.backend.sub(this.backend.ones(clipped.shape), clipped);
         const log1MinusP = this.backend.log(oneMinusClipped);
-
         const term1 = this.backend.mul(target, logP);
         const oneMinusTarget = this.backend.sub(this.backend.ones(target.shape), target);
         const term2 = this.backend.mul(oneMinusTarget, log1MinusP);
