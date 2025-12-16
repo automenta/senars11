@@ -1,35 +1,28 @@
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
-import { Linear } from '../../core/src/functor/Module.js';
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
+import { Linear, Module } from '../../core/src/functor/Module.js';
 import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
 import { AdamOptimizer } from '../../core/src/functor/Optimizer.js';
-
-const backend = new NativeBackend();
 console.log('=== Tensor Logic: MLP Training on XOR ===\n');
 
 const dataset = [
     [[0, 0], 0], [[0, 1], 1], [[1, 0], 1], [[1, 1], 0]
-].map(([x, y]) => [new Tensor([x], { backend }), new Tensor([[y]], { backend })]);
+].map(([x, y]) => [new Tensor([x], { backend: T }), new Tensor([[y]], { backend: T })]);
 
 console.log('XOR:', dataset.map(([x, y]) => `${x.toArray().flat()} → ${y.data[0]}`).join(', '));
 
-class MLP {
+class MLP extends Module {
     constructor() {
-        this.fc1 = new Linear(backend, 2, 8);
-        this.fc2 = new Linear(backend, 8, 1);
+        super();
+        this.fc1 = this.registerModule('fc1', new Linear(2, 8));
+        this.fc2 = this.registerModule('fc2', new Linear(8, 1));
     }
     forward(x) {
-        return backend.sigmoid(this.fc2.forward(backend.relu(this.fc1.forward(x))));
-    }
-    parameters() {
-        return new Map([
-            ['fc1.weight', this.fc1.weight], ['fc1.bias', this.fc1.bias],
-            ['fc2.weight', this.fc2.weight], ['fc2.bias', this.fc2.bias]
-        ]);
+        return T.sigmoid(this.fc2.forward(T.relu(this.fc1.forward(x))));
     }
 }
 
-const model = new MLP(), loss_fn = new LossFunctor(backend), optimizer = new AdamOptimizer(0.1);
+const model = new MLP(), loss_fn = new LossFunctor(T), optimizer = new AdamOptimizer(0.1);
 console.log('\nArchitecture: Linear(2→8) → ReLU → Linear(8→1) → Sigmoid\n');
 
 for (let epoch = 0; epoch < 500; epoch++) {

@@ -73,9 +73,9 @@ class TransformerBlock extends Module {
 
     forward(x) {
         // Self-attention with residual
-        const attended = this.T.add(x, this.attn.forward(x));
+        const attended = T.add(x, this.attn.forward(x));
         // Feedforward with residual (simplified - no LayerNorm)
-        return this.T.add(attended, T.relu(this.ff.forward(attended)));
+        return T.add(attended, T.relu(this.ff.forward(attended)));
     }
 }
 

@@ -3,20 +3,18 @@
  * Run: node examples/tensor-logic/training-utilities.mjs
  */
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 import { Linear } from '../../core/src/functor/Module.js';
 import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
 import { SGDOptimizer } from '../../core/src/functor/Optimizer.js';
 import { DataLoader, LRScheduler, EarlyStopping, MetricsTracker } from '../../core/src/functor/TrainingUtils.js';
 
-const backend = new NativeBackend();
-
 console.log('=== Tensor Logic: Training Utilities ===\n');
 
 // Create synthetic dataset: y = 2x + 1
 const dataset = Array.from({ length: 20 }, (_, i) => ({
-    x: new Tensor([[i * 0.1]], { backend }),
-    y: new Tensor([[i * 0.2 + 1]], { backend })  // y = 2x + 1
+    x: new Tensor([[i * 0.1]], { backend: T }),
+    y: new Tensor([[i * 0.2 + 1]], { backend: T })  // y = 2x + 1
 }));
 
 console.log('--- DataLoader ---');
@@ -81,8 +79,8 @@ console.log('Summary:', tracker.summary());
 // Complete training run with all utilities
 console.log('\n--- Complete Training Run ---');
 
-const model = new Linear(backend, 1, 1);
-const loss_fn = new LossFunctor(backend);
+const model = new Linear(1, 1);
+const loss_fn = new LossFunctor(T);
 const optimizer = new SGDOptimizer(0.01, 0.9);  // SGD with momentum
 const scheduler = new LRScheduler(optimizer, 'step', 20, 0.5);
 const early_stopping = new EarlyStopping(10, 0.0001);

@@ -1,7 +1,5 @@
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
-
-const backend = new NativeBackend();
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 console.log('=== Tensor Logic: Attention Mechanism ===\n');
 
 console.log('--- Einsum Patterns ---\n');
@@ -17,12 +15,12 @@ const patterns = [
 ];
 
 patterns.forEach(([pattern, tensors, desc]) => {
-    const result = backend.einsum(pattern, ...tensors);
+    const result = T.einsum(pattern, ...tensors);
     console.log(`einsum("${pattern}")`, Array.isArray(result.data) ? result.toArray() : result.data, `// ${desc}`);
 });
 
 const v1 = new Tensor([1, 2], { backend }), v2 = new Tensor([3, 4, 5], { backend });
-const outer = backend.einsum('i,j->ij', v1, v2);
+const outer = T.einsum('i,j->ij', v1, v2);
 console.log(`\neinsum("i,j->ij", [1,2], [3,4,5]):`, outer.toArray());
 
 console.log('\n--- Scaled Dot-Product Attention ---\n');
@@ -35,19 +33,19 @@ const V = new Tensor([[10, 11, 12, 13], [20, 21, 22, 23], [30, 31, 32, 33]], { b
 const scale = Math.sqrt(dModel);
 const format = arr => arr.map(row => row.map(v => v.toFixed(1)).join(', ')).join('\n');
 
-const attended = backend.attention(Q, K, V);
+const attended = T.attention(Q, K, V);
 console.log('Attended output (3 tokens, 4 dims):\n' + format(attended.toArray()));
 
 console.log('\n--- Manual Attention Steps ---');
-const scores = backend.matmul(Q, backend.transpose(K));
-const weights = backend.softmax(backend.div(scores, scale), 1);
-const output = backend.matmul(weights, V);
+const scores = T.matmul(Q, T.transpose(K));
+const weights = T.softmax(T.div(scores, scale), 1);
+const output = T.matmul(weights, V);
 console.log('Weights (softmax of Q@K^T / √d):\n' + weights.toArray().map(row => row.map(v => v.toFixed(3)).join(', ')).join('\n'));
 console.log('\nOutput (weights @ V):\n' + format(output.toArray()));
 
 console.log('\n--- Cosine Similarity ---');
 const vec1 = new Tensor([1, 2, 3], { backend }), vec3 = new Tensor([-1, -2, -3], { backend });
-console.log(`cos([1,2,3], [1,2,3]) = ${backend.cosineSimilarity(vec1, vec1).data[0].toFixed(3)}`);
-console.log(`cos([1,2,3], [-1,-2,-3]) = ${backend.cosineSimilarity(vec1, vec3).data[0].toFixed(3)}`);
+console.log(`cos([1,2,3], [1,2,3]) = ${T.cosineSimilarity(vec1, vec1).data[0].toFixed(3)}`);
+console.log(`cos([1,2,3], [-1,-2,-3]) = ${T.cosineSimilarity(vec1, vec3).data[0].toFixed(3)}`);
 
 console.log('\n✅ Attention mechanism demo complete!');

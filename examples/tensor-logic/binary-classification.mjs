@@ -3,12 +3,10 @@
  * Run: node examples/tensor-logic/binary-classification.mjs
  */
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 import { Linear, Module } from '../../core/src/functor/Module.js';
 import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
 import { AdamOptimizer } from '../../core/src/functor/Optimizer.js';
-
-const backend = new NativeBackend();
 
 console.log('=== Tensor Logic: Binary Classification ===\n');
 
@@ -43,18 +41,18 @@ console.log('○ = class 0, ● = class 1\n');
 class Classifier extends Module {
     constructor() {
         super();
-        this.fc1 = this.registerModule('fc1', new Linear(backend, 2, 8));
-        this.fc2 = this.registerModule('fc2', new Linear(backend, 8, 1));
+        this.fc1 = this.registerModule('fc1', new Linear(2, 8));
+        this.fc2 = this.registerModule('fc2', new Linear(8, 1));
     }
 
     forward(x) {
-        let h = backend.relu(this.fc1.forward(x));
-        return backend.sigmoid(this.fc2.forward(h));
+        let h = T.relu(this.fc1.forward(x));
+        return T.sigmoid(this.fc2.forward(h));
     }
 }
 
 const model = new Classifier();
-const loss_fn = new LossFunctor(backend);
+const loss_fn = new LossFunctor(T);
 const optimizer = new AdamOptimizer(0.1);
 
 console.log('--- Training ---');
@@ -68,8 +66,8 @@ for (let epoch = 0; epoch < epochs; epoch++) {
     data.forEach(([x, y, label]) => {
         optimizer.zeroGrad(model.parameters());
 
-        const input = new Tensor([[x, y]], { backend });
-        const target = new Tensor([[label]], { backend });
+        const input = new Tensor([[x, y]], { backend: T });
+        const target = new Tensor([[label]], { backend: T });
 
         const pred = model.forward(input);
         const loss = loss_fn.binaryCrossEntropy(pred, target);
@@ -90,7 +88,7 @@ for (let epoch = 0; epoch < epochs; epoch++) {
 // Final accuracy
 let finalCorrect = 0;
 data.forEach(([x, y, label]) => {
-    const pred = model.forward(new Tensor([[x, y]], { backend }));
+    const pred = model.forward(new Tensor([[x, y]], { backend: T }));
     if (Math.round(pred.data[0]) === label) finalCorrect++;
 });
 console.log(`\nFinal Accuracy: ${(finalCorrect / data.length * 100).toFixed(1)}%`);
@@ -104,7 +102,7 @@ for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
         const x = px / (width - 1) * 7;
         const y = (height - 1 - py) / (height - 1) * 7;
-        const pred = model.forward(new Tensor([[x, y]], { backend }));
+        const pred = model.forward(new Tensor([[x, y]], { backend: T }));
         grid2[py][px] = pred.data[0] > 0.5 ? '▓' : '░';
     }
 }

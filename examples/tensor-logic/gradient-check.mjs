@@ -1,14 +1,12 @@
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
-
-const backend = new NativeBackend();
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 console.log('=== Tensor Logic: Gradient Verification ===\n');
 
 const eps = 1e-5;
 
 function numericalGradient(fn, x, idx = 0) {
-    const xPlus = new Tensor([...x.data], { backend });
-    const xMinus = new Tensor([...x.data], { backend });
+    const xPlus = new Tensor([...x.data], { backend: T });
+    const xMinus = new Tensor([...x.data], { backend: T });
     xPlus.data[idx] += eps;
     xMinus.data[idx] -= eps;
     return (fn(xPlus).data[0] - fn(xMinus).data[0]) / (2 * eps);
@@ -21,7 +19,7 @@ function checkGradient(name, fn, xVal) {
 
     const analytical = x.grad.toArray();
     const numerical = xVal.map((_, i) =>
-        numericalGradient(t => fn(t), new Tensor(xVal, { backend }), i)
+        numericalGradient(t => fn(t), new Tensor(xVal, { backend: T }), i)
     );
 
     const maxError = Math.max(...analytical.map((a, i) => Math.abs(a - numerical[i])));
@@ -37,21 +35,21 @@ function checkGradient(name, fn, xVal) {
 
 // Test various operations
 const tests = [
-    ['y = x²', x => backend.mul(x, x), [2, 3, 4]],
-    ['y = x³', x => backend.mul(backend.mul(x, x), x), [2]],
-    ['y = sum(x)', x => backend.sum(x), [1, 2, 3, 4]],
-    ['y = mean(x)', x => backend.mean(x), [1, 2, 3, 4]],
-    ['y = relu(x)', x => backend.sum(backend.relu(x)), [-1, 0, 1, 2]],
-    ['y = sigmoid(x)', x => backend.sum(backend.sigmoid(x)), [-1, 0, 1]],
-    ['y = tanh(x)', x => backend.sum(backend.tanh(x)), [-1, 0, 1]],
-    ['y = exp(x)', x => backend.sum(backend.exp(x)), [0, 0.5, 1]],
-    ['y = log(x)', x => backend.sum(backend.log(x)), [1, 2, 3]],
-    ['y = sqrt(x)', x => backend.sum(backend.sqrt(x)), [1, 4, 9]],
-    ['y = x + x', x => backend.sum(backend.add(x, x)), [1, 2, 3]],
-    ['y = x - 1', x => backend.sum(backend.sub(x, backend.ones([3]))), [1, 2, 3]],
-    ['y = x / 2', x => backend.sum(backend.div(x, 2)), [2, 4, 6]],
-    ['y = |x|', x => backend.sum(backend.abs(x)), [-2, 0, 2]],
-    ['y = x^3', x => backend.sum(backend.pow(x, 3)), [1, 2]],
+    ['y = x²', x => T.mul(x, x), [2, 3, 4]],
+    ['y = x³', x => T.mul(T.mul(x, x), x), [2]],
+    ['y = sum(x)', x => T.sum(x), [1, 2, 3, 4]],
+    ['y = mean(x)', x => T.mean(x), [1, 2, 3, 4]],
+    ['y = relu(x)', x => T.sum(T.relu(x)), [-1, 0, 1, 2]],
+    ['y = sigmoid(x)', x => T.sum(T.sigmoid(x)), [-1, 0, 1]],
+    ['y = tanh(x)', x => T.sum(T.tanh(x)), [-1, 0, 1]],
+    ['y = exp(x)', x => T.sum(T.exp(x)), [0, 0.5, 1]],
+    ['y = log(x)', x => T.sum(T.log(x)), [1, 2, 3]],
+    ['y = sqrt(x)', x => T.sum(T.sqrt(x)), [1, 4, 9]],
+    ['y = x + x', x => T.sum(T.add(x, x)), [1, 2, 3]],
+    ['y = x - 1', x => T.sum(T.sub(x, T.ones([3]))), [1, 2, 3]],
+    ['y = x / 2', x => T.sum(T.div(x, 2)), [2, 4, 6]],
+    ['y = |x|', x => T.sum(T.abs(x)), [-2, 0, 2]],
+    ['y = x^3', x => T.sum(T.pow(x, 3)), [1, 2]],
 ];
 
 let passed = 0;
@@ -65,10 +63,10 @@ console.log(`Results: ${passed}/${tests.length} gradient checks passed`);
 // Matrix operations
 console.log('\n--- Matrix Gradient Check ---');
 const A = new Tensor([[1, 2], [3, 4]], { requiresGrad: true, backend });
-const B = new Tensor([[5, 6], [7, 8]], { backend });
+const B = new Tensor([[5, 6], [7, 8]], { backend: T });
 
-const C = backend.matmul(A, B);
-const loss = backend.sum(C);
+const C = T.matmul(A, B);
+const loss = T.sum(C);
 loss.backward();
 
 console.log('A @ B then sum:');

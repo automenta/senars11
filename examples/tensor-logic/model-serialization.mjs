@@ -1,17 +1,15 @@
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 import { Module, Linear, Sequential } from '../../core/src/functor/Module.js';
-
-const backend = new NativeBackend();
 console.log('=== Tensor Logic: Model Serialization ===\n');
 
 class TinyMLP extends Module {
     constructor() {
         super();
-        this.fc1 = this.registerModule('fc1', new Linear(backend, 4, 8));
-        this.fc2 = this.registerModule('fc2', new Linear(backend, 8, 2));
+        this.fc1 = this.registerModule('fc1', new Linear(4, 8));
+        this.fc2 = this.registerModule('fc2', new Linear(8, 2));
     }
-    forward(x) { return backend.relu(this.fc2.forward(backend.relu(this.fc1.forward(x)))); }
+    forward(x) { return T.relu(this.fc2.forward(T.relu(this.fc1.forward(x)))); }
 }
 
 const model = new TinyMLP();
@@ -41,7 +39,7 @@ model2.loadStateDict(loaded);
 console.log('fc1.weight[0] after load: ', model2.fc1.weight.data.slice(0, 3).map(v => v.toFixed(3)).join(', '));
 
 // Verify outputs match
-const testInput = backend.randn([1, 4]);
+const testInput = T.randn([1, 4]);
 const out1 = model.forward(testInput);
 const out2 = model2.forward(testInput);
 
@@ -52,7 +50,7 @@ console.log('Match:', JSON.stringify(out1.data) === JSON.stringify(out2.data) ? 
 
 console.log(`\nTrain/eval modes: ${model.training} → ${model.eval().training} → ${model.train().training}`);
 
-const seq = new Sequential(new Linear(backend, 2, 4), new Linear(backend, 4, 1));
+const seq = new Sequential(new Linear(2, 4), new Linear(4, 1));
 console.log(`\nSequential: ${seq.parameters().length} params, keys: ${Object.keys(seq.stateDict()).join(', ')}`);
 
 console.log('\n✅ Model serialization demo complete!');

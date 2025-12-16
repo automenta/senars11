@@ -1,8 +1,5 @@
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
-import { SGDOptimizer, AdamOptimizer, RMSpropOptimizer } from '../../core/src/functor/Optimizer.js';
-
-const backend = new NativeBackend();
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 
 console.log('=== Tensor Logic: Optimizer Race ===\n');
 console.log('Goal: Minimize f(x) = (x - 3)² starting from x = 10\n');
@@ -28,8 +25,8 @@ const trajectories = optimizers.map(({ name, opt }) => {
         opt.zeroGrad(params);
 
         // f(x) = (x - 3)²
-        const diff = backend.sub(x, new Tensor([target], { backend }));
-        const loss = backend.mul(diff, diff);
+        const diff = T.sub(x, new Tensor([target], { backend: T }));
+        const loss = T.mul(diff, diff);
         loss.backward();
 
         opt.step(params);

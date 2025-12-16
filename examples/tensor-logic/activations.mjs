@@ -3,9 +3,7 @@
  * Run: node examples/tensor-logic/activations.mjs
  */
 import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
-
-const backend = new NativeBackend();
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 
 console.log('=== Tensor Logic: Activation Functions ===\n');
 
@@ -18,10 +16,10 @@ console.log();
 
 // Apply each activation
 const activations = [
-    { name: 'ReLU', fn: () => backend.relu(x), desc: 'max(0, x) — sparse, fast' },
-    { name: 'Sigmoid', fn: () => backend.sigmoid(x), desc: '1/(1+e^-x) — probability' },
-    { name: 'Tanh', fn: () => backend.tanh(x), desc: '(e^x-e^-x)/(e^x+e^-x) — centered' },
-    { name: 'GELU', fn: () => backend.gelu(x), desc: 'x·Φ(x) — smooth, modern' },
+    { name: 'ReLU', fn: () => T.relu(x), desc: 'max(0, x) — sparse, fast' },
+    { name: 'Sigmoid', fn: () => T.sigmoid(x), desc: '1/(1+e^-x) — probability' },
+    { name: 'Tanh', fn: () => T.tanh(x), desc: '(e^x-e^-x)/(e^x+e^-x) — centered' },
+    { name: 'GELU', fn: () => T.gelu(x), desc: 'x·Φ(x) — smooth, modern' },
 ];
 
 activations.forEach(({ name, fn, desc }) => {
@@ -33,17 +31,17 @@ activations.forEach(({ name, fn, desc }) => {
 
 // Softmax (normalizes to probability distribution)
 console.log('--- Softmax (normalizes to probabilities) ---');
-const logits = new Tensor([2.0, 1.0, 0.1], { backend });
-const probs = backend.softmax(logits);
+const logits = new Tensor([2.0, 1.0, 0.1], { backend: T });
+const probs = T.softmax(logits);
 console.log('Logits:', logits.toArray().map(v => v.toFixed(1)).join(', '));
 console.log('Softmax:', probs.toArray().map(v => v.toFixed(3)).join(', '));
-console.log('Sum:', backend.sum(probs).data[0].toFixed(3), '(always 1.0)');
+console.log('Sum:', T.sum(probs).data[0].toFixed(3), '(always 1.0)');
 
 // Temperature scaling
 console.log('\n--- Temperature Scaling (Softmax) ---');
 console.log('Higher temp → more uniform, Lower temp → more peaked');
 [0.5, 1.0, 2.0, 5.0].forEach(temp => {
-    const scaled = backend.softmax(backend.div(logits, temp));
+    const scaled = T.softmax(T.div(logits, temp));
     const formatted = scaled.toArray().map(v => v.toFixed(3)).join(', ');
     console.log(`T=${temp.toFixed(1)}: [${formatted}]`);
 });
@@ -57,19 +55,19 @@ console.log('──────────────────────�
 testPoints.forEach(val => {
     // ReLU gradient
     const xRelu = new Tensor([val], { requiresGrad: true, backend });
-    const yRelu = backend.relu(xRelu);
+    const yRelu = T.relu(xRelu);
     yRelu.backward();
     const reluGrad = xRelu.grad.data[0];
 
     // Sigmoid gradient
     const xSig = new Tensor([val], { requiresGrad: true, backend });
-    const ySig = backend.sigmoid(xSig);
+    const ySig = T.sigmoid(xSig);
     ySig.backward();
     const sigGrad = xSig.grad.data[0];
 
     // Tanh gradient  
     const xTanh = new Tensor([val], { requiresGrad: true, backend });
-    const yTanh = backend.tanh(xTanh);
+    const yTanh = T.tanh(xTanh);
     yTanh.backward();
     const tanhGrad = xTanh.grad.data[0];
 
