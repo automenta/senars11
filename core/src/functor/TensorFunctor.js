@@ -185,6 +185,10 @@ export class TensorFunctor {
         this.ops.set(name, fn);
     }
 
+    registerModule(name, module) {
+        this.registerOp(name, (...args) => module.forward(...args));
+    }
+
     canEvaluate(term) {
         const op = term.operator ?? term.name;
         return this.ops.has(op) || TensorFunctor._TENSOR_OPS.has(op);
