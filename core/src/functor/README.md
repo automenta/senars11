@@ -204,10 +204,10 @@ See [`docs/examples/tensor_logic_layers.pl`](../../docs/examples/tensor_logic_la
 ✅ **Phase 6 (Complete)**: Core Tensor Logic  
 - Forward operations, autograd, truth-tensor bridge, loss functions, optimizers  
 
-🔄 **Phase 6.5 (Planned)**: ~35 hrs  
-- **Tier 1**: Einsum (phased), temperature-controlled activations, attention, additional ops  
-- **Tier 2**: ParameterStore, LRScheduler (incl. OneCycleLR), DataLoader, MetricsTracker, TrainingLoop (EarlyStopping, ModelCheckpoint)  
-- **Tier 3**: SymbolicBackend, TensorOptimizer, ONNXExporter (scaffolds)  
+🔄 **Phase 6.5 (Planned)**: ~20 hrs (Platinum Optimized)
+- **Tier 1**: Einsum, Composed Ops, Initialization, TensorFunctor Integration
+- **Tier 2**: TrainingUtils.js, Module System (Layers, Sequential)
+- **Tier 3**: Merged into Tier 2
 - **Tier 4**: NAL integration (deferred)
 
 ## Testing
