@@ -35,6 +35,17 @@ export class TensorBackend {
     max(a, axis = null) { throw new Error('Not implemented'); }
     min(a, axis = null) { throw new Error('Not implemented'); }
 
+    // === Mathematical operations ===
+    exp(a) { throw new Error('Not implemented'); }
+    log(a) { throw new Error('Not implemented'); }
+    sqrt(a) { throw new Error('Not implemented'); }
+    pow(a, n) { throw new Error('Not implemented'); }
+    abs(a) { throw new Error('Not implemented'); }
+
+    // === Quantifiers ===
+    forall(a, axis = null) { throw new Error('Not implemented'); }
+    exists(a, axis = null) { throw new Error('Not implemented'); }
+
     // === Utilities ===
     zeros(shape) { throw new Error('Not implemented'); }
     ones(shape) { throw new Error('Not implemented'); }

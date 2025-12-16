@@ -8,6 +8,7 @@ export class TensorFunctor {
     static _TENSOR_OPS = new Set([
         'tensor', 'matmul', 'add', 'sub', 'mul', 'div', 'transpose', 'reshape', 'neg',
         'relu', 'sigmoid', 'tanh', 'softmax', 'gelu', 'sum', 'mean', 'max', 'min',
+        'exp', 'log', 'sqrt', 'pow', 'abs', 'forall', 'exists',
         'zeros', 'ones', 'random', 'grad', 'backward', 'zero_grad',
         'truth_to_tensor', 'tensor_to_truth', 'mse', 'mae',
         'binary_cross_entropy', 'cross_entropy', 'sgd_step', 'adam_step'
@@ -26,9 +27,9 @@ export class TensorFunctor {
             const args = (term.components || []).map(c => this.resolve(c, bindings));
             return this.ops.get(op)(...args);
         }
-        const binaryOps = ['matmul', 'add', 'sub', 'mul', 'div'];
-        const unaryOps = ['transpose', 'neg', 'relu', 'sigmoid', 'tanh', 'gelu'];
-        const reductionOps = ['sum', 'mean', 'max', 'min'];
+        const binaryOps = ['matmul', 'add', 'sub', 'mul', 'div', 'pow'];
+        const unaryOps = ['transpose', 'neg', 'relu', 'sigmoid', 'tanh', 'gelu', 'exp', 'log', 'sqrt', 'abs'];
+        const reductionOps = ['sum', 'mean', 'max', 'min', 'forall', 'exists'];
         const shapeOps = ['zeros', 'ones', 'random'];
 
         switch (op) {

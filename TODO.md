@@ -1,8 +1,8 @@
 # SeNARS Development Plan
 
 > **Semantic Non-Axiomatic Reasoning System**  
-> **Status**: Phase 3 Complete | NAL-1 to NAL-6 + NAL-8 | 99.8% Test Pass Rate  
-> **Updated**: 2025-12-15
+> **Status**: Phase 6 Complete | NAL-1 to NAL-6 + NAL-8 | 99.8% Test Pass Rate  
+> **Updated**: 2025-12-16
 
 ---
 
@@ -37,7 +37,13 @@
 
 ```
 Phase 4: Core Observability ─► Phase 5: Prolog Enhancements ─► Phase 6: Tensor Logic
-   (Tracing, Serialization)      (Functor, Builtins, Is)         (Pure Tensor Logic)
+   (Tracing, Serialization)      (Functor, Builtins, Is)         (Autograd, Ops)
+                                                                       │
+                                                                       ▼
+                                                                Phase 6.5: TL Complete
+                                                                ├─ Tier 1: Einsum, Attention
+                                                                ├─ Tier 2: DataLoader, LRScheduler
+                                                                └─ Tier 3: Symbolic, ONNX Export
                                                                        │
                                                                        ▼
                                                                 Phase 7: RLFP
@@ -938,7 +944,7 @@ class PrologStrategy {
 
 ---
 
-### 5.1 TensorFunctor Base — Core Operations
+### 6.1 TensorFunctor Base — Core Operations
 
 **File**: `core/src/functor/TensorFunctor.js`  
 **Effort**: 3 days  
@@ -1097,7 +1103,7 @@ class TensorFunctor extends Functor {
 
 ---
 
-### 5.2 Tensor Class — Tier 2: Autograd Support
+### 6.2 Tensor Class — Tier 2: Autograd Support
 
 **Status**: ✅ Tier 1 Complete (forward-only ops) | **Next**: Tier 2 (gradient tracking)  
 **File**: `core/src/functor/Tensor.js`  
@@ -1175,7 +1181,7 @@ class Tensor {
 
 ---
 
-### 5.3 NativeBackend — Gradient Functions
+### 6.3 NativeBackend — Gradient Functions
 
 **File**: `core/src/functor/backends/NativeBackend.js`  
 **Changes**: Update all operations to build computation graph
@@ -1260,7 +1266,7 @@ relu(a) {
 
 ---
 
-### 5.4 TensorFunctor — Gradient Operations
+### 6.4 TensorFunctor — Gradient Operations
 
 **File**: `core/src/functor/TensorFunctor.js`  
 **Changes**: Implement `grad` and `backward` operations
@@ -1308,7 +1314,7 @@ evaluate(term, bindings) {
 
 ---
 
-### 5.5 Integration Tests — Gradient Checking
+### 6.5 Integration Tests — Gradient Checking
 
 **File**: `tests/unit/functor/TensorGradients.test.js`
 
@@ -1416,7 +1422,7 @@ describe('Tensor Gradients', function() {
 
 ---
 
-### 5.6 Example: Training Loop
+### 6.6 Example: Training Loop
 
 ```javascript
 // Simple gradient descent
@@ -1476,7 +1482,7 @@ console.log(`Final W: ${W.data[0].toFixed(2)}, b: ${b.data[0].toFixed(2)}`);
 
 ---
 
-### 5.3 Layer Abstraction — Neural Networks as Prolog
+### Layer Abstraction — Neural Networks as Prolog
 
 **Effort**: 2 days
 
@@ -1533,7 +1539,7 @@ conv_block(In, Out, Filters, KernelSize) :-
 
 ---
 
-### 5.4 PrologStrategy Integration
+### PrologStrategy Integration
 
 **Extend**: `core/src/reason/strategy/PrologStrategy.js`  
 **Effort**: 1 day
@@ -1569,7 +1575,7 @@ class PrologStrategy {
 
 ---
 
-### 5.5 Backend Abstraction
+### Backend Abstraction
 
 **File**: `core/src/functor/backends/`  
 **Effort**: 2 days
@@ -1608,7 +1614,7 @@ class ONNXBackend extends TensorBackend {
 
 ---
 
-### 5.6 Gradient-Based Operations
+### Gradient-Based Operations
 
 **Effort**: 1 week
 
@@ -1632,7 +1638,7 @@ _gradient(output, wrt, bindings) → Tensor {
 
 ---
 
-### 5.7 Training Loop as Terms
+### Training Loop as Terms
 
 ```prolog
 % SGD update step
@@ -1658,7 +1664,7 @@ train(Model, Data, Epochs) :-
 
 ---
 
-### 5.8 Truth-Value ↔ Tensor Bridge
+### Truth-Value ↔ Tensor Bridge
 
 **File**: `core/src/functor/TruthTensorBridge.js`  
 **Effort**: 4 hours  
@@ -1756,7 +1762,7 @@ case 'tensor_to_truth':
 
 ---
 
-### 5.9 Integration Tests
+### Integration Tests
 
 **File**: `tests/unit/functor/TensorFunctor.test.js`
 
@@ -1808,7 +1814,7 @@ describe('TensorFunctor', () => {
 
 ---
 
-### Phase 5 Summary
+### Phase 6 Summary
 
 | Component | File | Effort |
 |-----------|------|--------|
@@ -1836,76 +1842,747 @@ describe('TensorFunctor', () => {
 
 ---
 
-### Future Directions (Tier 3+)
+## Phase 6.5: Tensor Logic Completion & Optimization
 
-The following enhancements are deferred to future iterations, after core Tensor Logic is stable:
+> **Goal**: Complete Tensor Logic paper primitives, add performance optimization, and enable versatile ML workflows  
+> **Effort**: ~1.5 weeks (~30 hrs)  
+> **Prereqs**: Phase 6 Tiers 1-3 (complete)  
+> **Unlocks**: Full paper parity, high-performance training, portable models, foundation for NAL integration
 
-#### Einsum as Core Primitive
+### Design Principles
 
-**Concept**: Replace discrete `matmul`, `add`, `mul` with Einstein summation as the universal primitive.
+1. **Pure numerical/ML capabilities first** — NAL integration deferred until core is rock-solid
+2. **Backend consistency** — New ops implemented as NativeBackend methods for unified gradient flow
+3. **Training ergonomics** — DataLoader, LRScheduler, checkpointing for real-world usage
+4. **Portability** — ONNX export for deployment outside SeNARS
 
-```javascript
-// Future: matmul(A, B) becomes syntactic sugar for:
-einsum('ij,jk->ik', A, B)
+### Summary of Completed Work (Phase 6)
 
-// Logical rules as tensor contractions:
-// Grandparent(x, z) :- Parent(x, y), Parent(y, z)
-// becomes: T_Grandparent[x,z] = Σ_y T_Parent[x,y] * T_Parent[y,z]
-einsum('xy,yz->xz', T_Parent, T_Parent)
-```
-
-**Rationale**: Einsum unifies neural ops and logical inference at the mathematical level (per Tensor Logic paper). However, implementing an efficient einsum parser and executor adds significant complexity. Current discrete ops (`matmul`, `add`) are simpler for initial implementation and debugging.
-
-**Defer Until**: Tier 3 or when tensor contraction patterns become a bottleneck.
-
-#### Symbolic Graph Mode (Lazy Evaluation)
-
-**Concept**: Support `mode: 'eager' | 'symbolic'` in TensorFunctor.
-
-- **Eager** (current): Evaluate immediately, return `Tensor` with data
-- **Symbolic** (future): Return `GraphNode` (placeholder), enable graph compilation
-
-```javascript
-// Symbolic mode enables:
-// 1. Graph caching - define model once, run many times
-// 2. Compilation to WebGL/WebGPU shaders
-// 3. Whole-graph optimization before execution
-const graph = tensorFunctor.evaluate(model, bindings, { mode: 'symbolic' });
-const compiled = graph.compile({ target: 'webgl' });
-const result = compiled.run(inputData);
-```
-
-**Rationale**: Enables high-performance training loops without re-interpreting the Prolog tree each forward pass. However, adds significant implementation overhead (graph builder, shape inference, placeholder handling).
-
-**Defer Until**: Core autograd is stable and performance profiling indicates interpretation overhead.
-
-#### ParameterStore (Alternate Mode)
-
-> [!NOTE]  
-> This is noted for future consideration but not planned for implementation.
-
-**Concept**: Central registry for learnable weights, decoupled from rule definitions.
-
-```prolog
-% Current: explicit weight passing
-layer(In, Out, W, B, Act) :- Out is Act(add(matmul(W, In), B)).
-
-% Alternative: named parameter lookup
-layer(In, Out, 'layer_1') :- 
-    params('layer_1', W, B, Act),
-    Out is Act(add(matmul(W, In), B)).
-```
-
-**Trade-offs**:
-- **Pro**: Cleaner rules, easier serialization
-- **Con**: Introduces mutable global state, conflicts with functional/logical paradigm
-- **Con**: Explicit weight passing is more transparent and debuggable
-
-**Recommendation**: If needed, implement as an optional mode rather than replacing the explicit passing style.
+| Component | Status | Description |
+|-----------|--------|-------------|
+| `Tensor.js` | ✅ | N-d arrays with autograd, backward(), topological sort |
+| `NativeBackend.js` | ✅ | All ops with gradients: matmul, add, sub, mul, div, relu, sigmoid, tanh, gelu, softmax |
+| `TensorFunctor.js` | ✅ | Prolog term evaluation, registered ops, PrologStrategy integration |
+| `TruthTensorBridge.js` | ✅ | Bidirectional truth↔tensor: scalar, bounds, vector, sigmoid, dual, softmax |
+| `LossFunctor.js` | ✅ | MSE, MAE, binary cross-entropy, cross-entropy |
+| `Optimizer.js` | ✅ | SGD (momentum), Adam, RMSprop |
+| Quantifiers | ✅ | forall/exists as axis-wise min/max with gradients |
+| Math ops | ✅ | exp, log, sqrt, pow, abs with gradients |
+| Axis-wise reductions | ✅ | sum, mean, max, min with axis parameter and gradients |
 
 ---
 
-## Phase 6: RLFP — Reinforcement Learning from Preferences
+### Tier 1: Paper Completeness — Core Ops (~12 hrs)
+
+Complete the core primitives from [Tensor Logic: The Language of AI](https://arxiv.org/abs/2510.12269).
+
+#### 1.1 Einsum — Unified Tensor Contraction
+
+**File**: `core/src/functor/backends/NativeBackend.js` (add method)  
+**Effort**: 4 hours
+
+> [!IMPORTANT]
+> Einsum is implemented as a **NativeBackend method** (not separate class) for consistent gradient flow.
+
+```javascript
+// In NativeBackend.js
+einsum(subscripts, ...tensors) {
+    const { inputs, output, contracted } = this._parseEinsum(subscripts);
+    
+    // Build contraction plan
+    const plan = this._buildContractionPlan(inputs, output, contracted, tensors);
+    
+    // Execute with gradient tracking
+    const result = this._executeContraction(plan, tensors);
+    
+    if (tensors.some(t => t.requiresGrad)) {
+        result.requiresGrad = true;
+        result._parents = tensors.filter(t => t.requiresGrad);
+        result._gradFn = () => this._einsumBackward(subscripts, tensors, result);
+    }
+    
+    return result;
+}
+
+_parseEinsum(subscripts) {
+    const [inputStr, outputStr] = subscripts.split('->');
+    const inputs = inputStr.split(',').map(s => [...s.trim()]);
+    const output = outputStr ? [...outputStr.trim()] : [];
+    const allIndices = new Set(inputs.flatMap(i => i));
+    const contracted = [...allIndices].filter(i => !output.includes(i));
+    return { inputs, output, contracted };
+}
+```
+
+**Einsum operations unified**:
+
+| Operation | Einsum | Replaces |
+|-----------|--------|----------|
+| Matrix multiply | `'ij,jk->ik'` | `matmul(A, B)` |
+| Dot product | `'i,i->'` | `sum(mul(a, b))` |
+| Outer product | `'i,j->ij'` | — (new) |
+| Trace | `'ii->'` | — (new) |
+| Transpose | `'ij->ji'` | `transpose(A)` |
+| Batch matmul | `'bij,bjk->bik'` | — (new) |
+| Diagonal | `'ii->i'` | — (new) |
+| Sum axis | `'ij->i'` | `sum(A, 1)` |
+
+#### 1.2 Temperature-Controlled Activations
+
+**File**: `NativeBackend.js`  
+**Effort**: 2 hours
+
+From paper Section 5: Temperature controls deductive↔analogical spectrum.
+
+```javascript
+// Enhanced sigmoid with temperature
+sigmoid(a, temperature = 1.0) {
+    if (temperature === 0) return this.step(a);
+    return this._unaryWithGrad(a,
+        x => 1 / (1 + Math.exp(-x / temperature)),
+        (input, result) => this._createTensor(
+            result.data.map(s => (s * (1 - s)) / temperature), 
+            result.shape
+        )
+    );
+}
+
+// Enhanced softmax with temperature
+softmax(a, axis = -1, temperature = 1.0) {
+    const scaled = temperature !== 1.0 ? this.div(a, temperature) : a;
+    // ... existing softmax logic on scaled values
+}
+
+// Step function (T=0 limit)
+step(a) {
+    return this._unaryWithGrad(a, 
+        x => x > 0 ? 1 : 0,
+        () => this._createTensor(new Array(a.size).fill(0), a.shape)
+    );
+}
+```
+
+| Temperature | Behavior | Use Case |
+|-------------|----------|----------|
+| T=0 | Step function | Pure deduction, no hallucination |
+| T=1 | Standard | Default activation |
+| T>1 | Soft/smooth | Analogical reasoning, exploration |
+| T<1 | Sharper | More decisive, less uncertainty |
+
+#### 1.3 Additional Operations
+
+**File**: `NativeBackend.js`  
+**Effort**: 3 hours
+
+```javascript
+// Cosine similarity (for embedding comparisons)
+cosineSimilarity(a, b) {
+    const dot = this.sum(this.mul(a, b));
+    const normA = this.sqrt(this.sum(this.mul(a, a)));
+    const normB = this.sqrt(this.sum(this.mul(b, b)));
+    return this.div(dot, this.mul(normA, normB));
+}
+
+// Clamp with straight-through estimator (STE) gradients
+clamp(a, min, max) {
+    return this._unaryWithGrad(a, 
+        x => Math.max(min, Math.min(max, x)),
+        () => this._createTensor(new Array(a.size).fill(1), a.shape)  // STE
+    );
+}
+
+// Layer normalization
+layerNorm(a, axis = -1, eps = 1e-5, gamma = null, beta = null) {
+    const mean = this.mean(a, axis);
+    const variance = this.mean(this.pow(this.sub(a, mean), 2), axis);
+    const normalized = this.div(this.sub(a, mean), this.sqrt(this.add(variance, eps)));
+    return gamma ? this.add(this.mul(gamma, normalized), beta ?? 0) : normalized;
+}
+
+// Batch normalization
+batchNorm(a, gamma, beta, eps = 1e-5, runningMean = null, runningVar = null, training = true) {
+    const mean = training ? this.mean(a, 0) : runningMean;
+    const variance = training ? this.mean(this.pow(this.sub(a, mean), 2), 0) : runningVar;
+    const normalized = this.div(this.sub(a, mean), this.sqrt(this.add(variance, eps)));
+    return this.add(this.mul(gamma, normalized), beta);
+}
+
+// Dropout with optional seed for reproducibility
+dropout(a, rate = 0.5, training = true, seed = null) {
+    if (!training || rate === 0) return a;
+    const rng = seed !== null ? this._seededRNG(seed) : Math.random;
+    const mask = this._createTensor(
+        a.data.map(() => rng() > rate ? 1 / (1 - rate) : 0),
+        a.shape
+    );
+    return this.mul(a, mask);
+}
+```
+
+#### 1.4 Attention Mechanism
+
+**File**: `NativeBackend.js`  
+**Effort**: 3 hours
+
+Scaled dot-product attention with full gradient support.
+
+```javascript
+// Scaled dot-product attention
+attention(Q, K, V, mask = null, temperature = 1.0) {
+    const d_k = K.shape[K.shape.length - 1];
+    const scale = Math.sqrt(d_k) * temperature;
+    
+    const scores = this.div(this.matmul(Q, this.transpose(K)), scale);
+    const masked = mask ? this.add(scores, this.mul(mask, -1e9)) : scores;
+    const weights = this.softmax(masked, -1);
+    
+    return { output: this.matmul(weights, V), weights };
+}
+
+// Multi-head attention helper
+multiHeadAttention(Q, K, V, numHeads, Wq, Wk, Wv, Wo, mask = null) {
+    // Split heads, apply attention, concatenate, project
+    const d_model = Q.shape[Q.shape.length - 1];
+    const d_head = d_model / numHeads;
+    
+    const projQ = this.matmul(Q, Wq);
+    const projK = this.matmul(K, Wk);
+    const projV = this.matmul(V, Wv);
+    
+    // Reshape for multi-head: [batch, seq, heads, d_head]
+    // Apply attention per head, concatenate, project
+    const { output } = this.attention(projQ, projK, projV, mask);
+    return this.matmul(output, Wo);
+}
+```
+
+---
+
+### Tier 2: Training Ergonomics (~10 hrs)
+
+Enable real-world training workflows.
+
+#### 2.1 ParameterStore with Optimizer Integration
+
+**File**: `core/src/functor/ParameterStore.js`  
+**Effort**: 3 hours
+
+Central registry that works seamlessly with optimizers.
+
+```javascript
+class ParameterStore {
+    constructor() {
+        this.params = new Map();
+        this.frozen = new Set();
+    }
+    
+    // Registration
+    register(name, tensor, { freeze = false } = {}) {
+        tensor.name = name;  // Named tensor for debugging
+        this.params.set(name, tensor);
+        if (freeze) this.frozen.add(name);
+        return tensor;
+    }
+    
+    get(name) { return this.params.get(name); }
+    has(name) { return this.params.has(name); }
+    
+    // Iterator interface for optimizers
+    *entries() {
+        for (const [name, param] of this.params) {
+            if (!this.frozen.has(name)) yield [name, param];
+        }
+    }
+    
+    // Utilities
+    freeze(name) { this.frozen.add(name); }
+    unfreeze(name) { this.frozen.delete(name); }
+    allParams() { return [...this.params.values()]; }
+    trainableParams() { return [...this.entries()].map(([, p]) => p); }
+    
+    // Stats
+    numParams() {
+        return this.trainableParams().reduce((sum, p) => sum + p.size, 0);
+    }
+    
+    // Persistence
+    save(path) {
+        const state = Object.fromEntries(
+            [...this.params].map(([name, t]) => [name, t.toJSON()])
+        );
+        fs.writeFileSync(path, JSON.stringify(state));
+    }
+    
+    load(path) {
+        const state = JSON.parse(fs.readFileSync(path));
+        for (const [name, json] of Object.entries(state)) {
+            if (this.params.has(name)) {
+                const tensor = this.params.get(name);
+                tensor.data = Tensor.fromJSON(json).data;
+            }
+        }
+    }
+}
+```
+
+#### 2.2 Learning Rate Scheduler
+
+**File**: `core/src/functor/LRScheduler.js`  
+**Effort**: 2 hours
+
+```javascript
+class LRScheduler {
+    constructor(optimizer, options = {}) {
+        this.optimizer = optimizer;
+        this.baseLR = optimizer.learningRate;
+        this.step = 0;
+    }
+    
+    tick() { this.step++; }
+    getLR() { return this.baseLR; }
+}
+
+class StepLRScheduler extends LRScheduler {
+    constructor(optimizer, stepSize = 10, gamma = 0.1) {
+        super(optimizer);
+        this.stepSize = stepSize;
+        this.gamma = gamma;
+    }
+    
+    tick() {
+        super.tick();
+        this.optimizer.learningRate = this.baseLR * 
+            Math.pow(this.gamma, Math.floor(this.step / this.stepSize));
+    }
+}
+
+class CosineAnnealingScheduler extends LRScheduler {
+    constructor(optimizer, T_max, eta_min = 0) {
+        super(optimizer);
+        this.T_max = T_max;
+        this.eta_min = eta_min;
+    }
+    
+    tick() {
+        super.tick();
+        this.optimizer.learningRate = this.eta_min + 
+            (this.baseLR - this.eta_min) * 
+            (1 + Math.cos(Math.PI * this.step / this.T_max)) / 2;
+    }
+}
+
+class WarmupScheduler extends LRScheduler {
+    constructor(optimizer, warmupSteps, inner = null) {
+        super(optimizer);
+        this.warmupSteps = warmupSteps;
+        this.inner = inner;
+    }
+    
+    tick() {
+        super.tick();
+        if (this.step <= this.warmupSteps) {
+            this.optimizer.learningRate = this.baseLR * (this.step / this.warmupSteps);
+        } else if (this.inner) {
+            this.inner.tick();
+        }
+    }
+}
+```
+
+#### 2.3 DataLoader
+
+**File**: `core/src/functor/DataLoader.js`  
+**Effort**: 2 hours
+
+```javascript
+class DataLoader {
+    constructor(dataset, { batchSize = 32, shuffle = true, dropLast = false } = {}) {
+        this.dataset = dataset;
+        this.batchSize = batchSize;
+        this.shuffle = shuffle;
+        this.dropLast = dropLast;
+    }
+    
+    *[Symbol.iterator]() {
+        const indices = [...Array(this.dataset.length).keys()];
+        if (this.shuffle) this._shuffle(indices);
+        
+        for (let i = 0; i < indices.length; i += this.batchSize) {
+            const batchIndices = indices.slice(i, i + this.batchSize);
+            if (this.dropLast && batchIndices.length < this.batchSize) break;
+            
+            yield this._getBatch(batchIndices);
+        }
+    }
+    
+    _getBatch(indices) {
+        const items = indices.map(i => this.dataset[i]);
+        // Stack into batch tensors
+        return {
+            x: new Tensor(items.map(item => item.x)),
+            y: new Tensor(items.map(item => item.y))
+        };
+    }
+    
+    _shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+    
+    get numBatches() {
+        const n = Math.floor(this.dataset.length / this.batchSize);
+        return this.dropLast ? n : Math.ceil(this.dataset.length / this.batchSize);
+    }
+}
+```
+
+#### 2.4 Training Loop Utilities
+
+**File**: `core/src/functor/TrainingUtils.js`  
+**Effort**: 3 hours
+
+```javascript
+class TrainingLoop {
+    constructor(model, optimizer, lossFn, options = {}) {
+        this.model = model;
+        this.optimizer = optimizer;
+        this.lossFn = lossFn;
+        this.scheduler = options.scheduler;
+        this.clipGradNorm = options.clipGradNorm;
+        this.callbacks = options.callbacks ?? [];
+    }
+    
+    trainEpoch(dataLoader, options = {}) {
+        let totalLoss = 0, batches = 0;
+        
+        for (const batch of dataLoader) {
+            const loss = this.trainStep(batch);
+            totalLoss += loss;
+            batches++;
+            
+            this.callbacks.forEach(cb => cb.onBatch?.(batches, loss));
+        }
+        
+        if (this.scheduler) this.scheduler.tick();
+        return totalLoss / batches;
+    }
+    
+    trainStep(batch) {
+        this.optimizer.zeroGrad(this.model.params);
+        
+        const pred = this.model.forward(batch.x);
+        const loss = this.lossFn(pred, batch.y);
+        
+        loss.backward();
+        
+        if (this.clipGradNorm) this._clipGradients();
+        
+        this.optimizer.step(this.model.params);
+        
+        return loss.data[0];
+    }
+    
+    _clipGradients() {
+        let totalNorm = 0;
+        for (const [, param] of this.model.params.entries()) {
+            if (param.grad) {
+                totalNorm += param.grad.data.reduce((s, g) => s + g * g, 0);
+            }
+        }
+        totalNorm = Math.sqrt(totalNorm);
+        
+        if (totalNorm > this.clipGradNorm) {
+            const scale = this.clipGradNorm / totalNorm;
+            for (const [, param] of this.model.params.entries()) {
+                if (param.grad) {
+                    param.grad.data = param.grad.data.map(g => g * scale);
+                }
+            }
+        }
+    }
+}
+
+// Gradient checkpointing for memory efficiency
+function checkpoint(fn, inputs) {
+    // Forward pass without storing intermediates
+    const outputs = fn(...inputs.map(t => t.detach ? t.detach() : t));
+    
+    // Store function for recomputation during backward
+    outputs._checkpointFn = fn;
+    outputs._checkpointInputs = inputs;
+    
+    return outputs;
+}
+```
+
+---
+
+### Tier 3: Advanced Features (~8 hrs)
+
+#### 3.1 Symbolic Backend (Lazy Execution)
+
+**File**: `core/src/functor/backends/SymbolicBackend.js`  
+**Effort**: 4 hours
+
+> [!NOTE]
+> SymbolicBackend wraps NativeBackend but builds graphs lazily for optimization.
+
+```javascript
+class SymbolicBackend extends TensorBackend {
+    constructor(eagerBackend = new NativeBackend()) {
+        super();
+        this.eager = eagerBackend;
+        this.graph = null;
+        this.nodeCounter = 0;
+    }
+    
+    // Override ops to return GraphNodes
+    matmul(a, b) {
+        return this._createNode('matmul', [a, b], 
+            () => this.eager.matmul(this._resolve(a), this._resolve(b)));
+    }
+    
+    add(a, b) {
+        return this._createNode('add', [a, b],
+            () => this.eager.add(this._resolve(a), this._resolve(b)));
+    }
+    
+    // ... other ops follow pattern
+    
+    _createNode(op, inputs, executeFn) {
+        return new GraphNode({
+            id: this.nodeCounter++,
+            op,
+            inputs,
+            execute: executeFn,
+            backend: this
+        });
+    }
+    
+    _resolve(x) {
+        return x instanceof GraphNode ? x.execute() : x;
+    }
+    
+    compile(rootNode, options = {}) {
+        const optimizer = new TensorOptimizer(options);
+        const optimized = optimizer.optimize(rootNode);
+        
+        return {
+            run: (inputs) => {
+                this._bindInputs(optimized, inputs);
+                return optimized.execute();
+            }
+        };
+    }
+}
+
+class GraphNode {
+    constructor({ id, op, inputs, execute, backend }) {
+        this.id = id;
+        this.op = op;
+        this.inputs = inputs;
+        this._execute = execute;
+        this.backend = backend;
+        this._cached = null;
+    }
+    
+    execute() {
+        if (this._cached === null) {
+            this._cached = this._execute();
+        }
+        return this._cached;
+    }
+    
+    invalidate() {
+        this._cached = null;
+    }
+}
+```
+
+#### 3.2 Graph Optimizer
+
+**File**: `core/src/functor/TensorOptimizer.js`  
+**Effort**: 3 hours
+
+```javascript
+class TensorOptimizer {
+    constructor(options = {}) {
+        this.passes = options.passes ?? [
+            new ConstantFolding(),
+            new CommonSubexpressionElimination(),
+            new DeadCodeElimination(),
+        ];
+        this.cache = new Map();
+    }
+    
+    optimize(graph) {
+        const cacheKey = this._hash(graph);
+        if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
+        
+        let optimized = graph;
+        for (const pass of this.passes) {
+            optimized = pass.apply(optimized);
+        }
+        
+        this.cache.set(cacheKey, optimized);
+        return optimized;
+    }
+}
+
+class ConstantFolding {
+    apply(graph) {
+        // add(tensor([1,2]), tensor([3,4])) → tensor([4,6])
+        return this._visitPostOrder(graph, node => {
+            if (node.inputs.every(i => !(i instanceof GraphNode))) {
+                return node.execute();
+            }
+            return node;
+        });
+    }
+}
+
+class CommonSubexpressionElimination {
+    apply(graph) {
+        const seen = new Map();
+        return this._visitPostOrder(graph, node => {
+            const key = this._nodeSignature(node);
+            if (seen.has(key)) return seen.get(key);
+            seen.set(key, node);
+            return node;
+        });
+    }
+}
+
+class DeadCodeElimination {
+    apply(graph) {
+        const reachable = new Set();
+        this._markReachable(graph, reachable);
+        return this._filter(graph, node => reachable.has(node.id));
+    }
+}
+```
+
+#### 3.3 ONNX Export (Portability)
+
+**File**: `core/src/functor/ONNXExporter.js`  
+**Effort**: 1 hour (scaffold)
+
+```javascript
+class ONNXExporter {
+    static export(model, inputShapes, path) {
+        const graph = this._buildGraph(model, inputShapes);
+        const onnxGraph = this._convertToONNX(graph);
+        fs.writeFileSync(path, this._serialize(onnxGraph));
+    }
+    
+    static _buildGraph(model, inputShapes) {
+        const symbolic = new SymbolicBackend();
+        const inputs = inputShapes.map((shape, i) => 
+            new GraphNode({ id: `input_${i}`, op: 'input', inputs: [], shape }));
+        
+        return model.forward(...inputs);
+    }
+    
+    static _convertToONNX(graph) {
+        // Map SeNARS ops to ONNX ops
+        const opMap = {
+            'matmul': 'MatMul',
+            'add': 'Add',
+            'relu': 'Relu',
+            'sigmoid': 'Sigmoid',
+            'softmax': 'Softmax',
+            // ...
+        };
+        // Build ONNX protobuf structure
+    }
+}
+```
+
+---
+
+### Tier 4: NAL Integration (Deferred)
+
+> [!NOTE]
+> These features are deferred until Tiers 1-3 are complete and stable.
+
+#### Differentiable Truth Values
+
+```javascript
+// Deferred: TruthTensorBridge enhancements
+truthToTensor(truth, mode, requiresGrad = false)
+tensorToTruth(tensor, mode)  // with gradient preservation
+```
+
+#### NAL Operations as Tensor Ops
+
+```javascript
+// Deferred: NativeBackend extensions
+revise(t1, t2, k)       // NAL revision with gradients
+deduction(p1, p2)       // (A→B, B→C) ⊢ (A→C)
+induction(p1, p2)       // (A→B, A→C) ⊢ (B→C)
+abduction(p1, p2)       // (A→B, C→B) ⊢ (A→C)
+```
+
+#### Belief Embedding Integration
+
+```javascript
+// Deferred: TensorFunctor ops
+case 'embed':              // term → embedding vector
+case 'similarity':         // cosine similarity between terms
+case 'analogical_infer':   // temperature-based inference
+```
+
+---
+
+### Files Summary
+
+| File | Action | Tier | Effort |
+|------|--------|------|--------|
+| `NativeBackend.js` | MODIFY: einsum, temperature, attention, dropout, layerNorm, clamp | 1 | 10 hrs |
+| `TensorBackend.js` | MODIFY: add abstract methods | 1 | 1 hr |
+| `TensorFunctor.js` | MODIFY: einsum op, temperature params | 1 | 1 hr |
+| `ParameterStore.js` | NEW | 2 | 3 hrs |
+| `LRScheduler.js` | NEW | 2 | 2 hrs |
+| `DataLoader.js` | NEW | 2 | 2 hrs |
+| `TrainingUtils.js` | NEW | 2 | 3 hrs |
+| `SymbolicBackend.js` | NEW | 3 | 4 hrs |
+| `TensorOptimizer.js` | NEW | 3 | 3 hrs |
+| `ONNXExporter.js` | NEW (scaffold) | 3 | 1 hr |
+
+### Phase Summary
+
+| Tier | Focus | Effort | Status |
+|------|-------|--------|--------|
+| **Tier 1** | Paper primitives (einsum, attention, temperature) | 12 hrs | Ready |
+| **Tier 2** | Training ergonomics (DataLoader, LRScheduler) | 10 hrs | Ready |
+| **Tier 3** | Advanced (SymbolicBackend, Optimizer, ONNX) | 8 hrs | Ready |
+| **Tier 4** | NAL Integration | ~6 hrs | Deferred |
+
+### Competitive Position After Phase 6.5
+
+| Capability | Rust TL | PyTorch | **SeNARS** |
+|------------|---------|---------|------------|
+| Einsum | ✅ | ✅ | ✅ (Tier 1) |
+| Temperature | ✅ | ❌ | ✅ (Tier 1) |
+| Attention | ✅ | ✅ | ✅ (Tier 1) |
+| DataLoader | ✅ | ✅ | ✅ (Tier 2) |
+| LR Scheduler | ✅ | ✅ | ✅ (Tier 2) |
+| Autograd | ✅ | ✅ | ✅ (Done) |
+| Graph Optimizer | ✅ | ❌ | ✅ (Tier 3) |
+| ONNX Export | ❌ | ✅ | ✅ (Tier 3) |
+| Prolog integration | ❌ | ❌ | ✅ (Done) |
+| **NAL integration** | ❌ | ❌ | Deferred |
+
+### Phase 6.5 Total: ~30 hrs (~1.5 weeks)
+
+
+---
+
+
+## Phase 7: RLFP — Reinforcement Learning from Preferences
+
 
 > **Goal**: Learn reasoning preferences from human feedback  
 > **Effort**: ~1 week  

@@ -163,8 +163,8 @@ export class NativeBackend extends TensorBackend {
     }
 
     neg(a) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        return this._createTensor(a.data.map(x => -x), [...a.shape]);
+        return this._unaryWithGrad(a, x => -x, () =>
+            this._createTensor(Array(a.size).fill(-1), a.shape));
     }
 
     relu(a) {
@@ -206,14 +206,88 @@ export class NativeBackend extends TensorBackend {
     }
 
     gelu(a) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        return this._createTensor(a.data.map(x => {
-            const tanh_arg = Math.sqrt(2 / Math.PI) * (x + 0.044715 * x ** 3);
-            return 0.5 * x * (1 + Math.tanh(tanh_arg));
-        }), [...a.shape]);
+        const sqrt2Pi = Math.sqrt(2 / Math.PI);
+        return this._unaryWithGrad(a,
+            x => 0.5 * x * (1 + Math.tanh(sqrt2Pi * (x + 0.044715 * x ** 3))),
+            (input) => this._createTensor(input.data.map(x => {
+                const u = sqrt2Pi * (x + 0.044715 * x ** 3);
+                const tanhU = Math.tanh(u);
+                const sech2 = 1 - tanhU * tanhU;
+                return 0.5 * (1 + tanhU) + 0.5 * x * sech2 * sqrt2Pi * (1 + 0.134145 * x * x);
+            }), input.shape)
+        );
     }
 
+    // === Mathematical Operations ===
 
+    exp(a) {
+        return this._unaryWithGrad(a, x => Math.exp(x), (_, result) => result);
+    }
+
+    log(a) {
+        return this._unaryWithGrad(a, x => Math.log(x), (input) =>
+            this._createTensor(input.data.map(x => 1 / x), input.shape));
+    }
+
+    sqrt(a) {
+        return this._unaryWithGrad(a, x => Math.sqrt(x), (_, result) =>
+            this._createTensor(result.data.map(s => 0.5 / s), result.shape));
+    }
+
+    pow(a, n) {
+        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        const result = this._createTensor(a.data.map(x => Math.pow(x, n)), [...a.shape]);
+        if (a.requiresGrad) {
+            result.requiresGrad = true;
+            result._parents = [a];
+            result._gradFn = () => {
+                const gradA = this._createTensor(a.data.map(x => n * Math.pow(x, n - 1)), a.shape);
+                this._accumulateGrad(a, this.mul(result.grad, gradA));
+            };
+        }
+        return result;
+    }
+
+    abs(a) {
+        return this._unaryWithGrad(a, x => Math.abs(x), (input) =>
+            this._createTensor(input.data.map(x => x >= 0 ? 1 : -1), input.shape));
+    }
+
+    // === Reduction Operations ===
+
+    _reduceAxis(a, axis, reduceFn, gradFn) {
+        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        if (axis < 0) axis = a.ndim + axis;
+
+        const newShape = a.shape.filter((_, i) => i !== axis);
+        if (newShape.length === 0) newShape.push(1);
+
+        const axisSize = a.shape[axis];
+        const outerSize = a.shape.slice(0, axis).reduce((p, c) => p * c, 1);
+        const innerSize = a.shape.slice(axis + 1).reduce((p, c) => p * c, 1);
+        const resultSize = outerSize * innerSize;
+
+        const resultData = new Array(resultSize);
+        for (let outer = 0; outer < outerSize; outer++) {
+            for (let inner = 0; inner < innerSize; inner++) {
+                const values = [];
+                for (let ax = 0; ax < axisSize; ax++) {
+                    values.push(a.data[outer * axisSize * innerSize + ax * innerSize + inner]);
+                }
+                resultData[outer * innerSize + inner] = reduceFn(values);
+            }
+        }
+
+        const result = this._createTensor(resultData, newShape);
+
+        if (a.requiresGrad && gradFn) {
+            result.requiresGrad = true;
+            result._parents = [a];
+            result._gradFn = () => gradFn(a, result, axis, axisSize, outerSize, innerSize, this);
+        }
+
+        return result;
+    }
 
     sum(a, axis = null) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
@@ -221,67 +295,138 @@ export class NativeBackend extends TensorBackend {
         if (axis === null) {
             const value = a.data.reduce((sum, val) => sum + val, 0);
             const result = new Tensor([value], { backend: this });
-
             if (a.requiresGrad) {
                 result.requiresGrad = true;
                 result._parents = [a];
-                result._gradFn = () => {
-                    const gradA = this._createTensor(new Array(a.size).fill(result.grad.data[0]), a.shape.slice());
-                    this._accumulateGrad(a, gradA);
-                };
+                result._gradFn = () => this._accumulateGrad(a,
+                    this._createTensor(new Array(a.size).fill(result.grad.data[0]), a.shape.slice()));
             }
-
             return result;
         }
 
-        throw new Error('Axis-wise sum not yet implemented');
+        return this._reduceAxis(a, axis, vals => vals.reduce((s, v) => s + v, 0),
+            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
+                const gradA = new Array(a.size);
+                for (let outer = 0; outer < outerSize; outer++) {
+                    for (let inner = 0; inner < innerSize; inner++) {
+                        const gradVal = result.grad.data[outer * innerSize + inner];
+                        for (let ax = 0; ax < axisSize; ax++) {
+                            gradA[outer * axisSize * innerSize + ax * innerSize + inner] = gradVal;
+                        }
+                    }
+                }
+                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
+            });
     }
 
     mean(a, axis = null) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
 
         if (axis === null) {
-            const sum = a.data.reduce((sum, val) => sum + val, 0);
-            const value = sum / a.size;
+            const value = a.data.reduce((s, v) => s + v, 0) / a.size;
             const result = new Tensor([value], { backend: this });
-
             if (a.requiresGrad) {
                 result.requiresGrad = true;
                 result._parents = [a];
-                result._gradFn = () => {
-                    const gradValue = result.grad.data[0] / a.size;
-                    const gradA = this._createTensor(new Array(a.size).fill(gradValue), a.shape.slice());
-                    this._accumulateGrad(a, gradA);
-                };
+                result._gradFn = () => this._accumulateGrad(a,
+                    this._createTensor(new Array(a.size).fill(result.grad.data[0] / a.size), a.shape.slice()));
             }
-
             return result;
         }
 
-        throw new Error('Axis-wise mean not yet implemented');
+        return this._reduceAxis(a, axis, vals => vals.reduce((s, v) => s + v, 0) / vals.length,
+            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
+                const gradA = new Array(a.size);
+                for (let outer = 0; outer < outerSize; outer++) {
+                    for (let inner = 0; inner < innerSize; inner++) {
+                        const gradVal = result.grad.data[outer * innerSize + inner] / axisSize;
+                        for (let ax = 0; ax < axisSize; ax++) {
+                            gradA[outer * axisSize * innerSize + ax * innerSize + inner] = gradVal;
+                        }
+                    }
+                }
+                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
+            });
     }
 
     max(a, axis = null) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
 
         if (axis === null) {
-            const result = Math.max(...a.data);
-            return new Tensor([result], { backend: this });
+            const maxVal = Math.max(...a.data);
+            const result = new Tensor([maxVal], { backend: this });
+            if (a.requiresGrad) {
+                result.requiresGrad = true;
+                result._parents = [a];
+                result._gradFn = () => {
+                    const gradA = a.data.map(v => v === maxVal ? result.grad.data[0] : 0);
+                    this._accumulateGrad(a, this._createTensor(gradA, a.shape.slice()));
+                };
+            }
+            return result;
         }
 
-        throw new Error('Axis-wise max not yet implemented');
+        return this._reduceAxis(a, axis, vals => Math.max(...vals),
+            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
+                const gradA = new Array(a.size).fill(0);
+                for (let outer = 0; outer < outerSize; outer++) {
+                    for (let inner = 0; inner < innerSize; inner++) {
+                        const resultIdx = outer * innerSize + inner;
+                        const maxVal = result.data[resultIdx];
+                        for (let ax = 0; ax < axisSize; ax++) {
+                            const idx = outer * axisSize * innerSize + ax * innerSize + inner;
+                            if (a.data[idx] === maxVal) {
+                                gradA[idx] = result.grad.data[resultIdx];
+                                break;
+                            }
+                        }
+                    }
+                }
+                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
+            });
     }
 
     min(a, axis = null) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
 
         if (axis === null) {
-            const result = Math.min(...a.data);
-            return new Tensor([result], { backend: this });
+            const minVal = Math.min(...a.data);
+            const result = new Tensor([minVal], { backend: this });
+            if (a.requiresGrad) {
+                result.requiresGrad = true;
+                result._parents = [a];
+                result._gradFn = () => {
+                    const gradA = a.data.map(v => v === minVal ? result.grad.data[0] : 0);
+                    this._accumulateGrad(a, this._createTensor(gradA, a.shape.slice()));
+                };
+            }
+            return result;
         }
 
-        throw new Error('Axis-wise min not yet implemented');
+        return this._reduceAxis(a, axis, vals => Math.min(...vals),
+            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
+                const gradA = new Array(a.size).fill(0);
+                for (let outer = 0; outer < outerSize; outer++) {
+                    for (let inner = 0; inner < innerSize; inner++) {
+                        const resultIdx = outer * innerSize + inner;
+                        const minVal = result.data[resultIdx];
+                        for (let ax = 0; ax < axisSize; ax++) {
+                            const idx = outer * axisSize * innerSize + ax * innerSize + inner;
+                            if (a.data[idx] === minVal) {
+                                gradA[idx] = result.grad.data[resultIdx];
+                                break;
+                            }
+                        }
+                    }
+                }
+                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
+            });
     }
+
+    // === Quantifiers (aliases for logical operations) ===
+
+    forall(a, axis = null) { return this.min(a, axis); }
+    exists(a, axis = null) { return this.max(a, axis); }
 
     // === Utilities ===
 

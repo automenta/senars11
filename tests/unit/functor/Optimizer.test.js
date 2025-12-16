@@ -153,33 +153,39 @@ describe('Optimizers', function () {
 
     describe('training simulation', function () {
         test('SGD converges on simple linear problem', function () {
-            // y = 2x + 1, learn from (x=1, y=3)
-            const optimizer = new SGDOptimizer(0.1);
+            // y = 2x + 1, learn from multiple points
+            const optimizer = new SGDOptimizer(0.05);
             const w = new Tensor([0.5], { requiresGrad: true, backend });
             const b = new Tensor([0.5], { requiresGrad: true, backend });
 
-            const x = new Tensor([1], { backend });
-            const yTrue = new Tensor([3], { backend });
+            // Training data: x=[1,2,3,4], y=[3,5,7,9]
+            const xs = [[1], [2], [3], [4]];
+            const ys = [[3], [5], [7], [9]];
 
             const params = new Map([['w', w], ['b', b]]);
 
-            // Train for 20 epochs
-            for (let i = 0; i < 20; i++) {
-                optimizer.zeroGrad(params);
+            // Train for 100 epochs over all data
+            for (let epoch = 0; epoch < 100; epoch++) {
+                for (let i = 0; i < xs.length; i++) {
+                    optimizer.zeroGrad(params);
 
-                // Forward: y = w*x + b
-                const wx = backend.mul(w, x);
-                const yPred = backend.add(wx, b);
+                    const x = new Tensor(xs[i], { backend });
+                    const yTrue = new Tensor(ys[i], { backend });
 
-                // Loss: MSE = (y_pred - y_true)^2
-                const diff = backend.sub(yPred, yTrue);
-                const loss = backend.mul(diff, diff);
+                    // Forward: y = w*x + b
+                    const wx = backend.mul(w, x);
+                    const yPred = backend.add(wx, b);
 
-                // Backward
-                loss.backward();
+                    // Loss: MSE = (y_pred - y_true)^2
+                    const diff = backend.sub(yPred, yTrue);
+                    const loss = backend.mul(diff, diff);
 
-                // Update
-                optimizer.step(params);
+                    // Backward
+                    loss.backward();
+
+                    // Update
+                    optimizer.step(params);
+                }
             }
 
             // Should be close to w=2, b=1
