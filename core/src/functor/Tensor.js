@@ -11,7 +11,6 @@ export class Tensor {
 
     _inferShape(data) {
         if (typeof data === 'number' || !Array.isArray(data)) return [1];
-
         const shape = [];
         let current = data;
         while (Array.isArray(current)) {
@@ -23,7 +22,6 @@ export class Tensor {
 
     _flatten(data) {
         if (typeof data === 'number' || !Array.isArray(data)) return [data];
-
         const result = [];
         const flatten = (arr) => {
             for (const item of arr) {
@@ -36,62 +34,51 @@ export class Tensor {
 
     _unflatten(flat, shape) {
         if (shape.length === 1) return flat.slice(0, shape[0]);
-
         const result = [];
         const stride = shape.slice(1).reduce((a, b) => a * b, 1);
-
         for (let i = 0; i < shape[0]; i++) {
-            const slice = flat.slice(i * stride, (i + 1) * stride);
-            result.push(this._unflatten(slice, shape.slice(1)));
+            result.push(this._unflatten(flat.slice(i * stride, (i + 1) * stride), shape.slice(1)));
         }
         return result;
     }
 
-    get ndim() {
-        return this.shape.length;
-    }
-
-    get size() {
-        return this.shape.reduce((a, b) => a * b, 1);
-    }
+    get ndim() { return this.shape.length; }
+    get size() { return this.shape.reduce((a, b) => a * b, 1); }
 
     reshape(newShape) {
         const newSize = newShape.reduce((a, b) => a * b, 1);
         if (newSize !== this.size) {
             throw new Error(`Cannot reshape tensor of size ${this.size} to shape ${newShape}`);
         }
-
-        const newTensor = new Tensor(this.data.slice(), {
+        const newTensor = new Tensor([...this.data], {
             requiresGrad: this.requiresGrad,
             backend: this.backend
         });
-        newTensor.shape = newShape.slice();
+        newTensor.shape = [...newShape];
         return newTensor;
     }
 
     transpose(axes) {
-        axes = axes ?? (this.ndim === 2
+        axes ??= this.ndim === 2
             ? [1, 0]
-            : Array.from({ length: this.ndim }, (_, i) => this.ndim - 1 - i));
+            : Array.from({ length: this.ndim }, (_, i) => this.ndim - 1 - i);
 
         if (axes.length !== this.ndim) {
             throw new Error(`Transpose axes must match ndim ${this.ndim}`);
         }
 
         const newShape = axes.map(i => this.shape[i]);
-        const newData = new Array(this.size);
-
+        const newData = Array(this.size);
         const oldStrides = this._computeStrides(this.shape);
         const newStrides = this._computeStrides(newShape);
 
         for (let newIdx = 0; newIdx < this.size; newIdx++) {
             const newCoords = this._indexToCoords(newIdx, newStrides);
-            const oldCoords = new Array(this.ndim);
+            const oldCoords = Array(this.ndim);
             for (let i = 0; i < this.ndim; i++) {
                 oldCoords[axes[i]] = newCoords[i];
             }
-            const oldIdx = this._coordsToIndex(oldCoords, oldStrides);
-            newData[newIdx] = this.data[oldIdx];
+            newData[newIdx] = this.data[this._coordsToIndex(oldCoords, oldStrides)];
         }
 
         const result = new Tensor(0, { requiresGrad: this.requiresGrad, backend: this.backend });
@@ -101,7 +88,7 @@ export class Tensor {
     }
 
     _computeStrides(shape) {
-        const strides = new Array(shape.length);
+        const strides = Array(shape.length);
         strides[strides.length - 1] = 1;
         for (let i = strides.length - 2; i >= 0; i--) {
             strides[i] = strides[i + 1] * shape[i + 1];
@@ -110,7 +97,7 @@ export class Tensor {
     }
 
     _indexToCoords(index, strides) {
-        const coords = new Array(strides.length);
+        const coords = Array(strides.length);
         for (let i = 0; i < strides.length; i++) {
             coords[i] = Math.floor(index / strides[i]);
             index %= strides[i];
@@ -131,9 +118,7 @@ export class Tensor {
     }
 
     static fromJSON(json) {
-        return new Tensor(json.data, {
-            requiresGrad: json.requiresGrad ?? false
-        });
+        return new Tensor(json.data, { requiresGrad: json.requiresGrad ?? false });
     }
 
     toArray() {
@@ -146,47 +131,37 @@ export class Tensor {
 
     get(indices) {
         if (!Array.isArray(indices)) indices = [indices];
-        const strides = this._computeStrides(this.shape);
-        const index = this._coordsToIndex(indices, strides);
-        return this.data[index];
+        return this.data[this._coordsToIndex(indices, this._computeStrides(this.shape))];
     }
 
     set(indices, value) {
         if (!Array.isArray(indices)) indices = [indices];
-        const strides = this._computeStrides(this.shape);
-        const index = this._coordsToIndex(indices, strides);
-        this.data[index] = value;
+        this.data[this._coordsToIndex(indices, this._computeStrides(this.shape))] = value;
     }
 
     backward() {
         if (!this.requiresGrad) return;
-
-        if (this.grad === null) {
-            this.grad = this.backend?.ones(this.shape) ??
-                Object.assign(new Tensor(new Array(this.size).fill(1), { backend: this.backend }),
-                    { shape: this.shape.slice() });
-        }
-
-        this._topologicalSort().forEach(tensor => tensor._gradFn?.());
+        this.grad ??= this.backend?.ones(this.shape) ??
+            Object.assign(new Tensor(Array(this.size).fill(1), { backend: this.backend }),
+                { shape: [...this.shape] });
+        this._topologicalSort().forEach(t => t._gradFn?.());
     }
 
     _topologicalSort() {
         const topo = [];
         const visited = new Set();
-
-        const dfs = (tensor) => {
-            if (visited.has(tensor) || !tensor.requiresGrad) return;
-            visited.add(tensor);
-            tensor._parents?.forEach(dfs);
-            topo.push(tensor);
+        const dfs = (t) => {
+            if (visited.has(t) || !t.requiresGrad) return;
+            visited.add(t);
+            t._parents?.forEach(dfs);
+            topo.push(t);
         };
-
         dfs(this);
         return topo.reverse();
     }
 
     zeroGrad() {
         this.grad = null;
-        this._parents?.forEach(parent => parent.zeroGrad?.());
+        this._parents?.forEach(p => p.zeroGrad?.());
     }
 }
