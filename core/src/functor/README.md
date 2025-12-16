@@ -201,10 +201,14 @@ See [`docs/examples/tensor_logic_layers.pl`](../../docs/examples/tensor_logic_la
 
 ## Implementation Status
 
-✅ **Tier 1**: Forward operations (complete)  
-✅ **Tier 2**: Automatic differentiation (complete)  
-✅ **Tier 3**: Truth-Tensor bridge, loss functions, optimizers (complete)  
-⏸️ **Tier 4+**: Einstein summation, symbolic graph mode (planned)
+✅ **Phase 6 (Complete)**: Core Tensor Logic  
+- Forward operations, autograd, truth-tensor bridge, loss functions, optimizers  
+
+🔄 **Phase 6.5 (Planned)**: ~35 hrs  
+- **Tier 1**: Einsum (phased), temperature-controlled activations, attention, additional ops  
+- **Tier 2**: ParameterStore, LRScheduler (incl. OneCycleLR), DataLoader, MetricsTracker, TrainingLoop (EarlyStopping, ModelCheckpoint)  
+- **Tier 3**: SymbolicBackend, TensorOptimizer, ONNXExporter (scaffolds)  
+- **Tier 4**: NAL integration (deferred)
 
 ## Testing
 
@@ -217,5 +221,5 @@ npm test -- tests/unit/functor/
 ## References
 
 - [Tensor Logic: The Language of AI](https://arxiv.org/abs/2510.12269) (Domingos, 2024)
-- [TODO.md Phase 6](../../TODO.md) - Full specification
-- [Validation Document](/.gemini/antigravity/brain/.../tensor_logic_validation.md)
+- [TODO.md Phase 6 & 6.5](../../TODO.md) - Full specification
+
