@@ -1,19 +1,13 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { NativeBackend } from '../../../core/src/functor/backends/NativeBackend.js';
+import { NativeBackend, T } from '../../../core/src/functor/backends/NativeBackend.js';
 import { Module, Linear, Embedding, Sequential, MultiHeadAttention } from '../../../core/src/functor/Module.js';
 import { Tensor } from '../../../core/src/functor/Tensor.js';
 
 describe('Module System', () => {
-    let backend;
-
-    beforeEach(() => {
-        backend = new NativeBackend();
-    });
-
     describe('Module base class', () => {
         test('registers parameters', () => {
             const mod = new Module();
-            const param = new Tensor([[1, 2]], { backend });
+            const param = T.tensor([[1, 2]]);
             mod.registerParameter('weight', param);
 
             expect(mod._parameters.has('weight')).toBe(true);
@@ -32,8 +26,8 @@ describe('Module System', () => {
             const parent = new Module();
             const child = new Module();
 
-            parent.registerParameter('p1', new Tensor([1], { backend }));
-            child.registerParameter('p2', new Tensor([2], { backend }));
+            parent.registerParameter('p1', T.tensor([1]));
+            child.registerParameter('p2', T.tensor([2]));
             parent.registerModule('child', child);
 
             const params = parent.parameters();
@@ -56,7 +50,7 @@ describe('Module System', () => {
 
         test('stateDict serializes parameters', () => {
             const mod = new Module();
-            mod.registerParameter('weight', new Tensor([[1, 2], [3, 4]], { backend }));
+            mod.registerParameter('weight', T.tensor([[1, 2], [3, 4]]));
 
             const state = mod.stateDict();
             expect(state).toHaveProperty('weight');
@@ -67,8 +61,8 @@ describe('Module System', () => {
             const parent = new Module();
             const child = new Module();
 
-            parent.registerParameter('p1', new Tensor([1], { backend }));
-            child.registerParameter('p2', new Tensor([2], { backend }));
+            parent.registerParameter('p1', T.tensor([1]));
+            child.registerParameter('p2', T.tensor([2]));
             parent.registerModule('child', child);
 
             const state = parent.stateDict();
@@ -78,7 +72,7 @@ describe('Module System', () => {
 
         test('loadStateDict restores parameters', () => {
             const mod = new Module();
-            const weight = new Tensor([[1, 2]], { backend });
+            const weight = T.tensor([[1, 2]]);
             mod.registerParameter('weight', weight);
 
             const originalState = mod.stateDict();
@@ -91,15 +85,15 @@ describe('Module System', () => {
 
     describe('Linear layer', () => {
         test('forward pass', () => {
-            const layer = new Linear(backend, 2, 3);
-            const input = new Tensor([[1, 2]], { backend });
+            const layer = new Linear(2, 3);
+            const input = T.tensor([[1, 2]]);
             const output = layer.forward(input);
 
             expect(output.shape).toEqual([1, 3]);
         });
 
         test('has correct parameters', () => {
-            const layer = new Linear(backend, 2, 3, true);
+            const layer = new Linear(2, 3);
             const params = layer.parameters();
 
             expect(params.length).toBe(2); // weight + bias
@@ -108,7 +102,7 @@ describe('Module System', () => {
         });
 
         test('can disable bias', () => {
-            const layer = new Linear(backend, 2, 3, false);
+            const layer = new Linear(2, 3, { bias: false });
             const params = layer.parameters();
 
             expect(params.length).toBe(1); // weight only
@@ -116,8 +110,8 @@ describe('Module System', () => {
         });
 
         test('gradient flows through layer', () => {
-            const layer = new Linear(backend, 2, 1);
-            const input = new Tensor([[1, 2]], { backend });
+            const layer = new Linear(2, 1);
+            const input = T.tensor([[1, 2]]);
             const output = layer.forward(input);
 
             output.backward();
@@ -125,25 +119,31 @@ describe('Module System', () => {
             expect(layer.weight.grad).not.toBeNull();
             expect(layer.bias.grad).not.toBeNull();
         });
+
+        test('can pass explicit backend', () => {
+            const customBackend = new NativeBackend();
+            const layer = new Linear(2, 3, { backend: customBackend });
+            expect(layer.backend).toBe(customBackend);
+        });
     });
 
     describe('Embedding layer', () => {
         test('forward pass', () => {
-            const layer = new Embedding(backend, 10, 5);
-            const indices = new Tensor([0, 2, 4], { backend });
+            const layer = new Embedding(10, 5);
+            const indices = T.tensor([0, 2, 4]);
             const output = layer.forward(indices);
 
             expect(output.shape).toEqual([3, 5]);
         });
 
         test('has correct weight shape', () => {
-            const layer = new Embedding(backend, 100, 50);
+            const layer = new Embedding(100, 50);
             expect(layer.weight.shape).toEqual([100, 50]);
         });
 
         test('gradient updates embeddings', () => {
-            const layer = new Embedding(backend, 5, 3);
-            const indices = new Tensor([0, 2], { backend });
+            const layer = new Embedding(5, 3);
+            const indices = T.tensor([0, 2]);
             const output = layer.forward(indices);
             const loss = backend.sum(output);
 
@@ -155,11 +155,11 @@ describe('Module System', () => {
     describe('Sequential container', () => {
         test('chains layers', () => {
             const net = new Sequential(
-                new Linear(backend, 2, 4),
-                new Linear(backend, 4, 1)
+                new Linear(2, 4),
+                new Linear(4, 1)
             );
 
-            const input = new Tensor([[1, 2]], { backend });
+            const input = T.tensor([[1, 2]]);
             const output = net.forward(input);
 
             expect(output.shape).toEqual([1, 1]);
@@ -167,8 +167,8 @@ describe('Module System', () => {
 
         test('collects all parameters', () => {
             const net = new Sequential(
-                new Linear(backend, 2, 4),
-                new Linear(backend, 4, 1)
+                new Linear(2, 4),
+                new Linear(4, 1)
             );
 
             const params = net.parameters();
@@ -177,11 +177,11 @@ describe('Module System', () => {
 
         test('backward pass through network', () => {
             const net = new Sequential(
-                new Linear(backend, 2, 4),
-                new Linear(backend, 4, 1)
+                new Linear(2, 4),
+                new Linear(4, 1)
             );
 
-            const input = new Tensor([[1, 2]], { backend });
+            const input = T.tensor([[1, 2]]);
             const output = net.forward(input);
 
             output.backward();
@@ -193,19 +193,19 @@ describe('Module System', () => {
 
     describe('MultiHeadAttention', () => {
         test('creates with correct dimensions', () => {
-            const mha = new MultiHeadAttention(backend, 8, 2);
+            const mha = new MultiHeadAttention(8, 2);
             expect(mha.dModel).toBe(8);
             expect(mha.numHeads).toBe(2);
             expect(mha.headDim).toBe(4);
         });
 
         test('throws if dModel not divisible by numHeads', () => {
-            expect(() => new MultiHeadAttention(backend, 7, 2)).toThrow(/divisible/);
+            expect(() => new MultiHeadAttention(7, 2)).toThrow(/divisible/);
         });
 
         test('forward pass', () => {
-            const mha = new MultiHeadAttention(backend, 4, 2);
-            const input = new Tensor([[1, 2, 3, 4]], { backend });
+            const mha = new MultiHeadAttention(4, 2);
+            const input = T.tensor([[1, 2, 3, 4]]);
             const output = mha.forward(input);
 
             expect(output.shape).toEqual([1, 4]);

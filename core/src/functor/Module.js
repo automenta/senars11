@@ -1,4 +1,5 @@
 import { Tensor } from './Tensor.js';
+import { T } from './backends/NativeBackend.js';
 
 export class Module {
     constructor() {
@@ -55,9 +56,10 @@ export class Module {
 }
 
 export class Linear extends Module {
-    constructor(backend, inFeatures, outFeatures, bias = true) {
+    constructor(inFeatures, outFeatures, { backend = T, bias = true } = {}) {
         super();
-        Object.assign(this, { backend, inFeatures, outFeatures });
+        this.backend = backend;
+        Object.assign(this, { inFeatures, outFeatures });
         this.weight = this.registerParameter('weight', backend.kaimingNormal([inFeatures, outFeatures]));
         this.bias = bias ? this.registerParameter('bias', backend.zeros([outFeatures])) : null;
     }
@@ -75,9 +77,10 @@ export class Linear extends Module {
 }
 
 export class Embedding extends Module {
-    constructor(backend, numEmbeddings, embeddingDim) {
+    constructor(numEmbeddings, embeddingDim, { backend = T } = {}) {
         super();
-        Object.assign(this, { backend, numEmbeddings, embeddingDim });
+        this.backend = backend;
+        Object.assign(this, { numEmbeddings, embeddingDim });
         this.weight = this.registerParameter('weight', backend.randn([numEmbeddings, embeddingDim]));
     }
 
@@ -95,12 +98,13 @@ export class Sequential extends Module {
 }
 
 export class MultiHeadAttention extends Module {
-    constructor(backend, dModel, numHeads) {
+    constructor(dModel, numHeads, { backend = T } = {}) {
         super();
         if (dModel % numHeads) throw new Error('dModel must be divisible by numHeads');
-        Object.assign(this, { backend, dModel, numHeads, headDim: dModel / numHeads });
+        this.backend = backend;
+        Object.assign(this, { dModel, numHeads, headDim: dModel / numHeads });
         ['qProj', 'kProj', 'vProj', 'outProj'].forEach(name =>
-            this[name] = this.registerModule(name, new Linear(backend, dModel, dModel))
+            this[name] = this.registerModule(name, new Linear(dModel, dModel, { backend }))
         );
     }
 

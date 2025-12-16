@@ -13,6 +13,12 @@ node examples/tensor-logic/mlp-training.mjs
 # Advanced features
 node examples/tensor-logic/attention-mechanism.mjs
 node examples/tensor-logic/training-utilities.mjs
+node examples/tensor-logic/batch-training.mjs
+
+# Neuro-symbolic integration (NEW)
+node examples/tensor-logic/truth-tensor-bridge.mjs
+node examples/tensor-logic/embedding-demo.mjs
+node examples/tensor-logic/multi-head-attention.mjs
 
 # Deep dives
 node examples/tensor-logic/loss-functions.mjs
@@ -152,4 +158,28 @@ initialization.mjs        → All 3 init strategies
 linear-regression.mjs     → Regression with visualization
 binary-classification.mjs → Classification with decision boundary  
 model-serialization.mjs   → Save/load weights
+
+truth-tensor-bridge.mjs   → NAL truth ↔ tensor conversion (NEW)
+embedding-demo.mjs        → Word embeddings, sentiment classifier (NEW)
+multi-head-attention.mjs  → Transformer self-attention block (NEW)
+batch-training.mjs        → Vectorized batch processing, 14x speedup (NEW)
+```
+
+## API Usage
+
+All examples use the default `T` namespace - PyTorch-like ergonomics:
+
+```javascript
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
+import { Linear, Embedding } from '../../core/src/functor/Module.js';
+
+// Create tensors via T factory
+const x = T.tensor([[1, 2, 3]]);
+
+// Layers use default backend automatically
+const layer = new Linear(3, 4);  // No backend arg needed
+const output = layer.forward(x);
+
+// All ops via T namespace
+const y = T.relu(T.matmul(x, T.randn([3, 4])));
 ```

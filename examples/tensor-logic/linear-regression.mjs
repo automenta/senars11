@@ -1,18 +1,29 @@
-import { Tensor } from '../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../core/src/functor/backends/NativeBackend.js';
+/**
+ * Linear Regression — Learn y = mx + b with gradient descent
+ * Run: node examples/tensor-logic/linear-regression.mjs
+ */
+import { T } from '../../core/src/functor/backends/NativeBackend.js';
 import { Linear } from '../../core/src/functor/Module.js';
 import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
 import { SGDOptimizer } from '../../core/src/functor/Optimizer.js';
+import { MetricsTracker } from '../../core/src/functor/TrainingUtils.js';
 
-const backend = new NativeBackend();
 console.log('=== Tensor Logic: Linear Regression ===\n');
 
-const [trueW, trueB, n] = [2.5, -1.3, 50];
-const data = Array.from({ length: n }, () => {
+// True parameters
+const trueW = 2.5, trueB = -1.3;
+const numSamples = 50;
+
+// Generate synthetic data: y = 2.5x - 1.3 + noise
+const data = Array.from({ length: numSamples }, () => {
     const x = (Math.random() - 0.5) * 10;
     return { x, y: trueW * x + trueB + (Math.random() - 0.5) * 2 };
 });
-console.log(`True: y = ${trueW}x + ${trueB}, ${n} samples\n`);
+
+const X = data.map(d => [d.x]);
+const Y = data.map(d => [d.y]);
+
+console.log(`True: y = ${trueW}x + ${trueB}, ${numSamples} samples\n`);
 
 // ASCII scatter plot
 console.log('--- Data Visualization (ASCII) ---');
@@ -32,8 +43,8 @@ grid.forEach(row => console.log('│' + row.join('') + '│'));
 console.log('└' + '─'.repeat(width) + '┘');
 
 // Create model
-const model = new Linear(backend, 1, 1);
-const loss_fn = new LossFunctor(backend);
+const model = new Linear(1, 1);
+const loss_fn = new LossFunctor(T);
 const optimizer = new SGDOptimizer(0.01);
 const tracker = new MetricsTracker();
 
@@ -49,8 +60,8 @@ for (let epoch = 0; epoch < epochs; epoch++) {
     for (let i = 0; i < numSamples; i++) {
         optimizer.zeroGrad(model.parameters());
 
-        const x = new Tensor([X[i]], { backend });
-        const y = new Tensor([Y[i]], { backend });
+        const x = T.tensor([X[i]]);
+        const y = T.tensor([Y[i]]);
 
         const pred = model.forward(x);
         const loss = loss_fn.mse(pred, y);
@@ -75,9 +86,9 @@ console.log('\n--- Results ---');
 const learnedW = model.weight.data[0];
 const learnedB = model.bias.data[0];
 console.log(`Learned: y = ${learnedW.toFixed(4)}x + ${learnedB.toFixed(4)}`);
-console.log(`True:    y = ${trueWeight}x + ${trueBias}`);
-console.log(`Weight error: ${Math.abs(learnedW - trueWeight).toFixed(4)}`);
-console.log(`Bias error:   ${Math.abs(learnedB - trueBias).toFixed(4)}`);
+console.log(`True:    y = ${trueW}x + ${trueB}`);
+console.log(`Weight error: ${Math.abs(learnedW - trueW).toFixed(4)}`);
+console.log(`Bias error:   ${Math.abs(learnedB - trueB).toFixed(4)}`);
 
 // Draw learned line on plot
 console.log('\n--- Learned Line (ASCII) ---');

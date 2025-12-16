@@ -540,9 +540,22 @@ export class NativeBackend extends TensorBackend {
 
     clamp(x, minVal, maxVal) {
         if (!(x instanceof Tensor)) x = new Tensor([x], { backend: this });
-        const minT = typeof minVal === 'number' ? new Tensor([minVal], { backend: this }) : minVal;
-        const maxT = typeof maxVal === 'number' ? new Tensor([maxVal], { backend: this }) : maxVal;
-        return this.min(this.max(x, minT), maxT);
+        const result = this._createTensor(
+            x.data.map(v => Math.max(minVal, Math.min(maxVal, v))),
+            [...x.shape]
+        );
+        if (x.requiresGrad) {
+            result.requiresGrad = true;
+            result._parents = [x];
+            result._gradFn = () => {
+                const gradX = this._createTensor(
+                    x.data.map((v, i) => (v > minVal && v < maxVal) ? result.grad.data[i] : 0),
+                    x.shape
+                );
+                this._accumulateGrad(x, gradX);
+            };
+        }
+        return result;
     }
 
     // === Array Operations ===
@@ -739,4 +752,17 @@ export class NativeBackend extends TensorBackend {
         const size = shape.reduce((a, b) => a * b, 1);
         return this._createTensor(Array(size).fill(0).map(() => Math.random()), shape);
     }
+
+    // Factory method - creates tensor with this backend pre-attached
+    tensor(data, options = {}) {
+        return new Tensor(data, { ...options, backend: this });
+    }
 }
+
+// Default singleton - PyTorch-style namespace
+export const T = new NativeBackend();
+
+// Backward-compatible alias
+export const backend = T;
+
+
