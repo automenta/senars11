@@ -8,6 +8,9 @@ export class Module {
         this.training = true;
     }
 
+    module(name, mod) { return this.registerModule(name, mod); }
+    parameter(name, tensor) { return this.registerParameter(name, tensor); }
+
     registerParameter(name, tensor) {
         if (!(tensor instanceof Tensor)) throw new Error('registerParameter requires Tensor');
         tensor.requiresGrad = true;
@@ -32,6 +35,7 @@ export class Module {
     }
 
     eval() { return this.train(false); }
+    inference() { return this.eval(); }
 
     forward(...args) { throw new Error('forward() not implemented'); }
 
@@ -60,8 +64,8 @@ export class Linear extends Module {
         super();
         this.backend = backend;
         Object.assign(this, { inFeatures, outFeatures });
-        this.weight = this.registerParameter('weight', backend.kaimingNormal([inFeatures, outFeatures]));
-        this.bias = bias ? this.registerParameter('bias', backend.zeros([outFeatures])) : null;
+        this.weight = this.parameter('weight', backend.kaimingNormal([inFeatures, outFeatures]));
+        this.bias = bias ? this.parameter('bias', backend.zeros([outFeatures])) : null;
     }
 
     forward(input) {
@@ -81,7 +85,7 @@ export class Embedding extends Module {
         super();
         this.backend = backend;
         Object.assign(this, { numEmbeddings, embeddingDim });
-        this.weight = this.registerParameter('weight', backend.randn([numEmbeddings, embeddingDim]));
+        this.weight = this.parameter('weight', backend.randn([numEmbeddings, embeddingDim]));
     }
 
     forward(input) { return this.backend.gather(this.weight, input); }
@@ -90,7 +94,7 @@ export class Embedding extends Module {
 export class Sequential extends Module {
     constructor(...modules) {
         super();
-        modules.forEach((m, i) => this.registerModule(String(i), m));
+        modules.forEach((m, i) => this.module(String(i), m));
         this.layers = modules;
     }
 
@@ -104,7 +108,7 @@ export class MultiHeadAttention extends Module {
         this.backend = backend;
         Object.assign(this, { dModel, numHeads, headDim: dModel / numHeads });
         ['qProj', 'kProj', 'vProj', 'outProj'].forEach(name =>
-            this[name] = this.registerModule(name, new Linear(dModel, dModel, { backend }))
+            this[name] = this.module(name, new Linear(dModel, dModel, { backend }))
         );
     }
 
