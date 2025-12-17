@@ -1,4 +1,4 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
 
 describe('NAR - Basic Functionality', () => {
     let nar;
@@ -6,6 +6,10 @@ describe('NAR - Basic Functionality', () => {
     beforeEach(async () => {
         nar = new NAR();
         await nar.initialize();
+    });
+
+    afterEach(async () => {
+        await nar.dispose();
     });
 
     test.each([

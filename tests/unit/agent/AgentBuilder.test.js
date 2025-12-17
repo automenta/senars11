@@ -3,17 +3,20 @@ import { Agent } from '../../../agent/src/agent/Agent.js';
 import { NAR } from '../../../core/src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
-    let agent;
+    const agents = [];
 
     afterEach(async () => {
-        if (agent?.dispose) await agent.dispose();
-        else if (agent?.stop) agent.stop();
-        agent = null;
+        for (const a of agents) {
+            if (a?.dispose) await a.dispose();
+            else if (a?.stop) a.stop();
+        }
+        agents.length = 0;
     });
 
     const build = async (builder = new AgentBuilder()) => {
-        agent = await builder.build();
-        return agent;
+        const a = await builder.build();
+        agents.push(a);
+        return a;
     };
 
     test('default configuration', async () => {

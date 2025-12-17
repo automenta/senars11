@@ -1,8 +1,8 @@
 import { Tensor } from '../../../core/src/functor/Tensor.js';
 
-describe('Tensor', function () {
-    describe('construction and shape inference', function () {
-        test('creates 1D tensor from array', function () {
+describe('Tensor', () => {
+    describe('construction and shape inference', () => {
+        test('creates 1D tensor from array', () => {
             const t = new Tensor([1, 2, 3]);
             expect(t.shape).toEqual([3]);
             expect(t.ndim).toBe(1);
@@ -10,7 +10,7 @@ describe('Tensor', function () {
             expect(t.data).toEqual([1, 2, 3]);
         });
 
-        test('creates 2D tensor from nested array', function () {
+        test('creates 2D tensor from nested array', () => {
             const t = new Tensor([[1, 2], [3, 4]]);
             expect(t.shape).toEqual([2, 2]);
             expect(t.ndim).toBe(2);
@@ -18,7 +18,7 @@ describe('Tensor', function () {
             expect(t.data).toEqual([1, 2, 3, 4]);
         });
 
-        test('creates 3D tensor', function () {
+        test('creates 3D tensor', () => {
             const t = new Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
             expect(t.shape).toEqual([2, 2, 2]);
             expect(t.ndim).toBe(3);
@@ -26,22 +26,22 @@ describe('Tensor', function () {
         });
     });
 
-    describe('reshape', function () {
-        test('reshapes 1D to 2D', function () {
+    describe('reshape', () => {
+        test('reshapes 1D to 2D', () => {
             const t = new Tensor([1, 2, 3, 4]);
             const reshaped = t.reshape([2, 2]);
             expect(reshaped.shape).toEqual([2, 2]);
             expect(reshaped.toArray()).toEqual([[1, 2], [3, 4]]);
         });
 
-        test('throws on invalid reshape', function () {
+        test('throws on invalid reshape', () => {
             const t = new Tensor([1, 2, 3]);
-            expect(function () { t.reshape([2, 2]); }).toThrow();
+            expect(() => { t.reshape([2, 2]); }).toThrow();
         });
     });
 
-    describe('transpose', function () {
-        test('transposes 2D matrix', function () {
+    describe('transpose', () => {
+        test('transposes 2D matrix', () => {
             const t = new Tensor([[1, 2, 3], [4, 5, 6]]);
             const transposed = t.transpose();
             expect(transposed.shape).toEqual([3, 2]);
@@ -49,8 +49,8 @@ describe('Tensor', function () {
         });
     });
 
-    describe('serialization', function () {
-        test('toJSON and fromJSON round trip', function () {
+    describe('serialization', () => {
+        test('toJSON and fromJSON round trip', () => {
             const t = new Tensor([[1, 2], [3, 4]]);
             const json = t.toJSON();
             const restored = Tensor.fromJSON(json);
