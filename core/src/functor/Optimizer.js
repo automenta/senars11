@@ -1,90 +1,81 @@
 export class Optimizer {
-    constructor(learningRate = 0.01) {
-        this.learningRate = learningRate;
+    constructor(lr = 0.01) { this.lr = lr; }
+    step(params) { throw new Error('Not implemented'); }
+    zeroGrad(params) { params.forEach(p => p.zeroGrad()); }
+
+    _update(params, fn) {
+        const entries = params instanceof Map ? params : params.entries();
+        for (const [k, p] of entries) if (p.requiresGrad && p.grad) fn(k, p);
     }
 
-    get lr() { return this.learningRate; }
-    set lr(value) { this.learningRate = value; }
-
-    step(parameters) { throw new Error('Optimizer.step() must be implemented by subclass'); }
-
-    zeroGrad(parameters) {
-        parameters.forEach(param => param.zeroGrad());
-    }
-
-    _ensureState(stateMap, name, size, defaultValue = 0) {
-        return stateMap.has(name) ? stateMap.get(name) : stateMap.set(name, new Array(size).fill(defaultValue)).get(name);
-    }
-
-    _updateParams(parameters, updateFn) {
-        Array.from(parameters.entries())
-            .filter(([_, param]) => param.requiresGrad && param.grad)
-            .forEach(([name, param]) => updateFn(name, param));
+    _state(map, key, size, val = 0) {
+        if (!map.has(key)) map.set(key, Array(size).fill(val));
+        return map.get(key);
     }
 }
 
 export class SGDOptimizer extends Optimizer {
-    constructor(learningRate = 0.01, momentum = 0) {
-        super(learningRate);
-        Object.assign(this, { momentum, velocities: new Map() });
+    constructor(lr = 0.01, momentum = 0) {
+        super(lr);
+        this.momentum = momentum;
+        this.velocities = new Map();
     }
 
-    step(parameters) {
-        this._updateParams(parameters, (name, param) => {
-            const update = param.grad.data.slice();
+    step(params) {
+        this._update(params, (k, p) => {
+            const g = p.grad.data;
             if (this.momentum > 0) {
-                const velocity = this._ensureState(this.velocities, name, param.size);
-                update.forEach((grad, i) => {
-                    velocity[i] = this.momentum * velocity[i] + grad;
-                    update[i] = velocity[i];
-                });
+                const v = this._state(this.velocities, k, p.size);
+                for (let i = 0; i < p.size; i++) {
+                    v[i] = this.momentum * v[i] + g[i];
+                    p.data[i] -= this.lr * v[i];
+                }
+            } else {
+                for (let i = 0; i < p.size; i++) p.data[i] -= this.lr * g[i];
             }
-            param.data.forEach((val, i) => param.data[i] -= this.learningRate * update[i]);
         });
     }
 }
 
 export class AdamOptimizer extends Optimizer {
-    constructor(learningRate = 0.001, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8) {
-        super(learningRate);
-        Object.assign(this, { beta1, beta2, epsilon, m: new Map(), v: new Map(), t: 0 });
+    constructor(lr = 0.001, beta1 = 0.9, beta2 = 0.999, eps = 1e-8) {
+        super(lr);
+        Object.assign(this, { beta1, beta2, eps, m: new Map(), v: new Map(), t: 0 });
     }
 
-    step(parameters) {
+    step(params) {
         this.t++;
-        const biasCorrection1 = 1 - Math.pow(this.beta1, this.t);
-        const biasCorrection2 = 1 - Math.pow(this.beta2, this.t);
+        const bc1 = 1 - Math.pow(this.beta1, this.t);
+        const bc2 = 1 - Math.pow(this.beta2, this.t);
 
-        this._updateParams(parameters, (name, param) => {
-            const m = this._ensureState(this.m, name, param.size);
-            const v = this._ensureState(this.v, name, param.size);
-            const grad = param.grad.data;
+        this._update(params, (k, p) => {
+            const m = this._state(this.m, k, p.size);
+            const v = this._state(this.v, k, p.size);
+            const g = p.grad.data;
 
-            param.data.forEach((val, i) => {
-                m[i] = this.beta1 * m[i] + (1 - this.beta1) * grad[i];
-                v[i] = this.beta2 * v[i] + (1 - this.beta2) * grad[i] * grad[i];
-                const mHat = m[i] / biasCorrection1;
-                const vHat = v[i] / biasCorrection2;
-                param.data[i] -= this.learningRate * mHat / (Math.sqrt(vHat) + this.epsilon);
-            });
+            for (let i = 0; i < p.size; i++) {
+                m[i] = this.beta1 * m[i] + (1 - this.beta1) * g[i];
+                v[i] = this.beta2 * v[i] + (1 - this.beta2) * g[i] * g[i];
+                p.data[i] -= this.lr * (m[i] / bc1) / (Math.sqrt(v[i] / bc2) + this.eps);
+            }
         });
     }
 }
 
 export class RMSpropOptimizer extends Optimizer {
-    constructor(learningRate = 0.01, decay = 0.9, epsilon = 1e-8) {
-        super(learningRate);
-        Object.assign(this, { decay, epsilon, cache: new Map() });
+    constructor(lr = 0.01, decay = 0.9, eps = 1e-8) {
+        super(lr);
+        Object.assign(this, { decay, eps, cache: new Map() });
     }
 
-    step(parameters) {
-        this._updateParams(parameters, (name, param) => {
-            const cache = this._ensureState(this.cache, name, param.size);
-            const grad = param.grad.data;
-            param.data.forEach((val, i) => {
-                cache[i] = this.decay * cache[i] + (1 - this.decay) * grad[i] * grad[i];
-                param.data[i] -= this.learningRate * grad[i] / (Math.sqrt(cache[i]) + this.epsilon);
-            });
+    step(params) {
+        this._update(params, (k, p) => {
+            const c = this._state(this.cache, k, p.size);
+            const g = p.grad.data;
+            for (let i = 0; i < p.size; i++) {
+                c[i] = this.decay * c[i] + (1 - this.decay) * g[i] * g[i];
+                p.data[i] -= this.lr * g[i] / (Math.sqrt(c[i]) + this.eps);
+            }
         });
     }
 }

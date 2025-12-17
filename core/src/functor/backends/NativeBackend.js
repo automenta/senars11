@@ -1,12 +1,7 @@
 import { TensorBackend } from './TensorBackend.js';
 import { Tensor } from '../Tensor.js';
 
-
 export class NativeBackend extends TensorBackend {
-    constructor() {
-        super();
-    }
-
     _unaryWithGrad(a, forwardFn, gradMaskFn) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
         const result = this._createTensor(a.data.map(forwardFn), [...a.shape]);
@@ -18,258 +13,169 @@ export class NativeBackend extends TensorBackend {
         return result;
     }
 
-
-
     matmul(a, b) {
-        if (!(a instanceof Tensor) || !(b instanceof Tensor)) throw new Error('matmul requires Tensor arguments');
+        if (!(a instanceof Tensor) || !(b instanceof Tensor)) throw new Error('matmul requires Tensor');
 
         let result;
+        const [m, k1] = a.shape.length === 1 ? [1, a.shape[0]] : a.shape;
+        const [k2, n] = b.shape.length === 1 ? [b.shape[0], 1] : b.shape;
+
+        if (k1 !== k2) throw new Error(`Incompatible shapes: ${a.shape} vs ${b.shape}`);
+
         if (a.ndim === 1 && b.ndim === 1) {
-            if (a.shape[0] !== b.shape[0]) {
-                throw new Error(`Incompatible shapes for dot product: ${a.shape} and ${b.shape}`);
-            }
-            const value = a.data.reduce((sum, val, i) => sum + val * b.data[i], 0);
-            result = new Tensor([value], { backend: this });
-        } else if (a.ndim === 2 && b.ndim === 2) {
-            const [m, k1] = a.shape;
-            const [k2, n] = b.shape;
-
-            if (k1 !== k2) {
-                throw new Error(`Incompatible shapes for matmul: ${a.shape} and ${b.shape}`);
-            }
-
-            const data = new Array(m * n);
-            for (let i = 0; i < m; i++) {
-                for (let j = 0; j < n; j++) {
-                    let sum = 0;
-                    for (let k = 0; k < k1; k++) {
-                        sum += a.data[i * k1 + k] * b.data[k * n + j];
-                    }
-                    data[i * n + j] = sum;
-                }
-            }
-
-            result = this._createTensor(data, [m, n]);
-        } else if (a.ndim === 2 && b.ndim === 1) {
-            const [m, k1] = a.shape;
-            const k2 = b.shape[0];
-
-            if (k1 !== k2) {
-                throw new Error(`Incompatible shapes for matmul: ${a.shape} and ${b.shape}`);
-            }
-
-            const data = new Array(m);
-            for (let i = 0; i < m; i++) {
-                let sum = 0;
-                for (let k = 0; k < k1; k++) {
-                    sum += a.data[i * k1 + k] * b.data[k];
-                }
-                data[i] = sum;
-            }
-
-            result = new Tensor(data, { backend: this });
+            result = new Tensor([a.data.reduce((s, v, i) => s + v * b.data[i], 0)], { backend: this });
         } else {
-            throw new Error(`matmul not supported for shapes ${a.shape} and ${b.shape}`);
+            const data = new Array(m * n).fill(0);
+            for (let i = 0; i < m; i++)
+                for (let k = 0; k < k1; k++)
+                    for (let j = 0; j < n; j++)
+                        data[i * n + j] += a.data[i * k1 + k] * b.data[k * n + j];
+
+            result = this._createTensor(data, a.ndim === 1 ? [n] : (b.ndim === 1 ? [m] : [m, n]));
         }
+
         if (a.requiresGrad || b.requiresGrad) {
             result.requiresGrad = true;
             result._parents = [a, b];
             result._gradFn = () => {
-                if (a.requiresGrad) {
-                    this._accumulateGrad(a, this.matmul(result.grad, this.transpose(b)));
-                }
-                if (b.requiresGrad) {
-                    this._accumulateGrad(b, this.matmul(this.transpose(a), result.grad));
-                }
+                if (a.requiresGrad) this._accumulateGrad(a, this.matmul(result.grad, this.transpose(b)));
+                if (b.requiresGrad) this._accumulateGrad(b, this.matmul(this.transpose(a), result.grad));
             };
         }
-
         return result;
     }
 
-    add(a, b) {
-        return this._elementwise(a, b, (x, y) => x + y, (grad) => [grad, grad]);
-    }
-
-    sub(a, b) {
-        return this._elementwise(a, b, (x, y) => x - y, (grad, a, b, backend) => [grad, backend.neg(grad)]);
-    }
-
-    mul(a, b) {
-        return this._elementwise(a, b, (x, y) => x * y, (grad, a, b, backend) =>
-            [backend.mul(grad, b), backend.mul(grad, a)]);
-    }
-
-    div(a, b) {
-        return this._elementwise(a, b, (x, y) => x / y, (grad, a, b, backend) => [
-            backend.div(grad, b),
-            backend.neg(backend.div(backend.mul(grad, a), backend.mul(b, b)))
-        ]);
-    }
+    add(a, b) { return this._elementwise(a, b, (x, y) => x + y, (g) => [g, g]); }
+    sub(a, b) { return this._elementwise(a, b, (x, y) => x - y, (g, a, b, bk) => [g, bk.neg(g)]); }
+    mul(a, b) { return this._elementwise(a, b, (x, y) => x * y, (g, a, b, bk) => [bk.mul(g, b), bk.mul(g, a)]); }
+    div(a, b) { return this._elementwise(a, b, (x, y) => x / y, (g, a, b, bk) => [bk.div(g, b), bk.neg(bk.div(bk.mul(g, a), bk.mul(b, b)))]); }
 
     _elementwise(a, b, op, gradOp) {
         if (typeof a === 'number') a = new Tensor([a], { backend: this });
         if (typeof b === 'number') b = new Tensor([b], { backend: this });
 
-        let result;
-        if (a.size === b.size && a.shape.join() === b.shape.join()) {
-            result = this._createTensor(a.data.map((val, i) => op(val, b.data[i])), [...a.shape]);
-        } else if (b.size === 1) {
-            result = this._createTensor(a.data.map(val => op(val, b.data[0])), [...a.shape]);
-        } else if (a.size === 1) {
-            result = this._createTensor(b.data.map(val => op(a.data[0], val)), [...b.shape]);
-        } else if (a.ndim === 2 && b.ndim === 2 && b.shape[0] === 1 && a.shape[1] === b.shape[1]) {
-            // [m,n] + [1,n] -> broadcast row across all rows
-            const n = a.shape[1];
-            result = this._createTensor(a.data.map((val, i) => op(val, b.data[i % n])), [...a.shape]);
-        } else if (a.ndim === 2 && b.ndim === 2 && a.shape[0] === 1 && a.shape[1] === b.shape[1]) {
-            // [1,n] + [m,n] -> broadcast row across all rows (reversed)
-            const n = b.shape[1];
-            result = this._createTensor(b.data.map((val, i) => op(a.data[i % n], val)), [...b.shape]);
-        } else if (a.ndim === 2 && b.ndim === 1 && a.shape[1] === b.shape[0]) {
-            // [m,n] + [n] -> broadcast 1D across rows 
-            const n = b.shape[0];
-            result = this._createTensor(a.data.map((val, i) => op(val, b.data[i % n])), [...a.shape]);
-        } else if (a.ndim === 1 && b.ndim === 2 && a.shape[0] === b.shape[1]) {
-            // [n] + [m,n] -> broadcast 1D across rows (reversed)
-            const n = a.shape[0];
-            result = this._createTensor(b.data.map((val, i) => op(a.data[i % n], val)), [...b.shape]);
+        // Broadcasting logic
+        let data;
+        const [sa, sb] = [a.shape, b.shape];
+        const [na, nb] = [a.size, b.size];
+
+        if (na === nb && sa.join() === sb.join()) {
+            data = a.data.map((v, i) => op(v, b.data[i]));
+        } else if (nb === 1) {
+            data = a.data.map(v => op(v, b.data[0]));
+        } else if (na === 1) {
+            data = b.data.map(v => op(a.data[0], v));
+        } else if (a.ndim === 2 && b.ndim === 2 && sb[0] === 1 && sa[1] === sb[1]) { // [m,n] + [1,n]
+            data = a.data.map((v, i) => op(v, b.data[i % sa[1]]));
+        } else if (a.ndim === 2 && b.ndim === 2 && sa[0] === 1 && sa[1] === sb[1]) { // [1,n] + [m,n]
+            data = b.data.map((v, i) => op(a.data[i % sb[1]], v));
+        } else if (a.ndim === 2 && b.ndim === 1 && sa[1] === sb[0]) { // [m,n] + [n]
+            data = a.data.map((v, i) => op(v, b.data[i % sa[1]]));
+        } else if (a.ndim === 1 && b.ndim === 2 && sa[0] === sb[1]) { // [n] + [m,n]
+            data = b.data.map((v, i) => op(a.data[i % sb[1]], v));
         } else {
-            throw new Error(`Broadcasting not supported for shapes ${a.shape} and ${b.shape}`);
+            throw new Error(`Broadcasting not supported: ${sa} vs ${sb}`);
         }
+
+        const result = this._createTensor(data, na >= nb ? [...a.shape] : [...b.shape]);
 
         if (a.requiresGrad || b.requiresGrad) {
             result.requiresGrad = true;
             result._parents = [a, b];
             result._gradFn = () => {
                 if (gradOp) {
-                    const [gradA, gradB] = gradOp(result.grad, a, b, this);
-                    if (a.requiresGrad) this._accumulateGrad(a, gradA);
-                    if (b.requiresGrad) this._accumulateGrad(b, gradB);
+                    const [gA, gB] = gradOp(result.grad, a, b, this);
+                    if (a.requiresGrad) this._accumulateGrad(a, gA);
+                    if (b.requiresGrad) this._accumulateGrad(b, gB);
                 }
             };
         }
-
         return result;
     }
 
-    _accumulateGrad(tensor, grad) {
-        tensor.grad = tensor.grad ? this.add(tensor.grad, grad) : grad;
-    }
+    _accumulateGrad(t, g) { t.grad = t.grad ? this.add(t.grad, g) : g; }
 
     _createTensor(data, shape) {
-        const tensor = new Tensor(0, { backend: this });
-        tensor.data = data;
-        tensor.shape = shape;
-        return tensor;
+        const t = new Tensor(0, { backend: this });
+        t.data = data;
+        t.shape = shape;
+        return t;
     }
 
     transpose(a) {
-        if (!(a instanceof Tensor)) {
-            throw new Error('transpose requires Tensor argument');
+        const res = a.transpose();
+        if (a.requiresGrad) {
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => this._accumulateGrad(a, this.transpose(res.grad));
         }
-        return a.transpose();
+        return res;
     }
 
     reshape(a, shape) {
-        if (!(a instanceof Tensor)) {
-            throw new Error('reshape requires Tensor argument');
+        const res = a.reshape(shape);
+        if (a.requiresGrad) {
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => this._accumulateGrad(a, this.reshape(res.grad, a.shape));
         }
-        return a.reshape(shape);
+        return res;
     }
 
-    neg(a) {
-        return this._unaryWithGrad(a, x => -x, () =>
-            this._createTensor(Array(a.size).fill(-1), a.shape));
-    }
-
-    relu(a) {
-        return this._unaryWithGrad(a, x => Math.max(0, x), (input) =>
-            this._createTensor(input.data.map(x => x > 0 ? 1 : 0), input.shape));
-    }
+    neg(a) { return this._unaryWithGrad(a, x => -x, () => this._createTensor(Array(a.size).fill(-1), a.shape)); }
+    relu(a) { return this._unaryWithGrad(a, x => Math.max(0, x), i => this._createTensor(i.data.map(x => x > 0 ? 1 : 0), i.shape)); }
 
     sigmoid(a) {
-        return this._unaryWithGrad(a, x => 1 / (1 + Math.exp(-x)), (_, result) => {
-            const oneMinusSigmoid = this._createTensor(result.data.map(s => 1 - s), result.shape);
-            return this.mul(result, oneMinusSigmoid);
+        return this._unaryWithGrad(a, x => 1 / (1 + Math.exp(-x)), (_, r) => {
+            const oneMinus = this._createTensor(r.data.map(s => 1 - s), r.shape);
+            return this.mul(r, oneMinus);
         });
     }
 
     tanh(a) {
-        return this._unaryWithGrad(a, x => Math.tanh(x), (_, result) =>
-            this.sub(this.ones(result.shape), this.mul(result, result)));
+        return this._unaryWithGrad(a, x => Math.tanh(x), (_, r) => this.sub(this.ones(r.shape), this.mul(r, r)));
     }
 
     softmax(a, axis = -1) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-
-        // Normalize axis
         if (axis < 0) axis = a.ndim + axis;
+        if (a.ndim !== 1 && axis !== a.ndim - 1) throw new Error('Softmax only implemented for 1D or last axis');
 
-        // For 1D or when axis is last dimension
-        if (a.ndim === 1 || axis === a.ndim - 1) {
-            const max = Math.max(...a.data);
-            const exp = a.data.map(x => Math.exp(x - max));
-            const sum = exp.reduce((a, b) => a + b, 0);
-            const result = exp.map(x => x / sum);
-            const tensor = new Tensor(0, { backend: this });
-            tensor.data = result;
-            tensor.shape = a.shape.slice();
-            return tensor;
-        }
-
-        throw new Error('Softmax only implemented for 1D or last axis');
+        const max = Math.max(...a.data);
+        const exp = a.data.map(x => Math.exp(x - max));
+        const sum = exp.reduce((a, b) => a + b, 0);
+        const t = this._createTensor(exp.map(x => x / sum), [...a.shape]);
+        return t;
     }
 
     gelu(a) {
-        const sqrt2Pi = Math.sqrt(2 / Math.PI);
+        const C = 0.044715, S = Math.sqrt(2 / Math.PI);
         return this._unaryWithGrad(a,
-            x => 0.5 * x * (1 + Math.tanh(sqrt2Pi * (x + 0.044715 * x ** 3))),
-            (input) => this._createTensor(input.data.map(x => {
-                const u = sqrt2Pi * (x + 0.044715 * x ** 3);
-                const tanhU = Math.tanh(u);
-                const sech2 = 1 - tanhU * tanhU;
-                return 0.5 * (1 + tanhU) + 0.5 * x * sech2 * sqrt2Pi * (1 + 0.134145 * x * x);
-            }), input.shape)
+            x => 0.5 * x * (1 + Math.tanh(S * (x + C * x ** 3))),
+            i => this._createTensor(i.data.map(x => {
+                const u = S * (x + C * x ** 3);
+                const t = Math.tanh(u);
+                return 0.5 * (1 + t) + 0.5 * x * (1 - t * t) * S * (1 + 3 * C * x * x);
+            }), i.shape)
         );
     }
 
-    // === Mathematical Operations ===
-
-    exp(a) {
-        return this._unaryWithGrad(a, x => Math.exp(x), (_, result) => result);
-    }
-
-    log(a) {
-        return this._unaryWithGrad(a, x => Math.log(x), (input) =>
-            this._createTensor(input.data.map(x => 1 / x), input.shape));
-    }
-
-    sqrt(a) {
-        return this._unaryWithGrad(a, x => Math.sqrt(x), (_, result) =>
-            this._createTensor(result.data.map(s => 0.5 / s), result.shape));
-    }
+    exp(a) { return this._unaryWithGrad(a, Math.exp, (_, r) => r); }
+    log(a) { return this._unaryWithGrad(a, Math.log, i => this._createTensor(i.data.map(x => 1 / x), i.shape)); }
+    sqrt(a) { return this._unaryWithGrad(a, Math.sqrt, (_, r) => this._createTensor(r.data.map(s => 0.5 / s), r.shape)); }
 
     pow(a, n) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        const result = this._createTensor(a.data.map(x => Math.pow(x, n)), [...a.shape]);
+        const res = this._createTensor(a.data.map(x => Math.pow(x, n)), [...a.shape]);
         if (a.requiresGrad) {
-            result.requiresGrad = true;
-            result._parents = [a];
-            result._gradFn = () => {
-                const gradA = this._createTensor(a.data.map(x => n * Math.pow(x, n - 1)), a.shape);
-                this._accumulateGrad(a, this.mul(result.grad, gradA));
-            };
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => this._accumulateGrad(a, this.mul(res.grad, this._createTensor(a.data.map(x => n * Math.pow(x, n - 1)), a.shape)));
         }
-        return result;
+        return res;
     }
 
-    abs(a) {
-        return this._unaryWithGrad(a, x => Math.abs(x), (input) =>
-            this._createTensor(input.data.map(x => x >= 0 ? 1 : -1), input.shape));
-    }
-
-    // === Reduction Operations ===
+    abs(a) { return this._unaryWithGrad(a, Math.abs, i => this._createTensor(i.data.map(x => x >= 0 ? 1 : -1), i.shape)); }
 
     _reduceAxis(a, axis, reduceFn, gradFn) {
         if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
@@ -281,176 +187,127 @@ export class NativeBackend extends TensorBackend {
         const axisSize = a.shape[axis];
         const outerSize = a.shape.slice(0, axis).reduce((p, c) => p * c, 1);
         const innerSize = a.shape.slice(axis + 1).reduce((p, c) => p * c, 1);
-        const resultSize = outerSize * innerSize;
+        const resultData = new Array(outerSize * innerSize);
 
-        const resultData = new Array(resultSize);
-        for (let outer = 0; outer < outerSize; outer++) {
-            for (let inner = 0; inner < innerSize; inner++) {
-                const values = [];
-                for (let ax = 0; ax < axisSize; ax++) {
-                    values.push(a.data[outer * axisSize * innerSize + ax * innerSize + inner]);
-                }
-                resultData[outer * innerSize + inner] = reduceFn(values);
+        for (let o = 0; o < outerSize; o++) {
+            for (let i = 0; i < innerSize; i++) {
+                const vals = [];
+                for (let x = 0; x < axisSize; x++) vals.push(a.data[o * axisSize * innerSize + x * innerSize + i]);
+                resultData[o * innerSize + i] = reduceFn(vals);
             }
         }
 
-        const result = this._createTensor(resultData, newShape);
-
+        const res = this._createTensor(resultData, newShape);
         if (a.requiresGrad && gradFn) {
-            result.requiresGrad = true;
-            result._parents = [a];
-            result._gradFn = () => gradFn(a, result, axis, axisSize, outerSize, innerSize, this);
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => gradFn(a, res, axis, axisSize, outerSize, innerSize, this);
         }
-
-        return result;
+        return res;
     }
 
     sum(a, axis = null) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-
         if (axis === null) {
-            const value = a.data.reduce((sum, val) => sum + val, 0);
-            const result = new Tensor([value], { backend: this });
+            const res = new Tensor([a.data.reduce((s, v) => s + v, 0)], { backend: this });
             if (a.requiresGrad) {
-                result.requiresGrad = true;
-                result._parents = [a];
-                result._gradFn = () => this._accumulateGrad(a,
-                    this._createTensor(new Array(a.size).fill(result.grad.data[0]), a.shape.slice()));
+                res.requiresGrad = true;
+                res._parents = [a];
+                res._gradFn = () => this._accumulateGrad(a, this._createTensor(Array(a.size).fill(res.grad.data[0]), a.shape));
             }
-            return result;
+            return res;
         }
-
-        return this._reduceAxis(a, axis, vals => vals.reduce((s, v) => s + v, 0),
-            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
-                const gradA = new Array(a.size);
-                for (let outer = 0; outer < outerSize; outer++) {
-                    for (let inner = 0; inner < innerSize; inner++) {
-                        const gradVal = result.grad.data[outer * innerSize + inner];
-                        for (let ax = 0; ax < axisSize; ax++) {
-                            gradA[outer * axisSize * innerSize + ax * innerSize + inner] = gradVal;
-                        }
-                    }
+        return this._reduceAxis(a, axis, v => v.reduce((s, x) => s + x, 0), (a, r, ax, as, os, is, bk) => {
+            const g = new Array(a.size);
+            for (let o = 0; o < os; o++)
+                for (let i = 0; i < is; i++) {
+                    const gv = r.grad.data[o * is + i];
+                    for (let x = 0; x < as; x++) g[o * as * is + x * is + i] = gv;
                 }
-                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
-            });
+            bk._accumulateGrad(a, bk._createTensor(g, a.shape));
+        });
     }
 
     mean(a, axis = null) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-
         if (axis === null) {
-            const value = a.data.reduce((s, v) => s + v, 0) / a.size;
-            const result = new Tensor([value], { backend: this });
+            const res = new Tensor([a.data.reduce((s, v) => s + v, 0) / a.size], { backend: this });
             if (a.requiresGrad) {
-                result.requiresGrad = true;
-                result._parents = [a];
-                result._gradFn = () => this._accumulateGrad(a,
-                    this._createTensor(new Array(a.size).fill(result.grad.data[0] / a.size), a.shape.slice()));
+                res.requiresGrad = true;
+                res._parents = [a];
+                res._gradFn = () => this._accumulateGrad(a, this._createTensor(Array(a.size).fill(res.grad.data[0] / a.size), a.shape));
             }
-            return result;
+            return res;
         }
-
-        return this._reduceAxis(a, axis, vals => vals.reduce((s, v) => s + v, 0) / vals.length,
-            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
-                const gradA = new Array(a.size);
-                for (let outer = 0; outer < outerSize; outer++) {
-                    for (let inner = 0; inner < innerSize; inner++) {
-                        const gradVal = result.grad.data[outer * innerSize + inner] / axisSize;
-                        for (let ax = 0; ax < axisSize; ax++) {
-                            gradA[outer * axisSize * innerSize + ax * innerSize + inner] = gradVal;
-                        }
-                    }
+        return this._reduceAxis(a, axis, v => v.reduce((s, x) => s + x, 0) / v.length, (a, r, ax, as, os, is, bk) => {
+            const g = new Array(a.size);
+            for (let o = 0; o < os; o++)
+                for (let i = 0; i < is; i++) {
+                    const gv = r.grad.data[o * is + i] / as;
+                    for (let x = 0; x < as; x++) g[o * as * is + x * is + i] = gv;
                 }
-                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
-            });
+            bk._accumulateGrad(a, bk._createTensor(g, a.shape));
+        });
     }
 
     std(a, axis = null) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
         const m = this.mean(a, axis);
-        const centered = this.sub(a, axis === null ? m.data[0] : m);
-        const variance = this.mean(this.mul(centered, centered), axis);
-        return this.sqrt(variance);
+        const c = this.sub(a, axis === null ? m.data[0] : m);
+        return this.sqrt(this.mean(this.mul(c, c), axis));
     }
 
     max(a, axis = null) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-
         if (axis === null) {
-            const maxVal = Math.max(...a.data);
-            const result = new Tensor([maxVal], { backend: this });
+            const max = Math.max(...a.data);
+            const res = new Tensor([max], { backend: this });
             if (a.requiresGrad) {
-                result.requiresGrad = true;
-                result._parents = [a];
-                result._gradFn = () => {
-                    const gradA = a.data.map(v => v === maxVal ? result.grad.data[0] : 0);
-                    this._accumulateGrad(a, this._createTensor(gradA, a.shape.slice()));
-                };
+                res.requiresGrad = true;
+                res._parents = [a];
+                res._gradFn = () => this._accumulateGrad(a, this._createTensor(a.data.map(v => v === max ? res.grad.data[0] : 0), a.shape));
             }
-            return result;
+            return res;
         }
-
-        return this._reduceAxis(a, axis, vals => Math.max(...vals),
-            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
-                const gradA = new Array(a.size).fill(0);
-                for (let outer = 0; outer < outerSize; outer++) {
-                    for (let inner = 0; inner < innerSize; inner++) {
-                        const resultIdx = outer * innerSize + inner;
-                        const maxVal = result.data[resultIdx];
-                        for (let ax = 0; ax < axisSize; ax++) {
-                            const idx = outer * axisSize * innerSize + ax * innerSize + inner;
-                            if (a.data[idx] === maxVal) {
-                                gradA[idx] = result.grad.data[resultIdx];
-                                break;
-                            }
-                        }
+        return this._reduceAxis(a, axis, v => Math.max(...v), (a, r, ax, as, os, is, bk) => {
+            const g = new Array(a.size).fill(0);
+            for (let o = 0; o < os; o++)
+                for (let i = 0; i < is; i++) {
+                    const ridx = o * is + i;
+                    const max = r.data[ridx];
+                    for (let x = 0; x < as; x++) {
+                        const idx = o * as * is + x * is + i;
+                        if (a.data[idx] === max) { g[idx] = r.grad.data[ridx]; break; }
                     }
                 }
-                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
-            });
+            bk._accumulateGrad(a, bk._createTensor(g, a.shape));
+        });
     }
 
     min(a, axis = null) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-
         if (axis === null) {
-            const minVal = Math.min(...a.data);
-            const result = new Tensor([minVal], { backend: this });
+            const min = Math.min(...a.data);
+            const res = new Tensor([min], { backend: this });
             if (a.requiresGrad) {
-                result.requiresGrad = true;
-                result._parents = [a];
-                result._gradFn = () => {
-                    const gradA = a.data.map(v => v === minVal ? result.grad.data[0] : 0);
-                    this._accumulateGrad(a, this._createTensor(gradA, a.shape.slice()));
-                };
+                res.requiresGrad = true;
+                res._parents = [a];
+                res._gradFn = () => this._accumulateGrad(a, this._createTensor(a.data.map(v => v === min ? res.grad.data[0] : 0), a.shape));
             }
-            return result;
+            return res;
         }
-
-        return this._reduceAxis(a, axis, vals => Math.min(...vals),
-            (a, result, axis, axisSize, outerSize, innerSize, backend) => {
-                const gradA = new Array(a.size).fill(0);
-                for (let outer = 0; outer < outerSize; outer++) {
-                    for (let inner = 0; inner < innerSize; inner++) {
-                        const resultIdx = outer * innerSize + inner;
-                        const minVal = result.data[resultIdx];
-                        for (let ax = 0; ax < axisSize; ax++) {
-                            const idx = outer * axisSize * innerSize + ax * innerSize + inner;
-                            if (a.data[idx] === minVal) {
-                                gradA[idx] = result.grad.data[resultIdx];
-                                break;
-                            }
-                        }
+        return this._reduceAxis(a, axis, v => Math.min(...v), (a, r, ax, as, os, is, bk) => {
+            const g = new Array(a.size).fill(0);
+            for (let o = 0; o < os; o++)
+                for (let i = 0; i < is; i++) {
+                    const ridx = o * is + i;
+                    const min = r.data[ridx];
+                    for (let x = 0; x < as; x++) {
+                        const idx = o * as * is + x * is + i;
+                        if (a.data[idx] === min) { g[idx] = r.grad.data[ridx]; break; }
                     }
                 }
-                backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
-            });
+            bk._accumulateGrad(a, bk._createTensor(g, a.shape));
+        });
     }
 
-    // === Einsum & Tensor Contractions ===
-
     einsum(subscripts, ...tensors) {
-        const normalized = subscripts.replace(/\s/g, '');
+        const norm = subscripts.replace(/\s/g, '');
         const patterns = {
             'ij,jk->ik': () => this.matmul(tensors[0], tensors[1]),
             'i,i->': () => this.sum(this.mul(tensors[0], tensors[1])),
@@ -460,280 +317,203 @@ export class NativeBackend extends TensorBackend {
             'ij->i': () => this.sum(tensors[0], 1),
             'ij->j': () => this.sum(tensors[0], 0),
         };
-        if (patterns[normalized]) return patterns[normalized]();
-        return this._fallbackEinsum(normalized, tensors);
+        if (patterns[norm]) return patterns[norm]();
+        throw new Error(`Einsum pattern '${norm}' not supported.`);
     }
 
     outer(a, b) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
-        if (!(b instanceof Tensor)) b = new Tensor([b], { backend: this });
         if (a.ndim !== 1 || b.ndim !== 1) throw new Error('outer requires 1D tensors');
-
-        const result = this._createTensor(
-            a.data.flatMap(x => b.data.map(y => x * y)),
-            [a.shape[0], b.shape[0]]
-        );
-
+        const res = this._createTensor(a.data.flatMap(x => b.data.map(y => x * y)), [a.shape[0], b.shape[0]]);
         if (a.requiresGrad || b.requiresGrad) {
-            result.requiresGrad = true;
-            result._parents = [a, b];
-            result._gradFn = () => {
-                // c[i,j] = a[i] * b[j]
-                // ∂L/∂a[i] = Σ_j (∂L/∂c[i,j] * b[j])
-                // ∂L/∂b[j] = Σ_i (∂L/∂c[i,j] * a[i])
+            res.requiresGrad = true;
+            res._parents = [a, b];
+            res._gradFn = () => {
                 if (a.requiresGrad) {
-                    const gradA = new Array(a.size).fill(0);
-                    for (let i = 0; i < a.size; i++) {
-                        for (let j = 0; j < b.size; j++) {
-                            gradA[i] += result.grad.data[i * b.size + j] * b.data[j];
-                        }
-                    }
-                    this._accumulateGrad(a, this._createTensor(gradA, a.shape));
+                    const g = new Array(a.size).fill(0);
+                    for (let i = 0; i < a.size; i++) for (let j = 0; j < b.size; j++) g[i] += res.grad.data[i * b.size + j] * b.data[j];
+                    this._accumulateGrad(a, this._createTensor(g, a.shape));
                 }
                 if (b.requiresGrad) {
-                    const gradB = new Array(b.size).fill(0);
-                    for (let j = 0; j < b.size; j++) {
-                        for (let i = 0; i < a.size; i++) {
-                            gradB[j] += result.grad.data[i * b.size + j] * a.data[i];
-                        }
-                    }
-                    this._accumulateGrad(b, this._createTensor(gradB, b.shape));
+                    const g = new Array(b.size).fill(0);
+                    for (let j = 0; j < b.size; j++) for (let i = 0; i < a.size; i++) g[j] += res.grad.data[i * b.size + j] * a.data[i];
+                    this._accumulateGrad(b, this._createTensor(g, b.shape));
                 }
             };
         }
-        return result;
+        return res;
     }
 
     trace(a) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
         if (a.ndim !== 2) throw new Error('trace requires 2D tensor');
-
         const n = Math.min(a.shape[0], a.shape[1]);
         let val = 0;
         for (let i = 0; i < n; i++) val += a.data[i * a.shape[1] + i];
-
-        const result = new Tensor([val], { backend: this });
+        const res = new Tensor([val], { backend: this });
         if (a.requiresGrad) {
-            result.requiresGrad = true;
-            result._parents = [a];
-            result._gradFn = () => {
-                const gradA = this.zeros(a.shape);
-                for (let i = 0; i < n; i++) gradA.data[i * a.shape[1] + i] = result.grad.data[0];
-                this._accumulateGrad(a, gradA);
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => {
+                const g = this.zeros(a.shape);
+                for (let i = 0; i < n; i++) g.data[i * a.shape[1] + i] = res.grad.data[0];
+                this._accumulateGrad(a, g);
             };
         }
-        return result;
+        return res;
     }
-
-    _fallbackEinsum(subscripts, tensors) {
-        throw new Error(`Einsum pattern '${subscripts}' not supported. Supported patterns: ij,jk->ik | i,i-> | i,j->ij | ij->ji | ii-> | ij->i | ij->j`);
-    }
-
-    // === Composed Operations ===
 
     attention(q, k, v, scale = null) {
         const d = scale ?? Math.sqrt(k.shape[k.shape.length - 1]);
-        const scores = this.div(this.matmul(q, this.transpose(k)), d);
-        const weights = this.softmax(scores, -1);
-        return this.matmul(weights, v);
+        return this.matmul(this.softmax(this.div(this.matmul(q, this.transpose(k)), d), -1), v);
     }
 
     layerNorm(x, eps = 1e-5) {
-        const mean = this.mean(x, -1);
-        const centered = this.sub(x, mean);
-        const variance = this.mean(this.pow(centered, 2), -1);
-        const std = this.sqrt(this.add(variance, eps));
-        return this.div(centered, std);
+        const m = this.mean(x, -1);
+        const c = this.sub(x, m);
+        const v = this.mean(this.pow(c, 2), -1);
+        return this.div(c, this.sqrt(this.add(v, eps)));
     }
 
     cosineSimilarity(a, b) {
-        const dot = this.sum(this.mul(a, b));
-        const normA = this.sqrt(this.sum(this.mul(a, a)));
-        const normB = this.sqrt(this.sum(this.mul(b, b)));
-        return this.div(dot, this.mul(normA, normB));
+        return this.div(this.sum(this.mul(a, b)), this.mul(this.sqrt(this.sum(this.mul(a, a))), this.sqrt(this.sum(this.mul(b, b)))));
     }
 
     dropout(x, p = 0.5, training = true) {
         if (!training) return x;
-        const mask = this._createTensor(
-            x.data.map(() => Math.random() > p ? 1 : 0),
-            x.shape
-        );
+        const mask = this._createTensor(x.data.map(() => Math.random() > p ? 1 : 0), x.shape);
         return this.div(this.mul(x, mask), 1 - p);
     }
 
-    clamp(x, minVal, maxVal) {
+    clamp(x, min, max) {
         if (!(x instanceof Tensor)) x = new Tensor([x], { backend: this });
-        const result = this._createTensor(
-            x.data.map(v => Math.max(minVal, Math.min(maxVal, v))),
-            [...x.shape]
-        );
+        const res = this._createTensor(x.data.map(v => Math.max(min, Math.min(max, v))), [...x.shape]);
         if (x.requiresGrad) {
-            result.requiresGrad = true;
-            result._parents = [x];
-            result._gradFn = () => {
-                const gradX = this._createTensor(
-                    x.data.map((v, i) => (v > minVal && v < maxVal) ? result.grad.data[i] : 0),
-                    x.shape
-                );
-                this._accumulateGrad(x, gradX);
+            res.requiresGrad = true;
+            res._parents = [x];
+            res._gradFn = () => {
+                const g = x.data.map((v, i) => (v > min && v < max) ? res.grad.data[i] : 0);
+                this._accumulateGrad(x, this._createTensor(g, x.shape));
             };
         }
-        return result;
+        return res;
     }
 
-    // === Array Operations ===
-
     concat(tensors, axis = 0) {
-        if (!Array.isArray(tensors) || tensors.length === 0) {
-            throw new Error('concat requires non-empty array of tensors');
-        }
+        if (!tensors.length) throw new Error('concat requires tensors');
         if (axis < 0) axis = tensors[0].ndim + axis;
-
         const shapes = tensors.map(t => t.shape);
         const newShape = [...shapes[0]];
         newShape[axis] = shapes.reduce((s, sh) => s + sh[axis], 0);
 
-        const resultData = [];
-        const outerSize = shapes[0].slice(0, axis).reduce((a, b) => a * b, 1);
-        const innerSize = shapes[0].slice(axis + 1).reduce((a, b) => a * b, 1);
+        const resData = [];
+        const os = shapes[0].slice(0, axis).reduce((a, b) => a * b, 1);
+        const is = shapes[0].slice(axis + 1).reduce((a, b) => a * b, 1);
 
-        for (let outer = 0; outer < outerSize; outer++) {
+        for (let o = 0; o < os; o++) {
             for (const t of tensors) {
-                const axisSize = t.shape[axis];
-                for (let ax = 0; ax < axisSize; ax++) {
-                    for (let inner = 0; inner < innerSize; inner++) {
-                        resultData.push(t.data[outer * axisSize * innerSize + ax * innerSize + inner]);
-                    }
-                }
+                const as = t.shape[axis];
+                for (let x = 0; x < as; x++)
+                    for (let i = 0; i < is; i++)
+                        resData.push(t.data[o * as * is + x * is + i]);
             }
         }
 
-        const result = this._createTensor(resultData, newShape);
+        const res = this._createTensor(resData, newShape);
         if (tensors.some(t => t.requiresGrad)) {
-            result.requiresGrad = true;
-            result._parents = tensors;
-            result._gradFn = () => {
-                let offset = 0;
+            res.requiresGrad = true;
+            res._parents = tensors;
+            res._gradFn = () => {
+                let off = 0;
                 for (const t of tensors) {
-                    if (!t.requiresGrad) {
-                        offset += t.shape[axis];
-                        continue;
-                    }
-                    const gradSlice = this.slice(result.grad, offset, offset + t.shape[axis], axis);
-                    this._accumulateGrad(t, gradSlice);
-                    offset += t.shape[axis];
+                    if (t.requiresGrad) this._accumulateGrad(t, this.slice(res.grad, off, off + t.shape[axis], axis));
+                    off += t.shape[axis];
                 }
             };
         }
-        return result;
+        return res;
     }
 
     slice(a, start, end, axis = 0) {
-        if (!(a instanceof Tensor)) throw new Error('slice requires Tensor argument');
+        if (!(a instanceof Tensor)) throw new Error('slice requires Tensor');
         if (axis < 0) axis = a.ndim + axis;
-
         const newShape = [...a.shape];
         newShape[axis] = end - start;
 
-        const resultData = [];
-        const outerSize = a.shape.slice(0, axis).reduce((acc, s) => acc * s, 1);
-        const innerSize = a.shape.slice(axis + 1).reduce((acc, s) => acc * s, 1);
-        const axisSize = a.shape[axis];
+        const resData = [];
+        const os = a.shape.slice(0, axis).reduce((a, b) => a * b, 1);
+        const is = a.shape.slice(axis + 1).reduce((a, b) => a * b, 1);
+        const as = a.shape[axis];
 
-        for (let outer = 0; outer < outerSize; outer++) {
-            for (let ax = start; ax < end; ax++) {
-                for (let inner = 0; inner < innerSize; inner++) {
-                    resultData.push(a.data[outer * axisSize * innerSize + ax * innerSize + inner]);
-                }
-            }
-        }
+        for (let o = 0; o < os; o++)
+            for (let x = start; x < end; x++)
+                for (let i = 0; i < is; i++)
+                    resData.push(a.data[o * as * is + x * is + i]);
 
-        const result = this._createTensor(resultData, newShape);
+        const res = this._createTensor(resData, newShape);
         if (a.requiresGrad) {
-            result.requiresGrad = true;
-            result._parents = [a];
-            result._gradFn = () => {
-                const gradA = this.zeros(a.shape);
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => {
+                const g = this.zeros(a.shape);
                 let idx = 0;
-                for (let outer = 0; outer < outerSize; outer++) {
-                    for (let ax = start; ax < end; ax++) {
-                        for (let inner = 0; inner < innerSize; inner++) {
-                            gradA.data[outer * axisSize * innerSize + ax * innerSize + inner] = result.grad.data[idx++];
-                        }
-                    }
-                }
-                this._accumulateGrad(a, gradA);
+                for (let o = 0; o < os; o++)
+                    for (let x = start; x < end; x++)
+                        for (let i = 0; i < is; i++)
+                            g.data[o * as * is + x * is + i] = res.grad.data[idx++];
+                this._accumulateGrad(a, g);
             };
         }
-        return result;
+        return res;
     }
 
     unsqueeze(a, axis = 0) {
-        if (!(a instanceof Tensor)) throw new Error('unsqueeze requires Tensor argument');
         if (axis < 0) axis = a.ndim + 1 + axis;
-
-        const newShape = [...a.shape];
-        newShape.splice(axis, 0, 1);
-        return a.reshape(newShape);
+        const s = [...a.shape];
+        s.splice(axis, 0, 1);
+        return a.reshape(s);
     }
 
-    stack(tensors, axis = 0) {
-        const expanded = tensors.map(t => this.unsqueeze(t, axis));
-        return this.concat(expanded, axis);
-    }
+    stack(tensors, axis = 0) { return this.concat(tensors.map(t => this.unsqueeze(t, axis)), axis); }
 
     gather(a, indices, axis = 0) {
-        if (!(a instanceof Tensor)) throw new Error('gather requires Tensor argument');
         if (!(indices instanceof Tensor)) indices = new Tensor(indices, { backend: this });
         if (axis < 0) axis = a.ndim + axis;
 
-        const idxData = indices.data.map(x => Math.floor(x));
+        const idxData = indices.data.map(Math.floor);
         const newShape = [...a.shape];
         newShape[axis] = idxData.length;
 
-        const resultData = [];
-        const outerSize = a.shape.slice(0, axis).reduce((acc, s) => acc * s, 1);
-        const innerSize = a.shape.slice(axis + 1).reduce((acc, s) => acc * s, 1);
-        const axisSize = a.shape[axis];
+        const resData = [];
+        const os = a.shape.slice(0, axis).reduce((a, b) => a * b, 1);
+        const is = a.shape.slice(axis + 1).reduce((a, b) => a * b, 1);
+        const as = a.shape[axis];
 
-        for (let outer = 0; outer < outerSize; outer++) {
-            for (const idx of idxData) {
-                for (let inner = 0; inner < innerSize; inner++) {
-                    resultData.push(a.data[outer * axisSize * innerSize + idx * innerSize + inner]);
-                }
-            }
-        }
+        for (let o = 0; o < os; o++)
+            for (const idx of idxData)
+                for (let i = 0; i < is; i++)
+                    resData.push(a.data[o * as * is + idx * is + i]);
 
-        const result = this._createTensor(resultData, newShape);
+        const res = this._createTensor(resData, newShape);
         if (a.requiresGrad) {
-            result.requiresGrad = true;
-            result._parents = [a];
-            result._gradFn = () => {
-                const gradA = this.zeros(a.shape);
-                let resIdx = 0;
-                for (let outer = 0; outer < outerSize; outer++) {
-                    for (const idx of idxData) {
-                        for (let inner = 0; inner < innerSize; inner++) {
-                            const aIdx = outer * axisSize * innerSize + idx * innerSize + inner;
-                            gradA.data[aIdx] += result.grad.data[resIdx++];
-                        }
-                    }
-                }
-                this._accumulateGrad(a, gradA);
+            res.requiresGrad = true;
+            res._parents = [a];
+            res._gradFn = () => {
+                const g = this.zeros(a.shape);
+                let ridx = 0;
+                for (let o = 0; o < os; o++)
+                    for (const idx of idxData)
+                        for (let i = 0; i < is; i++)
+                            g.data[o * as * is + idx * is + i] += res.grad.data[ridx++];
+                this._accumulateGrad(a, g);
             };
         }
-        return result;
+        return res;
     }
-
-    // === Initialization & Randomness ===
 
     randn(shape, mean = 0, std = 1) {
         const size = shape.reduce((a, b) => a * b, 1);
         const data = new Array(size);
         for (let i = 0; i < size; i += 2) {
-            const u = 1 - Math.random();
-            const v = Math.random();
+            const u = 1 - Math.random(), v = Math.random();
             const z1 = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
             const z2 = Math.sqrt(-2.0 * Math.log(u)) * Math.sin(2.0 * Math.PI * v);
             data[i] = z1 * std + mean;
@@ -745,45 +525,23 @@ export class NativeBackend extends TensorBackend {
     xavierUniform(shape, gain = 1.0) {
         const fanIn = shape[0], fanOut = shape[1] ?? shape[0];
         const bound = gain * Math.sqrt(6.0 / (fanIn + fanOut));
-        const rand = this.random(shape);
-        return this.sub(this.mul(rand, 2 * bound), bound);
+        return this.sub(this.mul(this.random(shape), 2 * bound), bound);
     }
 
     kaimingNormal(shape, a = 0, mode = 'fan_in', nonlinearity = 'leaky_relu') {
         const fan = mode === 'fan_in' ? shape[0] : (shape[1] ?? shape[0]);
         const gain = nonlinearity === 'relu' ? Math.sqrt(2.0) : 1.0;
-        const std = gain / Math.sqrt(fan);
-        return this.randn(shape, 0, std);
+        return this.randn(shape, 0, gain / Math.sqrt(fan));
     }
-
-    // === Quantifiers (aliases for logical operations) ===
-
 
     forall(a, axis = null) { return this.min(a, axis); }
     exists(a, axis = null) { return this.max(a, axis); }
 
-    // === Utilities ===
-
-    zeros(shape) {
-        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0), shape);
-    }
-
-    ones(shape) {
-        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1), shape);
-    }
-
-    random(shape) {
-        const size = shape.reduce((a, b) => a * b, 1);
-        return this._createTensor(Array(size).fill(0).map(() => Math.random()), shape);
-    }
-
-    full(shape, value) {
-        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(value), shape);
-    }
-
-    empty(shape) {
-        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)), shape);
-    }
+    zeros(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0), shape); }
+    ones(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1), shape); }
+    random(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0).map(Math.random), shape); }
+    full(shape, value) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(value), shape); }
+    empty(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)), shape); }
 
     arange(start, end, step = 1) {
         const data = [];
@@ -793,21 +551,13 @@ export class NativeBackend extends TensorBackend {
 
     linspace(start, end, steps) {
         const data = Array(steps);
-        const stepSize = steps > 1 ? (end - start) / (steps - 1) : 0;
-        for (let i = 0; i < steps; i++) data[i] = start + i * stepSize;
+        const step = steps > 1 ? (end - start) / (steps - 1) : 0;
+        for (let i = 0; i < steps; i++) data[i] = start + i * step;
         return this._createTensor(data, [steps]);
     }
 
-    // Factory method - creates tensor with this backend pre-attached
-    tensor(data, options = {}) {
-        return new Tensor(data, { ...options, backend: this });
-    }
+    tensor(data, options = {}) { return new Tensor(data, { ...options, backend: this }); }
 }
 
-// Default singleton - PyTorch-style namespace
 export const T = new NativeBackend();
-
-// Backward-compatible alias
 export const backend = T;
-
-

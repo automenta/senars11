@@ -8,18 +8,15 @@ export class Module {
         this.training = true;
     }
 
-    module(name, mod) { return this.registerModule(name, mod); }
-    parameter(name, tensor) { return this.registerParameter(name, tensor); }
-
-    registerParameter(name, tensor) {
-        if (!(tensor instanceof Tensor)) throw new Error('registerParameter requires Tensor');
+    parameter(name, tensor) {
+        if (!(tensor instanceof Tensor)) throw new Error('parameter requires Tensor');
         tensor.requiresGrad = true;
         this._parameters.set(name, tensor);
         return tensor;
     }
 
-    registerModule(name, module) {
-        if (!(module instanceof Module)) throw new Error('registerModule requires Module');
+    module(name, module) {
+        if (!(module instanceof Module)) throw new Error('module requires Module');
         this._modules.set(name, module);
         return module;
     }

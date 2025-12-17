@@ -1,47 +1,47 @@
-/**
- * Tensor Basics — Core tensor operations and API
- * Run: node examples/tensor-logic/tensor-basics.mjs
- */
 import { T } from '../../core/src/functor/backends/NativeBackend.js';
 
-console.log('=== Tensor Logic: Basics ===\n');
+console.log('--- Tensor Basics ---');
 
-const v = T.tensor([1, 2, 3, 4]);
-console.log(`1D Tensor: shape=${v.shape} | ndim=${v.ndim} | size=${v.size}`);
-console.log(`Data:`, v.numpy());
+// 1. Creation
+const t1 = T.tensor([1, 2, 3, 4]);
+const t2 = T.tensor([[1, 2], [3, 4]]);
+const t3 = T.randn([2, 3]);
 
-const m = T.tensor([[1, 2, 3], [4, 5, 6]]);
-console.log(`\n2D Tensor: ${m.shape.join('×')} matrix:`, m.numpy());
+console.log('t1:', t1.toString());
+console.log('t2:', t2.toString());
+console.log('t3:', t3.toString());
 
-const t3d = T.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
-console.log(`\n3D Tensor: shape ${t3d.shape.join('×')}, element[1,0,1] = ${t3d.get([1, 0, 1])}`);
+// 2. Reshape & Transpose
+const t4 = t1.reshape([2, 2]);
+console.log('Reshaped t1:', t4.toString());
 
-console.log('\n--- Reshape ---');
-const flat = T.tensor([1, 2, 3, 4, 5, 6]);
-const reshaped = flat.reshape([2, 3]);
-console.log(`${flat.shape} → ${reshaped.shape}:`, reshaped.numpy());
+const t5 = t2.transpose();
+console.log('Transposed t2:', t5.toString());
 
-console.log('\n--- Transpose ---');
-const original = T.tensor([[1, 2, 3], [4, 5, 6]]);
-const transposed = original.transpose();
-console.log(`Original ${original.shape.join('×')}:`, original.numpy());
-console.log(`Transposed ${transposed.shape.join('×')}:`, transposed.numpy());
+// 3. Operations
+const t6 = T.add(t2, t5);
+console.log('t2 + t2.T:', t6.toString());
 
-console.log('\n--- Element Access ---');
-const mutable = T.tensor([[10, 20], [30, 40]]);
-mutable.set([0, 1], 99);
-console.log(`After set([0,1], 99):`, mutable.numpy());
+const t7 = T.matmul(t2, t5);
+console.log('t2 @ t2.T:', t7.toString());
 
-console.log('\n--- New: item() and clone() ---');
-const scalar = T.tensor([42]);
-console.log(`Scalar extraction: tensor([42]).item() = ${scalar.item()}`);
+// 4. Broadcasting
+const t8 = T.tensor([[1, 2, 3], [4, 5, 6]]);
+const t9 = T.tensor([1, 0, 1]);
+const t10 = T.add(t8, t9);
+console.log('Broadcasting add:', t10.toString());
 
-const cloned = m.clone();
-console.log(`Clone preserves data: ${JSON.stringify(cloned.data) === JSON.stringify(m.data)}`);
+// 5. Element access
+console.log('t2[0, 1]:', t2.get([0, 1]));
+t2.set([0, 1], 99);
+console.log('Modified t2:', t2.toString());
 
-console.log('\n--- Serialization ---');
-const json = m.toJSON();
-const restored = T.tensor(json.data);
-console.log(`JSON roundtrip: shape ${restored.shape}, data match: ${JSON.stringify(restored.data) === JSON.stringify(m.data)}`);
+// 6. Cloning
+const t11 = t2.clone();
+t11.set([0, 0], -1);
+console.log('Original t2 (unchanged):', t2.toString());
+console.log('Cloned t11:', t11.toString());
 
-console.log('\n✅ Tensor basics complete!');
+// 7. Serialization
+const json = JSON.stringify(t2);
+console.log('JSON:', json);

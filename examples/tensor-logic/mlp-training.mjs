@@ -40,7 +40,7 @@ for (let epoch = 0; epoch < 500; epoch++) {
         const loss = loss_fn.binaryCrossEntropy(model.forward(input), target);
         totalLoss += loss.item();
         loss.backward();
-        optimizer.step(model.parameters());
+        optimizer.step(model.namedParameters());
     }
     if (epoch % 100 === 0 || epoch === 499) {
         printMetrics(epoch, { loss: totalLoss / dataset.length });

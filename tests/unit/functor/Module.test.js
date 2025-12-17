@@ -8,7 +8,7 @@ describe('Module System', () => {
         test('registers parameters', () => {
             const mod = new Module();
             const param = T.tensor([[1, 2]]);
-            mod.registerParameter('weight', param);
+            mod.parameter('weight', param);
 
             expect(mod._parameters.has('weight')).toBe(true);
             expect(param.requiresGrad).toBe(true);
@@ -17,7 +17,7 @@ describe('Module System', () => {
         test('registers submodules', () => {
             const parent = new Module();
             const child = new Module();
-            parent.registerModule('child', child);
+            parent.module('child', child);
 
             expect(parent._modules.has('child')).toBe(true);
         });
@@ -26,9 +26,9 @@ describe('Module System', () => {
             const parent = new Module();
             const child = new Module();
 
-            parent.registerParameter('p1', T.tensor([1]));
-            child.registerParameter('p2', T.tensor([2]));
-            parent.registerModule('child', child);
+            parent.parameter('p1', T.tensor([1]));
+            child.parameter('p2', T.tensor([2]));
+            parent.module('child', child);
 
             const params = parent.parameters();
             expect(params.length).toBe(2);
@@ -37,7 +37,7 @@ describe('Module System', () => {
         test('train/eval modes cascade', () => {
             const parent = new Module();
             const child = new Module();
-            parent.registerModule('child', child);
+            parent.module('child', child);
 
             parent.eval();
             expect(parent.training).toBe(false);
@@ -50,7 +50,7 @@ describe('Module System', () => {
 
         test('stateDict serializes parameters', () => {
             const mod = new Module();
-            mod.registerParameter('weight', T.tensor([[1, 2], [3, 4]]));
+            mod.parameter('weight', T.tensor([[1, 2], [3, 4]]));
 
             const state = mod.stateDict();
             expect(state).toHaveProperty('weight');
@@ -61,19 +61,19 @@ describe('Module System', () => {
             const parent = new Module();
             const child = new Module();
 
-            parent.registerParameter('p1', T.tensor([1]));
-            child.registerParameter('p2', T.tensor([2]));
-            parent.registerModule('child', child);
+            parent.parameter('p1', T.tensor([1]));
+            child.parameter('p2', T.tensor([2]));
+            parent.module('child', child);
 
             const state = parent.stateDict();
-            expect(state).toHaveProperty('p1');
-            expect(state).toHaveProperty('child.p2');
+            expect(state['p1']).toBeDefined();
+            expect(state['child.p2']).toBeDefined();
         });
 
         test('loadStateDict restores parameters', () => {
             const mod = new Module();
             const weight = T.tensor([[1, 2]]);
-            mod.registerParameter('weight', weight);
+            mod.parameter('weight', weight);
 
             const originalState = mod.stateDict();
             weight.data.fill(999);
