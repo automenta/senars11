@@ -1,8 +1,6 @@
 import { afterAll, beforeAll, describe, expect, jest, test } from '@jest/globals';
 import { App } from '../../../agent/src/app/App.js';
 
-jest.setTimeout(60000);
-
 describe('Real Hybrid LM-NAL Reasoning', () => {
     let app, agent;
     const lmEvents = [];

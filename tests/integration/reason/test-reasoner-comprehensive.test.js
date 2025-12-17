@@ -1,8 +1,6 @@
 import { jest } from '@jest/globals';
 import { createStreamReasonerNAR } from '../../support/factories.js';
 
-jest.setTimeout(30000);
-
 describe('New Reasoner - Stream-based Architecture with Real Components', () => {
     let nar;
 

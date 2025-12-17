@@ -1,8 +1,6 @@
 import { jest } from '@jest/globals';
 import { NAR } from '../../../core/src/nar/NAR.js';
 
-jest.setTimeout(30000);
-
 const createReasonerConfig = (overrides = {}) => ({
     reasoning: { useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5 },
     cycle: { delay: 1 },

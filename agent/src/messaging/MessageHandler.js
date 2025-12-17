@@ -1,7 +1,8 @@
-import {EventEmitter} from 'events';
-import {MESSAGE_TYPES} from '@senars/core';
+import { EventEmitter } from 'events';
+import { MESSAGE_TYPES } from '@senars/core';
+import { Logger } from '../../../core/src/util/Logger.js';
 
-const CMD_MAP = {'start': 'run', 'stop': 'stop', 'step': 'next'};
+const CMD_MAP = { 'start': 'run', 'stop': 'stop', 'step': 'next' };
 
 export class ReplMessageHandler extends EventEmitter {
     constructor(engine) {
@@ -43,7 +44,7 @@ export class ReplMessageHandler extends EventEmitter {
                     return `Unknown command: ${cmd}`;
                 } catch (error) {
                     const errorMsg = `❌ Error executing command '${cmd}': ${error.message}`;
-                    this.emit('command.error', {command: cmd, error: error.message});
+                    this.emit('command.error', { command: cmd, error: error.message });
                     return errorMsg;
                 }
             });
@@ -62,7 +63,7 @@ export class ReplMessageHandler extends EventEmitter {
 
     async processMessage(message) {
         if (!message || typeof message !== 'object') {
-            return {error: 'Invalid message: expected object'};
+            return { error: 'Invalid message: expected object' };
         }
 
         try {
@@ -116,11 +117,11 @@ export class ReplMessageHandler extends EventEmitter {
                 return await this.engine.processInput(input);
             }
 
-            return {error: `Unknown message type: ${messageType || 'undefined'}`};
+            return { error: `Unknown message type: ${messageType || 'undefined'}` };
         } catch (error) {
-            console.error('Error processing message:', error);
-            this.emit('message.error', {message, error: error.message});
-            return {error: error.message, type: MESSAGE_TYPES.ERROR};
+            Logger.error('Error processing message:', error);
+            this.emit('message.error', { message, error: error.message });
+            return { error: error.message, type: MESSAGE_TYPES.ERROR };
         }
     }
 
@@ -128,17 +129,17 @@ export class ReplMessageHandler extends EventEmitter {
         try {
             const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload;
             if (typeof input !== 'string' || !input.trim()) {
-                return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
+                return { error: 'No input provided', type: MESSAGE_TYPES.ERROR };
             }
 
             const result = await this.engine.processInput(input);
             return {
                 type: MESSAGE_TYPES.AGENT_RESULT,
-                payload: {input, result, success: true, timestamp: Date.now()}
+                payload: { input, result, success: true, timestamp: Date.now() }
             };
         } catch (error) {
-            console.error('Error in agent input handler:', error);
-            return {error: error.message, type: MESSAGE_TYPES.ERROR};
+            Logger.error('Error in agent input handler:', error);
+            return { error: error.message, type: MESSAGE_TYPES.ERROR };
         }
     }
 
@@ -146,17 +147,17 @@ export class ReplMessageHandler extends EventEmitter {
         try {
             const input = message?.payload?.text ?? message?.payload?.input ?? message?.payload ?? message;
             if (typeof input !== 'string' || !input.trim()) {
-                return {error: 'No input provided', type: MESSAGE_TYPES.ERROR};
+                return { error: 'No input provided', type: MESSAGE_TYPES.ERROR };
             }
 
             const result = await this.engine.processInput(input);
             return {
                 type: MESSAGE_TYPES.NARSESE_RESULT,
-                payload: {input, result, success: !!result, timestamp: Date.now()}
+                payload: { input, result, success: !!result, timestamp: Date.now() }
             };
         } catch (error) {
-            console.error('Error in narsese input handler:', error);
-            return {error: error.message, type: MESSAGE_TYPES.ERROR};
+            Logger.error('Error in narsese input handler:', error);
+            return { error: error.message, type: MESSAGE_TYPES.ERROR };
         }
     }
 
@@ -164,7 +165,7 @@ export class ReplMessageHandler extends EventEmitter {
         try {
             const command = message?.type?.split('/')[1];
             if (!command) {
-                return {error: 'No control command specified', type: MESSAGE_TYPES.ERROR};
+                return { error: 'No control command specified', type: MESSAGE_TYPES.ERROR };
             }
 
             const mappedCommand = CMD_MAP[command] || command;
@@ -172,11 +173,11 @@ export class ReplMessageHandler extends EventEmitter {
 
             return {
                 type: MESSAGE_TYPES.CONTROL_RESULT,
-                payload: {command, result, timestamp: Date.now()}
+                payload: { command, result, timestamp: Date.now() }
             };
         } catch (error) {
-            console.error('Error in control command handler:', error);
-            return {error: error.message, type: MESSAGE_TYPES.ERROR};
+            Logger.error('Error in control command handler:', error);
+            return { error: error.message, type: MESSAGE_TYPES.ERROR };
         }
     }
 
@@ -186,18 +187,18 @@ export class ReplMessageHandler extends EventEmitter {
             const args = message?.payload?.args ?? [];
 
             if (!cmd) {
-                return {error: 'No command specified', type: MESSAGE_TYPES.ERROR};
+                return { error: 'No command specified', type: MESSAGE_TYPES.ERROR };
             }
 
             const result = await this._handleCommand(cmd, ...args);
 
             return {
                 type: MESSAGE_TYPES.COMMAND_RESULT,
-                payload: {command: cmd, args, result, timestamp: Date.now()}
+                payload: { command: cmd, args, result, timestamp: Date.now() }
             };
         } catch (error) {
-            console.error('Error in command execute handler:', error);
-            return {error: error.message, type: MESSAGE_TYPES.ERROR};
+            Logger.error('Error in command execute handler:', error);
+            return { error: error.message, type: MESSAGE_TYPES.ERROR };
         }
     }
 
@@ -217,9 +218,9 @@ export class ReplMessageHandler extends EventEmitter {
 
             return `Unknown command: ${cmd}`;
         } catch (error) {
-            console.error(`Error executing command ${cmd}:`, error);
+            Logger.error(`Error executing command ${cmd}:`, error);
             const errorMsg = `❌ Error executing command: ${error.message}`;
-            this.emit('command.error', {command: cmd, args, error: error.message});
+            this.emit('command.error', { command: cmd, args, error: error.message });
             return errorMsg;
         }
     }

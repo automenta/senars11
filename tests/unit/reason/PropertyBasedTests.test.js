@@ -1,7 +1,7 @@
-import {TaskBagPremiseSource} from '../../../core/src/reason/TaskBagPremiseSource.js';
-import {Strategy} from '../../../core/src/reason/Strategy.js';
-import {randomWeightedSelect} from '../../../core/src/reason/utils/randomWeightedSelect.js';
-import {createTestMemory, createTestTask} from '../../support/baseTestUtils.js';
+import { TaskBagPremiseSource } from '../../../core/src/reason/TaskBagPremiseSource.js';
+import { Strategy } from '../../../core/src/reason/Strategy.js';
+import { randomWeightedSelect } from '../../../core/src/reason/utils/randomWeightedSelect.js';
+import { createTestMemory, createTestTask } from '../../support/baseTestUtils.js';
 
 // Helper function to generate random tasks
 function generateRandomTask() {
@@ -28,8 +28,8 @@ describe('Property-Based Testing for Edge Cases', () => {
         test('should handle randomly generated premise streams', async () => {
             // Generate random tasks
             const randomTasks = generateRandomTaskBag(10);
-            const memory = createTestMemory({tasks: randomTasks});
-            const premiseSource = new TaskBagPremiseSource(memory, {priority: true});
+            const memory = createTestMemory({ tasks: randomTasks });
+            const premiseSource = new TaskBagPremiseSource(memory, { priority: true });
 
             // Test that we can sample from random tasks without errors
             const results = [];
@@ -51,7 +51,7 @@ describe('Property-Based Testing for Edge Cases', () => {
 
         test('should handle different sampling strategies with random data', async () => {
             const randomTasks = generateRandomTaskBag(20);
-            const memory = createTestMemory({tasks: randomTasks});
+            const memory = createTestMemory({ tasks: randomTasks });
             const premiseSource = new TaskBagPremiseSource(memory, {
                 priority: true,
                 recency: true,
@@ -96,7 +96,6 @@ describe('Property-Based Testing for Edge Cases', () => {
                 }
             } catch (error) {
                 // If an error occurs, it should be handled gracefully
-                console.warn('Strategy processing error (expected in property testing):', error.message);
             }
 
             // Should have processed at least some pairs without crashing
@@ -109,8 +108,8 @@ describe('Property-Based Testing for Edge Cases', () => {
             // Generate random items and weights
             for (let test = 0; test < 100; test++) {
                 const size = Math.floor(Math.random() * 10) + 1; // 1-10 items
-                const items = Array.from({length: size}, (_, i) => `item${i}`);
-                const weights = Array.from({length: size}, () => Math.random() * 10);
+                const items = Array.from({ length: size }, (_, i) => `item${i}`);
+                const weights = Array.from({ length: size }, () => Math.random() * 10);
 
                 // This should not throw an error for any valid input
                 let selected;
@@ -158,8 +157,8 @@ describe('Property-Based Testing for Edge Cases', () => {
                 createTestTask('task4', 'BELIEF', 0.6, 0.6, -0.5) // Invalid priority < 0
             ];
 
-            const memory = createTestMemory({tasks: malformedTasks});
-            const premiseSource = new TaskBagPremiseSource(memory, {priority: true});
+            const memory = createTestMemory({ tasks: malformedTasks });
+            const premiseSource = new TaskBagPremiseSource(memory, { priority: true });
 
             // Should not crash when processing malformed tasks
             // Test the various sampling methods with malformed data
@@ -183,7 +182,7 @@ describe('Property-Based Testing for Edge Cases', () => {
                 createTestTask('task5', 'BELIEF', 0.5, 0.5, Number.MIN_VALUE)
             ];
 
-            const memory = createTestMemory({tasks: extremeTasks});
+            const memory = createTestMemory({ tasks: extremeTasks });
             const premiseSource = new TaskBagPremiseSource(memory, {
                 priority: true,
                 novelty: true,

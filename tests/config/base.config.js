@@ -28,7 +28,7 @@ const baseConfig = {
             statements: 80,
         },
     },
-    testTimeout: 60000,
+    testTimeout: 10000,
     forceExit: true,
 };
 

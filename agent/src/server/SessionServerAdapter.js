@@ -1,4 +1,5 @@
-import {ReplMessageHandler} from '../messaging/MessageHandler.js';
+import { ReplMessageHandler } from '../messaging/MessageHandler.js';
+import { Logger } from '../../../core/src/util/Logger.js';
 
 export class SessionServerAdapter {
     /**
@@ -61,11 +62,11 @@ export class SessionServerAdapter {
         commandEvents.forEach(cmd => {
             this.agent.on(`command.${cmd}`, (data) => {
                 if (this.websocketServer && typeof this.websocketServer.bufferEvent === 'function') {
-                    this.websocketServer.bufferEvent('command.output', {command: cmd, result: data.result});
+                    this.websocketServer.bufferEvent('command.output', { command: cmd, result: data.result });
                 } else {
                     this._broadcastToAllClients({
                         type: 'command.output',
-                        payload: {command: cmd, result: data.result}
+                        payload: { command: cmd, result: data.result }
                     });
                 }
             });
@@ -81,10 +82,10 @@ export class SessionServerAdapter {
             const result = await this.messageHandler.processMessage(message);
             this._sendToClient(client, result);
         } catch (error) {
-            console.error('Error handling WebSocket message:', error);
+            Logger.error('Error handling WebSocket message:', error);
             this._sendToClient(client, {
                 type: 'error',
-                payload: {error: error.message}
+                payload: { error: error.message }
             });
         }
     }
@@ -100,7 +101,7 @@ export class SessionServerAdapter {
                 try {
                     client.send(serializedMessage);
                 } catch (error) {
-                    console.error('Error broadcasting to client:', error);
+                    Logger.error('Error broadcasting to client:', error);
                 }
             }
         }
@@ -111,12 +112,12 @@ export class SessionServerAdapter {
             try {
                 client.send(JSON.stringify(message));
             } catch (error) {
-                console.error('Error sending to client:', error);
+                Logger.error('Error sending to client:', error);
             }
         } else if (client && typeof client.send === 'function') {
-            console.warn('Client not in OPEN state, readyState:', client.readyState);
+            Logger.warn('Client not in OPEN state, readyState:', client.readyState);
         } else {
-            console.debug('Would send to client (test mode):', message);
+            Logger.debug('Would send to client (test mode):', message);
         }
     }
 
