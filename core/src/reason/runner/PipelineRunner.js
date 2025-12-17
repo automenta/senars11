@@ -1,5 +1,6 @@
-import {Runner} from './Runner.js';
-import {getHeapUsed} from '../../util/common.js';
+import { Runner } from './Runner.js';
+import { getHeapUsed } from '../../util/common.js';
+import { Logger } from '../../util/Logger.js';
 
 export class PipelineRunner extends Runner {
     constructor(reasoner, config = {}) {
@@ -34,7 +35,7 @@ export class PipelineRunner extends Runner {
 
     start() {
         if (this.isRunning) {
-            console.warn('PipelineRunner is already running');
+            Logger.warn('PipelineRunner is already running');
             return;
         }
 

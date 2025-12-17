@@ -1,35 +1,23 @@
-import {jest} from '@jest/globals';
-import {NAR} from '../../../core/src/nar/NAR.js';
+import { jest } from '@jest/globals';
+import { createStreamReasonerNAR } from '../../support/factories.js';
 
-// Set a timeout for all tests in this file to prevent hanging
-jest.setTimeout(30000); // 30 seconds timeout
+jest.setTimeout(30000);
 
 describe('New Reasoner - Stream-based Architecture with Real Components', () => {
     let nar;
 
     beforeEach(async () => {
-        nar = new NAR({
-            reasoning: {
-                useStreamReasoner: true,
-                cpuThrottleInterval: 0,
-                maxDerivationDepth: 5
-            },
-            cycle: {delay: 1}
-        });
-
+        nar = await createStreamReasonerNAR();
         await nar.initialize();
     });
 
     afterEach(async () => {
-        if (nar) {
-            await nar.dispose();
-        }
+        if (nar) await nar.dispose();
     });
 
     test('should initialize correctly with real components', () => {
         expect(nar.streamReasoner).toBeDefined();
         expect(nar.streamReasoner.constructor.name).toBe('Reasoner');
-        // Check that the configured depth is used (might be default 10 if not properly passed)
         expect(nar.streamReasoner.config.maxDerivationDepth).toBeGreaterThanOrEqual(5);
         expect(nar.streamReasoner.config.cpuThrottleInterval).toBe(0);
     });
@@ -55,26 +43,15 @@ describe('New Reasoner - Stream-based Architecture with Real Components', () => 
     });
 
     test('should handle derivation depth limits correctly', async () => {
-        const narLimited = new NAR({
-            reasoning: {
-                useStreamReasoner: true,
-                cpuThrottleInterval: 0,
-                maxDerivationDepth: 1  // Very low limit
-            },
-            cycle: {delay: 1}
-        });
-
+        const narLimited = await createStreamReasonerNAR({ reasoning: { maxDerivationDepth: 1 } });
         await narLimited.initialize();
 
         try {
             await narLimited.input('(M --> N). %0.9;0.9%');
             await narLimited.input('(N --> O). %0.8;0.8%');
 
-            for (let i = 0; i < 3; i++) {
-                await narLimited.step();
-            }
+            for (let i = 0; i < 3; i++) await narLimited.step();
 
-            // Should have tasks but respect depth limits
             const finalTasks = narLimited._focus.getTasks(20);
             expect(finalTasks.length).toBeGreaterThanOrEqual(2);
         } finally {
@@ -99,24 +76,11 @@ describe('New Reasoner - Stream-based Architecture with Real Components', () => 
     });
 
     test('should support start/stop functionality with real components', async () => {
-        // Mock console.warn to prevent test output pollution when starting already running reasoner
-        const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {
-        });
+        expect(typeof nar.streamReasoner.start).toBe('function');
+        expect(typeof nar.streamReasoner.stop).toBe('function');
 
-        try {
-            // Verify that start and stop methods exist
-            expect(typeof nar.streamReasoner.start).toBe('function');
-            expect(typeof nar.streamReasoner.stop).toBe('function');
-
-            // Initially should not be running (when using step-based approach)
-            // Start should work
-            expect(() => nar.streamReasoner.start()).not.toThrow();
-
-            // Stop should work
-            await nar.streamReasoner.stop();
-        } finally {
-            consoleSpy.mockRestore();
-        }
+        expect(() => nar.streamReasoner.start()).not.toThrow();
+        await nar.streamReasoner.stop();
     });
 
     test('should maintain proper reasoning pipeline flow', async () => {

@@ -119,3 +119,12 @@ export const createMockedLMAgent = async (responses = {}, config = {}) => {
 
     return { app, agent, cleanup };
 };
+
+export const createStreamReasonerNAR = async (config = {}) => {
+    const { NAR } = await import('../../core/src/nar/NAR.js');
+    return new NAR({
+        reasoning: { useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5 },
+        cycle: { delay: 1 },
+        ...config
+    });
+};

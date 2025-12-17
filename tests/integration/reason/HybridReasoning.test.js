@@ -49,7 +49,6 @@ describe('Hybrid LM-NAL Reasoning', () => {
     test('should support bidirectional synergy', async () => {
         await agent.input('"Fish live in water".');
 
-        // Verify LM translation created knowledge
         await assertEventuallyTrue(
             () => {
                 const terms = getTerms(agent);
@@ -58,7 +57,6 @@ describe('Hybrid LM-NAL Reasoning', () => {
             { description: 'LM creates knowledge', timeout: 5000 }
         );
 
-        // Question processing (exact matching depends on LM state)
         await agent.input('<fish --> ?x>?');
         const questions = agent.getQuestions();
         expect(questions.length).toBeGreaterThanOrEqual(1);

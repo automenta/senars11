@@ -1,7 +1,8 @@
 /**
  * ClientMessageHandlers - Modular handlers for WebSocket client messages
  */
-import {SUPPORTED_MESSAGE_TYPES} from '@senars/core';
+import { SUPPORTED_MESSAGE_TYPES } from '@senars/core';
+import { Logger } from '../../core/src/util/Logger.js';
 
 export class ClientMessageHandlers {
     constructor(webSocketMonitor) {
@@ -24,14 +25,14 @@ export class ClientMessageHandlers {
                     this._sendToClient(client, result);
                 })
                 .catch(error => {
-                    console.error('Error in ReplMessageHandler:', error);
+                    Logger.error('Error in ReplMessageHandler:', error);
                     this._sendToClient(client, {
                         type: 'error',
                         message: error.message
                     });
                 });
         } else {
-            console.warn('No ReplMessageHandler attached to handle Narsese input');
+            Logger.warn('No ReplMessageHandler attached to handle Narsese input');
             this._sendToClient(client, {
                 type: 'error',
                 message: 'Server not ready to process input'
@@ -60,7 +61,7 @@ export class ClientMessageHandlers {
     }
 
     handlePing(client) {
-        this._sendToClient(client, {type: 'pong', timestamp: Date.now()});
+        this._sendToClient(client, { type: 'pong', timestamp: Date.now() });
     }
 
     handleLog(client, message) {
@@ -98,7 +99,7 @@ export class ClientMessageHandlers {
     _handleClientLog(client, message) {
         // Log the client message to server console for debugging
         const logMessage = `[CLIENT-${client.clientId}] ${message.level.toUpperCase()}: ${message.data.join(' ')}`;
-        console.log(logMessage);
+        Logger.debug(logMessage);
     }
 
     // Handler for requesting client capabilities
@@ -121,12 +122,12 @@ export class ClientMessageHandlers {
     _sendToClient(client, message) {
         // Validate that we have both client and monitor before sending
         if (!client) {
-            console.warn('Attempt to send message to null/undefined client:', message);
+            Logger.warn('Attempt to send message to null/undefined client:', message);
             return;
         }
 
         if (!this.monitor || typeof this.monitor._sendToClient !== 'function') {
-            console.error('Monitor or its _sendToClient method is not available');
+            Logger.error('Monitor or its _sendToClient method is not available');
             return;
         }
 

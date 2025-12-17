@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { createTestAgent } from '../../support/factories.js';
 import { assertEventuallyTrue, getTerms, wait } from '../../support/testHelpers.js';
 
@@ -14,7 +14,6 @@ describe('LM Error Handling', () => {
     });
 
     test('LM timeout → graceful degradation', async () => {
-        const { jest } = await import('@jest/globals');
 
         jest.spyOn(agent.lm, 'generateText').mockImplementation(async () => {
             await wait(10000);
@@ -33,7 +32,6 @@ describe('LM Error Handling', () => {
     });
 
     test('LM error response → fallback behavior', async () => {
-        const { jest } = await import('@jest/globals');
 
         jest.spyOn(agent.lm, 'generateText').mockRejectedValue(new Error('LM service unavailable'));
 
@@ -49,7 +47,6 @@ describe('LM Error Handling', () => {
     });
 
     test('Circuit breaker activation → system continues', async () => {
-        const { jest } = await import('@jest/globals');
 
         let callCount = 0;
         jest.spyOn(agent.lm, 'generateText').mockImplementation(async () => {
@@ -69,7 +66,6 @@ describe('LM Error Handling', () => {
     });
 
     test('Malformed LM output → recovery', async () => {
-        const { jest } = await import('@jest/globals');
 
         jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {
             if (prompt.includes('valid')) return '<valid --> term>.';
@@ -89,7 +85,6 @@ describe('LM Error Handling', () => {
     });
 
     test('LM returns empty response → system continues', async () => {
-        const { jest } = await import('@jest/globals');
 
         jest.spyOn(agent.lm, 'generateText').mockResolvedValue('');
 
@@ -107,7 +102,6 @@ describe('LM Error Handling', () => {
     });
 
     test('Concurrent LM requests → proper handling', async () => {
-        const { jest } = await import('@jest/globals');
 
         let activeRequests = 0;
         let maxConcurrent = 0;

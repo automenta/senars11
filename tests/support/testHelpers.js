@@ -82,3 +82,25 @@ export const withTestAgent = (fn) => async () => {
         await cleanup();
     }
 };
+
+export const withJestMock = async (fn) => {
+    const { jest } = await import('@jest/globals');
+    return fn(jest);
+};
+
+export const mockLMWithResponses = async (agent, responses) =>
+    withJestMock((jest) => {
+        jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {
+            for (const [pattern, response] of Object.entries(responses)) {
+                if (prompt.includes(pattern)) return response;
+            }
+            return '';
+        });
+    });
+
+export const TEST_TIMEOUT = Object.freeze({
+    SHORT: 1000,
+    MEDIUM: 3000,
+    LONG: 8000,
+    EXTRA_LONG: 12000
+});

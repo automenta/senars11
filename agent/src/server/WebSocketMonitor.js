@@ -1,7 +1,8 @@
-import {WebSocketServer} from 'ws';
-import {EventEmitter} from 'events';
-import {ClientMessageHandlers} from './ClientMessageHandlers.js';
-import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '@senars/core';
+import { WebSocketServer } from 'ws';
+import { EventEmitter } from 'events';
+import { ClientMessageHandlers } from './ClientMessageHandlers.js';
+import { DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG } from '@senars/core';
+import { Logger } from '../../core/src/util/Logger.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -100,7 +101,7 @@ class WebSocketMonitor {
                         this.metrics.messagesReceived++;
                         this._handleClientMessage(ws, data);
                     } else {
-                        console.warn(`Rate limit exceeded for client: ${clientId}`);
+                        Logger.warn(`Rate limit exceeded for client: ${clientId}`);
                         this._sendToClient(ws, {
                             type: 'error',
                             message: 'Rate limit exceeded',
@@ -114,19 +115,19 @@ class WebSocketMonitor {
                     this.clientRateLimiters.delete(clientId);
                     this.clientCapabilities.delete(clientId);
                     this.metrics.clientDisconnectionCount++;
-                    this.eventEmitter.emit('clientDisconnected', {clientId, timestamp: Date.now()});
+                    this.eventEmitter.emit('clientDisconnected', { clientId, timestamp: Date.now() });
                 });
 
-                this.eventEmitter.emit('clientConnected', {clientId, timestamp: Date.now()});
+                this.eventEmitter.emit('clientConnected', { clientId, timestamp: Date.now() });
             });
 
             this.server.on('error', (error) => {
-                console.error('WebSocket server error:', error);
+                Logger.error('WebSocket server error:', error);
                 reject(error);
             });
 
             this.server.on('listening', () => {
-                console.log(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
+                Logger.info(`WebSocket monitoring server started on ws://${this.host}:${this.port}${this.path}`);
 
                 this._scheduleBatch();
 
@@ -189,11 +190,11 @@ class WebSocketMonitor {
 
             if (this.server) {
                 this.server.close(() => {
-                    console.log('WebSocket monitoring server stopped');
+                    Logger.info('WebSocket monitoring server stopped');
                     resolve();
                 });
             } else {
-                console.log('WebSocket monitoring server stopped');
+                Logger.info('WebSocket monitoring server stopped');
                 resolve();
             }
         });
@@ -205,7 +206,7 @@ class WebSocketMonitor {
                 client.send(JSON.stringify(message));
             }
         } catch (error) {
-            console.error('Error sending message to client:', error);
+            Logger.error('Error sending message to client:', error);
         }
     }
 
@@ -312,14 +313,14 @@ class WebSocketMonitor {
                     if (result) this._sendToClient(client, result);
                 })
                 .catch(error => {
-                    console.error('Error in ReplMessageHandler routing:', error);
+                    Logger.error('Error in ReplMessageHandler routing:', error);
                     this._sendToClient(client, {
                         type: 'error',
                         message: error.message
                     });
                 });
         } else {
-            console.warn(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}`);
+            Logger.warn(`[WEBSOCKET MONITOR] No handler found for type: ${message.type}`);
             this._sendToClient(client, {
                 type: 'error',
                 message: `Unknown message type: ${message.type}`
@@ -340,19 +341,19 @@ class WebSocketMonitor {
         const errorMsg = isSyntaxError ? 'Invalid JSON format' : 'Error processing message';
         const errorMessage = isSyntaxError ? error.message : error.message;
 
-        console.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
+        Logger.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
 
-        this._sendToClient(client, {type: 'error', message: errorMsg, error: errorMessage});
+        this._sendToClient(client, { type: 'error', message: errorMsg, error: errorMessage });
     }
 
     _sendHandlerError(client, messageType, handlerError) {
-        console.error(`Error in handler for message type ${messageType}:`, handlerError);
+        Logger.error(`Error in handler for message type ${messageType}:`, handlerError);
         this._sendError(client, `Handler error for ${messageType}`, handlerError.message);
         this.metrics.errorCount++;
     }
 
     _sendError(client, message, error = null) {
-        this._sendToClient(client, {type: 'error', message, error});
+        this._sendToClient(client, { type: 'error', message, error });
     }
 
     /**
@@ -422,4 +423,4 @@ class WebSocketMonitor {
     }
 }
 
-export {WebSocketMonitor};
+export { WebSocketMonitor };

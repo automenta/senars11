@@ -1,4 +1,5 @@
-import {ActionTypes} from './ActivityTypes.js';
+import { ActionTypes } from './ActivityTypes.js';
+import { Logger } from '../../../core/src/util/Logger.js';
 
 /**
  * ActionDispatcher handles execution of actions triggered by the UI.
@@ -15,7 +16,7 @@ export class ActionDispatcher {
      * @param {Object} action - The action object {type, id, payload, context}
      */
     async dispatch(action) {
-        console.log(`[ActionDispatcher] Dispatching ${action.type}`, action);
+        Logger.debug(`[ActionDispatcher] Dispatching ${action.type}`, action);
 
         switch (action.type) {
             case ActionTypes.RATE:
@@ -28,18 +29,18 @@ export class ActionDispatcher {
                 return this._handleTrace(action);
 
             default:
-                console.warn(`Unknown action type: ${action.type}`);
-                return {success: false, error: 'Unknown action type'};
+                Logger.warn(`Unknown action type: ${action.type}`);
+                return { success: false, error: 'Unknown action type' };
         }
     }
 
     async _handleRate(action) {
         if (!this.preferenceCollector) {
-            return {success: false, error: 'PreferenceCollector not available'};
+            return { success: false, error: 'PreferenceCollector not available' };
         }
 
-        const {value} = action.payload || {};
-        const {activityId, rawActivity} = action.context || {};
+        const { value } = action.payload || {};
+        const { activityId, rawActivity } = action.context || {};
 
         this.preferenceCollector.addPreference({
             activityId,
@@ -48,18 +49,18 @@ export class ActionDispatcher {
             source: 'ui_action'
         });
 
-        return {success: true, message: 'Rating recorded'};
+        return { success: true, message: 'Rating recorded' };
     }
 
     async _handleInspect(action) {
         // Just log for now, could trigger a "Focus" event in the graph
-        console.log('Inspect requested for:', action.context?.activityId);
-        return {success: true};
+        Logger.debug('Inspect requested for:', action.context?.activityId);
+        return { success: true };
     }
 
     async _handleTrace(action) {
         // Trigger trace generation or enable tracing
         // This might interact with the engine
-        return {success: true, message: 'Trace requested (not implemented)'};
+        return { success: true, message: 'Trace requested (not implemented)' };
     }
 }
