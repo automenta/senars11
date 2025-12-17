@@ -1,6 +1,6 @@
-import {jest} from '@jest/globals';
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {WebSocketMonitor} from '../../../agent/src/server/WebSocketMonitor.js';
+import { jest } from '@jest/globals';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { WebSocketMonitor } from '../../../agent/src/server/WebSocketMonitor.js';
 import WebSocket from 'ws';
 
 // Increase timeout for this suite
@@ -17,7 +17,6 @@ describe('Web UI Simulation Integration Test', () => {
         // Use global.testPort if available, otherwise random
         PORT = global.testPort || 8090 + Math.floor(Math.random() * 100);
         WS_URL = `ws://localhost:${PORT}/ws/monitor`;
-        console.log(`Using port ${PORT}`);
 
         nar = new NAR();
         monitor = new WebSocketMonitor({
@@ -65,7 +64,7 @@ describe('Web UI Simulation Integration Test', () => {
         });
 
         // Subscribe to all events
-        client.send(JSON.stringify({type: 'subscribe', channel: 'all'}));
+        client.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
 
         // Wait a bit for subscription to be processed
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -108,7 +107,7 @@ describe('Web UI Simulation Integration Test', () => {
             }
         });
 
-        client.send(JSON.stringify({type: 'subscribe', channel: 'all'}));
+        client.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
         await new Promise(resolve => setTimeout(resolve, 50));
 
         // Send multiple inputs rapidly

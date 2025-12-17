@@ -1,14 +1,15 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
-import {completeNARIntegrationSuite, flexibleNARIntegrationSuite} from '../../support/commonTestSuites.js';
-import {comprehensiveTestSuites, flexibleAssertions} from '../../support/testOrganizer.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import { completeNARIntegrationSuite, flexibleNARIntegrationSuite } from '../../support/commonTestSuites.js';
+import { comprehensiveTestSuites, flexibleAssertions } from '../../support/testOrganizer.js';
+import { inputAll } from '../../support/testHelpers.js';
 
 describe('NAR Integration Tests', () => {
     let nar;
     const narProvider = () => nar;
 
     beforeAll(async () => {
-        nar = new NAR({debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5}});
+        nar = new NAR({ debug: { enabled: false }, cycle: { delay: 10, maxTasksPerCycle: 5 } });
         if (nar.initialize) await nar.initialize();
     });
 
@@ -21,7 +22,7 @@ describe('NAR Integration Tests', () => {
 
     comprehensiveTestSuites.inputOutputModuleTests('NAR',
         async () => {
-            const instance = new NAR({debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5}});
+            const instance = new NAR({ debug: { enabled: false }, cycle: { delay: 10, maxTasksPerCycle: 5 } });
             if (instance.initialize) await instance.initialize();
             return {
                 process: async (input) => {
@@ -60,7 +61,7 @@ describe('NAR Integration Tests', () => {
         beforeEach(() => new TermFactory());
 
         test('should store tasks in appropriate concepts', async () => {
-            await Promise.all(['(cat --> animal).', '(dog --> animal).', '(cat --> pet).'].map(i => narProvider().input(i)));
+            await inputAll(narProvider(), ['(cat --> animal).', '(dog --> animal).', '(cat --> pet).']);
             const concepts = narProvider().memory.getAllConcepts();
             flexibleAssertions.expectAtLeast(concepts, 3, 'concepts in memory');
 
@@ -72,7 +73,7 @@ describe('NAR Integration Tests', () => {
         });
 
         test('should retrieve beliefs by query term', async () => {
-            await Promise.all(['(cat --> animal).', '(dog --> animal).', '(bird --> animal).'].map(i => narProvider().input(i)));
+            await inputAll(narProvider(), ['(cat --> animal).', '(dog --> animal).', '(bird --> animal).']);
             const beliefs = narProvider().getBeliefs().filter(b => b.term.toString().toLowerCase().includes('cat'));
             flexibleAssertions.expectAtLeast(beliefs, 1, 'beliefs containing "cat"');
             if (beliefs.length > 0) expect(beliefs[0].term.toString()).toContain('cat');
@@ -86,7 +87,7 @@ describe('NAR Integration Tests', () => {
 
     describe('System Statistics', () => {
         test('should provide comprehensive statistics', async () => {
-            await Promise.all(['(cat --> animal).', '(dog --> animal).'].map(i => narProvider().input(i)));
+            await inputAll(narProvider(), ['(cat --> animal).', '(dog --> animal).']);
             await narProvider().step();
             expect(narProvider().getStats()).toMatchObject({
                 memoryStats: expect.anything(),
@@ -96,7 +97,7 @@ describe('NAR Integration Tests', () => {
         });
 
         test('should track memory usage correctly', async () => {
-            await Promise.all(['(cat --> animal).', '(dog --> animal).', '(bird --> animal).'].map(i => narProvider().input(i)));
+            await inputAll(narProvider(), ['(cat --> animal).', '(dog --> animal).', '(bird --> animal).']);
             const stats = narProvider().getStats();
             expect(stats.memoryStats.totalConcepts).toBeGreaterThanOrEqual(1);
             expect(stats.memoryStats.totalTasks).toBeGreaterThanOrEqual(1);

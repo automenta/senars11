@@ -1,4 +1,4 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
 
 describe('NARS Inference Cycle Integration with Computational Operations', () => {
     let nar;
@@ -26,7 +26,6 @@ describe('NARS Inference Cycle Integration with Computational Operations', () =>
             const memoryStats = nar.memory.getDetailedStats();
             expect(memoryStats).toBeDefined();
         } catch (error) {
-            console.error("Error in computational operations test:", error.message);
             throw error;
         }
     });
@@ -40,7 +39,6 @@ describe('NARS Inference Cycle Integration with Computational Operations', () =>
 
             expect(cycleResult).toBeDefined();
         } catch (error) {
-            console.error("Error in equation solving test:", error.message);
             throw error;
         }
     });
@@ -54,7 +52,6 @@ describe('NARS Inference Cycle Integration with Computational Operations', () =>
 
             expect(cycleResult).toBeDefined();
         } catch (error) {
-            console.error("Error in higher-order pattern matching test:", error.message);
             throw error;
         }
     });

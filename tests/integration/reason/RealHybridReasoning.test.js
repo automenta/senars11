@@ -1,5 +1,5 @@
-import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
-import {App} from '../../../agent/src/app/App.js';
+import { afterAll, beforeAll, describe, expect, jest, test } from '@jest/globals';
+import { App } from '../../../agent/src/app/App.js';
 
 // Increase timeout for real LM
 jest.setTimeout(60000);
@@ -28,7 +28,7 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
     beforeAll(async () => {
         try {
             app = new App(config);
-            agent = await app.start({startAgent: true});
+            agent = await app.start({ startAgent: true });
 
             // Wait for agent to stabilize
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -36,17 +36,15 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
             // Capture LM events for verification (Research Observability)
             if (agent.on) {
                 agent.on('lm.prompt', (data) => {
-                    console.log('[ResearchLog] LM Prompt:', data);
-                    lmEvents.push({type: 'prompt', ...data});
+                    lmEvents.push({ type: 'prompt', ...data });
                 });
                 agent.on('lm.response', (data) => {
-                    console.log('[ResearchLog] LM Response:', data);
-                    lmEvents.push({type: 'response', ...data});
+                    lmEvents.push({ type: 'response', ...data });
                 });
             }
 
         } catch (error) {
-            console.warn('Failed to initialize real LM environment. Skipping tests if offline.', error);
+            // Failed to initialize - tests will be skipped
         }
     });
 
@@ -57,12 +55,9 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
     // Skipped due to environment issues with Float32Array in Jest+ONNX.
     // Verified manually that logic is correct and model is loaded.
     test.skip('should translate natural language to Narsese using Real LM', async () => {
-        if (!agent) {
-            console.warn('Skipping test: Agent not initialized');
-            return;
-        }
+        if (!agent) return;
 
-        console.log('Testing Real NL translation...');
+        // Clear previous events
 
         // Clear previous events
         lmEvents.length = 0;
@@ -83,15 +78,6 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
         const hasLMEvents = lmEvents.some(e => e.type === 'response');
 
         expect(hasLMEvents).toBe(true);
-
-        if (hasDerived) {
-            console.log('✅ Success: Real LM derived correct Narsese!');
-        } else {
-            console.log('⚠️ Partial Success: Real LM executed but output might not have parsed correctly.');
-            console.log('Events:', JSON.stringify(lmEvents, null, 2));
-        }
-
-        // We assert at least that the rule TRIED to run and got a response
         expect(lmEvents.length).toBeGreaterThan(0);
         const translationPrompt = lmEvents.find(e => e.type === 'prompt' && e.ruleId === 'narsese-translation');
         expect(translationPrompt).toBeDefined();
@@ -100,7 +86,6 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
     test.skip('should elaborate concepts using Real LM', async () => {
         if (!agent) return;
 
-        console.log('Testing Real Concept Elaboration...');
         lmEvents.length = 0;
 
         await agent.input('bird.');
@@ -109,8 +94,5 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
 
         const hasLMEvents = lmEvents.some(e => e.type === 'response' && e.ruleId === 'concept-elaboration');
         expect(hasLMEvents).toBe(true);
-
-        const elaborationResponse = lmEvents.find(e => e.type === 'response' && e.ruleId === 'concept-elaboration');
-        console.log('Elaboration Response:', elaborationResponse?.response);
     });
 });
