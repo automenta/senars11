@@ -73,10 +73,42 @@ import { TestSuiteFactory, taggedTest } from './support/index.js';
    taggedTest([TestCategorization.Tags.UNIT, TestCategorization.Tags.CORE], 'test name', testFn);
    ```
 
-## Deprecation Notice
+## Test Patterns and Best Practices
 
-Some older test utility files (generalTestSuites.js, commonTestSuites.js, enhancedTestSuites.js) have been deprecated
-and now re-export functionality from the consolidated files. All new tests should use the consolidated utilities.
+### Writing Non-Brittle Tests
+
+**Use Custom Matchers for Flexibility:**
+```javascript
+// ❌ Brittle - exact match
+expect(task.truth.f).toBe(0.90);
+
+// ✅ Flexible - tolerance-based  
+expect(task.truth).toHaveTruthCloseTo({f: 0.90, c: 0.85}, 0.02);
+```
+
+**Use TaskMatch for Complex Matching:**
+```javascript
+const matcher = new TaskMatch('<cat --> animal>')
+    .withMinimumTruth(0.8, 0.7)
+    .withPunctuation('.');
+```
+
+**Use Range Assertions for Probabilistic Behavior:**
+```javascript
+// ❌ Brittle - exact count
+expect(memory.stats.totalConcepts).toBe(10);
+
+// ✅ Flexible - range
+expect(memory.stats.totalConcepts).toBeGreaterThan(8);
+expect(memory.stats.totalConcepts).toBeLessThanOrEqual(10);
+```
+
+### Anti-Patterns to Avoid
+
+- **Hardcoded exact values** for probabilistic systems
+- **Timing dependencies** (use deterministic approaches)
+- **Large test data** in test files (use factories)
+- **Duplicated setup code** (use shared fixtures)
 
 ## Performance Optimizations
 

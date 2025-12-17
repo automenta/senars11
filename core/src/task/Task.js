@@ -21,44 +21,26 @@ const TYPE_TO_PUNCTUATION = Object.freeze({
 const DEFAULT_BUDGET = Object.freeze({ priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10 });
 
 export class Task {
-    constructor({
-        term,
-        punctuation = '.',
-        truth = null,
-        budget = DEFAULT_BUDGET,
-        stamp = null,
-        metadata = null
-    }) {
+    constructor({ term, punctuation = '.', truth = null, budget = DEFAULT_BUDGET, stamp = null, metadata = null }) {
         if (!(term instanceof Term)) throw new Error('Task must be initialized with a valid Term object.');
 
         let finalTerm = term;
         let finalTruth = truth;
 
         // Handle negation: (--, T) -> T with inverted truth
-        if (finalTerm.operator === '--' && finalTerm.components && finalTerm.components.length === 1) {
+        if (finalTerm.operator === '--' && finalTerm.components?.length === 1) {
             finalTerm = finalTerm.components[0];
             if (finalTruth) {
-                // Invert truth: f' = 1 - f, c' = c
-                // Or for NARS: negation of (f, c) is (1-f, c)
-                if (finalTruth instanceof Truth) {
-                    finalTruth = new Truth(1.0 - finalTruth.f, finalTruth.c);
-                } else if (finalTruth.frequency !== undefined) {
-                    finalTruth = {
-                        frequency: 1.0 - finalTruth.frequency,
-                        confidence: finalTruth.confidence
-                    };
-                }
+                const f = finalTruth instanceof Truth ? finalTruth.f : finalTruth.frequency;
+                const c = finalTruth instanceof Truth ? finalTruth.c : finalTruth.confidence;
+                finalTruth = finalTruth instanceof Truth ? new Truth(1.0 - f, c) : { frequency: 1.0 - f, confidence: c };
             }
         }
 
         this.term = finalTerm;
         this.type = PUNCTUATION_TO_TYPE[punctuation] ?? 'BELIEF';
 
-        // Validate truth value based on task type
-        const hasValidTruthForType = this.type === 'QUESTION'
-            ? (finalTruth === null)
-            : (finalTruth !== null);
-
+        const hasValidTruthForType = this.type === 'QUESTION' ? (finalTruth === null) : (finalTruth !== null);
         if (!hasValidTruthForType) {
             const errorMsg = this.type === 'QUESTION'
                 ? 'Questions cannot have truth values'
@@ -99,13 +81,9 @@ export class Task {
     _createTruth(truth) {
         if (truth instanceof Truth) return truth;
         if (!truth) return null;
-
-        // Handle format: {frequency, confidence}
-        if (truth.frequency !== undefined && truth.confidence !== undefined) {
-            return new Truth(truth.frequency, truth.confidence);
-        }
-
-        return null;
+        return truth?.frequency != null && truth?.confidence != null
+            ? new Truth(truth.frequency, truth.confidence)
+            : null;
     }
 
     clone(overrides = {}) {
@@ -113,7 +91,7 @@ export class Task {
             term: this.term,
             punctuation: this.punctuation,
             truth: this.truth,
-            budget: { ...this.budget }, // Shallow copy budget to avoid reference issues
+            budget: { ...this.budget },
             stamp: this.stamp,
             ...overrides,
         });
