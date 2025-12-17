@@ -1,5 +1,5 @@
-import {Layer} from './Layer.js';
-import {Bag} from './Bag.js';
+import { Layer } from './Layer.js';
+import { Bag } from './Bag.js';
 
 export class TermLayer extends Layer {
     constructor(config = {}) {
@@ -21,7 +21,7 @@ export class TermLayer extends Layer {
         const sourceLinks = this._getOrCreateSourceMap(source.name);
         const priority = data.priority ?? 1;
 
-        const linkEntry = this._createLinkEntry(source, target, {...data, priority});
+        const linkEntry = this._createLinkEntry(source, target, { ...data, priority });
         const added = this.linkBag.add(linkEntry);
 
         if (added) {
@@ -109,7 +109,7 @@ export class TermLayer extends Layer {
             source,
             target,
             data,
-            budget: {priority: data.priority},
+            budget: { priority: data.priority },
             toString() {
                 return this.id;
             }
@@ -121,7 +121,7 @@ export class TermLayer extends Layer {
     }
 
     _getSourceTermByName(name) {
-        return {name};
+        return { name };
     }
 
     _getOrCreateSourceMap(sourceName) {
@@ -142,17 +142,8 @@ export class TermLayer extends Layer {
     }
 
     _updatePriorityInBag(linkEntry) {
-        // This remove/add might trigger callback.
-        // remove -> callback -> deletes from map
-        // add -> adds back to bag -> we MUST add back to map!
-
-        // Wait, update logic is tricky now.
-        // If I remove from bag, it triggers callback which removes from map.
-        // Then I add to bag.
-        // But I don't add to map in _updatePriorityInBag!
-
-        // So I need to fix _updatePriorityInBag.
-
+        // Removing from bag triggers the callback which removes from the map.
+        // We must re-add the entry to the map after adding it back to the bag.
         this.linkBag.remove(linkEntry); // triggers map removal
         this.linkBag.add(linkEntry);
 
