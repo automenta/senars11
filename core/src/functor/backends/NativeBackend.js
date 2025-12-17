@@ -753,6 +753,27 @@ export class NativeBackend extends TensorBackend {
         return this._createTensor(Array(size).fill(0).map(() => Math.random()), shape);
     }
 
+    full(shape, value) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(value), shape);
+    }
+
+    empty(shape) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)), shape);
+    }
+
+    arange(start, end, step = 1) {
+        const data = [];
+        for (let i = start; i < end; i += step) data.push(i);
+        return this._createTensor(data, [data.length]);
+    }
+
+    linspace(start, end, steps) {
+        const data = Array(steps);
+        const stepSize = steps > 1 ? (end - start) / (steps - 1) : 0;
+        for (let i = 0; i < steps; i++) data[i] = start + i * stepSize;
+        return this._createTensor(data, [steps]);
+    }
+
     // Factory method - creates tensor with this backend pre-attached
     tensor(data, options = {}) {
         return new Tensor(data, { ...options, backend: this });

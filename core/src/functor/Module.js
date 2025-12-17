@@ -28,6 +28,23 @@ export class Module {
         return [...this._parameters.values(), ...Array.from(this._modules.values()).flatMap(m => m.parameters())];
     }
 
+    namedParameters() {
+        const params = new Map(this._parameters);
+        for (const [k, m] of this._modules) {
+            for (const [pk, pv] of m.namedParameters()) {
+                params.set(`${k}.${pk}`, pv);
+            }
+        }
+        return params;
+    }
+
+    to(backend) {
+        this._parameters.forEach(p => p.backend = backend);
+        this._modules.forEach(m => m.to(backend));
+        if (this.backend) this.backend = backend;
+        return this;
+    }
+
     train(mode = true) {
         this.training = mode;
         this._modules.forEach(m => m.train(mode));

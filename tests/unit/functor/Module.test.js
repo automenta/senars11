@@ -145,7 +145,7 @@ describe('Module System', () => {
             const layer = new Embedding(5, 3);
             const indices = T.tensor([0, 2]);
             const output = layer.forward(indices);
-            const loss = backend.sum(output);
+            const loss = T.sum(output);
 
             loss.backward();
             expect(layer.weight.grad).not.toBeNull();

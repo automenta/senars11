@@ -2,52 +2,36 @@
  * Binary Classification — Classify 2D points with decision boundary
  * Run: node examples/tensor-logic/binary-classification.mjs
  */
-import { Tensor } from '../../core/src/functor/Tensor.js';
 import { T } from '../../core/src/functor/backends/NativeBackend.js';
 import { Linear, Module } from '../../core/src/functor/Module.js';
 import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
 import { AdamOptimizer } from '../../core/src/functor/Optimizer.js';
+import { createDataset, visualizeGrid, visualizeDecisionBoundary, printMetrics } from './utils/training_helpers.mjs';
 
 console.log('=== Tensor Logic: Binary Classification ===\n');
 
-// Generate two clusters
-console.log('--- Generating Data ---');
-const cluster1 = [], cluster2 = [];
-for (let i = 0; i < 25; i++) {
-    cluster1.push([1 + Math.random() * 2, 1 + Math.random() * 2, 0]);
-    cluster2.push([4 + Math.random() * 2, 4 + Math.random() * 2, 1]);
-}
-const data = [...cluster1, ...cluster2].sort(() => Math.random() - 0.5);
+const dataset = createDataset(i => {
+    const label = i < 25 ? 0 : 1;
+    const [cx, cy] = label === 0 ? [2, 2] : [5, 5];
+    return {
+        x: cx + Math.random() * 2,
+        y: cy + Math.random() * 2,
+        label
+    };
+}, 50).sort(() => Math.random() - 0.5);
 
-console.log('Cluster 1 (label=0): centered at (2, 2)');
-console.log('Cluster 2 (label=1): centered at (5, 5)');
-console.log(`Total samples: ${data.length}\n`);
-
-// Visualize
-const width = 40, height = 15;
-const grid = Array(height).fill().map(() => Array(width).fill(' '));
-data.forEach(([x, y, label]) => {
-    const px = Math.floor(x / 7 * (width - 1));
-    const py = height - 1 - Math.floor(y / 7 * (height - 1));
-    if (py >= 0 && py < height && px >= 0 && px < width) {
-        grid[py][px] = label === 0 ? '○' : '●';
-    }
-});
-grid.forEach(row => console.log('│' + row.join('') + '│'));
-console.log('└' + '─'.repeat(width) + '┘');
+console.log('--- Data Distribution ---');
+visualizeGrid(dataset.map(d => ({ x: d.x, y: d.y, label: d.label })));
 console.log('○ = class 0, ● = class 1\n');
 
-// Build classifier
 class Classifier extends Module {
     constructor() {
         super();
-        this.fc1 = this.registerModule('fc1', new Linear(2, 8));
-        this.fc2 = this.registerModule('fc2', new Linear(8, 1));
+        this.fc1 = this.module('fc1', new Linear(2, 8));
+        this.fc2 = this.module('fc2', new Linear(8, 1));
     }
-
     forward(x) {
-        let h = T.relu(this.fc1.forward(x));
-        return T.sigmoid(this.fc2.forward(h));
+        return T.sigmoid(this.fc2.forward(T.relu(this.fc1.forward(x))));
     }
 }
 
@@ -56,68 +40,31 @@ const loss_fn = new LossFunctor(T);
 const optimizer = new AdamOptimizer(0.1);
 
 console.log('--- Training ---');
-console.log('Model: Linear(2→8) → ReLU → Linear(8→1) → Sigmoid\n');
+console.log('Architecture: Linear(2→8) → ReLU → Linear(8→1) → Sigmoid\n');
 
-const epochs = 100;
-for (let epoch = 0; epoch < epochs; epoch++) {
-    let totalLoss = 0;
-    let correct = 0;
+for (let epoch = 0; epoch < 100; epoch++) {
+    let totalLoss = 0, correct = 0;
 
-    data.forEach(([x, y, label]) => {
+    dataset.forEach(({ x, y, label }) => {
         optimizer.zeroGrad(model.parameters());
-
-        const input = new Tensor([[x, y]], { backend: T });
-        const target = new Tensor([[label]], { backend: T });
-
-        const pred = model.forward(input);
-        const loss = loss_fn.binaryCrossEntropy(pred, target);
-        totalLoss += loss.data[0];
-
+        const pred = model.forward(T.tensor([[x, y]]));
+        const loss = loss_fn.binaryCrossEntropy(pred, T.tensor([[label]]));
+        totalLoss += loss.item();
         if (Math.round(pred.data[0]) === label) correct++;
-
         loss.backward();
         optimizer.step(model.parameters());
     });
 
-    if (epoch % 25 === 0 || epoch === epochs - 1) {
-        const acc = (correct / data.length * 100).toFixed(1);
-        console.log(`Epoch ${String(epoch).padStart(3)}: loss=${(totalLoss / data.length).toFixed(4)}, acc=${acc}%`);
+    if (epoch % 25 === 0 || epoch === 99) {
+        printMetrics(epoch, { loss: totalLoss / dataset.length, acc: `${(correct / dataset.length * 100).toFixed(1)}%` });
     }
 }
 
-// Final accuracy
-let finalCorrect = 0;
-data.forEach(([x, y, label]) => {
-    const pred = model.forward(new Tensor([[x, y]], { backend: T }));
-    if (Math.round(pred.data[0]) === label) finalCorrect++;
-});
-console.log(`\nFinal Accuracy: ${(finalCorrect / data.length * 100).toFixed(1)}%`);
-
-// Visualize decision boundary
 console.log('\n--- Decision Boundary ---');
-const grid2 = Array(height).fill().map(() => Array(width).fill(' '));
-
-// Fill with predictions
-for (let py = 0; py < height; py++) {
-    for (let px = 0; px < width; px++) {
-        const x = px / (width - 1) * 7;
-        const y = (height - 1 - py) / (height - 1) * 7;
-        const pred = model.forward(new Tensor([[x, y]], { backend: T }));
-        grid2[py][px] = pred.data[0] > 0.5 ? '▓' : '░';
-    }
-}
-
-// Overlay data points
-data.forEach(([x, y, label]) => {
-    const px = Math.floor(x / 7 * (width - 1));
-    const py = height - 1 - Math.floor(y / 7 * (height - 1));
-    if (py >= 0 && py < height && px >= 0 && px < width) {
-        grid2[py][px] = label === 0 ? '○' : '●';
-    }
-});
-
-grid2.forEach(row => console.log('│' + row.join('') + '│'));
-console.log('└' + '─'.repeat(width) + '┘');
+visualizeDecisionBoundary(model, 40, 15, [0, 7], dataset.map(d => ({ x: d.x, y: d.y, label: d.label })));
 console.log('░ = predict 0, ▓ = predict 1');
 
+const finalCorrect = dataset.reduce((acc, { x, y, label }) =>
+    acc + (Math.round(model.forward(T.tensor([[x, y]])).data[0]) === label ? 1 : 0), 0);
+console.log(`\nFinal Accuracy: ${(finalCorrect / dataset.length * 100).toFixed(1)}%`);
 console.log('\n✅ Binary classification demo complete!');

@@ -118,6 +118,19 @@ export class Tensor {
         return `Tensor(shape=${this.shape.join('x')}, data=${JSON.stringify(this.toArray())})`;
     }
 
+    item() {
+        if (this.size !== 1) throw new Error(`item() requires scalar tensor, got shape ${this.shape}`);
+        return this.data[0];
+    }
+
+    numpy() { return this.toArray(); }
+
+    clone() {
+        const cloned = new Tensor([...this.data], { requiresGrad: this.requiresGrad, backend: this.backend });
+        cloned.shape = [...this.shape];
+        return cloned;
+    }
+
     get(indices) {
         if (!Array.isArray(indices)) indices = [indices];
         return this.data[this._coordsToIndex(indices, this._computeStrides(this.shape))];
