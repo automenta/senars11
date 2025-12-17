@@ -1,5 +1,6 @@
 import { Tensor } from '../../core/src/functor/Tensor.js';
 import { T } from '../../core/src/functor/backends/NativeBackend.js';
+import { SGDOptimizer, AdamOptimizer, RMSpropOptimizer } from '../../core/src/functor/Optimizer.js';
 
 console.log('=== Tensor Logic: Optimizer Race ===\n');
 console.log('Goal: Minimize f(x) = (x - 3)² starting from x = 10\n');
@@ -17,7 +18,7 @@ const maxIters = 20;
 
 // Track trajectories
 const trajectories = optimizers.map(({ name, opt }) => {
-    const x = new Tensor([10], { requiresGrad: true, backend });
+    const x = new Tensor([10], { requiresGrad: true, backend: T });
     const params = new Map([['x', x]]);
     const history = [x.data[0]];
 

@@ -13,7 +13,7 @@ function numericalGradient(fn, x, idx = 0) {
 }
 
 function checkGradient(name, fn, xVal) {
-    const x = new Tensor(xVal, { requiresGrad: true, backend });
+    const x = new Tensor(xVal, { requiresGrad: true, backend: T });
     const y = fn(x);
     y.backward();
 
@@ -62,7 +62,7 @@ console.log(`Results: ${passed}/${tests.length} gradient checks passed`);
 
 // Matrix operations
 console.log('\n--- Matrix Gradient Check ---');
-const A = new Tensor([[1, 2], [3, 4]], { requiresGrad: true, backend });
+const A = new Tensor([[1, 2], [3, 4]], { requiresGrad: true, backend: T });
 const B = new Tensor([[5, 6], [7, 8]], { backend: T });
 
 const C = T.matmul(A, B);

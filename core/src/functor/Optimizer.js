@@ -3,6 +3,9 @@ export class Optimizer {
         this.learningRate = learningRate;
     }
 
+    get lr() { return this.learningRate; }
+    set lr(value) { this.learningRate = value; }
+
     step(parameters) { throw new Error('Optimizer.step() must be implemented by subclass'); }
 
     zeroGrad(parameters) {

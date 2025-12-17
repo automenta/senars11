@@ -118,6 +118,22 @@ export class NativeBackend extends TensorBackend {
             result = this._createTensor(a.data.map(val => op(val, b.data[0])), [...a.shape]);
         } else if (a.size === 1) {
             result = this._createTensor(b.data.map(val => op(a.data[0], val)), [...b.shape]);
+        } else if (a.ndim === 2 && b.ndim === 2 && b.shape[0] === 1 && a.shape[1] === b.shape[1]) {
+            // [m,n] + [1,n] -> broadcast row across all rows
+            const n = a.shape[1];
+            result = this._createTensor(a.data.map((val, i) => op(val, b.data[i % n])), [...a.shape]);
+        } else if (a.ndim === 2 && b.ndim === 2 && a.shape[0] === 1 && a.shape[1] === b.shape[1]) {
+            // [1,n] + [m,n] -> broadcast row across all rows (reversed)
+            const n = b.shape[1];
+            result = this._createTensor(b.data.map((val, i) => op(a.data[i % n], val)), [...b.shape]);
+        } else if (a.ndim === 2 && b.ndim === 1 && a.shape[1] === b.shape[0]) {
+            // [m,n] + [n] -> broadcast 1D across rows 
+            const n = b.shape[0];
+            result = this._createTensor(a.data.map((val, i) => op(val, b.data[i % n])), [...a.shape]);
+        } else if (a.ndim === 1 && b.ndim === 2 && a.shape[0] === b.shape[1]) {
+            // [n] + [m,n] -> broadcast 1D across rows (reversed)
+            const n = a.shape[0];
+            result = this._createTensor(b.data.map((val, i) => op(a.data[i % n], val)), [...b.shape]);
         } else {
             throw new Error(`Broadcasting not supported for shapes ${a.shape} and ${b.shape}`);
         }
@@ -347,6 +363,14 @@ export class NativeBackend extends TensorBackend {
                 }
                 backend._accumulateGrad(a, backend._createTensor(gradA, a.shape.slice()));
             });
+    }
+
+    std(a, axis = null) {
+        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        const m = this.mean(a, axis);
+        const centered = this.sub(a, axis === null ? m.data[0] : m);
+        const variance = this.mean(this.mul(centered, centered), axis);
+        return this.sqrt(variance);
     }
 
     max(a, axis = null) {
