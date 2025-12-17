@@ -1,99 +1,17 @@
-import {NAR} from '../../core/src/nar/NAR.js';
-import {Task} from '../../core/src/task/Task.js';
-import {Truth} from '../../core/src/Truth.js';
-import {TermFactory} from '../../core/src/term/TermFactory.js';
-import {ReasonerBuilder} from '../../core/src/reason/ReasonerBuilder.js';
-import {createTask, createTerm, createTruth, TEST_CONSTANTS} from './factories.js';
+import { NAR } from '../../core/src/nar/NAR.js';
+import { Task } from '../../core/src/task/Task.js';
+import { Truth } from '../../core/src/Truth.js';
+import { TermFactory } from '../../core/src/term/TermFactory.js';
+import { ReasonerBuilder } from '../../core/src/reason/ReasonerBuilder.js';
+import { createTask, createTerm, createTruth, TEST_CONSTANTS } from './factories.js';
 
 const termFactory = new TermFactory();
 
-/**
- * Base test setup for NAR integration tests
- * Provides consistent initialization and cleanup for NAR instances
- */
-export class NARTestSetup {
-    constructor(config = {}) {
-        this.config = {
-            debug: {enabled: false},
-            cycle: {delay: 10, maxTasksPerCycle: 5},
-            ...config
-        };
-        this.nar = null;
-    }
+import { NARTestSetup, ComponentTestSetup } from './setup.js';
+import { truthAssertions } from './assertions.js';
 
-    async setup() {
-        this.nar = new NAR(this.config);
-        return this.nar;
-    }
-
-    async teardown() {
-        if (this.nar && typeof this.nar.dispose === 'function') {
-            await this.nar.dispose();
-        } else if (this.nar && this.nar.isRunning) {
-            this.nar.stop();
-        }
-        this.nar = null;
-    }
-
-    async reset() {
-        if (this.nar) {
-            this.nar.reset();
-        }
-    }
-}
-
-/**
- * Base test setup for component unit tests
- * Provides common initialization and utility methods
- */
-export class ComponentTestSetup {
-    constructor(ComponentClass, defaultConfig = {}) {
-        this.ComponentClass = ComponentClass;
-        this.defaultConfig = defaultConfig;
-        this.instance = null;
-    }
-
-    setup(config = {}) {
-        const finalConfig = {...this.defaultConfig, ...config};
-        this.instance = new this.ComponentClass(finalConfig);
-        return this.instance;
-    }
-
-    async teardown() {
-        if (this.instance && typeof this.instance.dispose === 'function') {
-            await this.instance.dispose();
-        }
-        this.instance = null;
-    }
-}
-
-/**
- * Common test assertions for truth values
- */
-export const truthAssertions = {
-    /**
-     * Asserts that a truth value matches expected values within epsilon
-     */
-    expectTruthCloseTo: (actual, expectedF, expectedC, precision = 5) => {
-        expect(actual.f).toBeCloseTo(expectedF, precision);
-        expect(actual.c).toBeCloseTo(expectedC, precision);
-    },
-
-    /**
-     * Asserts truth equality using the equals method
-     */
-    expectTruthEquals: (actual, expected) => {
-        expect(actual.equals(expected)).toBe(true);
-    },
-
-    /**
-     * Asserts truth expectation value
-     */
-    expectTruthExpectation: (truth, expectedValue, precision = 5) => {
-        const calculated = truth.f * (truth.c - 0.5) + 0.5;
-        expect(calculated).toBeCloseTo(expectedValue, precision);
-    }
-};
+export { NARTestSetup, ComponentTestSetup };
+export { truthAssertions };
 
 /**
  * Common test assertions for tasks
@@ -433,20 +351,20 @@ export const testData = {
      * Gets common truth values for testing
      */
     getCommonTruthValues: () => [
-        {f: 1.0, c: 1.0, name: 'certain'},
-        {f: 0.9, c: 0.9, name: 'high'},
-        {f: 0.5, c: 0.8, name: 'medium'},
-        {f: 0.1, c: 0.2, name: 'low'},
-        {f: 0.0, c: 0.1, name: 'false'}
+        { f: 1.0, c: 1.0, name: 'certain' },
+        { f: 0.9, c: 0.9, name: 'high' },
+        { f: 0.5, c: 0.8, name: 'medium' },
+        { f: 0.1, c: 0.2, name: 'low' },
+        { f: 0.0, c: 0.1, name: 'false' }
     ],
 
     /**
      * Gets common budget values for testing
      */
     getCommonBudgetValues: () => [
-        {priority: 0.9, durability: 0.8, quality: 0.7, name: 'high'},
-        {priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium'},
-        {priority: 0.1, durability: 0.2, quality: 0.3, name: 'low'}
+        { priority: 0.9, durability: 0.8, quality: 0.7, name: 'high' },
+        { priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium' },
+        { priority: 0.1, durability: 0.2, quality: 0.3, name: 'low' }
     ],
 
     /**
@@ -703,7 +621,7 @@ export const comprehensiveTestSuites = {
                 }
             });
 
-            test.each(testCases)('$description', async ({input, expectedOutput, validator}) => {
+            test.each(testCases)('$description', async ({ input, expectedOutput, validator }) => {
                 const result = await module.process(input);
                 if (validator) {
                     expect(validator(result, expectedOutput)).toBe(true);
@@ -943,7 +861,7 @@ export const optimizedTestPatterns = {
             const truth = config.truth || (punctuation !== '?' ? optimizedTestPatterns.testDataGenerator.getTruth(0.9, 0.8) : null);
             const budget = config.budget || TEST_CONSTANTS.BUDGET.DEFAULT;
 
-            const task = new Task({term, punctuation, truth, budget});
+            const task = new Task({ term, punctuation, truth, budget });
             return task;
         }
     }
@@ -997,11 +915,11 @@ export const setupMemoryTest = () => {
 
 // Exporting common test data
 export const COMMON_TRUTH_VALUES = [
-    {f: 1.0, c: 1.0, name: 'certain'},
-    {f: 0.9, c: 0.9, name: 'high'},
-    {f: 0.5, c: 0.8, name: 'medium'},
-    {f: 0.1, c: 0.2, name: 'low'},
-    {f: 0.0, c: 0.1, name: 'false'}
+    { f: 1.0, c: 1.0, name: 'certain' },
+    { f: 0.9, c: 0.9, name: 'high' },
+    { f: 0.5, c: 0.8, name: 'medium' },
+    { f: 0.1, c: 0.2, name: 'low' },
+    { f: 0.0, c: 0.1, name: 'false' }
 ];
 
 /**
@@ -1121,7 +1039,7 @@ export function createTestReasoner(options = {}) {
     };
     const termFactory = options.termFactory || {};
 
-    const context = {focus, memory, termFactory};
+    const context = { focus, memory, termFactory };
 
     const builder = new ReasonerBuilder(context)
         .withConfig(options.config || {});
@@ -1135,7 +1053,7 @@ export function createTestReasoner(options = {}) {
 }
 
 export const COMMON_BUDGET_VALUES = [
-    {priority: 0.9, durability: 0.8, quality: 0.7, name: 'high'},
-    {priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium'},
-    {priority: 0.1, durability: 0.2, quality: 0.3, name: 'low'}
+    { priority: 0.9, durability: 0.8, quality: 0.7, name: 'high' },
+    { priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium' },
+    { priority: 0.1, durability: 0.2, quality: 0.3, name: 'low' }
 ];

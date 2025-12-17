@@ -19,3 +19,4 @@ export * from './util/Plugin.js';
 export * from './util/ErrorHandler.js';
 export * from './config/constants.js';
 export * from './lm/LMProviderBuilder.js';
+export * from './lm/LMConfig.js';

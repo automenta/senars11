@@ -22,4 +22,8 @@ describe('NAR - Basic Functionality', () => {
         expect(beliefs.length).toBeGreaterThan(0);
         expect(check(beliefs[0].term.toString())).toBe(true);
     });
+
+    test('handle invalid input', async () => {
+        await expect(nar.input('invalid input')).rejects.toThrow(/Input processing failed/);
+    });
 });

@@ -1,5 +1,5 @@
 import { Agent } from './Agent.js';
-import { LMProviderBuilder, PluginManager } from '@senars/core';
+import { LMConfig, PluginManager } from '@senars/core';
 import { FunctorProvider } from './FunctorProvider.js';
 
 export class AgentBuilder {
@@ -180,7 +180,19 @@ export class AgentBuilder {
 
     _setupLM(agent) {
         if (!agent.lm) return;
-        const lmProvider = LMProviderBuilder.create(agent, this.config.lm);
+
+        const config = new LMConfig();
+        const providerType = this.config.lm.provider || 'ollama';
+
+        config.setProvider(providerType, {
+            ...this.config.lm,
+            type: providerType
+        });
+        config.setActive(providerType);
+
+        const lmProvider = config.createActiveProvider();
+        LMConfig.bindTools(lmProvider, agent);
+
         if (lmProvider) {
             agent.lm?.registerProvider(lmProvider.id, lmProvider);
             agent.lm?.providers.setDefault(lmProvider.id);
