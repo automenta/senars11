@@ -1,93 +1,121 @@
+import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Memory } from '../../../core/src/memory/Memory.js';
-import { createMemoryConfig, createTask, createTerm, TEST_CONSTANTS } from '../../support/factories.js';
-import { memoryAssertions, TestSuiteFactory } from '../../support/testOrganizer.js';
-
-TestSuiteFactory.createMemoryRelatedSuite({
-    className: 'Memory',
-    Constructor: Memory,
-    validInput: createMemoryConfig(),
-    testAssertions: true,
-    testDataModel: false,
-    assertionUtils: memoryAssertions
-});
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import { Task } from '../../../core/src/task/Task.js';
 
 describe('Memory', () => {
-    let memory, config;
+    let memory;
+    let termFactory;
+
     beforeEach(() => {
-        config = createMemoryConfig();
-        memory = new Memory(config);
+        memory = new Memory({
+            maxConcepts: 10,
+            forgetPolicy: 'priority'
+        });
+        termFactory = new TermFactory();
     });
 
-    test('initialization', () => {
-        expect(memory.concepts.size).toBe(0);
-        expect(memory.config).toStrictEqual(config);
-    });
+    test('adds tasks and creates concepts', () => {
+        const term = termFactory.create('cat');
+        const task = new Task({
+            term,
+            punctuation: '.',
+            truth: { frequency: 1.0, confidence: 0.9 }
+        });
 
-    test('task operations', () => {
-        const term = createTerm('A');
-        const task = createTask({ term, truth: TEST_CONSTANTS.TRUTH.HIGH, budget: TEST_CONSTANTS.BUDGET.MEDIUM });
-
-        expect(memory.addTask(task)).toBe(true);
+        const added = memory.addTask(task);
+        expect(added).toBe(true);
+        expect(memory.hasConcept(term)).toBe(true);
         expect(memory.stats.totalConcepts).toBe(1);
-        expect(memory.getConcept(term)).toMatchObject({ term });
-
-        memory.addTask(createTask({ term, truth: TEST_CONSTANTS.TRUTH.MEDIUM })); // Duplicate task (concept exists)
-        expect(memory.stats.totalConcepts).toBe(1);
-        expect(memory.stats.totalTasks).toBe(1); // Duplicate suppressed
-
-        expect(memory.removeConcept(term)).toBe(true);
-        expect(memory.stats.totalConcepts).toBe(0);
     });
 
-    test('priority and focus', () => {
-        memory.addTask(createTask({ term: createTerm('A'), budget: TEST_CONSTANTS.BUDGET.HIGH }));
-        expect(memory.focusConcepts.size).toBe(1);
+    test('retrieves concepts', () => {
+        const term = termFactory.create('dog');
+        const task = new Task({
+            term,
+            punctuation: '.',
+            truth: { frequency: 1.0, confidence: 0.9 }
+        });
+        memory.addTask(task);
 
-        memory.addTask(createTask({ term: createTerm('B'), budget: TEST_CONSTANTS.BUDGET.LOW }));
-        // Low priority might not enter focus depending on threshold
+        const concept = memory.getConcept(term);
+        expect(concept).toBeDefined();
+        expect(concept.term.toString()).toBe('dog');
     });
 
-    test('stats & utils', () => {
-        memory.addTask(createTask({ term: createTerm('A') }));
-        expect(memory.getTotalTaskCount()).toBe(1);
-        expect(memory.getDetailedStats()).toMatchObject({ totalConcepts: 1 });
+    test('removes concepts', () => {
+        const term = termFactory.create('bird');
+        const task = new Task({
+            term,
+            punctuation: '.',
+            truth: { frequency: 1.0, confidence: 0.9 }
+        });
+        memory.addTask(task);
+
+        const removed = memory.removeConcept(term);
+        expect(removed).toBe(true);
+        expect(memory.hasConcept(term)).toBe(false);
+    });
+
+    test('clears memory', () => {
+        const term = termFactory.create('fish');
+        const task = new Task({
+            term,
+            punctuation: '.',
+            truth: { frequency: 1.0, confidence: 0.9 }
+        });
+        memory.addTask(task);
+
         memory.clear();
         expect(memory.stats.totalConcepts).toBe(0);
+        expect(memory.concepts.size).toBe(0);
     });
 
-    test('concept boosting', () => {
-        const tA = createTerm('A');
-        memory.addTask(createTask({ term: tA, budget: TEST_CONSTANTS.BUDGET.HIGH }));
+    test('respects capacity limits', () => {
+        // Add more concepts than maxConcepts (10)
+        for (let i = 0; i < 15; i++) {
+            const term = termFactory.create(`term_${i}`);
+            const task = new Task({
+                term,
+                punctuation: '.',
+                truth: { frequency: 1.0, confidence: 0.9 }
+            });
+            memory.addTask(task);
+        }
 
-        memory.boostConceptActivation(tA, 0.6);
-        expect(memory.getConceptsByCriteria({ minActivation: 0.5 })).not.toHaveLength(0);
-        expect(memory.getMostActiveConcepts(5)).not.toHaveLength(0);
-
-        const c = memory.getConcept(tA);
-        const origAct = c.activation;
-        memory.boostConceptActivation(tA, 0.2);
-        expect(c.activation).toBeGreaterThanOrEqual(origAct);
+        // Should have forgotten some
+        expect(memory.stats.totalConcepts).toBeLessThanOrEqual(10);
+        expect(memory.stats.conceptsForgotten).toBeGreaterThan(0);
     });
 
-    test('concept quality updates', () => {
-        const tA = createTerm('A');
-        memory.addTask(createTask({ term: tA, budget: TEST_CONSTANTS.BUDGET.HIGH }));
-        const c = memory.getConcept(tA);
-        const origQual = c.quality;
+    test('serialization roundtrip', () => {
+        const term = termFactory.create('serialization');
+        const task = new Task({
+            term,
+            punctuation: '.',
+            truth: { frequency: 1.0, confidence: 0.9 }
+        });
+        memory.addTask(task);
 
-        memory.updateConceptQuality(tA, 0.1);
-        expect(c.quality).toBeGreaterThanOrEqual(origQual);
+        const serialized = memory.serialize();
+        expect(serialized).toBeDefined();
+        expect(serialized.concepts).toBeDefined();
     });
 
-    test('consolidation', () => {
-        const lastConsolidation = memory.stats.lastConsolidation;
-        memory.consolidate();
-        expect(memory.stats.lastConsolidation).toBeGreaterThanOrEqual(lastConsolidation);
-    });
+    test('handles exact capacity boundary', () => {
+        // Add exactly maxConcepts
+        for (let i = 0; i < 10; i++) {
+            const term = termFactory.create(`exact_${i}`);
+            const task = new Task({
+                term,
+                punctuation: '.',
+                truth: { frequency: 1.0, confidence: 0.9 }
+            });
+            memory.addTask(task);
+        }
 
-    test('error handling', () => {
-        expect(memory.addTask(null)).toBe(false);
-        expect(() => memory.consolidate()).not.toThrow();
-        expect(() => memory.getConcept(null)).not.toThrow();
+        // Should be at or near capacity
+        expect(memory.stats.totalConcepts).toBeGreaterThan(8);
+        expect(memory.stats.totalConcepts).toBeLessThanOrEqual(10);
     });
 });

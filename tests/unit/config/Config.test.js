@@ -110,4 +110,25 @@ describe('Component', () => {
         expect(comp.config.b.c).toBe(2);
         // expect(comp.config.b.d).toBe(3); // Uncomment if deep merge supports this
     });
+
+    test('prevents double initialization', async () => {
+        await component.initialize();
+        await component.initialize(); // Should be idempotent
+        expect(component.initialized).toBe(true);
+    });
+});
+
+describe('Config Validation', () => {
+    test('handles empty command line args', () => {
+        const config = Config.parse([]);
+        expect(config).toBeDefined();
+        expect(config.lm).toBeDefined();
+    });
+
+    test('handles invalid port numbers', () => {
+        const args = ['--port', 'invalid'];
+        const config = Config.parse(args);
+        // Should use default or handle gracefully
+        expect(config).toBeDefined();
+    });
 });

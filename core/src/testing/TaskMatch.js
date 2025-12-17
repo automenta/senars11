@@ -44,6 +44,34 @@ export class TaskMatch {
         return this;
     }
 
+    /**
+     * Add range-based truth matching
+     * @param {number} minFreq - Minimum frequency
+     * @param {number} maxFreq - Maximum frequency
+     * @param {number} minConf - Minimum confidence
+     * @param {number} maxConf - Maximum confidence
+     * @returns {TaskMatch} - Returns this for method chaining
+     */
+    withTruthRange(minFreq, maxFreq, minConf, maxConf) {
+        this.minFreq = minFreq;
+        this.maxFreq = maxFreq;
+        this.minConf = minConf;
+        this.maxConf = maxConf;
+        return this;
+    }
+
+    /**
+     * Cleaner API for minimum truth values
+     * @param {number} minFrequency - Minimum frequency value
+     * @param {number} minConfidence - Minimum confidence value
+     * @returns {TaskMatch} - Returns this for method chaining
+     */
+    withMinimumTruth(minFrequency, minConfidence) {
+        this.minFreq = minFrequency;
+        this.minConf = minConfidence;
+        return this;
+    }
+
     async matches(task) {
         // Check term match
         if (this.termFilter && !await this._checkTermMatch(task)) {
