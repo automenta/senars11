@@ -1,9 +1,11 @@
+import { describe, test, expect, beforeEach } from '@jest/globals';
 import { ProviderRegistry } from '../../../core/src/lm/ProviderRegistry.js';
 import { DummyProvider } from '../../../core/src/lm/DummyProvider.js';
 
 describe('ProviderRegistry', () => {
     let registry;
-    beforeEach(() => { registry = new ProviderRegistry(); });
+
+    beforeEach(() => registry = new ProviderRegistry());
 
     test('initialization', () => {
         expect(registry.size).toBe(0);

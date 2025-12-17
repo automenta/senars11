@@ -4,38 +4,27 @@ import { DummyProvider } from '../../../core/src/lm/DummyProvider.js';
 describe('DummyProvider', () => {
     let provider;
 
-    beforeEach(() => {
-        provider = new DummyProvider();
-    });
+    beforeEach(() => provider = new DummyProvider());
 
-    test('initializes correctly', () => {
-        expect(provider.id).toBe('dummy');
-    });
+    test('initializes correctly', () => expect(provider.id).toBe('dummy'));
 
     test('generates text', async () => {
-        const prompt = 'Hello';
-        const result = await provider.generateText(prompt);
+        const result = await provider.generateText('Hello');
         expect(result).toBeDefined();
         expect(typeof result).toBe('string');
         expect(result.length).toBeGreaterThan(0);
     });
 
     test('streams text', async () => {
-        const prompt = 'Hello';
-        const stream = provider.streamText(prompt);
         let fullText = '';
-
-        for await (const chunk of stream) {
+        for await (const chunk of provider.streamText('Hello')) {
             fullText += chunk;
         }
-
         expect(fullText.length).toBeGreaterThan(0);
     });
 
     test('handles tools (mock)', async () => {
-        // DummyProvider might not implement tool logic deeply, but should not crash
-        const tools = [{ name: 'test_tool', description: 'test' }];
-        provider = new DummyProvider({ tools });
+        provider = new DummyProvider({ tools: [{ name: 'test_tool', description: 'test' }] });
         const result = await provider.generateText('Use test_tool');
         expect(result).toBeDefined();
     });
