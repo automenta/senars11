@@ -6,9 +6,8 @@
  * Abstract, Modularized, Parameterized with Terse syntax, Few comments: rely on self-documenting code
  */
 
-import {FlexibleTestPatterns, ParameterizedTestPatterns, StandardTestSuites} from './consolidatedTestSuites.js';
-import {flexibleAssertions, memoryAssertions, taskAssertions, truthAssertions} from './baseTestUtils.js';
-import {T} from './enhancedTestSuites.js';
+import { FlexibleTestPatterns, ParameterizedTestPatterns, StandardTestSuites } from './consolidatedTestSuites.js';
+import { flexibleAssertions, memoryAssertions, taskAssertions, truthAssertions } from './baseTestUtils.js';
 
 /**
  * Factory function to create comprehensive test suites for different types of classes
@@ -41,7 +40,7 @@ export const TestSuiteFactory = {
         // Run additional custom tests if provided
         if (additionalTests.length > 0) {
             describe(`${className} - Additional Tests`, () => {
-                additionalTests.forEach(({name, testFn}) => {
+                additionalTests.forEach(({ name, testFn }) => {
                     test(name, testFn);
                 });
             });
@@ -68,7 +67,7 @@ export const TestSuiteFactory = {
         // Run additional custom tests if provided
         if (additionalTests.length > 0) {
             describe(`${className} - Additional Task Tests`, () => {
-                additionalTests.forEach(({name, testFn}) => {
+                additionalTests.forEach(({ name, testFn }) => {
                     test(name, testFn);
                 });
             });
@@ -95,7 +94,7 @@ export const TestSuiteFactory = {
         // Run additional custom tests if provided
         if (additionalTests.length > 0) {
             describe(`${className} - Additional Truth Tests`, () => {
-                additionalTests.forEach(({name, testFn}) => {
+                additionalTests.forEach(({ name, testFn }) => {
                     test(name, testFn);
                 });
             });
@@ -124,7 +123,7 @@ export const TestSuiteFactory = {
         // Run additional custom tests if provided
         if (additionalTests.length > 0) {
             describe(`${className} - Additional Memory Tests`, () => {
-                additionalTests.forEach(({name, testFn}) => {
+                additionalTests.forEach(({ name, testFn }) => {
                     test(name, testFn);
                 });
             });
@@ -157,7 +156,7 @@ export const TestSuiteFactory = {
         } = config;
 
         describe(`${className} - Agile-Ready Tests`, () => {
-            testOperations.forEach(({name, operation, expected}) => {
+            testOperations.forEach(({ name, operation, expected }) => {
                 FlexibleTestPatterns.retryableTest(
                     name,
                     () => operation(),
@@ -210,7 +209,7 @@ export const TestSuiteFactory = {
             // Run additional custom tests if provided
             if (additionalTests.length > 0) {
                 describe(`${className} - Additional Integration Tests`, () => {
-                    additionalTests.forEach(({name, testFn}) => {
+                    additionalTests.forEach(({ name, testFn }) => {
                         test(name, testFn);
                     });
                 });
@@ -229,7 +228,7 @@ export const TestSuiteFactory = {
         } = config;
 
         describe(`${className} Performance Benchmarks`, () => {
-            benchmarkTests.forEach(({name, testFn}) => {
+            benchmarkTests.forEach(({ name, testFn }) => {
                 test(name, async () => {
                     const startTime = Date.now();
                     await testFn();
@@ -257,12 +256,7 @@ export const TestSuiteFactory = {
         }
     },
 
-    /**
-     * Create a combined suite using the T shorthand from enhancedTestSuites
-     */
-    createShorthandSuite: (type, ...args) => {
-        return T.suite(type, ...args);
-    }
+
 };
 
 // Export for convenience

@@ -16,9 +16,7 @@ import * as flexibleUtils from './flexibleTestUtils.js';
 import * as templateFactory from './TestTemplateFactory.js';
 import * as categorizationUtils from './testCategorization.js';
 import * as errorHandlingUtils from './testErrorHandling.js';
-import * as commonUtils from './commonTestSuites.js';
-import * as generalUtils from './generalTestSuites.js';
-import * as enhancedUtils from './enhancedTestSuites.js';
+import * as agileUtils from './agileRobustnessUtils.js';
 
 /**
  * Consolidated test utilities organized by functionality
@@ -62,11 +60,9 @@ const TestOrganizer = {
 
     // Comprehensive test suites
     suites: {
-        ...commonUtils,
-        ...generalUtils,
-        ...consolidatedSuites, // Include the new consolidated test suites
-        ...enhancedUtils,     // Include the enhanced test suites
-        factory: testSuiteFactory, // Include the test suite factory
+        ...consolidatedSuites,
+        ...agileUtils,
+        factory: testSuiteFactory,
         comprehensive: baseUtils.comprehensiveTestSuites
     },
 
@@ -131,7 +127,7 @@ export const {
 } = TestOrganizer;
 
 // Also export the original for backward compatibility
-export {TestOrganizer};
+export { TestOrganizer };
 
 // Export everything individually for backward compatibility
 // Note: Be careful of conflicts when using star exports
@@ -139,10 +135,7 @@ export {TestOrganizer};
 export * from './baseTestUtils.js';
 export * from './narTestSetup.js';
 export * from './factories.js';
-export * from './commonTestSuites.js';
-export * from './generalTestSuites.js';
 export * from './consolidatedTestSuites.js';
-export * from './enhancedTestSuites.js';
 export * from './agileRobustnessUtils.js';
 export * from './testSuiteFactory.js';
 
@@ -155,7 +148,7 @@ export {
     parameterizedTestUtils,
     default as flexibleTestUtils
 } from './flexibleTestUtils.js';
-export {TestTemplateFactory, default as testTemplateFactory} from './TestTemplateFactory.js';
+export { TestTemplateFactory, default as testTemplateFactory } from './TestTemplateFactory.js';
 export {
     TestCategorization,
     taggedTest,
@@ -183,22 +176,22 @@ export class FluentTestAPI {
     }
 
     withData(data) {
-        this.testData = {...this.testData, ...data};
+        this.testData = { ...this.testData, ...data };
         return this;
     }
 
     given(description, setupFn) {
-        this.steps.push({type: 'given', description, fn: setupFn});
+        this.steps.push({ type: 'given', description, fn: setupFn });
         return this;
     }
 
     when(description, actionFn) {
-        this.steps.push({type: 'when', description, fn: actionFn});
+        this.steps.push({ type: 'when', description, fn: actionFn });
         return this;
     }
 
     then(description, assertionFn) {
-        this.steps.push({type: 'then', description, fn: assertionFn});
+        this.steps.push({ type: 'then', description, fn: assertionFn });
         return this;
     }
 
@@ -217,7 +210,7 @@ export class FluentTestAPI {
 export class TestEnvironment {
     constructor(config = {}) {
         this.config = {
-            nar: {debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5}},
+            nar: { debug: { enabled: false }, cycle: { delay: 10, maxTasksPerCycle: 5 } },
             ...config
         };
         this.resources = new Map();
