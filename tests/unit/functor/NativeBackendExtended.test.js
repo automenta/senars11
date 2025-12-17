@@ -223,7 +223,7 @@ describe('NativeBackend Extended Ops', () => {
 
     describe('initialization', () => {
         test('randn produces normal distribution', () => {
-            const t = backend.randn([1000]);
+            const t = backend.randn([10000]);
             const mean = t.data.reduce((a, b) => a + b) / t.size;
             const variance = t.data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / t.size;
 

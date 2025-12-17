@@ -1,29 +1,16 @@
-import {Knowing} from '../../../agent/src/know/Knowing.js';
-import {Knowledge} from '../../../agent/src/know/Knowledge.js';
+import { Knowing } from '../../../agent/src/know/Knowing.js';
+import { Knowledge } from '../../../agent/src/know/Knowledge.js';
 
 class SimpleTestKnowledge extends Knowledge {
-    async toTasks() {
-        return this.data?.tasks || [];
-    }
-
-    async getItems() {
-        return this.data?.items || [];
-    }
-
-    async getSummary() {
-        return {data: this.data};
-    }
-
-    async createRelationships() {
-        return this.data?.relationships || [];
-    }
+    async toTasks() { return this.data?.tasks || []; }
+    async getItems() { return this.data?.items || []; }
+    async getSummary() { return { data: this.data }; }
+    async createRelationships() { return this.data?.relationships || []; }
 }
 
 describe('Knowing System', () => {
     let knowing;
-    beforeEach(() => {
-        knowing = new Knowing();
-    });
+    beforeEach(() => { knowing = new Knowing(); });
 
     test('initialization', () => {
         expect(knowing.getStats()).toMatchObject({
@@ -32,12 +19,12 @@ describe('Knowing System', () => {
     });
 
     test('add knowledge', async () => {
-        await knowing.addKnowledge(new SimpleTestKnowledge({tasks: ['<test --> value>. %1.00;0.90%']}));
+        await knowing.addKnowledge(new SimpleTestKnowledge({ tasks: ['<test --> value>. %1.00;0.90%'] }));
         expect(knowing.getStats().totalKnowledgeItems).toBe(1);
     });
 
     test('query and find', async () => {
-        await knowing.addKnowledge(new SimpleTestKnowledge({type: 'test'}));
+        await knowing.addKnowledge(new SimpleTestKnowledge({ type: 'test' }));
         expect(knowing.query(k => k instanceof SimpleTestKnowledge)).toHaveLength(1);
         expect(knowing.findByType('SimpleTestKnowledge')).toHaveLength(1);
     });
@@ -53,7 +40,7 @@ describe('Knowing System', () => {
     });
 
     test('clear', async () => {
-        await knowing.addKnowledge(new SimpleTestKnowledge({items: [1]}));
+        await knowing.addKnowledge(new SimpleTestKnowledge({ items: [1] }));
         knowing.clear();
         expect(knowing.getStats().totalKnowledgeItems).toBe(0);
     });
