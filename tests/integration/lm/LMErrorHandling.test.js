@@ -10,6 +10,9 @@ describe('LM Error Handling', () => {
     });
 
     afterEach(async () => {
+        if (agent && typeof agent.destroy === 'function') {
+            await agent.destroy();
+        }
         if (cleanup) await cleanup();
     });
 

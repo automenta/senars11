@@ -1,4 +1,4 @@
-import {BaseProvider} from './BaseProvider.js';
+import { BaseProvider } from './BaseProvider.js';
 
 let pipelinePromise = null;
 const importPipeline = () => {
@@ -21,7 +21,7 @@ export class TransformersJSProvider extends BaseProvider {
     async _initialize() {
         if (this.pipeline) return;
         const pipeline = await importPipeline();
-        this.pipeline = await pipeline(this.task, this.modelName, {device: this.device});
+        this.pipeline = await pipeline(this.task, this.modelName, { device: this.device });
     }
 
     async generateText(prompt, options = {}) {
@@ -100,7 +100,7 @@ export class TransformersJSProvider extends BaseProvider {
     }
 
     async* _streamPipeline(prompt, options) {
-        const {maxTokens, temperature, ...restOptions} = options;
+        const { maxTokens, temperature, ...restOptions } = options;
         const temp = temperature ?? 0.7;
 
         let resolvePromise, rejectPromise;
@@ -114,7 +114,7 @@ export class TransformersJSProvider extends BaseProvider {
         let fullOutput = '';
 
         const callback_function = (beams) => {
-            const decodedText = this.pipeline.tokenizer.decode(beams[0].output_token_ids, {skip_special_tokens: true});
+            const decodedText = this.pipeline.tokenizer.decode(beams[0].output_token_ids, { skip_special_tokens: true });
             if (decodedText.length > fullOutput.length && decodedText.startsWith(fullOutput)) {
                 const newText = decodedText.substring(fullOutput.length);
                 outputQueue.push(newText);
@@ -143,5 +143,12 @@ export class TransformersJSProvider extends BaseProvider {
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
+    }
+    async destroy() {
+        // Clear pipeline reference to allow GC
+        this.pipeline = null;
+        // Note: The underlying pipeline from transformers.js might not have an explicit destroy method
+        // but clearing the reference helps.
+        // Also ensure any pending streams are stopped (though generator logic handles this via loop conditions)
     }
 }

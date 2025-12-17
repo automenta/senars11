@@ -1,7 +1,7 @@
-import {z} from 'zod';
-import {CYCLE, MEMORY, PERFORMANCE, SYSTEM} from './constants.js';
+import { z } from 'zod';
+import { CYCLE, MEMORY, PERFORMANCE, SYSTEM } from './constants.js';
 
-const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG = {
     system: {
         port: SYSTEM.DEFAULT_PORT,
         host: SYSTEM.DEFAULT_HOST,
@@ -96,7 +96,7 @@ export class SystemConfig {
     }
 
     _deepMerge(target, source) {
-        const result = {...target};
+        const result = { ...target };
         for (const [key, value] of Object.entries(source)) {
             const isObject = (obj) => obj && typeof obj === 'object' && !Array.isArray(obj);
 
