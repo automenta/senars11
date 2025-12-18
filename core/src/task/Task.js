@@ -27,13 +27,11 @@ export class Task {
         let finalTerm = term;
         let finalTruth = truth;
 
-        // Handle negation: (--, T) -> T with inverted truth
         if (finalTerm.operator === '--' && finalTerm.components?.length === 1) {
             finalTerm = finalTerm.components[0];
             if (finalTruth) {
-                const f = finalTruth instanceof Truth ? finalTruth.f : finalTruth.frequency;
-                const c = finalTruth instanceof Truth ? finalTruth.c : finalTruth.confidence;
-                finalTruth = finalTruth instanceof Truth ? new Truth(1.0 - f, c) : { frequency: 1.0 - f, confidence: c };
+                const truth = this._createTruth(finalTruth);
+                finalTruth = truth ? new Truth(1.0 - truth.f, truth.c) : null;
             }
         }
 
@@ -97,25 +95,22 @@ export class Task {
         });
     }
 
-    isBelief = () => this.type === 'BELIEF';
+    isBelief() { return this.type === 'BELIEF'; }
 
-    isGoal = () => this.type === 'GOAL';
+    isGoal() { return this.type === 'GOAL'; }
 
-    isQuestion = () => this.type === 'QUESTION';
+    isQuestion() { return this.type === 'QUESTION'; }
 
     equals(other) {
         if (!(other instanceof Task) || this.type !== other.type) return false;
 
-        // Check term equality first (early exit if terms don't match)
         if (this.term !== other.term && !this.term.equals(other.term)) return false;
 
         const thisHasTruth = this.truth !== null;
         const otherHasTruth = other.truth !== null;
 
-        // Check truth existence first (early exit if truth existence differs)
         if (thisHasTruth !== otherHasTruth) return false;
 
-        // If both have truth, check truth equality
         if (thisHasTruth && otherHasTruth && !this.truth.equals(other.truth)) return false;
 
         return true;

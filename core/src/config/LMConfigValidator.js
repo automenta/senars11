@@ -14,20 +14,17 @@ export const validateLMConfig = (config) => {
 
     const errors = [];
 
-    // Provider validation
     if (!config.provider) {
         errors.push('provider is required');
     } else if (!VALID_PROVIDERS.includes(config.provider)) {
         errors.push(`Unknown provider: ${config.provider}. Valid providers: ${VALID_PROVIDERS.join(', ')}`);
     } else {
-        // Provider-specific validation using mapping
         const requirements = PROVIDER_REQUIREMENTS[config.provider];
         requirements.requiredFields.forEach(field => {
             if (!config[field]) errors.push(`${field} is required for ${config.provider}`);
         });
     }
 
-    // Temperature validation (only if provided)
     if (config.temperature != null && (config.temperature < 0 || config.temperature > 1)) {
         errors.push('temperature must be between 0 and 1');
     }
