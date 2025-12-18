@@ -122,13 +122,22 @@ export class TransformersJSProvider extends BaseProvider {
             fullOutput = decodedText;
         };
 
-        this.pipeline(prompt, {
+        const resultPromise = this.pipeline(prompt, {
             max_new_tokens: maxTokens ?? 256,
             temperature: temp,
             do_sample: temp > 0,
             callback_function,
             ...restOptions
-        }).then(() => {
+        });
+
+        resultPromise.then((output) => {
+            // If streaming didn't capture anything but we have output, enqueue it
+            if (fullOutput.length === 0 && Array.isArray(output) && output[0]?.generated_text) {
+                const generated = output[0].generated_text;
+                // Remove prompt if included (common in text-generation task)
+                const cleanText = generated.startsWith(prompt) ? generated.slice(prompt.length) : generated;
+                if (cleanText) outputQueue.push(cleanText);
+            }
             processing = false;
             resolvePromise();
         }).catch(err => {

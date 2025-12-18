@@ -5,7 +5,7 @@
  * Demonstrates hybrid intelligence with LM and NARS integration
  */
 
-import {App} from '@senars/agent';
+import { App } from '@senars/agent';
 
 async function runAdvancedAgentDemo() {
     console.log('🤖🎨 SeNARS Advanced Agent REPL Demo with Ollama Integration\n');
@@ -19,8 +19,8 @@ async function runAdvancedAgentDemo() {
         const app = new App({
             lm: {
                 enabled: true,
-                provider: 'ollama',
-                modelName: process.env.OLLAMA_MODEL || 'llama3',
+                provider: process.env.LM_PROVIDER || 'ollama',
+                modelName: process.env.LM_MODEL || process.env.OLLAMA_MODEL || 'llama3',
                 baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
                 temperature: 0.7
             }
@@ -114,13 +114,13 @@ async function runGoalPlanningDemo(agent) {
     console.log('\n┌─ DEMONSTRATION: Goal Setting & Planning ─────────────┐');
 
     // Set an agent goal
-    await runCommand(agent, 'goal', 'learn quantum physics');
+    await runCommand(agent, 'goal', 'learn_quantum_physics');
 
     // Generate a plan to achieve the goal
     await runCommand(agent, 'plan', 'How to learn quantum physics fundamentals in 3 months');
 
     // Set a more specific goal
-    await runCommand(agent, 'goal', '<understand quantum entanglement --> important>. %1.00;0.80% !');
+    await runCommand(agent, 'goal', '<understand_quantum_entanglement --> important>. %1.00;0.80% !');
 
     // Query for goals
     await runCommand(agent, 'goal', 'list');
@@ -167,7 +167,15 @@ async function runCommand(agent, cmd, ...args) {
     try {
         const result = await agent.executeCommand(cmd, ...args);
         console.log(`💬 Command: /${cmd} ${args.join(' ')}`);
-        console.log(`✅ Result: ${typeof result === 'string' ? result.substring(0, 100) : JSON.stringify(result)}${result.length > 100 ? '...' : ''}\n`);
+
+        // Format output based on content type
+        if (typeof result === 'string') {
+            console.log('✅ Result:');
+            console.log(result.trim().split('\n').map(line => `   ${line}`).join('\n'));
+        } else {
+            console.log(`✅ Result: ${JSON.stringify(result, null, 2)}`);
+        }
+        console.log('');
         return result;
     } catch (error) {
         console.log(`💬 Command: /${cmd} ${args.join(' ')}`);

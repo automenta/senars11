@@ -7,13 +7,13 @@
  * - RuleExecutor: StreamRuleExecutor
  */
 
-import {NAR} from '../src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 import {
     RuleExecutor as StreamRuleExecutor,
     RuleProcessor as StreamRuleProcessor,
     Strategy,
     TaskBagPremiseSource
-} from '../src/reason/index.js';
+} from '../../core/src/reason/index.js';
 
 async function componentsDemo() {
     console.log('🔄 Stream Reasoner Components Demo');

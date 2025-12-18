@@ -1,50 +1,52 @@
 /**
- * NAL-only Reasoning Demonstration: Syllogisms
- * Demonstrates classic syllogistic reasoning: All men are mortal. Socrates is a man. Therefore, Socrates is mortal.
- * Updated to show both traditional and new stream-based reasoner approaches.
+ * NAL-only Reasoning Demonstration: Causal Reasoning
+ * Demonstrates basic causal reasoning patterns in NAL with both traditional and new stream-based reasoners
  */
 
-import {NAR} from '../src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 
-async function syllogismDemo() {
-    console.log('=== NAL-only Syllogistic Reasoning Demo ===\n');
+async function traditionalCausalDemo() {
+    console.log('=== Traditional NAL-only Causal Reasoning Demo ===\n');
 
-    console.log('🧪 Testing with Traditional Cycle-Based Reasoner:');
     // Initialize NAR with traditional cycle-based reasoner (default)
-    const traditionalConfig = {
+    const config = {
         lm: {enabled: false},
         reasoning: {
             useStreamReasoner: false  // Use traditional cycle-based reasoner
         }
     };
 
-    const traditionalNar = new NAR(traditionalConfig);
-    await traditionalNar.initialize();
+    const nar = new NAR(config);
+    await nar.initialize();
 
-    console.log('Input: All men are mortal');
-    await traditionalNar.input('(man --> mortal). %1.0;0.9%');
+    console.log('Input: If it rains, the ground gets wet');
+    await nar.input('((&/, (rains =/> #1), (?1 --> [raining])) =/> (ground --> [wet])). %0.9;0.8%');
 
-    console.log('Input: Socrates is a man');
-    await traditionalNar.input('(Socrates --> man). %1.0;0.8%');
+    console.log('Input: It is raining now');
+    await nar.input('(rains =/> [raining]). %1.0;0.9%');
 
     console.log('\nRunning reasoning cycles...\n');
-    await traditionalNar.runCycles(10);
+    await nar.runCycles(10);
 
-    // Check for derived belief that Socrates is mortal
-    const traditionalBeliefs = traditionalNar.getBeliefs();
+    // Check for derived beliefs
+    const beliefs = nar.getBeliefs();
     console.log('Beliefs after traditional reasoning:');
-    traditionalBeliefs.forEach((task, index) => {
+    beliefs.forEach((task, index) => {
         console.log(`${index + 1}. ${task.term.name} ${task.truth ? task.truth.toString() : ''} [Priority: ${task.budget?.priority?.toFixed(2) || 'N/A'}]`);
     });
 
-    console.log(`\nTotal reasoning cycles completed: ${traditionalNar.cycleCount}`);
-    console.log(`Total concepts in memory: ${traditionalNar.memory.getAllConcepts().length}`);
+    console.log(`\nTotal reasoning cycles completed: ${nar.cycleCount}`);
+    console.log(`Total concepts in memory: ${nar.memory.getAllConcepts().length}`);
 
+    return nar;
+}
+
+async function streamCausalDemo() {
     console.log('\n' + '='.repeat(70));
-    console.log('\n🧪 Testing with New Stream-Based Reasoner:');
+    console.log('=== Stream-Based Causal Reasoning Demo ===\n');
 
     // Initialize NAR with new stream-based reasoner
-    const streamConfig = {
+    const config = {
         lm: {enabled: false},
         reasoning: {
             useStreamReasoner: true,  // Enable new stream-based reasoner
@@ -53,23 +55,23 @@ async function syllogismDemo() {
         }
     };
 
-    const streamNar = new NAR(streamConfig);
-    await streamNar.initialize();
+    const nar = new NAR(config);
+    await nar.initialize();
 
-    console.log('Input: All men are mortal');
-    await streamNar.input('(man --> mortal). %1.0;0.9%');
+    console.log('Input: If it rains, the ground gets wet');
+    await nar.input('((&/, (rains =/> #1), (?1 --> [raining])) =/> (ground --> [wet])). %0.9;0.8%');
 
-    console.log('Input: Socrates is a man');
-    await streamNar.input('(Socrates --> man). %1.0;0.8%');
+    console.log('Input: It is raining now');
+    await nar.input('(rains =/> [raining]). %1.0;0.9%');
 
     console.log('\nStarting stream reasoning...\n');
 
     // Start the stream reasoner
-    streamNar.start();
+    nar.start();
 
     // Run a few manual steps to ensure reasoning occurs
     for (let i = 0; i < 20; i++) {
-        await streamNar.step();
+        await nar.step();
         await new Promise(resolve => setTimeout(resolve, 50)); // Small delay to allow processing
     }
 
@@ -77,17 +79,17 @@ async function syllogismDemo() {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Stop the stream reasoner
-    streamNar.stop();
+    nar.stop();
 
     // Check for derived beliefs
-    const streamBeliefs = streamNar.getBeliefs();
+    const beliefs = nar.getBeliefs();
     console.log('Beliefs after stream reasoning:');
-    streamBeliefs.forEach((task, index) => {
+    beliefs.forEach((task, index) => {
         console.log(`${index + 1}. ${task.term.name} ${task.truth ? task.truth.toString() : ''} [Priority: ${task.budget?.priority?.toFixed(2) || 'N/A'}]`);
     });
 
     // Get specific stats for stream reasoner
-    const stats = streamNar.getStats();
+    const stats = nar.getStats();
     console.log(`\nStream reasoner derivations: ${stats.cycleCount}`);
     console.log(`Total concepts in memory: ${stats.memoryStats.conceptCount}`);
 
@@ -98,13 +100,24 @@ async function syllogismDemo() {
         console.log(`  Throughput: ${(stats.streamReasonerStats.throughput || 0).toFixed(2)}/sec`);
     }
 
-    console.log('\n🎯 Demonstrations completed! Both reasoner types should derive similar conclusions.');
+    return nar;
+}
+
+async function runCausalComparison() {
+    console.log('🚀 Causal Reasoning: Traditional vs Stream-Based Comparison\n');
+
+    // Run traditional demo
+    await traditionalCausalDemo();
+
+    // Run stream demo
+    await streamCausalDemo();
+
+    console.log('\n🎯 Causal reasoning comparison completed!');
 }
 
 // Run the demo
 if (import.meta.url === `file://${process.argv[1]}`) {
-    syllogismDemo().catch(console.error);
+    runCausalComparison().catch(console.error);
 }
 
-export default syllogismDemo;
-
+export {traditionalCausalDemo, streamCausalDemo, runCausalComparison};

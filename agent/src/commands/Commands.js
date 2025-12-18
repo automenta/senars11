@@ -2,11 +2,11 @@
  * Standardized Command Interface and Implementations
  */
 
-import {handleError} from '../../../core/src/util/ErrorHandler.js';
-import {fileURLToPath} from 'url';
-import {basename, dirname, join, resolve} from 'path';
-import {promises as fs} from 'fs';
-import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
+import { handleError } from '../../../core/src/util/ErrorHandler.js';
+import { fileURLToPath } from 'url';
+import { basename, dirname, join, resolve } from 'path';
+import { promises as fs } from 'fs';
+import { FormattingUtils } from '../../../core/src/util/FormattingUtils.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = resolve(__dirname, '../../../examples');
@@ -139,7 +139,8 @@ export class PlanCommand extends AgentCommand {
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: plan <description>';
         if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(`Generate a step-by-step plan to achieve: "${args.join(' ')}"`, {temperature: 0.7});
+        console.log(`[PlanCommand] Generating plan for: "${args.join(' ')}"`);
+        const response = await agent.lm.generateText(`Generate a step-by-step plan to achieve: "${args.join(' ')}"`, { temperature: 0.7 });
         return `📋 Generated Plan:\n${response}`;
     }
 }
@@ -152,7 +153,8 @@ export class ThinkCommand extends AgentCommand {
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: think <topic>';
         if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(`Reflect on: "${args.join(' ')}"`, {temperature: 0.8});
+        console.log(`[ThinkCommand] Thinking about: "${args.join(' ')}"`);
+        const response = await agent.lm.generateText(`Reflect on: "${args.join(' ')}"`, { temperature: 0.8 });
         return `💭 Reflection:\n${response}`;
     }
 }
@@ -165,7 +167,8 @@ export class ReasonCommand extends AgentCommand {
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: reason <statement>';
         if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(`Reason about: "${args.join(' ')}"`, {temperature: 0.3});
+        console.log(`[ReasonCommand] Reasoning about: "${args.join(' ')}"`);
+        const response = await agent.lm.generateText(`Reason about: "${args.join(' ')}"`, { temperature: 0.3 });
         return `🧠 Reasoning Result:\n${response}`;
     }
 }
@@ -178,7 +181,8 @@ export class LMCommand extends AgentCommand {
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: lm <prompt>';
         if (!agent.lm) return '❌ No Language Model enabled.';
-        const response = await agent.lm.generateText(args.join(' '), {temperature: 0.7});
+        console.log(`[LMCommand] Prompting: "${args.join(' ')}"`);
+        const response = await agent.lm.generateText(args.join(' '), { temperature: 0.7 });
         return `🤖 LM Response:\n${response}`;
     }
 }
@@ -566,7 +570,7 @@ export class TasksCommand extends AgentCommand {
                 const task = item.task;
                 // We add a temporary property for display source, carefully not to mutate original if it matters
                 // but formatTask probably won't show it. We'll prepend it in output.
-                return {task, source: 'Input'};
+                return { task, source: 'Input' };
             }));
         }
 
@@ -580,7 +584,7 @@ export class TasksCommand extends AgentCommand {
         }
 
         if (focus && focus.getTasks) {
-            tasks.push(...focus.getTasks(50).map(t => ({task: t, source: 'Focus'})));
+            tasks.push(...focus.getTasks(50).map(t => ({ task: t, source: 'Focus' })));
         }
 
         // Filter by term if provided

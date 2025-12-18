@@ -1,4 +1,4 @@
-import {ReplEngine} from '../src/repl/ReplEngine.js';
+import {ReplEngine} from '../../core/src/repl/ReplEngine.js';
 
 // Create a simple test to verify the new unified REPL functionality
 const engine = new ReplEngine();

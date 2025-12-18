@@ -41,7 +41,10 @@
 | **Unifier** | `core/src/term/Unifier.js` | — | ✅ |
 | **RuleCompiler** | `core/src/reason/rules/compiler/` | — | ✅ |
 | **All 10 Strategies** | `core/src/reason/strategy/` | [README](file:///home/me/senars10/core/src/reason/strategy/README.md) | ✅ |
-| **EmbeddingLayer** | `core/src/lm/EmbeddingLayer.js` | — | ✅ |
+| **LM Integration** | Multiple files | — | ✅ |
+| - All 16 LM Rules | `core/src/reason/rules/lm/` | — | ✅ |
+| - **NARS-GPT** | `NarsGPTStrategy.js`, rules | [NARSGPT.md](file:///home/me/senars10/core/src/reason/strategy/NARSGPT.md) | ✅ |
+| - EmbeddingLayer | `core/src/lm/EmbeddingLayer.js` | — | ✅ |
 | **MCP Server** | `agent/src/mcp/` | [README](file:///home/me/senars10/agent/src/mcp/README.md) | ✅ |
 | **Demo System** | `agent/src/demo/` | [README](file:///home/me/senars10/agent/src/demo/README.md) | ✅ |
 | **RLFP Framework** | `agent/src/rlfp/` | [README](file:///home/me/senars10/agent/src/rlfp/README.md) | Skeleton |

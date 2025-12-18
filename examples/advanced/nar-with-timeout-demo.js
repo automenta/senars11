@@ -1,4 +1,4 @@
-import {NAR} from '../src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 
 async function test() {
     const nar = new NAR();

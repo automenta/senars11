@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {App} from '@senars/agent';
+import { App } from '@senars/agent';
 
 // Set environment variable to suppress ONNX runtime warnings
 process.env.ORT_LOG_LEVEL = '3';
@@ -34,7 +34,7 @@ async function demonstrateTransformersJS() {
 
     try {
         console.log('🚀 Starting SeNARS with Transformers.js LM...');
-        const agent = await app.start({startAgent: true});
+        const agent = await app.start({ startAgent: true });
 
         console.log('✅ SeNARS started successfully with Transformers.js integration!\n');
 
@@ -44,9 +44,16 @@ async function demonstrateTransformersJS() {
         console.log(`   - Default Provider: ${agent.lm.providers.defaultProviderId}`);
         console.log(`   - LM Enabled: ${agent.lm.config.enabled || true}\n`);
 
-        console.log('🎯 Example Usage:');
-        console.log('   You can now run the REPL with Transformers.js using:');
-        console.log('   npm run repl -- --provider transformers --model Xenova/LaMini-Flan-T5-248M\n');
+        console.log('🧪 Running Inference Test...');
+        const prompt = "Translate English to French: Hello, how are you?";
+        console.log(`   Input: "${prompt}"`);
+
+        try {
+            const response = await agent.lm.generateText(prompt);
+            console.log(`   Output: "${response}"\n`);
+        } catch (e) {
+            console.log(`   Error during inference: ${e.message}\n`);
+        }
 
         console.log('💡 Benefits of Transformers.js Integration:');
         console.log('   - Zero-configuration compact LM option');
