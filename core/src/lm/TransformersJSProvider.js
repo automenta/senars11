@@ -20,8 +20,42 @@ export class TransformersJSProvider extends BaseProvider {
 
     async _initialize() {
         if (this.pipeline) return;
-        const pipeline = await importPipeline();
-        this.pipeline = await pipeline(this.task, this.modelName, { device: this.device });
+
+        const startTime = Date.now();
+        this._emitEvent('lm:model-load-start', { modelName: this.modelName, task: this.task });
+
+        try {
+            const pipeline = await importPipeline();
+            const loadModelPromise = pipeline(this.task, this.modelName, { device: this.device });
+
+            this.pipeline = await this._withTimeout(
+                loadModelPromise,
+                this.loadTimeout,
+                `Model loading (${this.modelName})`
+            );
+
+            const elapsed = Date.now() - startTime;
+            this._emitEvent('lm:model-load-complete', {
+                modelName: this.modelName,
+                task: this.task,
+                elapsedMs: elapsed
+            });
+            this._emitDebug('Model loaded successfully', { modelName: this.modelName, elapsedMs: elapsed });
+        } catch (error) {
+            const elapsed = Date.now() - startTime;
+
+            if (error.message.includes('timed out')) {
+                this._emitEvent('lm:model-load-timeout', {
+                    modelName: this.modelName,
+                    task: this.task,
+                    timeoutMs: this.loadTimeout,
+                    elapsedMs: elapsed
+                });
+            }
+
+            this.pipeline = null; // Cleanup on failure
+            throw error;
+        }
     }
 
     async generateText(prompt, options = {}) {
@@ -131,8 +165,7 @@ export class TransformersJSProvider extends BaseProvider {
         });
 
         resultPromise.then((output) => {
-            // Debug logging for pipeline output
-            console.log('[TransformersDebug] Pipeline output:', JSON.stringify(output, null, 2));
+            this._emitDebug('Pipeline output', { output });
 
             // If streaming didn't capture anything but we have output, enqueue it
             if (fullOutput.length === 0 && Array.isArray(output) && output[0]?.generated_text) {
