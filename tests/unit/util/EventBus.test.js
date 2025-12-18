@@ -1,5 +1,5 @@
-import {jest} from '@jest/globals';
-import {EventBus} from '../../../core/src/util/EventBus.js';
+import { jest } from '@jest/globals';
+import { EventBus } from '../../../core/src/util/EventBus.js';
 
 describe('EventBus', () => {
     let bus;
@@ -8,7 +8,7 @@ describe('EventBus', () => {
     });
 
     test('initialization', () => {
-        expect(bus.getStats()).toEqual({eventsEmitted: 0, eventsHandled: 0, errors: 0});
+        expect(bus.getStats()).toEqual({ eventsEmitted: 0, eventsHandled: 0, errors: 0 });
         expect(bus.isEnabled()).toBe(true);
     });
 
@@ -16,12 +16,12 @@ describe('EventBus', () => {
         const handler = jest.fn();
         bus.on('event', handler);
 
-        await bus.emit('event', {value: 1});
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({value: 1, eventName: 'event'}));
+        await bus.emit('event', { value: 1 });
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ value: 1, eventName: 'event' }));
         expect(bus.getStats().eventsEmitted).toBe(1);
 
         bus.off('event', handler);
-        await bus.emit('event', {value: 2});
+        await bus.emit('event', { value: 2 });
         expect(handler).toHaveBeenCalledTimes(1);
     });
 
@@ -35,16 +35,16 @@ describe('EventBus', () => {
     });
 
     test('middleware', async () => {
-        bus.use(async (data) => ({...data, enriched: true}));
+        bus.use(async (data) => ({ ...data, enriched: true }));
         bus.use((data) => data.cancel ? null : data);
 
         const handler = jest.fn();
         bus.on('event', handler);
 
-        await bus.emit('event', {cancel: false});
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({enriched: true}));
+        await bus.emit('event', { cancel: false });
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ enriched: true }));
 
-        await bus.emit('event', {cancel: true});
+        await bus.emit('event', { cancel: true });
         expect(handler).toHaveBeenCalledTimes(1); // Not called again
     });
 
@@ -81,16 +81,15 @@ describe('EventBus', () => {
         expect(bus.listenerCount('test')).toBe(0);
     });
 
-    test('memory leak warning', () => {
-        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
-        });
+    test('memory leak warning', async () => {
+        const { Logger } = await import('../../../core/src/util/Logger.js');
+        const warn = jest.spyOn(Logger, 'warn').mockImplementation(() => { });
+
         bus.setMaxListeners(2);
-        bus.on('t', () => {
-        });
-        bus.on('t', () => {
-        });
-        bus.on('t', () => {
-        });
+        bus.on('t', () => { });
+        bus.on('t', () => { });
+        bus.on('t', () => { });
+
         expect(warn).toHaveBeenCalledWith(expect.stringMatching(/Possible memory leak/));
         warn.mockRestore();
     });

@@ -58,30 +58,27 @@ describe('NAR', () => {
             await nar.input('<?x --> ?type>?');
         });
 
-        test('queries concepts', () => {
-            const beliefs = nar.query('cat');
-            expect(beliefs).toBeDefined();
-            expect(Array.isArray(beliefs)).toBe(true);
-        });
+        test('queries concepts', () =>
+            expect(nar.query('cat')).toEqual(expect.any(Array))
+        );
 
         test('gets all beliefs', () =>
-            expect(Array.isArray(nar.getBeliefs())).toBe(true)
+            expect(nar.getBeliefs()).toEqual(expect.any(Array))
         );
 
         test('gets goals', () =>
-            expect(Array.isArray(nar.getGoals())).toBe(true)
+            expect(nar.getGoals()).toEqual(expect.any(Array))
         );
 
         test('gets questions', () =>
-            expect(Array.isArray(nar.getQuestions())).toBe(true)
+            expect(nar.getQuestions()).toEqual(expect.any(Array))
         );
 
         test('gets concept priorities', () => {
             const priorities = nar.getConceptPriorities();
-            expect(Array.isArray(priorities)).toBe(true);
-            expect(priorities.length).toBeGreaterThan(0);
-            expect(priorities[0]).toHaveProperty('term');
-            expect(priorities[0]).toHaveProperty('priority');
+            expect(priorities).toEqual(expect.arrayContaining([
+                expect.objectContaining({ term: expect.anything(), priority: expect.any(Number) })
+            ]));
         });
     });
 
