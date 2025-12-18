@@ -1,6 +1,6 @@
 /**
  * @file LMNarsGPTGoalRule.js
- * @description NARS-GPT style goal processing with grounding requirement.
+ * NARS-GPT style goal processing with grounding requirement.
  */
 
 import { LMRule } from '../../LMRule.js';
@@ -9,14 +9,11 @@ import { Truth } from '../../../Truth.js';
 import { isGoal, tryParseNarsese } from '../../RuleHelpers.js';
 import { NarsGPTPrompts } from './NarsGPTPrompts.js';
 
-/**
- * Creates a NARS-GPT style goal processing rule.
- * Only processes goals with grounded terms (known to the system).
- */
-export const createNarsGPTGoalRule = (dependencies) => {
-    const { lm, narsGPTStrategy, parser, eventBus, memory } = dependencies;
+const GOAL_PATTERN = /(!$|-->|==>|^\d+\.)/;
+const MAX_SUBGOALS = 5;
 
-    return LMRule.create({
+export const createNarsGPTGoalRule = ({ lm, narsGPTStrategy, parser, eventBus, memory }) =>
+    LMRule.create({
         id: 'narsgpt-goal',
         lm,
         eventBus,
@@ -25,103 +22,64 @@ export const createNarsGPTGoalRule = (dependencies) => {
         priority: 0.9,
         singlePremise: true,
 
-        condition: async (primaryPremise, secondaryPremise, context) => {
-            if (!primaryPremise?.term) return false;
-            if (!isGoal(primaryPremise)) return false;
-
-            // Check grounding if strategy available
-            if (narsGPTStrategy?.checkGrounding) {
-                const goalText = primaryPremise.term?.toString?.() ?? '';
-                const groundingResult = await narsGPTStrategy.checkGrounding(goalText);
-
-                // Reject ungrounded goals (NARS-GPT behavior)
-                if (!groundingResult.grounded) {
-                    return false;
-                }
-            }
-
-            return true;
+        condition: async (task) => {
+            if (!task?.term || !isGoal(task)) return false;
+            if (!narsGPTStrategy?.checkGrounding) return true;
+            const result = await narsGPTStrategy.checkGrounding(task.term?.toString?.() ?? '');
+            return result.grounded;
         },
 
-        prompt: async (primaryPremise, secondaryPremise, context) => {
-            const goal = primaryPremise.term?.toString?.() ?? String(primaryPremise.term);
-            const mem = context?.memory ?? memory;
-            const currentTime = context?.currentTime ?? Date.now();
-
-            let contextStr = '';
+        prompt: async (task, _, ctx) => {
+            const goal = task.term?.toString?.() ?? String(task.term);
+            const mem = ctx?.memory ?? memory;
+            let context = '';
             if (narsGPTStrategy && mem) {
-                const buffer = await narsGPTStrategy.buildAttentionBuffer(goal, mem, currentTime);
-                contextStr = NarsGPTPrompts.formatBuffer(buffer);
+                const buffer = await narsGPTStrategy.buildAttentionBuffer(goal, mem, ctx?.currentTime ?? Date.now());
+                context = NarsGPTPrompts.formatBuffer(buffer);
             }
-
-            return NarsGPTPrompts.goal(contextStr, goal);
+            return NarsGPTPrompts.goal(context, goal);
         },
 
         process: (response) => {
             if (!response) return null;
-
-            // Extract goal-like statements (ending with !)
-            const lines = response.split('\n')
-                .map(l => l.trim())
-                .filter(l => l.length > 0);
-
-            const goals = lines.filter(l =>
-                l.endsWith('!') ||
-                l.includes('-->') ||
-                l.includes('==>') ||
-                l.match(/^\d+\./)  // numbered items
-            );
-
-            return goals.length > 0 ? goals : [response.trim()];
+            const lines = response.split('\n').map(l => l.trim()).filter(Boolean);
+            const goals = lines.filter(l => GOAL_PATTERN.test(l));
+            return goals.length ? goals : [response.trim()];
         },
 
-        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
-            if (!processedOutput || processedOutput.length === 0) return [];
+        generate: (output, task, _, ctx) => {
+            if (!output?.length) return [];
+            const outputs = (Array.isArray(output) ? output : [output]).slice(0, MAX_SUBGOALS);
+            const parentTruth = task.truth ?? { f: 0.9, c: 0.9 };
+            const parentPriority = task.budget?.priority ?? 0.8;
+            const parentGoal = task.term?.toString?.();
 
-            const tasks = [];
-            const termFactory = context?.termFactory;
-
-            const outputs = Array.isArray(processedOutput) ? processedOutput : [processedOutput];
-
-            for (const output of outputs.slice(0, 5)) { // Max 5 sub-goals
-                // Clean numbered prefixes
-                const cleaned = output.replace(/^\d+\.\s*/, '').trim();
-
+            return outputs.map(line => {
+                const cleaned = line.replace(/^\d+\.\s*/, '').trim();
                 const parsed = tryParseNarsese(cleaned, parser);
+
                 if (parsed?.term) {
-                    tasks.push(new Task({
+                    return new Task({
                         term: parsed.term,
                         punctuation: Punctuation.GOAL,
-                        truth: new Truth(
-                            primaryPremise.truth?.f ?? 0.9,
-                            (primaryPremise.truth?.c ?? 0.9) * 0.85
-                        ),
-                        budget: {
-                            priority: (primaryPremise.budget?.priority ?? 0.8) * 0.9,
-                            durability: 0.7,
-                            quality: 0.5
-                        },
-                        metadata: { source: 'narsgpt-goal', parentGoal: primaryPremise.term?.toString?.() }
-                    }));
-                } else if (termFactory) {
-                    // Create atomic sub-goal
-                    const subGoalTerm = termFactory.atomic(cleaned.replace(/!$/, ''));
-                    tasks.push(new Task({
-                        term: subGoalTerm,
+                        truth: new Truth(parentTruth.f ?? 0.9, (parentTruth.c ?? 0.9) * 0.85),
+                        budget: { priority: parentPriority * 0.9, durability: 0.7, quality: 0.5 },
+                        metadata: { source: 'narsgpt-goal', parentGoal }
+                    });
+                }
+
+                if (ctx?.termFactory) {
+                    return new Task({
+                        term: ctx.termFactory.atomic(cleaned.replace(/!$/, '')),
                         punctuation: Punctuation.GOAL,
                         truth: new Truth(0.8, 0.7),
                         budget: { priority: 0.7, durability: 0.6, quality: 0.5 },
-                        metadata: { source: 'narsgpt-goal', parentGoal: primaryPremise.term?.toString?.() }
-                    }));
+                        metadata: { source: 'narsgpt-goal', parentGoal }
+                    });
                 }
-            }
-
-            return tasks;
+                return null;
+            }).filter(Boolean);
         },
 
-        lm_options: {
-            temperature: 0.5,
-            max_tokens: 400,
-        }
+        lm_options: { temperature: 0.5, max_tokens: 400 }
     });
-};

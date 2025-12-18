@@ -1,6 +1,6 @@
 /**
  * @file LMNarsGPTBeliefRule.js
- * @description NARS-GPT style belief formation from natural language.
+ * NARS-GPT style belief formation from natural language.
  */
 
 import { LMRule } from '../../LMRule.js';
@@ -9,14 +9,11 @@ import { Truth } from '../../../Truth.js';
 import { isBelief, tryParseNarsese } from '../../RuleHelpers.js';
 import { NarsGPTPrompts } from './NarsGPTPrompts.js';
 
-/**
- * Creates a NARS-GPT style belief encoding rule.
- * Converts natural language statements to Narsese with consistent term usage.
- */
-export const createNarsGPTBeliefRule = (dependencies) => {
-    const { lm, narsGPTStrategy, parser, eventBus, memory } = dependencies;
+const NARSESE_PATTERN = /^[(<].*?(-->|<->|==>)/;
+const TRUTH_PATTERN = /\{(\d+\.?\d*)\s+(\d+\.?\d*)\}/;
 
-    return LMRule.create({
+export const createNarsGPTBeliefRule = ({ lm, narsGPTStrategy, parser, eventBus, memory }) =>
+    LMRule.create({
         id: 'narsgpt-belief',
         lm,
         eventBus,
@@ -25,82 +22,47 @@ export const createNarsGPTBeliefRule = (dependencies) => {
         priority: 0.85,
         singlePremise: true,
 
-        condition: (primaryPremise) => {
-            if (!primaryPremise?.term) return false;
-            if (!isBelief(primaryPremise)) return false;
-
-            // Target: atomic terms that look like natural language (contain spaces or quotes)
-            const term = primaryPremise.term;
-            const name = term.name ?? term.toString?.() ?? '';
-            return term.isAtomic && (/\s/.test(name) || name.startsWith('"'));
+        condition: (task) => {
+            if (!task?.term || !isBelief(task)) return false;
+            const name = task.term.name ?? task.term.toString?.() ?? '';
+            return task.term.isAtomic && (/\s/.test(name) || name.startsWith('"'));
         },
 
-        prompt: async (primaryPremise, secondaryPremise, context) => {
-            const sentence = primaryPremise.term?.toString?.() ?? String(primaryPremise.term);
-            const cleanSentence = sentence.replace(/^"|"$/g, '');
-            const mem = context?.memory ?? memory;
-            const currentTime = context?.currentTime ?? Date.now();
-
-            // Build context for consistent term usage
-            let contextStr = '';
+        prompt: async (task, _, ctx) => {
+            const sentence = (task.term?.toString?.() ?? String(task.term)).replace(/^"|"$/g, '');
+            const mem = ctx?.memory ?? memory;
+            let context = '';
             if (narsGPTStrategy && mem) {
-                const buffer = await narsGPTStrategy.buildAttentionBuffer(cleanSentence, mem, currentTime);
-                contextStr = NarsGPTPrompts.formatBuffer(buffer.slice(0, 10)); // Limit context
+                const buffer = await narsGPTStrategy.buildAttentionBuffer(sentence, mem, ctx?.currentTime ?? Date.now());
+                context = NarsGPTPrompts.formatBuffer(buffer.slice(0, 10));
             }
-
-            return NarsGPTPrompts.belief(contextStr, cleanSentence);
+            return NarsGPTPrompts.belief(context, sentence);
         },
 
         process: (response) => {
             if (!response) return null;
-
-            // Extract Narsese-like content from response
-            const lines = response.split('\n').filter(l => l.trim());
-
-            // Find lines that look like Narsese
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if ((trimmed.startsWith('(') || trimmed.startsWith('<')) &&
-                    (trimmed.includes('-->') || trimmed.includes('<->') || trimmed.includes('==>'))) {
-                    return trimmed;
-                }
-            }
-
-            return response.trim();
+            const narseseLine = response.split('\n').map(l => l.trim()).find(l => NARSESE_PATTERN.test(l));
+            return narseseLine ?? response.trim();
         },
 
-        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
-            if (!processedOutput) return [];
+        generate: (output, task) => {
+            if (!output) return [];
+            const parsed = tryParseNarsese(output, parser);
+            if (!parsed?.term) return [];
 
-            const parsed = tryParseNarsese(processedOutput, parser);
-            if (parsed?.term) {
-                // Extract truth values if present
-                let truth = new Truth(0.9, 0.9);
-                if (parsed.truthValue) {
-                    truth = new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence);
-                } else {
-                    // Parse inline truth values like {0.9 0.8}
-                    const truthMatch = processedOutput.match(/\{(\d+\.?\d*)\s+(\d+\.?\d*)\}/);
-                    if (truthMatch) {
-                        truth = new Truth(parseFloat(truthMatch[1]), parseFloat(truthMatch[2]));
-                    }
-                }
+            const match = output.match(TRUTH_PATTERN);
+            const truth = parsed.truthValue
+                ? new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence)
+                : match ? new Truth(parseFloat(match[1]), parseFloat(match[2])) : new Truth(0.9, 0.9);
 
-                return [new Task({
-                    term: parsed.term,
-                    punctuation: Punctuation.BELIEF,
-                    truth,
-                    budget: { priority: 0.8, durability: 0.8, quality: 0.6 },
-                    metadata: { source: 'narsgpt-belief' }
-                })];
-            }
-
-            return [];
+            return [new Task({
+                term: parsed.term,
+                punctuation: Punctuation.BELIEF,
+                truth,
+                budget: { priority: 0.8, durability: 0.8, quality: 0.6 },
+                metadata: { source: 'narsgpt-belief' }
+            })];
         },
 
-        lm_options: {
-            temperature: 0.2,
-            max_tokens: 200,
-        }
+        lm_options: { temperature: 0.2, max_tokens: 200 }
     });
-};

@@ -80,8 +80,13 @@ describe('NarsGPTStrategy', () => {
         });
 
         it('should handle no swap when disabled', () => {
-            strategy.perspectiveSwapEnabled = false;
+            strategy.perspectiveMode = 'none';
             expect(strategy.perspectiveSwap('you are smart')).toBe('you are smart');
+        });
+
+        it('should neutralize perspective when mode is neutralize', () => {
+            strategy.perspectiveMode = 'neutralize';
+            expect(strategy.perspectiveSwap('you are smart')).toMatch(/one/i);
         });
     });
 
