@@ -131,6 +131,9 @@ export class TransformersJSProvider extends BaseProvider {
         });
 
         resultPromise.then((output) => {
+            // Debug logging for pipeline output
+            console.log('[TransformersDebug] Pipeline output:', JSON.stringify(output, null, 2));
+
             // If streaming didn't capture anything but we have output, enqueue it
             if (fullOutput.length === 0 && Array.isArray(output) && output[0]?.generated_text) {
                 const generated = output[0].generated_text;

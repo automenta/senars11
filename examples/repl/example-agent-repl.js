@@ -21,6 +21,7 @@ async function runAdvancedAgentDemo() {
                 enabled: true,
                 provider: process.env.LM_PROVIDER || 'ollama',
                 modelName: process.env.LM_MODEL || process.env.OLLAMA_MODEL || 'llama3',
+                task: process.env.LM_TASK,
                 baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
                 temperature: 0.7
             }
@@ -120,7 +121,7 @@ async function runGoalPlanningDemo(agent) {
     await runCommand(agent, 'plan', 'How to learn quantum physics fundamentals in 3 months');
 
     // Set a more specific goal
-    await runCommand(agent, 'goal', '<understand_quantum_entanglement --> important>. %1.00;0.80% !');
+    await runCommand(agent, 'goal', 'understand_quantum_entanglement --> important');
 
     // Query for goals
     await runCommand(agent, 'goal', 'list');
