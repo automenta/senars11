@@ -1,7 +1,7 @@
-import { describe, test } from '@jest/globals';
-import { TestNAR } from '../../../../core/src/testing/TestNAR.js';
-import { TestNARRemote } from '../../../../core/src/testing/TestNARRemote.js';
-import { TaskMatch } from '../../../../core/src/testing/TaskMatch.js';
+import {describe, test} from '@jest/globals';
+import {TestNAR} from '../../../../core/src/testing/TestNAR.js';
+import {TestNARRemote} from '../../../../core/src/testing/TestNARRemote.js';
+import {TaskMatch} from '../../../../core/src/testing/TaskMatch.js';
 
 describe('WebSocket Pathway Tests', () => {
     test('Basic inheritance chain via WebSocket', async () => {

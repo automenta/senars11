@@ -1,4 +1,4 @@
-import { Tensor } from './Tensor.js';
+import {Tensor} from './Tensor.js';
 
 export class LossFunctor {
     constructor(backend = null) {
@@ -7,14 +7,14 @@ export class LossFunctor {
 
     _clipTensor(tensor, eps) {
         const clipped = new Tensor(tensor.data.map(x => Math.max(eps, Math.min(1 - eps, x))),
-            { backend: this.backend, requiresGrad: tensor.requiresGrad });
+            {backend: this.backend, requiresGrad: tensor.requiresGrad});
         clipped.shape = tensor.shape;
         return clipped;
     }
 
     _attachGradient(loss, parents, gradFn) {
         if (parents.some(p => p.requiresGrad)) {
-            Object.assign(loss, { requiresGrad: true, _parents: parents, _gradFn: gradFn });
+            Object.assign(loss, {requiresGrad: true, _parents: parents, _gradFn: gradFn});
         }
     }
 
@@ -44,7 +44,7 @@ export class LossFunctor {
                     const y = target.data[i];
                     const pClipped = Math.max(eps, Math.min(1 - eps, p));
                     return -(y / pClipped - (1 - y) / (1 - pClipped));
-                }), { backend: this.backend });
+                }), {backend: this.backend});
                 grad.shape = predicted.shape;
                 const scaledGrad = this.backend.mul(negSum.grad, grad);
                 predicted.grad = predicted.grad ? this.backend.add(predicted.grad, scaledGrad) : scaledGrad;
@@ -65,7 +65,7 @@ export class LossFunctor {
                 const grad = new Tensor(predicted.data.map((p, i) => {
                     const y = target.data[i];
                     return -y / Math.max(eps, Math.min(1 - eps, p));
-                }), { backend: this.backend });
+                }), {backend: this.backend});
                 grad.shape = predicted.shape;
                 const scaledGrad = this.backend.mul(loss.grad, grad);
                 predicted.grad = predicted.grad ? this.backend.add(predicted.grad, scaledGrad) : scaledGrad;

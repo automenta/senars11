@@ -1,5 +1,4 @@
-import { jest } from '@jest/globals';
-import { createStreamReasonerNAR } from '../../support/factories.js';
+import {createStreamReasonerNAR} from '../../support/factories.js';
 
 describe('New Reasoner - Stream-based Architecture with Real Components', () => {
     let nar;
@@ -41,7 +40,7 @@ describe('New Reasoner - Stream-based Architecture with Real Components', () => 
     });
 
     test('should handle derivation depth limits correctly', async () => {
-        const narLimited = await createStreamReasonerNAR({ reasoning: { maxDerivationDepth: 1 } });
+        const narLimited = await createStreamReasonerNAR({reasoning: {maxDerivationDepth: 1}});
         await narLimited.initialize();
 
         try {

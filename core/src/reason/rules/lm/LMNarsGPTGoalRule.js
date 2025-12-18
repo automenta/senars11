@@ -3,16 +3,16 @@
  * NARS-GPT style goal processing with grounding requirement.
  */
 
-import { LMRule } from '../../LMRule.js';
-import { Punctuation, Task } from '../../../task/Task.js';
-import { Truth } from '../../../Truth.js';
-import { isGoal, tryParseNarsese } from '../../RuleHelpers.js';
-import { NarsGPTPrompts } from './NarsGPTPrompts.js';
+import {LMRule} from '../../LMRule.js';
+import {Punctuation, Task} from '../../../task/Task.js';
+import {Truth} from '../../../Truth.js';
+import {isGoal, tryParseNarsese} from '../../RuleHelpers.js';
+import {NarsGPTPrompts} from './NarsGPTPrompts.js';
 
 const GOAL_PATTERN = /(!$|-->|==>|^\d+\.)/;
 const MAX_SUBGOALS = 5;
 
-export const createNarsGPTGoalRule = ({ lm, narsGPTStrategy, parser, eventBus, memory }) =>
+export const createNarsGPTGoalRule = ({lm, narsGPTStrategy, parser, eventBus, memory}) =>
     LMRule.create({
         id: 'narsgpt-goal',
         lm,
@@ -50,7 +50,7 @@ export const createNarsGPTGoalRule = ({ lm, narsGPTStrategy, parser, eventBus, m
         generate: (output, task, _, ctx) => {
             if (!output?.length) return [];
             const outputs = (Array.isArray(output) ? output : [output]).slice(0, MAX_SUBGOALS);
-            const parentTruth = task.truth ?? { f: 0.9, c: 0.9 };
+            const parentTruth = task.truth ?? {f: 0.9, c: 0.9};
             const parentPriority = task.budget?.priority ?? 0.8;
             const parentGoal = task.term?.toString?.();
 
@@ -63,8 +63,8 @@ export const createNarsGPTGoalRule = ({ lm, narsGPTStrategy, parser, eventBus, m
                         term: parsed.term,
                         punctuation: Punctuation.GOAL,
                         truth: new Truth(parentTruth.f ?? 0.9, (parentTruth.c ?? 0.9) * 0.85),
-                        budget: { priority: parentPriority * 0.9, durability: 0.7, quality: 0.5 },
-                        metadata: { source: 'narsgpt-goal', parentGoal }
+                        budget: {priority: parentPriority * 0.9, durability: 0.7, quality: 0.5},
+                        metadata: {source: 'narsgpt-goal', parentGoal}
                     });
                 }
 
@@ -73,13 +73,13 @@ export const createNarsGPTGoalRule = ({ lm, narsGPTStrategy, parser, eventBus, m
                         term: ctx.termFactory.atomic(cleaned.replace(/!$/, '')),
                         punctuation: Punctuation.GOAL,
                         truth: new Truth(0.8, 0.7),
-                        budget: { priority: 0.7, durability: 0.6, quality: 0.5 },
-                        metadata: { source: 'narsgpt-goal', parentGoal }
+                        budget: {priority: 0.7, durability: 0.6, quality: 0.5},
+                        metadata: {source: 'narsgpt-goal', parentGoal}
                     });
                 }
                 return null;
             }).filter(Boolean);
         },
 
-        lm_options: { temperature: 0.5, max_tokens: 400 }
+        lm_options: {temperature: 0.5, max_tokens: 400}
     });

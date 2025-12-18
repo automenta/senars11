@@ -1,5 +1,5 @@
-import { describe, test, expect } from '@jest/globals';
-import { DataLoader, LRScheduler, EarlyStopping, MetricsTracker } from '../../../core/src/functor/TrainingUtils.js';
+import {describe, expect, test} from '@jest/globals';
+import {DataLoader, EarlyStopping, LRScheduler, MetricsTracker} from '../../../core/src/functor/TrainingUtils.js';
 
 describe('TrainingUtils', () => {
     describe('DataLoader', () => {
@@ -25,7 +25,7 @@ describe('TrainingUtils', () => {
         });
 
         test('shuffles data', () => {
-            const dataset = Array.from({ length: 100 }, (_, i) => i);
+            const dataset = Array.from({length: 100}, (_, i) => i);
             const loader = new DataLoader(dataset, 10, true);
             const batches = [...loader];
             const allItems = batches.flat();
@@ -58,7 +58,7 @@ describe('TrainingUtils', () => {
 
     describe('LRScheduler', () => {
         test('step decay reduces learning rate', () => {
-            const optimizer = { lr: 0.1 };
+            const optimizer = {lr: 0.1};
             const scheduler = new LRScheduler(optimizer, 'step', 30, 0.1);
 
             scheduler.step(0);
@@ -72,7 +72,7 @@ describe('TrainingUtils', () => {
         });
 
         test('exponential decay', () => {
-            const optimizer = { lr: 1.0 };
+            const optimizer = {lr: 1.0};
             const scheduler = new LRScheduler(optimizer, 'exponential');
 
             scheduler.step(0);
@@ -86,7 +86,7 @@ describe('TrainingUtils', () => {
         });
 
         test('cosine annealing', () => {
-            const optimizer = { lr: 1.0 };
+            const optimizer = {lr: 1.0};
             const scheduler = new LRScheduler(optimizer, 'cosine', 30, 0.1, 100);
 
             scheduler.step(0);
@@ -100,7 +100,7 @@ describe('TrainingUtils', () => {
         });
 
         test('throws on unknown mode', () => {
-            const optimizer = { lr: 0.1 };
+            const optimizer = {lr: 0.1};
             const scheduler = new LRScheduler(optimizer, 'invalid');
 
             expect(() => scheduler.step(0)).toThrow(/Unknown LR scheduler mode/);
@@ -159,13 +159,13 @@ describe('TrainingUtils', () => {
         test('logs metrics by epoch', () => {
             const tracker = new MetricsTracker();
 
-            tracker.log(0, { loss: 1.0, acc: 0.5 });
-            tracker.log(1, { loss: 0.8, acc: 0.6 });
+            tracker.log(0, {loss: 1.0, acc: 0.5});
+            tracker.log(1, {loss: 0.8, acc: 0.6});
 
             const lossHistory = tracker.get('loss');
             expect(lossHistory).toHaveLength(2);
-            expect(lossHistory[0]).toEqual({ epoch: 0, value: 1.0 });
-            expect(lossHistory[1]).toEqual({ epoch: 1, value: 0.8 });
+            expect(lossHistory[0]).toEqual({epoch: 0, value: 1.0});
+            expect(lossHistory[1]).toEqual({epoch: 1, value: 0.8});
         });
 
         test('returns empty array for unknown metric', () => {
@@ -176,8 +176,8 @@ describe('TrainingUtils', () => {
         test('handles multiple metrics', () => {
             const tracker = new MetricsTracker();
 
-            tracker.log(0, { loss: 1.0, acc: 0.5, f1: 0.4 });
-            tracker.log(1, { loss: 0.8, acc: 0.6, f1: 0.5 });
+            tracker.log(0, {loss: 1.0, acc: 0.5, f1: 0.4});
+            tracker.log(1, {loss: 0.8, acc: 0.6, f1: 0.5});
 
             expect(Object.keys(tracker.history).length).toBe(3);
         });
@@ -185,7 +185,7 @@ describe('TrainingUtils', () => {
         test('clear resets history', () => {
             const tracker = new MetricsTracker();
 
-            tracker.log(0, { loss: 1.0 });
+            tracker.log(0, {loss: 1.0});
             tracker.clear();
 
             expect(Object.keys(tracker.history).length).toBe(0);
@@ -194,9 +194,9 @@ describe('TrainingUtils', () => {
         test('summary provides stats', () => {
             const tracker = new MetricsTracker();
 
-            tracker.log(0, { loss: 1.0, acc: 0.5 });
-            tracker.log(1, { loss: 0.8, acc: 0.6 });
-            tracker.log(2, { loss: 0.9, acc: 0.7 });
+            tracker.log(0, {loss: 1.0, acc: 0.5});
+            tracker.log(1, {loss: 0.8, acc: 0.6});
+            tracker.log(2, {loss: 0.9, acc: 0.7});
 
             const summary = tracker.summary();
 

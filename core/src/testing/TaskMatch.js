@@ -102,8 +102,8 @@ export class TaskMatch {
     }
 
     async _checkTermMatch(task) {
-        const { NarseseParser } = await import('../parser/NarseseParser.js');
-        const { TermFactory } = await import('../term/TermFactory.js');
+        const {NarseseParser} = await import('../parser/NarseseParser.js');
+        const {TermFactory} = await import('../term/TermFactory.js');
         const termFactory = new TermFactory();
         const parser = new NarseseParser(termFactory);
         const expectedTerm = parser.parse(this.termFilter + '.').term;
@@ -148,7 +148,7 @@ export class TaskMatch {
     }
 
     _punctToType(punct) {
-        const map = { '.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION' };
+        const map = {'.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION'};
         return map[punct] || 'BELIEF';
     }
 }
@@ -165,8 +165,8 @@ export class RemoteTaskMatch extends TaskMatch {
         // Check term match
         if (this.termFilter) {
             // Import parser and factory to properly compare terms
-            const { NarseseParser } = await import('../parser/NarseseParser.js');
-            const { TermFactory } = await import('../term/TermFactory.js');
+            const {NarseseParser} = await import('../parser/NarseseParser.js');
+            const {TermFactory} = await import('../term/TermFactory.js');
 
             const termFactory = new TermFactory();
             const parser = new NarseseParser(termFactory);

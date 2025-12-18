@@ -9,11 +9,11 @@ Production-ready examples demonstrating the SeNARS Agent REPL with Ollama integr
 
 ## Examples
 
-| Example | Description |
-|---------|-------------|
-| [example-agent-repl-ollama.js](example-agent-repl-ollama.js) | Full agent demo with Ollama LM |
-| [example-research-scenario.js](example-research-scenario.js) | Multi-agent research simulation |
-| [example-fallback-mechanism.js](example-fallback-mechanism.js) | LM/NARS routing demo |
+| Example                                                        | Description                     |
+|----------------------------------------------------------------|---------------------------------|
+| [example-agent-repl-ollama.js](example-agent-repl-ollama.js)   | Full agent demo with Ollama LM  |
+| [example-research-scenario.js](example-research-scenario.js)   | Multi-agent research simulation |
+| [example-fallback-mechanism.js](example-fallback-mechanism.js) | LM/NARS routing demo            |
 
 ## Quick Start
 

@@ -33,7 +33,7 @@ export class LMStats {
             this.avgTokensPerSecond = (this.avgTokensPerSecond * (this.totalCalls - 1) + tokensPerSec) / this.totalCalls;
         }
 
-        const usage = this.providerUsage.get(providerId) ?? { calls: 0, tokens: 0, avgLatency: 0 };
+        const usage = this.providerUsage.get(providerId) ?? {calls: 0, tokens: 0, avgLatency: 0};
         usage.calls++;
         usage.tokens += resultTokens;
         usage.avgLatency = (usage.avgLatency * (usage.calls - 1) + responseTime) / usage.calls;

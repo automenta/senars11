@@ -1,5 +1,5 @@
-import { Layer } from './Layer.js';
-import { Bag } from './Bag.js';
+import {Layer} from './Layer.js';
+import {Bag} from './Bag.js';
 
 export class TermLayer extends Layer {
     constructor(config = {}) {
@@ -21,7 +21,7 @@ export class TermLayer extends Layer {
         const sourceLinks = this._getOrCreateSourceMap(source.name);
         const priority = data.priority ?? 1;
 
-        const linkEntry = this._createLinkEntry(source, target, { ...data, priority });
+        const linkEntry = this._createLinkEntry(source, target, {...data, priority});
         const added = this.linkBag.add(linkEntry);
 
         if (added) {
@@ -109,7 +109,7 @@ export class TermLayer extends Layer {
             source,
             target,
             data,
-            budget: { priority: data.priority },
+            budget: {priority: data.priority},
             toString() {
                 return this.id;
             }
@@ -121,7 +121,7 @@ export class TermLayer extends Layer {
     }
 
     _getSourceTermByName(name) {
-        return { name };
+        return {name};
     }
 
     _getOrCreateSourceMap(sourceName) {

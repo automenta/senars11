@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { App } from '@senars/agent';
+import {App} from '@senars/agent';
 
 // Set environment variable to suppress ONNX runtime warnings
 process.env.ORT_LOG_LEVEL = '3';
@@ -34,7 +34,7 @@ async function demonstrateTransformersJS() {
 
     try {
         console.log('🚀 Starting SeNARS with Transformers.js LM...');
-        const agent = await app.start({ startAgent: true });
+        const agent = await app.start({startAgent: true});
 
         console.log('✅ SeNARS started successfully with Transformers.js integration!\n');
 

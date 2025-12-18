@@ -1,6 +1,6 @@
-import { Tensor } from '../../core/src/functor/Tensor.js';
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
-import { Module, Linear, Sequential } from '../../core/src/functor/Module.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+import {Linear, Module, Sequential} from '../../core/src/functor/Module.js';
+
 console.log('=== Tensor Logic: Model Serialization ===\n');
 
 class TinyMLP extends Module {
@@ -9,7 +9,10 @@ class TinyMLP extends Module {
         this.fc1 = this.registerModule('fc1', new Linear(4, 8));
         this.fc2 = this.registerModule('fc2', new Linear(8, 2));
     }
-    forward(x) { return T.relu(this.fc2.forward(T.relu(this.fc1.forward(x)))); }
+
+    forward(x) {
+        return T.relu(this.fc2.forward(T.relu(this.fc1.forward(x))));
+    }
 }
 
 const model = new TinyMLP();

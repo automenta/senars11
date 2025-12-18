@@ -3,14 +3,14 @@
  * Demonstrates how to ground domain-specific knowledge for NARS-GPT.
  */
 
-import { NarsGPTStrategy } from '../../core/src/reason/strategy/NarsGPTStrategy.js';
-import { EmbeddingLayer } from '../../core/src/lm/EmbeddingLayer.js';
-import { NAR } from '../../core/src/nar/NAR.js';
+import {NarsGPTStrategy} from '../../core/src/reason/strategy/NarsGPTStrategy.js';
+import {EmbeddingLayer} from '../../core/src/lm/EmbeddingLayer.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 
 console.log('Domain Knowledge Grounding Examples\n' + '='.repeat(50));
 
 const strategy = new NarsGPTStrategy({
-    embeddingLayer: new EmbeddingLayer({ model: 'mock' }),
+    embeddingLayer: new EmbeddingLayer({model: 'mock'}),
     perspectiveMode: 'neutralize'
 });
 

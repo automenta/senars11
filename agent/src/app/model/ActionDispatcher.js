@@ -1,5 +1,5 @@
-import { ActionTypes } from './ActivityTypes.js';
-import { Logger } from '../../../../core/src/util/Logger.js';
+import {ActionTypes} from './ActivityTypes.js';
+import {Logger} from '../../../../core/src/util/Logger.js';
 
 /**
  * ActionDispatcher handles execution of actions triggered by the UI.
@@ -30,17 +30,17 @@ export class ActionDispatcher {
 
             default:
                 Logger.warn(`Unknown action type: ${action.type}`);
-                return { success: false, error: 'Unknown action type' };
+                return {success: false, error: 'Unknown action type'};
         }
     }
 
     async _handleRate(action) {
         if (!this.preferenceCollector) {
-            return { success: false, error: 'PreferenceCollector not available' };
+            return {success: false, error: 'PreferenceCollector not available'};
         }
 
-        const { value } = action.payload || {};
-        const { activityId, rawActivity } = action.context || {};
+        const {value} = action.payload || {};
+        const {activityId, rawActivity} = action.context || {};
 
         this.preferenceCollector.addPreference({
             activityId,
@@ -49,18 +49,18 @@ export class ActionDispatcher {
             source: 'ui_action'
         });
 
-        return { success: true, message: 'Rating recorded' };
+        return {success: true, message: 'Rating recorded'};
     }
 
     async _handleInspect(action) {
         // Just log for now, could trigger a "Focus" event in the graph
         Logger.debug('Inspect requested for:', action.context?.activityId);
-        return { success: true };
+        return {success: true};
     }
 
     async _handleTrace(action) {
         // Trigger trace generation or enable tracing
         // This might interact with the engine
-        return { success: true, message: 'Trace requested (not implemented)' };
+        return {success: true, message: 'Trace requested (not implemented)'};
     }
 }

@@ -1,7 +1,7 @@
 // Unit Test Setup
 // This file sets up the environment for unit tests with real objects and minimal dependencies
 
-import { setupCustomMatchers } from '../support/test-matchers.js';
+import {setupCustomMatchers} from '../support/test-matchers.js';
 
 // Set up test-specific configurations
 process.env.NODE_ENV = 'test';
@@ -16,7 +16,7 @@ const validateTestEnvironment = () => ({
     timestamp: Date.now()
 });
 
-const createTestInstanceHelper = (config = {}) => ({ config: { ...config } });
+const createTestInstanceHelper = (config = {}) => ({config: {...config}});
 
 // Validate test environment
 const envValidation = validateTestEnvironment();
@@ -26,7 +26,8 @@ if (!envValidation.isValid) {
 
 // Global console silencing for cleaner test output
 if (!process.env.SHOW_LOGS_IN_TESTS) {
-    const noop = () => { };
+    const noop = () => {
+    };
     global.console = {
         ...console,
         log: noop,

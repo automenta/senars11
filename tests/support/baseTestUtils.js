@@ -1,15 +1,15 @@
-import { NAR } from '../../core/src/nar/NAR.js';
-import { Task } from '../../core/src/task/Task.js';
-import { Truth } from '../../core/src/Truth.js';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { ReasonerBuilder } from '../../core/src/reason/ReasonerBuilder.js';
-import { createTask, createTerm, createTruth, TEST_CONSTANTS } from './factories.js';
-import { NARTestSetup, ComponentTestSetup } from './setup.js';
-import { truthAssertions } from './assertions.js';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {Task} from '../../core/src/task/Task.js';
+import {Truth} from '../../core/src/Truth.js';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {ReasonerBuilder} from '../../core/src/reason/ReasonerBuilder.js';
+import {createTask, createTerm, createTruth, TEST_CONSTANTS} from './factories.js';
+import {ComponentTestSetup, NARTestSetup} from './setup.js';
+import {truthAssertions} from './assertions.js';
 
 const termFactory = new TermFactory();
 
-export { NARTestSetup, ComponentTestSetup, truthAssertions };
+export {NARTestSetup, ComponentTestSetup, truthAssertions};
 
 export const taskAssertions = {
     expectTask: (task, expected) => {
@@ -19,13 +19,13 @@ export const taskAssertions = {
     },
 
     expectTaskType: (task, type) => {
-        const method = { BELIEF: 'isBelief', GOAL: 'isGoal', QUESTION: 'isQuestion' }[type.toUpperCase()];
+        const method = {BELIEF: 'isBelief', GOAL: 'isGoal', QUESTION: 'isQuestion'}[type.toUpperCase()];
         if (!method) throw new Error(`Unknown task type: ${type}`);
         expect(task[method]()).toBe(true);
     },
 
     expectTaskPunctuation: (task, punctuation) => {
-        const expectedType = { '.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION' }[punctuation] ?? '';
+        const expectedType = {'.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION'}[punctuation] ?? '';
         expect(task?.punctuation).toBe(punctuation);
         expect(task?.type).toBe(expectedType);
     },
@@ -101,7 +101,9 @@ const testImmutableProperty = (instance) => {
         key.startsWith('_') || ['f', 'c', 'term'].includes(key)
     );
     if (testProp && instance[testProp] !== undefined) {
-        expect(() => { instance[testProp] = 'modified'; }).toThrow();
+        expect(() => {
+            instance[testProp] = 'modified';
+        }).toThrow();
     }
 };
 
@@ -197,17 +199,17 @@ export const asyncTests = {
 };
 
 export const COMMON_TRUTH_VALUES = [
-    { f: 1.0, c: 1.0, name: 'certain' },
-    { f: 0.9, c: 0.9, name: 'high' },
-    { f: 0.5, c: 0.8, name: 'medium' },
-    { f: 0.1, c: 0.2, name: 'low' },
-    { f: 0.0, c: 0.1, name: 'false' }
+    {f: 1.0, c: 1.0, name: 'certain'},
+    {f: 0.9, c: 0.9, name: 'high'},
+    {f: 0.5, c: 0.8, name: 'medium'},
+    {f: 0.1, c: 0.2, name: 'low'},
+    {f: 0.0, c: 0.1, name: 'false'}
 ];
 
 export const COMMON_BUDGET_VALUES = [
-    { priority: 0.9, durability: 0.8, quality: 0.7, name: 'high' },
-    { priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium' },
-    { priority: 0.1, durability: 0.2, quality: 0.3, name: 'low' }
+    {priority: 0.9, durability: 0.8, quality: 0.7, name: 'high'},
+    {priority: 0.5, durability: 0.5, quality: 0.5, name: 'medium'},
+    {priority: 0.1, durability: 0.2, quality: 0.3, name: 'low'}
 ];
 
 export const testData = {
@@ -226,7 +228,9 @@ const getStorageByType = (nar, type) => ({
     belief: () => nar.getBeliefs(),
     goal: () => nar.getGoals(),
     question: () => nar.getQuestions()
-}[type.toLowerCase()] ?? (() => { throw new Error(`Unknown expected type: ${type}`); }))();
+}[type.toLowerCase()] ?? (() => {
+    throw new Error(`Unknown expected type: ${type}`);
+}))();
 
 export const narTestScenarios = {
     testBasicInputProcessing: async (nar, input, expectedType) => {
@@ -357,7 +361,7 @@ export const comprehensiveTestSuites = {
             beforeEach(async () => module = await createModule());
             afterEach(() => module?.destroy?.());
 
-            test.each(testCases)('$description', async ({ input, expectedOutput, validator }) => {
+            test.each(testCases)('$description', async ({input, expectedOutput, validator}) => {
                 const result = await module.process(input);
                 validator ? expect(validator(result, expectedOutput)).toBe(true) :
                     expect(result).toEqual(expectedOutput);
@@ -383,7 +387,9 @@ export const comprehensiveTestSuites = {
                 const instance = new Constructor(testData.validInput);
                 const firstKey = Object.keys(instance)[0];
                 firstKey && instance[firstKey] !== undefined &&
-                    expect(() => { instance[firstKey] = 'modified'; }).toThrow();
+                expect(() => {
+                    instance[firstKey] = 'modified';
+                }).toThrow();
             });
 
             testData.testEquality && test('should implement equality correctly', () => {
@@ -507,7 +513,7 @@ export const optimizedTestPatterns = {
             const truth = config.truth || (punctuation !== '?' ?
                 optimizedTestPatterns.testDataGenerator.getTruth(0.9, 0.8) : null);
             const budget = config.budget || TEST_CONSTANTS.BUDGET.DEFAULT;
-            return new Task({ term, punctuation, truth, budget });
+            return new Task({term, punctuation, truth, budget});
         }
     }
 };
@@ -516,13 +522,15 @@ export const testImmutability = (instance, properties) => {
     if (!instance || typeof instance !== 'object') throw new Error('instance must be an object');
     if (!properties || typeof properties !== 'object') throw new Error('properties must be an object');
     Object.entries(properties).forEach(([propertyName, value]) =>
-        expect(() => { instance[propertyName] = value; }).toThrow()
+        expect(() => {
+            instance[propertyName] = value;
+        }).toThrow()
     );
 };
 
 export const setupMemoryTest = () => {
     const config = createMemoryConfig();
-    return { config, createTask, createTerm, createTruth, TEST_CONSTANTS };
+    return {config, createTask, createTerm, createTruth, TEST_CONSTANTS};
 };
 
 export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confidence = 0.9, priority = 0.5) {
@@ -548,7 +556,7 @@ export function createTestTask(termStr, type = 'BELIEF', frequency = 0.9, confid
         term,
         punctuation,
         truth,
-        budget: { priority, durability: 0.7, quality: 0.8 }
+        budget: {priority, durability: 0.7, quality: 0.8}
     });
 }
 
@@ -557,22 +565,40 @@ export function createTestMemory(options = {}) {
     return {
         taskBag: {
             tasks: Array.isArray(tasks) ? tasks : [],
-            take() { return this.tasks.shift() || null; },
-            add(task) { this.tasks.push(task); },
-            size() { return this.tasks.length; }
+            take() {
+                return this.tasks.shift() || null;
+            },
+            add(task) {
+                this.tasks.push(task);
+            },
+            size() {
+                return this.tasks.length;
+            }
         },
-        addTask(task) { this.taskBag.add(task); },
-        getTask() { return this.taskBag.take(); }
+        addTask(task) {
+            this.taskBag.add(task);
+        },
+        getTask() {
+            return this.taskBag.take();
+        }
     };
 }
 
 export function createTestTaskBag(tasks = []) {
     return {
         tasks,
-        take() { return this.tasks.shift() || null; },
-        add(task) { this.tasks.push(task); },
-        size() { return this.tasks.length; },
-        peek() { return this.tasks[0] || null; }
+        take() {
+            return this.tasks.shift() || null;
+        },
+        add(task) {
+            this.tasks.push(task);
+        },
+        size() {
+            return this.tasks.length;
+        },
+        peek() {
+            return this.tasks[0] || null;
+        }
     };
 }
 
@@ -580,9 +606,10 @@ export function createTestReasoner(options = {}) {
     const memory = options.memory || createTestMemory();
     const focus = options.focus || {
         getTasks: () => [],
-        addTaskToFocus: () => { }
+        addTaskToFocus: () => {
+        }
     };
-    const context = { focus, memory, termFactory: options.termFactory || {} };
+    const context = {focus, memory, termFactory: options.termFactory || {}};
 
     const builder = new ReasonerBuilder(context).withConfig(options.config || {});
 

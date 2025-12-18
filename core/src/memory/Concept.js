@@ -1,11 +1,11 @@
-import { Bag } from './Bag.js';
-import { clamp } from '../util/common.js';
-import { BaseComponent } from '../util/BaseComponent.js';
-import { Task } from '../task/Task.js';
-import { Logger } from '../util/Logger.js';
+import {Bag} from './Bag.js';
+import {clamp} from '../util/common.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {Task} from '../task/Task.js';
+import {Logger} from '../util/Logger.js';
 
-const TASK_TYPES = Object.freeze({ BELIEF: 'BELIEF', GOAL: 'GOAL', QUESTION: 'QUESTION' });
-const CAPACITY_DISTRIBUTION = Object.freeze({ BELIEF: 0.6, GOAL: 0.3, QUESTION: 0.1 });
+const TASK_TYPES = Object.freeze({BELIEF: 'BELIEF', GOAL: 'GOAL', QUESTION: 'QUESTION'});
+const CAPACITY_DISTRIBUTION = Object.freeze({BELIEF: 0.6, GOAL: 0.3, QUESTION: 0.1});
 
 export class Concept extends BaseComponent {
     static DEFAULT_CONFIG = {
@@ -20,7 +20,7 @@ export class Concept extends BaseComponent {
     };
 
     constructor(term, config = {}) {
-        super({ ...Concept.DEFAULT_CONFIG, ...config }, `Concept<${term.toString()}>`);
+        super({...Concept.DEFAULT_CONFIG, ...config}, `Concept<${term.toString()}>`);
 
         this._term = term;
         this._createdAt = Date.now();
@@ -193,7 +193,7 @@ export class Concept extends BaseComponent {
 
     updateTaskBudget(task, newBudget) {
         const storage = this._getStorage(task.type);
-        return this._replaceTaskInStorage(storage, task, task.clone({ budget: newBudget }));
+        return this._replaceTaskInStorage(storage, task, task.clone({budget: newBudget}));
     }
 
     _replaceTaskInStorage(storage, oldTask, newTask) {
@@ -249,12 +249,12 @@ export class Concept extends BaseComponent {
             }
 
             const deserializationMap = [
-                { dataKey: 'beliefs', bagKey: '_beliefs' },
-                { dataKey: 'goals', bagKey: '_goals' },
-                { dataKey: 'questions', bagKey: '_questions' }
+                {dataKey: 'beliefs', bagKey: '_beliefs'},
+                {dataKey: 'goals', bagKey: '_goals'},
+                {dataKey: 'questions', bagKey: '_questions'}
             ];
 
-            await Promise.all(deserializationMap.map(async ({ dataKey, bagKey }) => {
+            await Promise.all(deserializationMap.map(async ({dataKey, bagKey}) => {
                 if (data[dataKey] && this[bagKey].deserialize) {
                     await this[bagKey].deserialize(data[dataKey], Task.fromJSON);
                 }

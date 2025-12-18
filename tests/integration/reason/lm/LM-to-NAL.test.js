@@ -1,14 +1,14 @@
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
-import { Punctuation, Task } from '../../../../core/src/task/Task.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { createLMNALTestAgent } from '../../../support/lmTestHelpers.js';
-import { assertEventuallyTrue, getTerms, hasTermMatch } from '../../../support/testHelpers.js';
+import {afterAll, beforeAll, describe, test} from '@jest/globals';
+import {Punctuation, Task} from '../../../../core/src/task/Task.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {createLMNALTestAgent} from '../../../support/lmTestHelpers.js';
+import {assertEventuallyTrue, getTerms, hasTermMatch} from '../../../support/testHelpers.js';
 
 describe('LM Rule Coverage', () => {
     let app, agent, termFactory;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent());
+        ({app, agent} = await createLMNALTestAgent());
         termFactory = new TermFactory();
     });
 
@@ -21,7 +21,7 @@ describe('LM Rule Coverage', () => {
 
         await assertEventuallyTrue(
             () => hasTermMatch(getTerms(agent), 'dog', 'animal'),
-            { description: 'NL translation to Narsese' }
+            {description: 'NL translation to Narsese'}
         );
     });
 
@@ -33,7 +33,7 @@ describe('LM Rule Coverage', () => {
                 const terms = getTerms(agent);
                 return hasTermMatch(terms, 'bird') && (hasTermMatch(terms, 'animal') || hasTermMatch(terms, 'fly'));
             },
-            { description: 'concept elaboration' }
+            {description: 'concept elaboration'}
         );
     });
 
@@ -41,8 +41,8 @@ describe('LM Rule Coverage', () => {
         const writeBookGoal = new Task({
             term: termFactory.atomic('write_book'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         await agent.input(writeBookGoal);
@@ -54,7 +54,7 @@ describe('LM Rule Coverage', () => {
                 const concepts = agent.getConcepts();
                 return goals.length > 0 || concepts.length > 0;
             },
-            { description: 'goal processing', timeout: 3000 }
+            {description: 'goal processing', timeout: 3000}
         );
     }, 5000);
 
@@ -62,8 +62,8 @@ describe('LM Rule Coverage', () => {
         await agent.input(new Task({
             term: termFactory.atomic('"Activity correlates with results"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         }));
 
         await assertEventuallyTrue(
@@ -72,7 +72,7 @@ describe('LM Rule Coverage', () => {
                     .map(t => t.term.toString());
                 return all.some(t => ['activity', 'results', 'Increased'].some(w => t.includes(w)));
             },
-            { description: 'hypothesis generation' }
+            {description: 'hypothesis generation'}
         );
     });
 
@@ -80,8 +80,8 @@ describe('LM Rule Coverage', () => {
         await agent.input(new Task({
             term: termFactory.atomic('"Value is $X"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 0.9, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 0.9, confidence: 0.9}
         }));
 
         await assertEventuallyTrue(
@@ -89,7 +89,7 @@ describe('LM Rule Coverage', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => ['robin', 'canary', 'Value'].some(w => t.includes(w)));
             },
-            { description: 'variable grounding' }
+            {description: 'variable grounding'}
         );
     });
 
@@ -97,8 +97,8 @@ describe('LM Rule Coverage', () => {
         await agent.input(new Task({
             term: termFactory.atomic('solve_complex_problem'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         }));
 
         await assertEventuallyTrue(
@@ -106,7 +106,7 @@ describe('LM Rule Coverage', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => ['solution', 'problem', 'solve'].some(w => t.includes(w)));
             },
-            { description: 'analogical reasoning (relaxed check)' }
+            {description: 'analogical reasoning (relaxed check)'}
         );
     });
 });

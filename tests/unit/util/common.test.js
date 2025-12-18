@@ -1,9 +1,9 @@
-import { jest } from '@jest/globals';
-import { deepClone, formatNumber, safeAsync, safeGet } from '../../../core/src/util/common.js';
+import {jest} from '@jest/globals';
+import {deepClone, formatNumber, safeAsync, safeGet} from '../../../core/src/util/common.js';
 
 describe('Common Utils', () => {
     describe('safeGet', () => {
-        const obj = { a: { b: { c: 1 } } };
+        const obj = {a: {b: {c: 1}}};
         test.each([
             ['existing nested value', obj, 'a.b.c', undefined, 1],
             ['non-existent path -> default', obj, 'a.b.d', 'def', 'def'],
@@ -15,7 +15,7 @@ describe('Common Utils', () => {
 
     describe('deepClone', () => {
         test('object', () => {
-            const orig = { a: 1, b: { c: 2 }, d: [3, 4] };
+            const orig = {a: 1, b: {c: 2}, d: [3, 4]};
             const clone = deepClone(orig);
             expect(clone).toEqual(orig);
             expect(clone).not.toBe(orig);
@@ -47,8 +47,11 @@ describe('Common Utils', () => {
         });
 
         test('catches error -> default', async () => {
-            const spy = jest.spyOn(console, 'error').mockImplementation(() => { });
-            const res = await safeAsync(async () => { throw new Error('fail'); }, 'def');
+            const spy = jest.spyOn(console, 'error').mockImplementation(() => {
+            });
+            const res = await safeAsync(async () => {
+                throw new Error('fail');
+            }, 'def');
             expect(res).toBe('def');
             spy.mockRestore();
         });

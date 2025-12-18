@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { NarsGPTStrategy } from '../../../../core/src/reason/strategy/NarsGPTStrategy.js';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {NarsGPTStrategy} from '../../../../core/src/reason/strategy/NarsGPTStrategy.js';
 
 const mockEmbedding = () => ({
     getEmbedding: async (text) => {
@@ -18,14 +18,14 @@ const mockEmbedding = () => ({
 });
 
 const mockMemory = (beliefs = []) => ({
-    concepts: new Map([['bird', { beliefs }], ['animal', { beliefs: [] }]])
+    concepts: new Map([['bird', {beliefs}], ['animal', {beliefs: []}]])
 });
 
-const mockTask = (termStr, truth = { f: 0.9, c: 0.8 }) => ({
-    term: { toString: () => termStr, name: termStr },
+const mockTask = (termStr, truth = {f: 0.9, c: 0.8}) => ({
+    term: {toString: () => termStr, name: termStr},
     truth,
-    stamp: { occurrenceTime: Date.now() },
-    budget: { priority: 0.5 }
+    stamp: {occurrenceTime: Date.now()},
+    budget: {priority: 0.5}
 });
 
 describe('NarsGPTStrategy', () => {
@@ -97,14 +97,14 @@ describe('NarsGPTStrategy', () => {
 
     describe('atomize', () => {
         it('creates new atom', async () => {
-            const { isNew, unifiedTerm } = await strategy.atomize('elephant', 'NOUN');
+            const {isNew, unifiedTerm} = await strategy.atomize('elephant', 'NOUN');
             expect(isNew).toBe(true);
             expect(unifiedTerm).toBeNull();
         });
 
         it('unifies with existing', async () => {
             await strategy.atomize('cat', 'NOUN');
-            const { isNew, unifiedTerm } = await strategy.atomize('cat', 'NOUN');
+            const {isNew, unifiedTerm} = await strategy.atomize('cat', 'NOUN');
             expect(isNew).toBe(false);
             expect(unifiedTerm).toBe('cat');
         });
@@ -123,7 +123,7 @@ describe('NarsGPTStrategy', () => {
 
         it('finds grounded sentence', async () => {
             await strategy.ground('(bird --> animal)', 'Birds are animals');
-            const { grounded, match } = await strategy.checkGrounding('Birds are animals');
+            const {grounded, match} = await strategy.checkGrounding('Birds are animals');
             expect(grounded).toBe(true);
             expect(match).toBe('(bird --> animal)');
         });
@@ -136,8 +136,8 @@ describe('NarsGPTStrategy', () => {
     describe('formatContext', () => {
         it('formats as numbered list', () => {
             const buffer = [
-                { task: mockTask('(a --> b)', { f: 0.9, c: 0.8 }), score: 0.5 },
-                { task: mockTask('(c --> d)', { f: 0.7, c: 0.6 }), score: 0.3 }
+                {task: mockTask('(a --> b)', {f: 0.9, c: 0.8}), score: 0.5},
+                {task: mockTask('(c --> d)', {f: 0.7, c: 0.6}), score: 0.3}
             ];
             const ctx = strategy.formatContext(buffer);
             expect(ctx).toContain('1.');
@@ -150,7 +150,10 @@ describe('NarsGPTStrategy', () => {
         it('yields from memory', async () => {
             const memory = mockMemory([mockTask('(bird --> flyer)')]);
             const candidates = [];
-            for await (const c of strategy.generateCandidates(mockTask('What can fly?'), { memory, currentTime: Date.now() })) {
+            for await (const c of strategy.generateCandidates(mockTask('What can fly?'), {
+                memory,
+                currentTime: Date.now()
+            })) {
                 candidates.push(c);
             }
             expect(candidates.length).toBeGreaterThanOrEqual(0);

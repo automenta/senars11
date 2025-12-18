@@ -1,6 +1,6 @@
-import { clamp } from '../util/common.js';
-import { BaseComponent } from '../util/BaseComponent.js';
-import { Logger } from '../util/Logger.js';
+import {clamp} from '../util/common.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {Logger} from '../util/Logger.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     maxFocusSets: 5,
@@ -136,7 +136,7 @@ export class Focus extends BaseComponent {
             }
 
             if (data.config) {
-                this._config = { ...this._config, ...data.config };
+                this._config = {...this._config, ...data.config};
             }
 
             this.clear();
@@ -236,7 +236,7 @@ class FocusSet {
         const taskEntries = Array.from(this._tasks.values());
 
         const scoredTasks = taskEntries.map(entry => {
-            const { task, priority, addedAt } = entry;
+            const {task, priority, addedAt} = entry;
 
             const activationScore = priority;
             const complexityScore = this._calculateTaskComplexityScore(task);

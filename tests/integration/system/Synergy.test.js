@@ -1,7 +1,7 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { NARTool } from '../../../core/src/tool/NARTool.js';
-import { PrologStrategy } from '../../../core/src/reason/strategy/PrologStrategy.js';
-import { Task } from '../../../core/src/task/Task.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {NARTool} from '../../../core/src/tool/NARTool.js';
+import {PrologStrategy} from '../../../core/src/reason/strategy/PrologStrategy.js';
+import {Task} from '../../../core/src/task/Task.js';
 
 describe('NAL-Prolog Synergy', () => {
     let nar, narTool, tf;
@@ -13,7 +13,7 @@ describe('NAL-Prolog Synergy', () => {
                 strategies: [new PrologStrategy()],
                 maxDerivationDepth: 10
             },
-            debug: { reasoning: false }
+            debug: {reasoning: false}
         });
         await nar.initialize();
         narTool = new NARTool(nar);
@@ -26,8 +26,8 @@ describe('NAL-Prolog Synergy', () => {
     };
 
     test('Prolog feedback loop → NAL stream', async () => {
-        await narTool.execute({ action: 'assert_prolog', content: 'man(socrates).' });
-        await narTool.execute({ action: 'assert_prolog', content: 'mortal(X) :- man(X).' });
+        await narTool.execute({action: 'assert_prolog', content: 'man(socrates).'});
+        await narTool.execute({action: 'assert_prolog', content: 'mortal(X) :- man(X).'});
 
         const subgoalTask = new Task({
             term: createPrologTerm('mortal', 'socrates'),

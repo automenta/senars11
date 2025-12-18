@@ -3,9 +3,9 @@
  * Demonstrates attention buffer, atomization, grounding, and perspective transformation.
  */
 
-import { NarsGPTStrategy } from '../core/src/reason/strategy/NarsGPTStrategy.js';
-import { createNarsGPTQARule, NarsGPTPrompts } from '../core/src/reason/rules/lm/index.js';
-import { EmbeddingLayer } from '../core/src/lm/EmbeddingLayer.js';
+import {NarsGPTStrategy} from '../core/src/reason/strategy/NarsGPTStrategy.js';
+import {createNarsGPTQARule, NarsGPTPrompts} from '../core/src/reason/rules/lm/index.js';
+import {EmbeddingLayer} from '../core/src/lm/EmbeddingLayer.js';
 
 const section = (title) => console.log(`\n${title}`);
 const show = (label, value) => console.log(`  ${label}: ${value}`);
@@ -13,13 +13,13 @@ const show = (label, value) => console.log(`  ${label}: ${value}`);
 section('═'.repeat(60) + '\nNARS-GPT Demo\n' + '═'.repeat(60));
 
 // Setup
-const embeddingLayer = new EmbeddingLayer({ model: 'mock' });
+const embeddingLayer = new EmbeddingLayer({model: 'mock'});
 const strategy = new NarsGPTStrategy({
     embeddingLayer,
     relevantViewSize: 20,
     recentViewSize: 10,
     atomCreationThreshold: 0.95,
-    weights: { relevance: 0.7, recency: 0.3 }
+    weights: {relevance: 0.7, recency: 0.3}
 });
 
 // 1. Perspective Transformation
@@ -37,7 +37,7 @@ strategy.perspectiveMode = 'swap';
 // 2. Atomization (Term Deduplication)
 section('[2] Atomization');
 for (const term of ['cat', 'dog', 'cat', 'feline']) {
-    const { isNew, unifiedTerm } = await strategy.atomize(term, 'NOUN');
+    const {isNew, unifiedTerm} = await strategy.atomize(term, 'NOUN');
     show(`  "${term}"`, isNew ? 'NEW ATOM' : `UNIFIED → "${unifiedTerm}"`);
 }
 
@@ -56,9 +56,9 @@ checks.forEach(([text, r]) => show(`  "${text}"`, `grounded: ${r.grounded}${r.ma
 // 4. Negated Belief Formatting
 section('[4] Negated Belief Formatting');
 const mockBuffer = [
-    { task: { term: { toString: () => '(bird --> flyer)' }, truth: { f: 0.9, c: 0.8 } } },
-    { task: { term: { toString: () => '(penguin --> bird)' }, truth: { f: 1.0, c: 0.95 } } },
-    { task: { term: { toString: () => '(penguin --> flyer)' }, truth: { f: 0.1, c: 0.7 } } } // Negated!
+    {task: {term: {toString: () => '(bird --> flyer)'}, truth: {f: 0.9, c: 0.8}}},
+    {task: {term: {toString: () => '(penguin --> bird)'}, truth: {f: 1.0, c: 0.95}}},
+    {task: {term: {toString: () => '(penguin --> flyer)'}, truth: {f: 0.1, c: 0.7}}} // Negated!
 ];
 console.log(NarsGPTPrompts.formatBuffer(mockBuffer).split('\n').map(l => '  ' + l).join('\n'));
 
@@ -71,7 +71,10 @@ show('  Perspective ops', m.perspectiveOps);
 
 // 6. Rule Factory
 section('[6] Rule Factory');
-const qa = createNarsGPTQARule({ lm: { generateText: async () => '(bird --> animal). {0.9 0.9}' }, narsGPTStrategy: strategy });
+const qa = createNarsGPTQARule({
+    lm: {generateText: async () => '(bird --> animal). {0.9 0.9}'},
+    narsGPTStrategy: strategy
+});
 show('  Created', `"${qa.id}" (${qa.config.name})`);
 
 section('═'.repeat(60) + '\n✓ Demo Complete\n' + '═'.repeat(60));

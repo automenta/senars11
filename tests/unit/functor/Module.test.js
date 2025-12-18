@@ -1,7 +1,6 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { NativeBackend, T } from '../../../core/src/functor/backends/NativeBackend.js';
-import { Module, Linear, Embedding, Sequential, MultiHeadAttention } from '../../../core/src/functor/Module.js';
-import { Tensor } from '../../../core/src/functor/Tensor.js';
+import {describe, expect, test} from '@jest/globals';
+import {NativeBackend, T} from '../../../core/src/functor/backends/NativeBackend.js';
+import {Embedding, Linear, Module, MultiHeadAttention, Sequential} from '../../../core/src/functor/Module.js';
 
 describe('Module System', () => {
     describe('Module base class', () => {
@@ -102,7 +101,7 @@ describe('Module System', () => {
         });
 
         test('can disable bias', () => {
-            const layer = new Linear(2, 3, { bias: false });
+            const layer = new Linear(2, 3, {bias: false});
             const params = layer.parameters();
 
             expect(params.length).toBe(1); // weight only
@@ -122,7 +121,7 @@ describe('Module System', () => {
 
         test('can pass explicit backend', () => {
             const customBackend = new NativeBackend();
-            const layer = new Linear(2, 3, { backend: customBackend });
+            const layer = new Linear(2, 3, {backend: customBackend});
             expect(layer.backend).toBe(customBackend);
         });
     });

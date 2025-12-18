@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { SystemConfig, DEFAULT_CONFIG } from '../../../core/src/config/SystemConfig.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {DEFAULT_CONFIG, SystemConfig} from '../../../core/src/config/SystemConfig.js';
 
 describe('SystemConfig', () => {
     let systemConfig;
@@ -12,14 +12,14 @@ describe('SystemConfig', () => {
 
     test('validates valid configuration', () =>
         expect(() => new SystemConfig({
-            memory: { capacity: 5000 },
-            lm: { enabled: true }
+            memory: {capacity: 5000},
+            lm: {enabled: true}
         })).not.toThrow()
     );
 
     test('detects invalid configuration', () =>
         expect(() => new SystemConfig({
-            memory: { capacity: -100 }
+            memory: {capacity: -100}
         })).toThrow(/validation failed/)
     );
 

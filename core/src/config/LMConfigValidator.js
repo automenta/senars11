@@ -1,16 +1,16 @@
-import { z } from 'zod';
+import {z} from 'zod';
 
 const PROVIDER_REQUIREMENTS = {
-    openai: { requiredFields: ['apiKey', 'modelName'], supportsStreaming: true },
-    ollama: { requiredFields: ['modelName'], supportsStreaming: true },
-    anthropic: { requiredFields: ['apiKey', 'modelName'], supportsStreaming: true },
-    dummy: { requiredFields: [], supportsStreaming: false }
+    openai: {requiredFields: ['apiKey', 'modelName'], supportsStreaming: true},
+    ollama: {requiredFields: ['modelName'], supportsStreaming: true},
+    anthropic: {requiredFields: ['apiKey', 'modelName'], supportsStreaming: true},
+    dummy: {requiredFields: [], supportsStreaming: false}
 };
 
 const VALID_PROVIDERS = Object.keys(PROVIDER_REQUIREMENTS);
 
 export const validateLMConfig = (config) => {
-    if (!config) return { isValid: false, errors: ['Configuration is required'] };
+    if (!config) return {isValid: false, errors: ['Configuration is required']};
 
     const errors = [];
 
@@ -29,5 +29,5 @@ export const validateLMConfig = (config) => {
         errors.push('temperature must be between 0 and 1');
     }
 
-    return { isValid: errors.length === 0, errors };
+    return {isValid: errors.length === 0, errors};
 };

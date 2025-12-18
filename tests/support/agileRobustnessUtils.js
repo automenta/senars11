@@ -6,7 +6,7 @@
  * without breaking tests during ongoing development.
  */
 
-import { runPerformanceTest, waitForCondition } from './baseTestUtils.js';
+import {runPerformanceTest, waitForCondition} from './baseTestUtils.js';
 
 /**
  * Agile-robust assertions that are tolerant of implementation changes

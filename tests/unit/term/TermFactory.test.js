@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('TermFactory', () => {
     let termFactory;

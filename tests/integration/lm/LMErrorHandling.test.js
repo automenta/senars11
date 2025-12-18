@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { createTestAgent } from '../../support/factories.js';
-import { assertEventuallyTrue, getTerms, wait } from '../../support/testHelpers.js';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
+import {createTestAgent} from '../../support/factories.js';
+import {assertEventuallyTrue, getTerms, wait} from '../../support/testHelpers.js';
 
 describe('LM Error Handling', () => {
     let app, agent, cleanup;
 
     beforeEach(async () => {
-        ({ app, agent, cleanup } = await createTestAgent());
+        ({app, agent, cleanup} = await createTestAgent());
     });
 
     afterEach(async () => {
@@ -30,7 +30,7 @@ describe('LM Error Handling', () => {
                 const concepts = agent.getConcepts();
                 return concepts.length > 0;
             },
-            { description: 'system continues despite LM timeout', timeout: 3000 }
+            {description: 'system continues despite LM timeout', timeout: 3000}
         );
     });
 
@@ -45,7 +45,7 @@ describe('LM Error Handling', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => t.includes('Test'));
             },
-            { description: 'system processes input despite LM error', timeout: 2000 }
+            {description: 'system processes input despite LM error', timeout: 2000}
         );
     });
 
@@ -83,7 +83,7 @@ describe('LM Error Handling', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => t.includes('valid'));
             },
-            { description: 'system recovers from malformed output', timeout: 2000 }
+            {description: 'system recovers from malformed output', timeout: 2000}
         );
     });
 
@@ -98,7 +98,7 @@ describe('LM Error Handling', () => {
                 const terms = getTerms(agent);
                 return terms.length >= 0;
             },
-            { description: 'system handles empty LM response', timeout: 1000 }
+            {description: 'system handles empty LM response', timeout: 1000}
         );
 
         expect(agent.getBeliefs().length).toBeGreaterThanOrEqual(0);

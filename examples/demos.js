@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * SeNARS Demo Runner - Run and validate all examples
- * 
+ *
  * Usage:
  *   node demos.js                    # Run all demos
  *   node demos.js --lm-only          # Run only LM-dependent demos
@@ -10,10 +10,9 @@
  *   node demos.js --quick            # Run quick subset only
  */
 
-import { spawn } from 'child_process';
+import {spawn} from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,31 +20,52 @@ const __dirname = path.dirname(__filename);
 // Demo definitions with metadata
 const DEMOS = [
     // Core reasoning (no LM required)
-    { path: 'reasoning/syllogism-demo.js', name: 'Syllogism', category: 'reasoning', lmRequired: false, quick: true },
-    { path: 'reasoning/causal-reasoning-demo.js', name: 'Causal Reasoning', category: 'reasoning', lmRequired: false },
-    { path: 'reasoning/inductive-reasoning-demo.js', name: 'Inductive Reasoning', category: 'reasoning', lmRequired: false },
-    { path: 'reasoning/temporal-reasoning-demo.js', name: 'Temporal Reasoning', category: 'reasoning', lmRequired: false },
-    { path: 'reasoning/syllogism-comparison-demo.js', name: 'Reasoner Comparison', category: 'reasoning', lmRequired: false },
+    {path: 'reasoning/syllogism-demo.js', name: 'Syllogism', category: 'reasoning', lmRequired: false, quick: true},
+    {path: 'reasoning/causal-reasoning-demo.js', name: 'Causal Reasoning', category: 'reasoning', lmRequired: false},
+    {
+        path: 'reasoning/inductive-reasoning-demo.js',
+        name: 'Inductive Reasoning',
+        category: 'reasoning',
+        lmRequired: false
+    },
+    {
+        path: 'reasoning/temporal-reasoning-demo.js',
+        name: 'Temporal Reasoning',
+        category: 'reasoning',
+        lmRequired: false
+    },
+    {
+        path: 'reasoning/syllogism-comparison-demo.js',
+        name: 'Reasoner Comparison',
+        category: 'reasoning',
+        lmRequired: false
+    },
 
     // Advanced features (no LM required)
-    { path: 'advanced/stream-reasoning.js', name: 'Stream Reasoning', category: 'advanced', lmRequired: false, quick: true },
-    { path: 'advanced/prolog-strategy-demo.js', name: 'Prolog Strategy', category: 'advanced', lmRequired: false },
-    { path: 'advanced/performance-benchmark.js', name: 'Performance Benchmark', category: 'advanced', lmRequired: false },
+    {
+        path: 'advanced/stream-reasoning.js',
+        name: 'Stream Reasoning',
+        category: 'advanced',
+        lmRequired: false,
+        quick: true
+    },
+    {path: 'advanced/prolog-strategy-demo.js', name: 'Prolog Strategy', category: 'advanced', lmRequired: false},
+    {path: 'advanced/performance-benchmark.js', name: 'Performance Benchmark', category: 'advanced', lmRequired: false},
 
     // Tensor Logic (no LM required)
-    { path: 'tensor-logic/tensor-basics.mjs', name: 'Tensor Basics', category: 'tensor', lmRequired: false, quick: true },
-    { path: 'tensor-logic/mlp-training.mjs', name: 'MLP Training', category: 'tensor', lmRequired: false },
-    { path: 'tensor-logic/autograd-demo.mjs', name: 'Autograd', category: 'tensor', lmRequired: false },
+    {path: 'tensor-logic/tensor-basics.mjs', name: 'Tensor Basics', category: 'tensor', lmRequired: false, quick: true},
+    {path: 'tensor-logic/mlp-training.mjs', name: 'MLP Training', category: 'tensor', lmRequired: false},
+    {path: 'tensor-logic/autograd-demo.mjs', name: 'Autograd', category: 'tensor', lmRequired: false},
 
     // NARS-GPT (mock LM - no external LM required)
-    { path: 'narsgpt/demo-narsgpt.js', name: 'NARS-GPT Demo', category: 'narsgpt', lmRequired: false, quick: true },
-    { path: 'narsgpt/domain-knowledge.js', name: 'Domain Knowledge', category: 'narsgpt', lmRequired: false },
+    {path: 'narsgpt/demo-narsgpt.js', name: 'NARS-GPT Demo', category: 'narsgpt', lmRequired: false, quick: true},
+    {path: 'narsgpt/domain-knowledge.js', name: 'Domain Knowledge', category: 'narsgpt', lmRequired: false},
 
     // LM-dependent demos (require external LM provider)
-    { path: 'narsgpt/production-lm.js', name: 'Production LM', category: 'narsgpt', lmRequired: true },
-    { path: 'repl/example-agent-repl.js', name: 'Agent REPL', category: 'repl', lmRequired: true },
-    { path: 'repl/example-research-scenario.js', name: 'Research Scenario', category: 'repl', lmRequired: true },
-    { path: 'repl/example-fallback-mechanism.js', name: 'Fallback Mechanism', category: 'repl', lmRequired: true },
+    {path: 'narsgpt/production-lm.js', name: 'Production LM', category: 'narsgpt', lmRequired: true},
+    {path: 'repl/example-agent-repl.js', name: 'Agent REPL', category: 'repl', lmRequired: true},
+    {path: 'repl/example-research-scenario.js', name: 'Research Scenario', category: 'repl', lmRequired: true},
+    {path: 'repl/example-fallback-mechanism.js', name: 'Fallback Mechanism', category: 'repl', lmRequired: true},
 ];
 
 // Parse CLI arguments
@@ -70,7 +90,7 @@ async function runDemo(demoPath, options = {}) {
         const startTime = Date.now();
 
         // Set environment variables for LM provider
-        const env = { ...process.env };
+        const env = {...process.env};
         if (options.provider) {
             env.LM_PROVIDER = options.provider;
         }
@@ -89,8 +109,12 @@ async function runDemo(demoPath, options = {}) {
         let stdout = '';
         let stderr = '';
 
-        child.stdout.on('data', (data) => { stdout += data.toString(); });
-        child.stderr.on('data', (data) => { stderr += data.toString(); });
+        child.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
 
         const timeoutId = setTimeout(() => {
             child.kill('SIGTERM');
@@ -171,7 +195,8 @@ Examples:
   # Transformers.js Provider (Local, no server needed)
   # Good for testing: Xenova/LaMini-Flan-T5-783M (small, capable)
   node demos.js --lm-only --provider transformers --model Xenova/LaMini-Flan-T5-783M
-`); return;
+`);
+        return;
     }
 
     console.log('═'.repeat(60));
@@ -200,15 +225,15 @@ Examples:
     }
 
     // Results tracking
-    const results = { passed: 0, failed: 0, skipped: 0, errors: [] };
+    const results = {passed: 0, failed: 0, skipped: 0, errors: []};
 
     // Optional Asciinema recording
     let recorder = null;
     if (opts.record) {
         try {
             // Check if asciinema is available
-            const { execSync } = await import('child_process');
-            execSync('which asciinema', { stdio: 'ignore' });
+            const {execSync} = await import('child_process');
+            execSync('which asciinema', {stdio: 'ignore'});
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const recordFile = `demos-${timestamp}.cast`;
             console.log(`  Recording to: ${recordFile}\n`);
@@ -245,7 +270,7 @@ Examples:
         } catch (err) {
             console.log(`✗ Error: ${err.message}`);
             results.failed++;
-            results.errors.push({ demo: demo.name, path: demo.path, error: err.message });
+            results.errors.push({demo: demo.name, path: demo.path, error: err.message});
         }
     }
 

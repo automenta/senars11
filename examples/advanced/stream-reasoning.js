@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Stream Reasoning Demo - Comprehensive demonstration of stream-based reasoning
- * 
+ *
  * Features shown:
  * - Stream vs cycle-based reasoning comparison
  * - Continuous pipeline with adaptive processing
@@ -9,7 +9,7 @@
  * - Metrics and performance tracking
  */
 
-import { NAR } from '../../core/src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
 const metric = (label, value) => console.log(`  ${label.padEnd(25)} ${value}`);
@@ -19,12 +19,12 @@ async function runStreamDemo() {
     section('Stream-Based Reasoner Demo');
 
     const nar = new NAR({
-        lm: { enabled: false },
+        lm: {enabled: false},
         reasoning: {
             useStreamReasoner: true,
             maxDerivationDepth: 7,
             cpuThrottleInterval: 0,
-            streamSamplingObjectives: { priority: true, recency: true, novelty: true }
+            streamSamplingObjectives: {priority: true, recency: true, novelty: true}
         }
     });
     await nar.initialize();
@@ -78,8 +78,8 @@ async function runCycleDemo() {
     section('Cycle-Based Reasoner Demo (Comparison)');
 
     const nar = new NAR({
-        lm: { enabled: false },
-        reasoning: { useStreamReasoner: false }
+        lm: {enabled: false},
+        reasoning: {useStreamReasoner: false}
     });
     await nar.initialize();
 
@@ -133,4 +133,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     main();
 }
 
-export { runStreamDemo, runCycleDemo };
+export {runStreamDemo, runCycleDemo};

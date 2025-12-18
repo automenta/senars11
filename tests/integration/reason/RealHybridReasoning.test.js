@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, expect, jest, test } from '@jest/globals';
-import { App } from '../../../agent/src/app/App.js';
+import {afterAll, beforeAll, describe, expect, test} from '@jest/globals';
+import {App} from '../../../agent/src/app/App.js';
 
 describe('Real Hybrid LM-NAL Reasoning', () => {
     let app, agent;
@@ -13,17 +13,17 @@ describe('Real Hybrid LM-NAL Reasoning', () => {
                     modelName: 'Xenova/flan-t5-small',
                     enabled: true,
                     temperature: 0.1,
-                    circuitBreaker: { failureThreshold: 5, resetTimeout: 10000 }
+                    circuitBreaker: {failureThreshold: 5, resetTimeout: 10000}
                 },
-                subsystems: { lm: true }
+                subsystems: {lm: true}
             });
 
-            agent = await app.start({ startAgent: true });
+            agent = await app.start({startAgent: true});
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             if (agent.on) {
-                agent.on('lm.prompt', (data) => lmEvents.push({ type: 'prompt', ...data }));
-                agent.on('lm.response', (data) => lmEvents.push({ type: 'response', ...data }));
+                agent.on('lm.prompt', (data) => lmEvents.push({type: 'prompt', ...data}));
+                agent.on('lm.response', (data) => lmEvents.push({type: 'response', ...data}));
             }
         } catch (error) {
             // Failed to initialize - tests will be skipped

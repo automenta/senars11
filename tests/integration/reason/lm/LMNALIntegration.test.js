@@ -1,14 +1,14 @@
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
-import { Punctuation, Task } from '../../../../core/src/task/Task.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { createLMNALTestAgent, assertLMTranslation, assertNALDerivation } from '../../../support/lmTestHelpers.js';
-import { assertEventuallyTrue, getTerms, hasTermMatch } from '../../../support/testHelpers.js';
+import {afterAll, beforeAll, describe, test} from '@jest/globals';
+import {Punctuation, Task} from '../../../../core/src/task/Task.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {createLMNALTestAgent} from '../../../support/lmTestHelpers.js';
+import {assertEventuallyTrue, getTerms, hasTermMatch} from '../../../support/testHelpers.js';
 
 describe('LM-NAL Multi-Step Reasoning', () => {
     let app, agent, termFactory;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent());
+        ({app, agent} = await createLMNALTestAgent());
         termFactory = new TermFactory();
     });
 
@@ -22,7 +22,7 @@ describe('LM-NAL Multi-Step Reasoning', () => {
 
         await assertEventuallyTrue(
             () => hasTermMatch(getTerms(agent), 'bird', 'animal') || hasTermMatch(getTerms(agent), 'canary', 'animal'),
-            { description: 'LM elaboration feeds NAL syllogism' }
+            {description: 'LM elaboration feeds NAL syllogism'}
         );
     });
 
@@ -30,8 +30,8 @@ describe('LM-NAL Multi-Step Reasoning', () => {
         await agent.input(new Task({
             term: termFactory.atomic('"Activity correlates with results"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         }));
 
         await assertEventuallyTrue(
@@ -40,7 +40,7 @@ describe('LM-NAL Multi-Step Reasoning', () => {
                     .map(t => t.term.toString());
                 return all.some(t => ['activity', 'results', 'Increased'].some(w => t.includes(w)));
             },
-            { description: 'hypothesis generation', timeout: 8000 }
+            {description: 'hypothesis generation', timeout: 8000}
         );
     }, 10000);
 
@@ -48,8 +48,8 @@ describe('LM-NAL Multi-Step Reasoning', () => {
         const writeBookGoal = new Task({
             term: termFactory.atomic('write_book'),
             punctuation: Punctuation.GOAL,
-            budget: { priority: 0.9 },
-            truth: { frequency: 1.0, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 1.0, confidence: 0.9}
         });
 
         await agent.input(writeBookGoal);
@@ -61,7 +61,7 @@ describe('LM-NAL Multi-Step Reasoning', () => {
                 const concepts = agent.getConcepts();
                 return goals.length > 0 || concepts.length > 0;
             },
-            { description: 'goal processed by system', timeout: 3000 }
+            {description: 'goal processed by system', timeout: 3000}
         );
     }, 5000);
 
@@ -70,8 +70,8 @@ describe('LM-NAL Multi-Step Reasoning', () => {
         await agent.input(new Task({
             term: termFactory.atomic('"Value is $X"'),
             punctuation: Punctuation.BELIEF,
-            budget: { priority: 0.9 },
-            truth: { frequency: 0.9, confidence: 0.9 }
+            budget: {priority: 0.9},
+            truth: {frequency: 0.9, confidence: 0.9}
         }));
 
         await assertEventuallyTrue(
@@ -79,7 +79,7 @@ describe('LM-NAL Multi-Step Reasoning', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => ['robin', 'canary', 'sparrow'].some(w => t.includes(w))) || terms.length > 0;
             },
-            { description: 'variable grounding enables inheritance' }
+            {description: 'variable grounding enables inheritance'}
         );
     });
 
@@ -94,7 +94,7 @@ describe('LM-NAL Multi-Step Reasoning', () => {
                 const hasInheritance = hasTermMatch(terms, 'bird', 'animal');
                 return hasTranslation || hasInheritance;
             },
-            { description: 'full NL→NAL→LM pipeline' }
+            {description: 'full NL→NAL→LM pipeline'}
         );
     });
 });
@@ -103,7 +103,7 @@ describe('Focus (STM) Content Verification', () => {
     let app, agent;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent({
+        ({app, agent} = await createLMNALTestAgent({
             '"bird"': '<bird --> animal>.'
         }));
     });
@@ -120,7 +120,7 @@ describe('Focus (STM) Content Verification', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => t.includes('animal') || t.includes('bird'));
             },
-            { description: 'LM tasks appear in focus' }
+            {description: 'LM tasks appear in focus'}
         );
     });
 
@@ -135,7 +135,7 @@ describe('Focus (STM) Content Verification', () => {
                     hasTermMatch([t], 'canary', 'animal') || hasTermMatch([t], 'bird', 'animal')
                 );
             },
-            { description: 'intermediate derivation results' }
+            {description: 'intermediate derivation results'}
         );
     });
 });

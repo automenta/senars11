@@ -7,7 +7,7 @@ const formatTruth = (truth) => {
     const f = truth?.f ?? truth?.frequency ?? 0.5;
     const c = truth?.c ?? truth?.confidence ?? 0;
     const isNeg = f < 0.5;
-    return { prefix: isNeg ? 'NOT: ' : '', f: isNeg ? 1 - f : f, c };
+    return {prefix: isNeg ? 'NOT: ' : '', f: isNeg ? 1 - f : f, c};
 };
 
 export const NarsGPTPrompts = {
@@ -62,13 +62,13 @@ If using general knowledge not in the memory, note that as well.`,
         return buffer.map((item, i) => {
             const task = item.task ?? item;
             const term = task.term?.toString?.() ?? String(task.term ?? task);
-            const { prefix, f, c } = formatTruth(task.truth);
+            const {prefix, f, c} = formatTruth(task.truth);
             return `${i + 1}. ${prefix}${term}${task.truth ? ` {${f.toFixed(2)} ${c.toFixed(2)}}` : ''}`;
         }).join('\n');
     },
 
     formatBelief: (termStr, truth) => {
-        const { prefix, f, c } = formatTruth(truth);
+        const {prefix, f, c} = formatTruth(truth);
         return `${prefix}${termStr} {${f.toFixed(2)} ${c.toFixed(2)}}`;
     }
 };

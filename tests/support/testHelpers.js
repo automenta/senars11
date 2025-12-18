@@ -5,7 +5,8 @@ export const waitForCondition = async (predicate, timeout = 5000, interval = 100
     while (Date.now() - start < timeout) {
         try {
             if (await predicate()) return true;
-        } catch { }
+        } catch {
+        }
         await wait(interval);
     }
     return false;
@@ -20,7 +21,7 @@ export const assertEventuallyTrue = async (predicate, {
     if (!result) throw new Error(`Timeout waiting for: ${description}`);
 };
 
-export const getTermStrings = ({ concepts = [], beliefs = [], questions = [], goals = [] }) => [
+export const getTermStrings = ({concepts = [], beliefs = [], questions = [], goals = []}) => [
     ...concepts.map(c => c.term.toString()),
     ...beliefs.map(b => b.term.toString()),
     ...questions.map(q => q.term.toString()),
@@ -61,21 +62,21 @@ export const mockLM = (jest, agent, responses) => {
 };
 
 export const createMockConfig = (overrides = {}) => ({
-    lm: { provider: 'transformers', modelName: 'mock-model', enabled: true },
-    subsystems: { lm: true },
+    lm: {provider: 'transformers', modelName: 'mock-model', enabled: true},
+    subsystems: {lm: true},
     ...overrides
 });
 
 export const createTestAgent = async (overrides = {}) => {
-    const { App } = await import('../../agent/src/app/App.js');
+    const {App} = await import('../../agent/src/app/App.js');
     const app = new App(createMockConfig(overrides));
-    const agent = await app.start({ startAgent: true });
+    const agent = await app.start({startAgent: true});
     await wait(100);
-    return { app, agent, cleanup: async () => app.shutdown() };
+    return {app, agent, cleanup: async () => app.shutdown()};
 };
 
 export const withTestAgent = (fn) => async () => {
-    const { app, agent, cleanup } = await createTestAgent();
+    const {app, agent, cleanup} = await createTestAgent();
     try {
         await fn(agent);
     } finally {
@@ -84,7 +85,7 @@ export const withTestAgent = (fn) => async () => {
 };
 
 export const withJestMock = async (fn) => {
-    const { jest } = await import('@jest/globals');
+    const {jest} = await import('@jest/globals');
     return fn(jest);
 };
 

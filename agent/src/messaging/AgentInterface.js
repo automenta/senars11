@@ -1,5 +1,5 @@
-import { ReplMessageHandler } from './ReplMessageHandler.js';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {ReplMessageHandler} from './ReplMessageHandler.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 export class ReplCommonInterface {
     constructor(engine) {
@@ -15,14 +15,14 @@ export class ReplCommonInterface {
         try {
             const message = {
                 type: 'narseseInput',
-                payload: { input }
+                payload: {input}
             };
 
             const result = await this.messageHandler.processMessage(message);
             return result;
         } catch (error) {
             Logger.error('Error in processInput:', error);
-            return { error: error.message };
+            return {error: error.message};
         }
     }
 
@@ -30,14 +30,14 @@ export class ReplCommonInterface {
         try {
             const message = {
                 type: 'command.execute',
-                payload: { command, args }
+                payload: {command, args}
             };
 
             const result = await this.messageHandler.processMessage(message);
             return result;
         } catch (error) {
             Logger.error('Error in executeCommand:', error);
-            return { error: error.message };
+            return {error: error.message};
         }
     }
 
@@ -52,7 +52,7 @@ export class ReplCommonInterface {
             return result;
         } catch (error) {
             Logger.error('Error in executeControlCommand:', error);
-            return { error: error.message };
+            return {error: error.message};
         }
     }
 

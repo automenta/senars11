@@ -1,7 +1,15 @@
 export class Optimizer {
-    constructor(lr = 0.01) { this.lr = lr; }
-    step(params) { throw new Error('Not implemented'); }
-    zeroGrad(params) { params.forEach(p => p.zeroGrad()); }
+    constructor(lr = 0.01) {
+        this.lr = lr;
+    }
+
+    step(params) {
+        throw new Error('Not implemented');
+    }
+
+    zeroGrad(params) {
+        params.forEach(p => p.zeroGrad());
+    }
 
     _update(params, fn) {
         const entries = params instanceof Map ? params : params.entries();
@@ -40,7 +48,7 @@ export class SGDOptimizer extends Optimizer {
 export class AdamOptimizer extends Optimizer {
     constructor(lr = 0.001, beta1 = 0.9, beta2 = 0.999, eps = 1e-8) {
         super(lr);
-        Object.assign(this, { beta1, beta2, eps, m: new Map(), v: new Map(), t: 0 });
+        Object.assign(this, {beta1, beta2, eps, m: new Map(), v: new Map(), t: 0});
     }
 
     step(params) {
@@ -65,7 +73,7 @@ export class AdamOptimizer extends Optimizer {
 export class RMSpropOptimizer extends Optimizer {
     constructor(lr = 0.01, decay = 0.9, eps = 1e-8) {
         super(lr);
-        Object.assign(this, { decay, eps, cache: new Map() });
+        Object.assign(this, {decay, eps, cache: new Map()});
     }
 
     step(params) {

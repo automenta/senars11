@@ -7,32 +7,41 @@ Strategies control how premise pairs are selected for inference rules.
 ### Core Strategies
 
 #### [BagStrategy](file:///home/me/senars10/core/src/reason/strategy/BagStrategy.js)
+
 Priority-based selection using the concept bag.
 
 #### [ExhaustiveStrategy](file:///home/me/senars10/core/src/reason/strategy/ExhaustiveStrategy.js)
+
 Tries all possible pairings (use with caution).
 
 #### [ResolutionStrategy](file:///home/me/senars10/core/src/reason/strategy/ResolutionStrategy.js)
+
 NARS-style goal-driven backward chaining.
 
 ### Advanced Strategies
 
 #### [NarsGPTStrategy](file:///home/me/senars10/core/src/reason/strategy/NarsGPTStrategy.js)
-Embedding-based retrieval with attention buffer. See [NARSGPT.md](file:///home/me/senars10/core/src/reason/strategy/NARSGPT.md) for details.
+
+Embedding-based retrieval with attention buffer.
+See [NARSGPT.md](file:///home/me/senars10/core/src/reason/strategy/NARSGPT.md) for details.
 
 Features:
+
 - Attention buffer (relevance + recency)
 - Term atomization via embeddings
 - Grounding verification
 - Perspective transformation
 
 #### [DecompositionStrategy](file:///home/me/senars10/core/src/reason/strategy/DecompositionStrategy.js)
+
 Breaks down compound terms for focused inference.
 
 #### [TermLinkStrategy](file:///home/me/senars10/core/src/reason/strategy/TermLinkStrategy.js)
+
 Uses term linkage for premise selection.
 
 #### [TaskMatchStrategy](file:///home/me/senars10/core/src/reason/strategy/TaskMatchStrategy.js)
+
 Matches tasks by content similarity.
 
 ## Usage

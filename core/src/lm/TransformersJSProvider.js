@@ -1,4 +1,4 @@
-import { BaseProvider } from './BaseProvider.js';
+import {BaseProvider} from './BaseProvider.js';
 
 let pipelinePromise = null;
 const importPipeline = () => {
@@ -22,11 +22,11 @@ export class TransformersJSProvider extends BaseProvider {
         if (this.pipeline) return;
 
         const startTime = Date.now();
-        this._emitEvent('lm:model-load-start', { modelName: this.modelName, task: this.task });
+        this._emitEvent('lm:model-load-start', {modelName: this.modelName, task: this.task});
 
         try {
             const pipeline = await importPipeline();
-            const loadModelPromise = pipeline(this.task, this.modelName, { device: this.device });
+            const loadModelPromise = pipeline(this.task, this.modelName, {device: this.device});
 
             this.pipeline = await this._withTimeout(
                 loadModelPromise,
@@ -40,7 +40,7 @@ export class TransformersJSProvider extends BaseProvider {
                 task: this.task,
                 elapsedMs: elapsed
             });
-            this._emitDebug('Model loaded successfully', { modelName: this.modelName, elapsedMs: elapsed });
+            this._emitDebug('Model loaded successfully', {modelName: this.modelName, elapsedMs: elapsed});
         } catch (error) {
             const elapsed = Date.now() - startTime;
 
@@ -134,7 +134,7 @@ export class TransformersJSProvider extends BaseProvider {
     }
 
     async* _streamPipeline(prompt, options) {
-        const { maxTokens, temperature, ...restOptions } = options;
+        const {maxTokens, temperature, ...restOptions} = options;
         const temp = temperature ?? 0.7;
 
         let resolvePromise, rejectPromise;
@@ -148,7 +148,7 @@ export class TransformersJSProvider extends BaseProvider {
         let fullOutput = '';
 
         const callback_function = (beams) => {
-            const decodedText = this.pipeline.tokenizer.decode(beams[0].output_token_ids, { skip_special_tokens: true });
+            const decodedText = this.pipeline.tokenizer.decode(beams[0].output_token_ids, {skip_special_tokens: true});
             if (decodedText.length > fullOutput.length && decodedText.startsWith(fullOutput)) {
                 const newText = decodedText.substring(fullOutput.length);
                 outputQueue.push(newText);
@@ -165,7 +165,7 @@ export class TransformersJSProvider extends BaseProvider {
         });
 
         resultPromise.then((output) => {
-            this._emitDebug('Pipeline output', { output });
+            this._emitDebug('Pipeline output', {output});
 
             // If streaming didn't capture anything but we have output, enqueue it
             if (fullOutput.length === 0 && Array.isArray(output) && output[0]?.generated_text) {
@@ -189,6 +189,7 @@ export class TransformersJSProvider extends BaseProvider {
             }
         }
     }
+
     async destroy() {
         // Clear pipeline reference to allow GC
         this.pipeline = null;

@@ -1,5 +1,5 @@
-import { Tensor } from './Tensor.js';
-import { T } from './backends/NativeBackend.js';
+import {Tensor} from './Tensor.js';
+import {T} from './backends/NativeBackend.js';
 
 export class Module {
     constructor() {
@@ -48,10 +48,17 @@ export class Module {
         return this;
     }
 
-    eval() { return this.train(false); }
-    inference() { return this.eval(); }
+    eval() {
+        return this.train(false);
+    }
 
-    forward(...args) { throw new Error('forward() not implemented'); }
+    inference() {
+        return this.eval();
+    }
+
+    forward(...args) {
+        throw new Error('forward() not implemented');
+    }
 
     stateDict() {
         const dict = Object.fromEntries(Array.from(this._parameters, ([k, v]) => [k, v.data.slice()]));
@@ -62,7 +69,9 @@ export class Module {
     }
 
     loadStateDict(dict) {
-        this._parameters.forEach((v, k) => { if (dict[k]) v.data = dict[k].slice(); });
+        this._parameters.forEach((v, k) => {
+            if (dict[k]) v.data = dict[k].slice();
+        });
         for (const [k, m] of this._modules) {
             const prefix = `${k}.`;
             const childDict = Object.fromEntries(
@@ -74,10 +83,10 @@ export class Module {
 }
 
 export class Linear extends Module {
-    constructor(inFeatures, outFeatures, { backend = T, bias = true } = {}) {
+    constructor(inFeatures, outFeatures, {backend = T, bias = true} = {}) {
         super();
         this.backend = backend;
-        Object.assign(this, { inFeatures, outFeatures });
+        Object.assign(this, {inFeatures, outFeatures});
         this.weight = this.parameter('weight', backend.kaimingNormal([inFeatures, outFeatures]));
         this.bias = bias ? this.parameter('bias', backend.zeros([outFeatures])) : null;
     }
@@ -95,14 +104,16 @@ export class Linear extends Module {
 }
 
 export class Embedding extends Module {
-    constructor(numEmbeddings, embeddingDim, { backend = T } = {}) {
+    constructor(numEmbeddings, embeddingDim, {backend = T} = {}) {
         super();
         this.backend = backend;
-        Object.assign(this, { numEmbeddings, embeddingDim });
+        Object.assign(this, {numEmbeddings, embeddingDim});
         this.weight = this.parameter('weight', backend.randn([numEmbeddings, embeddingDim]));
     }
 
-    forward(input) { return this.backend.gather(this.weight, input); }
+    forward(input) {
+        return this.backend.gather(this.weight, input);
+    }
 }
 
 export class Sequential extends Module {
@@ -112,17 +123,19 @@ export class Sequential extends Module {
         this.layers = modules;
     }
 
-    forward(input) { return this.layers.reduce((x, layer) => layer.forward(x), input); }
+    forward(input) {
+        return this.layers.reduce((x, layer) => layer.forward(x), input);
+    }
 }
 
 export class MultiHeadAttention extends Module {
-    constructor(dModel, numHeads, { backend = T } = {}) {
+    constructor(dModel, numHeads, {backend = T} = {}) {
         super();
         if (dModel % numHeads) throw new Error('dModel must be divisible by numHeads');
         this.backend = backend;
-        Object.assign(this, { dModel, numHeads, headDim: dModel / numHeads });
+        Object.assign(this, {dModel, numHeads, headDim: dModel / numHeads});
         ['qProj', 'kProj', 'vProj', 'outProj'].forEach(name =>
-            this[name] = this.module(name, new Linear(dModel, dModel, { backend }))
+            this[name] = this.module(name, new Linear(dModel, dModel, {backend}))
         );
     }
 

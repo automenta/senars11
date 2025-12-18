@@ -1,12 +1,12 @@
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
-import { createLMNALTestAgent } from '../../../support/lmTestHelpers.js';
-import { assertEventuallyTrue, getTerms, hasTermMatch } from '../../../support/testHelpers.js';
+import {afterAll, beforeAll, describe, test} from '@jest/globals';
+import {createLMNALTestAgent} from '../../../support/lmTestHelpers.js';
+import {assertEventuallyTrue, getTerms, hasTermMatch} from '../../../support/testHelpers.js';
 
 describe('Bidirectional LM ↔ NAL Cycle', () => {
     let app, agent;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent());
+        ({app, agent} = await createLMNALTestAgent());
     });
 
     afterAll(async () => {
@@ -24,7 +24,7 @@ describe('Bidirectional LM ↔ NAL Cycle', () => {
                 const hasCanaryBird = hasTermMatch(terms, 'canary', 'bird');
                 return hasBirdFly || hasCanaryBird;
             },
-            { description: 'full LM→NAL→LM cycle' }
+            {description: 'full LM→NAL→LM cycle'}
         );
     });
 
@@ -38,7 +38,7 @@ describe('Bidirectional LM ↔ NAL Cycle', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => ['exercise', 'healthy', 'activity'].some(w => t.includes(w)));
             },
-            { description: 'NAL→LM→NAL interaction' }
+            {description: 'NAL→LM→NAL interaction'}
         );
     });
 });
@@ -47,9 +47,9 @@ describe('NAL Rule Coverage (Pure Symbolic)', () => {
     let app, agent;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent({}, {
-            lm: { enabled: false },
-            subsystems: { lm: false }
+        ({app, agent} = await createLMNALTestAgent({}, {
+            lm: {enabled: false},
+            subsystems: {lm: false}
         }));
     });
 
@@ -63,7 +63,7 @@ describe('NAL Rule Coverage (Pure Symbolic)', () => {
 
         await assertEventuallyTrue(
             () => hasTermMatch(getTerms(agent), 'sparrow', 'animal'),
-            { description: 'syllogistic derivation' }
+            {description: 'syllogistic derivation'}
         );
     });
 
@@ -73,7 +73,7 @@ describe('NAL Rule Coverage (Pure Symbolic)', () => {
 
         await assertEventuallyTrue(
             () => getTerms(agent).some(t => t === 'wet' || t.includes('wet')),
-            { description: 'modus ponens derivation' }
+            {description: 'modus ponens derivation'}
         );
     });
 
@@ -86,7 +86,7 @@ describe('NAL Rule Coverage (Pure Symbolic)', () => {
                 const terms = getTerms(agent);
                 return hasTermMatch(terms, 'bird', 'singer') || hasTermMatch(terms, 'robin');
             },
-            { description: 'inductive inference' }
+            {description: 'inductive inference'}
         );
     });
 
@@ -99,7 +99,7 @@ describe('NAL Rule Coverage (Pure Symbolic)', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => ['bird', 'fish', 'animal'].some(w => t.includes(w)));
             },
-            { description: 'abductive inference' }
+            {description: 'abductive inference'}
         );
     });
 
@@ -109,7 +109,7 @@ describe('NAL Rule Coverage (Pure Symbolic)', () => {
 
         await assertEventuallyTrue(
             () => hasTermMatch(getTerms(agent), 'study', 'knowledge'),
-            { description: 'implication chain derivation' }
+            {description: 'implication chain derivation'}
         );
     });
 });

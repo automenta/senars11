@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { Tensor } from '../../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../../core/src/functor/backends/NativeBackend.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {Tensor} from '../../../core/src/functor/Tensor.js';
+import {NativeBackend} from '../../../core/src/functor/backends/NativeBackend.js';
 
 describe('NativeBackend Extended Ops', () => {
     let backend;
@@ -11,43 +11,43 @@ describe('NativeBackend Extended Ops', () => {
 
     describe('einsum', () => {
         test('matrix multiplication pattern ij,jk->ik', () => {
-            const a = new Tensor([[1, 2], [3, 4]], { backend });
-            const b = new Tensor([[5, 6], [7, 8]], { backend });
+            const a = new Tensor([[1, 2], [3, 4]], {backend});
+            const b = new Tensor([[5, 6], [7, 8]], {backend});
             const c = backend.einsum('ij,jk->ik', a, b);
             expect(c.shape).toEqual([2, 2]);
             expect(c.data).toEqual([19, 22, 43, 50]);
         });
 
         test('dot product pattern i,i->', () => {
-            const a = new Tensor([1, 2, 3], { backend });
-            const b = new Tensor([4, 5, 6], { backend });
+            const a = new Tensor([1, 2, 3], {backend});
+            const b = new Tensor([4, 5, 6], {backend});
             const c = backend.einsum('i,i->', a, b);
             expect(c.data[0]).toBe(32); // 1*4 + 2*5 + 3*6
         });
 
         test('outer product pattern i,j->ij', () => {
-            const a = new Tensor([1, 2], { backend });
-            const b = new Tensor([3, 4], { backend });
+            const a = new Tensor([1, 2], {backend});
+            const b = new Tensor([3, 4], {backend});
             const c = backend.einsum('i,j->ij', a, b);
             expect(c.shape).toEqual([2, 2]);
             expect(c.data).toEqual([3, 4, 6, 8]);
         });
 
         test('transpose pattern ij->ji', () => {
-            const a = new Tensor([[1, 2, 3], [4, 5, 6]], { backend });
+            const a = new Tensor([[1, 2, 3], [4, 5, 6]], {backend});
             const c = backend.einsum('ij->ji', a);
             expect(c.shape).toEqual([3, 2]);
             expect(c.data).toEqual([1, 4, 2, 5, 3, 6]);
         });
 
         test('trace pattern ii->', () => {
-            const a = new Tensor([[1, 2], [3, 4]], { backend });
+            const a = new Tensor([[1, 2], [3, 4]], {backend});
             const c = backend.einsum('ii->', a);
             expect(c.data[0]).toBe(5); // 1 + 4
         });
 
         test('sum over axis patterns', () => {
-            const a = new Tensor([[1, 2], [3, 4]], { backend });
+            const a = new Tensor([[1, 2], [3, 4]], {backend});
             const rowSum = backend.einsum('ij->i', a);
             const colSum = backend.einsum('ij->j', a);
             expect(rowSum.data).toEqual([3, 7]);
@@ -55,15 +55,15 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('throws on unsupported pattern', () => {
-            const a = new Tensor([[1, 2]], { backend });
+            const a = new Tensor([[1, 2]], {backend});
             expect(() => backend.einsum('xyz->abc', a)).toThrow(/not supported/);
         });
     });
 
     describe('tensor contractions', () => {
         test('outer product with gradient', () => {
-            const a = new Tensor([2, 3], { requiresGrad: true, backend });
-            const b = new Tensor([4, 5], { requiresGrad: true, backend });
+            const a = new Tensor([2, 3], {requiresGrad: true, backend});
+            const b = new Tensor([4, 5], {requiresGrad: true, backend});
             const c = backend.outer(a, b);
 
             expect(c.shape).toEqual([2, 2]);
@@ -77,7 +77,7 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('trace with gradient', () => {
-            const a = new Tensor([[2, 3], [4, 5]], { requiresGrad: true, backend });
+            const a = new Tensor([[2, 3], [4, 5]], {requiresGrad: true, backend});
             const c = backend.trace(a);
 
             expect(c.data[0]).toBe(7); // 2 + 5
@@ -89,16 +89,16 @@ describe('NativeBackend Extended Ops', () => {
 
     describe('composed ops', () => {
         test('attention mechanism', () => {
-            const q = new Tensor([[1, 2]], { backend });
-            const k = new Tensor([[1, 2], [3, 4]], { backend });
-            const v = new Tensor([[5, 6], [7, 8]], { backend });
+            const q = new Tensor([[1, 2]], {backend});
+            const k = new Tensor([[1, 2], [3, 4]], {backend});
+            const v = new Tensor([[5, 6], [7, 8]], {backend});
             const out = backend.attention(q, k, v);
             expect(out.shape).toEqual([1, 2]);
             expect(out.data.every(x => !isNaN(x))).toBe(true);
         });
 
         test('layerNorm normalizes distribution', () => {
-            const x = new Tensor([[1, 2, 3, 4, 5]], { backend });
+            const x = new Tensor([[1, 2, 3, 4, 5]], {backend});
             const normalized = backend.layerNorm(x);
 
             const mean = normalized.data.reduce((a, b) => a + b, 0) / normalized.size;
@@ -109,18 +109,18 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('cosineSimilarity computes correctly', () => {
-            const a = new Tensor([1, 0, 0], { backend });
-            const b = new Tensor([1, 0, 0], { backend });
+            const a = new Tensor([1, 0, 0], {backend});
+            const b = new Tensor([1, 0, 0], {backend});
             const sim = backend.cosineSimilarity(a, b);
             expect(sim.data[0]).toBeCloseTo(1, 5);
 
-            const c = new Tensor([0, 1, 0], { backend });
+            const c = new Tensor([0, 1, 0], {backend});
             const sim2 = backend.cosineSimilarity(a, c);
             expect(sim2.data[0]).toBeCloseTo(0, 5);
         });
 
         test('dropout in training mode', () => {
-            const x = new Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], { backend });
+            const x = new Tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], {backend});
             const dropped = backend.dropout(x, 0.5, true);
 
             const nonZero = dropped.data.filter(v => v !== 0).length;
@@ -129,13 +129,13 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('dropout in eval mode returns input', () => {
-            const x = new Tensor([1, 2, 3], { backend });
+            const x = new Tensor([1, 2, 3], {backend});
             const dropped = backend.dropout(x, 0.5, false);
             expect(dropped.data).toEqual(x.data);
         });
 
         test('clamp limits values', () => {
-            const x = new Tensor([-5, 0, 5, 10], { backend });
+            const x = new Tensor([-5, 0, 5, 10], {backend});
             const clamped = backend.clamp(x, 0, 5);
             expect(clamped.data).toEqual([0, 0, 5, 5]);
         });
@@ -143,24 +143,24 @@ describe('NativeBackend Extended Ops', () => {
 
     describe('array ops', () => {
         test('concat along axis 0', () => {
-            const a = new Tensor([[1, 2]], { backend });
-            const b = new Tensor([[3, 4]], { backend });
+            const a = new Tensor([[1, 2]], {backend});
+            const b = new Tensor([[3, 4]], {backend});
             const c = backend.concat([a, b], 0);
             expect(c.shape).toEqual([2, 2]);
             expect(c.data).toEqual([1, 2, 3, 4]);
         });
 
         test('concat along axis 1', () => {
-            const a = new Tensor([[1], [2]], { backend });
-            const b = new Tensor([[3], [4]], { backend });
+            const a = new Tensor([[1], [2]], {backend});
+            const b = new Tensor([[3], [4]], {backend});
             const c = backend.concat([a, b], 1);
             expect(c.shape).toEqual([2, 2]);
             expect(c.data).toEqual([1, 3, 2, 4]);
         });
 
         test('concat gradient flows back', () => {
-            const a = new Tensor([[1, 2]], { requiresGrad: true, backend });
-            const b = new Tensor([[3, 4]], { requiresGrad: true, backend });
+            const a = new Tensor([[1, 2]], {requiresGrad: true, backend});
+            const b = new Tensor([[3, 4]], {requiresGrad: true, backend});
             const c = backend.concat([a, b], 0);
             const loss = backend.sum(c);
 
@@ -170,14 +170,14 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('slice extracts subset', () => {
-            const a = new Tensor([[1, 2], [3, 4], [5, 6]], { backend });
+            const a = new Tensor([[1, 2], [3, 4], [5, 6]], {backend});
             const b = backend.slice(a, 0, 2, 0);
             expect(b.shape).toEqual([2, 2]);
             expect(b.data).toEqual([1, 2, 3, 4]);
         });
 
         test('slice gradient', () => {
-            const a = new Tensor([[1, 2], [3, 4], [5, 6]], { requiresGrad: true, backend });
+            const a = new Tensor([[1, 2], [3, 4], [5, 6]], {requiresGrad: true, backend});
             const b = backend.slice(a, 1, 3, 0);
             const loss = backend.sum(b);
 
@@ -186,15 +186,15 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('stack tensors', () => {
-            const a = new Tensor([1, 2], { backend });
-            const b = new Tensor([3, 4], { backend });
+            const a = new Tensor([1, 2], {backend});
+            const b = new Tensor([3, 4], {backend});
             const c = backend.stack([a, b], 0);
             expect(c.shape).toEqual([2, 2]);
             expect(c.data).toEqual([1, 2, 3, 4]);
         });
 
         test('unsqueeze adds dimension', () => {
-            const a = new Tensor([1, 2, 3], { backend });
+            const a = new Tensor([1, 2, 3], {backend});
             const b = backend.unsqueeze(a, 0);
             expect(b.shape).toEqual([1, 3]);
 
@@ -203,16 +203,16 @@ describe('NativeBackend Extended Ops', () => {
         });
 
         test('gather selects rows', () => {
-            const a = new Tensor([[1, 2], [3, 4], [5, 6]], { backend });
-            const indices = new Tensor([0, 2], { backend });
+            const a = new Tensor([[1, 2], [3, 4], [5, 6]], {backend});
+            const indices = new Tensor([0, 2], {backend});
             const b = backend.gather(a, indices, 0);
             expect(b.shape).toEqual([2, 2]);
             expect(b.data).toEqual([1, 2, 5, 6]);
         });
 
         test('gather gradient accumulates', () => {
-            const a = new Tensor([[1, 2], [3, 4], [5, 6]], { requiresGrad: true, backend });
-            const indices = new Tensor([0, 0], { backend });
+            const a = new Tensor([[1, 2], [3, 4], [5, 6]], {requiresGrad: true, backend});
+            const indices = new Tensor([0, 0], {backend});
             const b = backend.gather(a, indices, 0);
             const loss = backend.sum(b);
 

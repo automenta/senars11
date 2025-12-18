@@ -1,14 +1,13 @@
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
-import { Punctuation, Task } from '../../../../core/src/task/Task.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { createLMNALTestAgent, assertNALDerivation, assertLMTranslation } from '../../../support/lmTestHelpers.js';
-import { assertEventuallyTrue, getTerms, hasTermMatch } from '../../../support/testHelpers.js';
+import {afterAll, beforeAll, describe, test} from '@jest/globals';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {createLMNALTestAgent} from '../../../support/lmTestHelpers.js';
+import {assertEventuallyTrue, getTerms, hasTermMatch} from '../../../support/testHelpers.js';
 
 describe('NAL → LM Reasoning', () => {
     let app, agent, termFactory;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent());
+        ({app, agent} = await createLMNALTestAgent());
         termFactory = new TermFactory();
     });
 
@@ -22,7 +21,7 @@ describe('NAL → LM Reasoning', () => {
 
         await assertEventuallyTrue(
             () => hasTermMatch(getTerms(agent), 'exercise', 'healthy') || hasTermMatch(getTerms(agent), 'explanation'),
-            { description: 'syllogistic derivation or explanation' }
+            {description: 'syllogistic derivation or explanation'}
         );
     });
 
@@ -35,7 +34,7 @@ describe('NAL → LM Reasoning', () => {
                 const terms = getTerms(agent);
                 return hasTermMatch(terms, 'bird', 'red') || hasTermMatch(terms, 'robin');
             },
-            { description: 'induction result or elaboration' }
+            {description: 'induction result or elaboration'}
         );
     });
 
@@ -48,7 +47,7 @@ describe('NAL → LM Reasoning', () => {
                 const terms = getTerms(agent);
                 return terms.some(t => ['cat', 'dog', 'mammal'].some(w => t.includes(w)));
             },
-            { description: 'abduction result' }
+            {description: 'abduction result'}
         );
     });
 
@@ -57,7 +56,7 @@ describe('NAL → LM Reasoning', () => {
 
         await assertEventuallyTrue(
             () => hasTermMatch(getTerms(agent), 'student', 'person'),
-            { description: 'conversion result' }
+            {description: 'conversion result'}
         );
     });
 });

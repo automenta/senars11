@@ -1,5 +1,5 @@
-import { describe, test, expect } from '@jest/globals';
-import { HuggingFaceProvider } from '../../../core/src/lm/HuggingFaceProvider.js';
+import {describe, expect, test} from '@jest/globals';
+import {HuggingFaceProvider} from '../../../core/src/lm/HuggingFaceProvider.js';
 
 describe('HuggingFaceProvider', () => {
     test('initializes with correct configuration and defaults', () => {
@@ -29,7 +29,7 @@ describe('HuggingFaceProvider', () => {
     ];
 
     test.each(modelTypes)('identifies model type for %s as %s', (modelName, expectedType) => {
-        const provider = new HuggingFaceProvider({ modelName });
+        const provider = new HuggingFaceProvider({modelName});
         expect(provider.modelType).toBe(expectedType);
     });
 });

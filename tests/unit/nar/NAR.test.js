@@ -1,15 +1,15 @@
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { Memory } from '../../../core/src/memory/Memory.js';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {Memory} from '../../../core/src/memory/Memory.js';
 
 describe('NAR', () => {
     let nar;
 
     beforeEach(async () => {
         nar = new NAR({
-            memory: { maxConcepts: 10 },
-            lm: { enabled: false },
-            tools: { enabled: false }
+            memory: {maxConcepts: 10},
+            lm: {enabled: false},
+            tools: {enabled: false}
         });
         await nar.initialize();
     });
@@ -77,7 +77,7 @@ describe('NAR', () => {
         test('gets concept priorities', () => {
             const priorities = nar.getConceptPriorities();
             expect(priorities).toEqual(expect.arrayContaining([
-                expect.objectContaining({ term: expect.anything(), priority: expect.any(Number) })
+                expect.objectContaining({term: expect.anything(), priority: expect.any(Number)})
             ]));
         });
     });

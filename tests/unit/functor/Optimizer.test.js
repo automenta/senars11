@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { SGDOptimizer, AdamOptimizer, RMSpropOptimizer } from '../../../core/src/functor/Optimizer.js';
-import { Tensor } from '../../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../../core/src/functor/backends/NativeBackend.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {AdamOptimizer, RMSpropOptimizer, SGDOptimizer} from '../../../core/src/functor/Optimizer.js';
+import {Tensor} from '../../../core/src/functor/Tensor.js';
+import {NativeBackend} from '../../../core/src/functor/backends/NativeBackend.js';
 
 describe('Optimizers', function () {
     let backend;
@@ -13,8 +13,8 @@ describe('Optimizers', function () {
     describe('SGDOptimizer', function () {
         test('updates parameters with learning rate', function () {
             const optimizer = new SGDOptimizer(0.1);
-            const param = new Tensor([1, 2, 3], { requiresGrad: true, backend });
-            param.grad = new Tensor([0.5, 1.0, 1.5], { backend });
+            const param = new Tensor([1, 2, 3], {requiresGrad: true, backend});
+            param.grad = new Tensor([0.5, 1.0, 1.5], {backend});
 
             const originalData = param.data.slice();
             const params = new Map([['w', param]]);
@@ -28,18 +28,18 @@ describe('Optimizers', function () {
 
         test('SGD with momentum', function () {
             const optimizer = new SGDOptimizer(0.1, 0.9);
-            const param = new Tensor([1], { requiresGrad: true, backend });
+            const param = new Tensor([1], {requiresGrad: true, backend});
             const params = new Map([['w', param]]);
 
             // First step
-            param.grad = new Tensor([1], { backend });
+            param.grad = new Tensor([1], {backend});
             optimizer.step(params);
             // velocity = 0.9 * 0 + 1 = 1
             // param = 1 - 0.1 * 1 = 0.9
             expect(param.data[0]).toBeCloseTo(0.9);
 
             // Second step
-            param.grad = new Tensor([1], { backend });
+            param.grad = new Tensor([1], {backend});
             optimizer.step(params);
             // velocity = 0.9 * 1 + 1 = 1.9
             // param = 0.9 - 0.1 * 1.9 = 0.71
@@ -48,7 +48,7 @@ describe('Optimizers', function () {
 
         test('skips parameters without gradients', function () {
             const optimizer = new SGDOptimizer(0.1);
-            const param = new Tensor([1, 2, 3], { requiresGrad: false, backend });
+            const param = new Tensor([1, 2, 3], {requiresGrad: false, backend});
             const params = new Map([['w', param]]);
 
             optimizer.step(params);
@@ -60,8 +60,8 @@ describe('Optimizers', function () {
     describe('AdamOptimizer', function () {
         test('updates parameters with adaptive learning rate', function () {
             const optimizer = new AdamOptimizer(0.001);
-            const param = new Tensor([1, 2], { requiresGrad: true, backend });
-            param.grad = new Tensor([0.5, 1.0], { backend });
+            const param = new Tensor([1, 2], {requiresGrad: true, backend});
+            param.grad = new Tensor([0.5, 1.0], {backend});
 
             const params = new Map([['w', param]]);
             optimizer.step(params);
@@ -73,11 +73,11 @@ describe('Optimizers', function () {
 
         test('Adam with multiple steps', function () {
             const optimizer = new AdamOptimizer(0.01);
-            const param = new Tensor([1], { requiresGrad: true, backend });
+            const param = new Tensor([1], {requiresGrad: true, backend});
             const params = new Map([['w', param]]);
 
             for (let i = 0; i < 5; i++) {
-                param.grad = new Tensor([1], { backend });
+                param.grad = new Tensor([1], {backend});
                 optimizer.step(params);
             }
 
@@ -87,11 +87,11 @@ describe('Optimizers', function () {
 
         test('Adam handles different gradient magnitudes', function () {
             const optimizer = new AdamOptimizer(0.001);
-            const param1 = new Tensor([1], { requiresGrad: true, backend });
-            const param2 = new Tensor([1], { requiresGrad: true, backend });
+            const param1 = new Tensor([1], {requiresGrad: true, backend});
+            const param2 = new Tensor([1], {requiresGrad: true, backend});
 
-            param1.grad = new Tensor([0.1], { backend });
-            param2.grad = new Tensor([10], { backend });
+            param1.grad = new Tensor([0.1], {backend});
+            param2.grad = new Tensor([10], {backend});
 
             const params = new Map([['w1', param1], ['w2', param2]]);
             optimizer.step(params);
@@ -105,8 +105,8 @@ describe('Optimizers', function () {
     describe('RMSpropOptimizer', function () {
         test('updates parameters with RMSprop', function () {
             const optimizer = new RMSpropOptimizer(0.01);
-            const param = new Tensor([1, 2], { requiresGrad: true, backend });
-            param.grad = new Tensor([0.5, 1.0], { backend });
+            const param = new Tensor([1, 2], {requiresGrad: true, backend});
+            param.grad = new Tensor([0.5, 1.0], {backend});
 
             const params = new Map([['w', param]]);
             optimizer.step(params);
@@ -117,12 +117,12 @@ describe('Optimizers', function () {
 
         test('RMSprop accumulates squared gradients', function () {
             const optimizer = new RMSpropOptimizer(0.01, 0.9);
-            const param = new Tensor([1], { requiresGrad: true, backend });
+            const param = new Tensor([1], {requiresGrad: true, backend});
             const params = new Map([['w', param]]);
 
             // Multiple steps with same gradient
             for (let i = 0; i < 3; i++) {
-                param.grad = new Tensor([1], { backend });
+                param.grad = new Tensor([1], {backend});
                 const before = param.data[0];
                 optimizer.step(params);
                 // Step size should decrease as cache builds up
@@ -137,11 +137,11 @@ describe('Optimizers', function () {
     describe('zeroGrad', function () {
         test('clears gradients for all parameters', function () {
             const optimizer = new SGDOptimizer(0.1);
-            const param1 = new Tensor([1], { requiresGrad: true, backend });
-            const param2 = new Tensor([2], { requiresGrad: true, backend });
+            const param1 = new Tensor([1], {requiresGrad: true, backend});
+            const param2 = new Tensor([2], {requiresGrad: true, backend});
 
-            param1.grad = new Tensor([1], { backend });
-            param2.grad = new Tensor([2], { backend });
+            param1.grad = new Tensor([1], {backend});
+            param2.grad = new Tensor([2], {backend});
 
             const params = new Map([['w1', param1], ['w2', param2]]);
             optimizer.zeroGrad(params);
@@ -155,8 +155,8 @@ describe('Optimizers', function () {
         test('SGD converges on simple linear problem', function () {
             // y = 2x + 1, learn from multiple points
             const optimizer = new SGDOptimizer(0.05);
-            const w = new Tensor([0.5], { requiresGrad: true, backend });
-            const b = new Tensor([0.5], { requiresGrad: true, backend });
+            const w = new Tensor([0.5], {requiresGrad: true, backend});
+            const b = new Tensor([0.5], {requiresGrad: true, backend});
 
             // Training data: x=[1,2,3,4], y=[3,5,7,9]
             const xs = [[1], [2], [3], [4]];
@@ -169,8 +169,8 @@ describe('Optimizers', function () {
                 for (let i = 0; i < xs.length; i++) {
                     optimizer.zeroGrad(params);
 
-                    const x = new Tensor(xs[i], { backend });
-                    const yTrue = new Tensor(ys[i], { backend });
+                    const x = new Tensor(xs[i], {backend});
+                    const yTrue = new Tensor(ys[i], {backend});
 
                     // Forward: y = w*x + b
                     const wx = backend.mul(w, x);

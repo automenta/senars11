@@ -1,8 +1,8 @@
 // embedding-demo.mjs
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
-import { Embedding, Linear, Module } from '../../core/src/functor/Module.js';
-import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
-import { AdamOptimizer } from '../../core/src/functor/Optimizer.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+import {Embedding, Linear, Module} from '../../core/src/functor/Module.js';
+import {LossFunctor} from '../../core/src/functor/LossFunctor.js';
+import {AdamOptimizer} from '../../core/src/functor/Optimizer.js';
 
 console.log('=== Embedding Layer ===\n');
 
@@ -28,8 +28,8 @@ class SentimentClassifier extends Module {
 }
 
 const data = [
-    { x: [3, 4], y: 1 }, { x: [4, 5], y: 1 },
-    { x: [0, 1], y: 0 }, { x: [1, 0], y: 0 }
+    {x: [3, 4], y: 1}, {x: [4, 5], y: 1},
+    {x: [0, 1], y: 0}, {x: [1, 0], y: 0}
 ];
 
 const model = new SentimentClassifier();
@@ -38,7 +38,7 @@ const optimizer = new AdamOptimizer(0.1);
 
 for (let epoch = 0; epoch < 100; epoch++) {
     let totalLoss = 0;
-    for (const { x, y } of data) {
+    for (const {x, y} of data) {
         optimizer.zeroGrad(model.parameters());
         const pred = model.forward(x);
         const loss = loss_fn.binaryCrossEntropy(pred, T.tensor([[y]]));
@@ -50,7 +50,7 @@ for (let epoch = 0; epoch < 100; epoch++) {
 }
 
 console.log('\n--- Predictions ---');
-data.forEach(({ x, y }) => {
+data.forEach(({x, y}) => {
     const pred = model.forward(x).data[0];
     console.log(`[${x}] → ${pred.toFixed(3)} (expected: ${y}) ${Math.round(pred) === y ? '✓' : '✗'}`);
 });

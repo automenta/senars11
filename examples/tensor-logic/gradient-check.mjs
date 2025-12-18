@@ -1,25 +1,26 @@
-import { Tensor } from '../../core/src/functor/Tensor.js';
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
+import {Tensor} from '../../core/src/functor/Tensor.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+
 console.log('=== Tensor Logic: Gradient Verification ===\n');
 
 const eps = 1e-5;
 
 function numericalGradient(fn, x, idx = 0) {
-    const xPlus = new Tensor([...x.data], { backend: T });
-    const xMinus = new Tensor([...x.data], { backend: T });
+    const xPlus = new Tensor([...x.data], {backend: T});
+    const xMinus = new Tensor([...x.data], {backend: T});
     xPlus.data[idx] += eps;
     xMinus.data[idx] -= eps;
     return (fn(xPlus).data[0] - fn(xMinus).data[0]) / (2 * eps);
 }
 
 function checkGradient(name, fn, xVal) {
-    const x = new Tensor(xVal, { requiresGrad: true, backend: T });
+    const x = new Tensor(xVal, {requiresGrad: true, backend: T});
     const y = fn(x);
     y.backward();
 
     const analytical = x.grad.toArray();
     const numerical = xVal.map((_, i) =>
-        numericalGradient(t => fn(t), new Tensor(xVal, { backend: T }), i)
+        numericalGradient(t => fn(t), new Tensor(xVal, {backend: T}), i)
     );
 
     const maxError = Math.max(...analytical.map((a, i) => Math.abs(a - numerical[i])));
@@ -62,8 +63,8 @@ console.log(`Results: ${passed}/${tests.length} gradient checks passed`);
 
 // Matrix operations
 console.log('\n--- Matrix Gradient Check ---');
-const A = new Tensor([[1, 2], [3, 4]], { requiresGrad: true, backend: T });
-const B = new Tensor([[5, 6], [7, 8]], { backend: T });
+const A = new Tensor([[1, 2], [3, 4]], {requiresGrad: true, backend: T});
+const B = new Tensor([[5, 6], [7, 8]], {backend: T});
 
 const C = T.matmul(A, B);
 const loss = T.sum(C);

@@ -1,6 +1,6 @@
-import { Runner } from './Runner.js';
-import { getHeapUsed } from '../../util/common.js';
-import { Logger } from '../../util/Logger.js';
+import {Runner} from './Runner.js';
+import {getHeapUsed} from '../../util/common.js';
+import {Logger} from '../../util/Logger.js';
 
 export class PipelineRunner extends Runner {
     constructor(reasoner, config = {}) {

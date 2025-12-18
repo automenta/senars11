@@ -3,12 +3,12 @@
  * Demonstrates real-world integration with Ollama LLM for question-answering.
  */
 
-import { NAR } from '../../core/src/nar/NAR.js';
-import { NarsGPTStrategy } from '../../core/src/reason/strategy/NarsGPTStrategy.js';
-import { createNarsGPTQARule, createNarsGPTBeliefRule } from '../../core/src/reason/rules/lm/index.js';
-import { EmbeddingLayer } from '../../core/src/lm/EmbeddingLayer.js';
-import { LangChainProvider } from '../../core/src/lm/LangChainProvider.js';
-import { EventBus } from '../../core/src/util/EventBus.js';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {NarsGPTStrategy} from '../../core/src/reason/strategy/NarsGPTStrategy.js';
+import {createNarsGPTBeliefRule, createNarsGPTQARule} from '../../core/src/reason/rules/lm/index.js';
+import {EmbeddingLayer} from '../../core/src/lm/EmbeddingLayer.js';
+import {LangChainProvider} from '../../core/src/lm/LangChainProvider.js';
+import {EventBus} from '../../core/src/util/EventBus.js';
 
 // Configuration
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
@@ -44,24 +44,24 @@ const strategy = new NarsGPTStrategy({
     relevantViewSize: 20,
     recentViewSize: 10,
     perspectiveMode: 'neutralize', // Use 3rd-person for knowledge representation
-    weights: { relevance: 0.7, recency: 0.3 }
+    weights: {relevance: 0.7, recency: 0.3}
 });
 
 // 5. Enable EventBus logging for observability
 console.log('[4] Enabling EventBus logging...');
-eventBus.on('narsgpt:candidates', ({ query, bufferSize }) => {
+eventBus.on('narsgpt:candidates', ({query, bufferSize}) => {
     console.log(`  [Event] Attention buffer built: ${bufferSize} items for "${query}"`);
 });
 
-eventBus.on('narsgpt:atomCreated', ({ term, type }) => {
+eventBus.on('narsgpt:atomCreated', ({term, type}) => {
     console.log(`  [Event] New atom created: "${term}" (${type})`);
 });
 
-eventBus.on('narsgpt:atomUnified', ({ term, unifiedTo, similarity }) => {
+eventBus.on('narsgpt:atomUnified', ({term, unifiedTo, similarity}) => {
     console.log(`  [Event] Atom unified: "${term}" → "${unifiedTo}" (similarity: ${similarity.toFixed(3)})`);
 });
 
-eventBus.on('narsgpt:grounded', ({ narsese, sentence }) => {
+eventBus.on('narsgpt:grounded', ({narsese, sentence}) => {
     console.log(`  [Event] Grounded: "${sentence}" → ${narsese}`);
 });
 

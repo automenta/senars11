@@ -1,8 +1,8 @@
 /**
  * ClientMessageHandlers - Modular handlers for WebSocket client messages
  */
-import { SUPPORTED_MESSAGE_TYPES } from '@senars/core';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {SUPPORTED_MESSAGE_TYPES} from '@senars/core';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 export class ClientMessageHandlers {
     constructor(webSocketMonitor) {
@@ -61,7 +61,7 @@ export class ClientMessageHandlers {
     }
 
     handlePing(client) {
-        this._sendToClient(client, { type: 'pong', timestamp: Date.now() });
+        this._sendToClient(client, {type: 'pong', timestamp: Date.now()});
     }
 
     handleLog(client, message) {

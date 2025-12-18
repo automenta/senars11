@@ -4,10 +4,10 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { FileSystemDemoSource } from './FileSystemDemoSource.js';
-import { BuiltinDemoSource } from './BuiltinDemoSource.js';
-import { ProcessDemoRunner } from './ProcessDemoRunner.js';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {FileSystemDemoSource} from './FileSystemDemoSource.js';
+import {BuiltinDemoSource} from './BuiltinDemoSource.js';
+import {ProcessDemoRunner} from './ProcessDemoRunner.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 export class DemosManager {
     constructor() {
@@ -85,7 +85,7 @@ export class DemosManager {
                 const tempPath = path.join(os.tmpdir(), `senars_custom_${Date.now()}.js`);
                 await fs.promises.writeFile(tempPath, code);
                 try {
-                    await this.runProcessDemo({ path: tempPath, id: 'custom' }, sendDemoStep);
+                    await this.runProcessDemo({path: tempPath, id: 'custom'}, sendDemoStep);
                 } finally {
                     await fs.promises.unlink(tempPath).catch(() => {
                     });

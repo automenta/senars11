@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { Config, Component, DEFAULT_CONFIG_CORE } from '../../../core/src/config/Config.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {Component, Config, DEFAULT_CONFIG_CORE} from '../../../core/src/config/Config.js';
 
 describe('Config', () => {
     describe('parse', () => {
@@ -45,7 +45,7 @@ describe('Config', () => {
             }
         ];
 
-        test.each(parseTests)('parses $name', ({ args, expect: expectFn }) =>
+        test.each(parseTests)('parses $name', ({args, expect: expectFn}) =>
             expectFn(Config.parse(args))
         );
     });
@@ -61,10 +61,21 @@ describe('Component', () => {
             this.destroyCalled = false;
         }
 
-        async _initialize() { this.initCalled = true; }
-        async _start() { this.startCalled = true; }
-        async _stop() { this.stopCalled = true; }
-        async _destroy() { this.destroyCalled = true; }
+        async _initialize() {
+            this.initCalled = true;
+        }
+
+        async _start() {
+            this.startCalled = true;
+        }
+
+        async _stop() {
+            this.stopCalled = true;
+        }
+
+        async _destroy() {
+            this.destroyCalled = true;
+        }
     }
 
     let component;
@@ -102,8 +113,8 @@ describe('Component', () => {
     });
 
     test('updateConfig merges values', () => {
-        const comp = new TestComponent({ a: 1, b: { c: 2 } });
-        comp.updateConfig({ b: { d: 3 } });
+        const comp = new TestComponent({a: 1, b: {c: 2}});
+        comp.updateConfig({b: {d: 3}});
         expect(comp.config.a).toBe(1);
         expect(comp.config.b.c).toBe(2);
     });

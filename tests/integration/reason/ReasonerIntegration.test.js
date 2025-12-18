@@ -1,9 +1,8 @@
-import { jest } from '@jest/globals';
-import { NAR } from '../../../core/src/nar/NAR.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 const createReasonerConfig = (overrides = {}) => ({
-    reasoning: { useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5 },
-    cycle: { delay: 1 },
+    reasoning: {useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5},
+    cycle: {delay: 1},
     ...overrides
 });
 
@@ -53,7 +52,7 @@ describe('Reasoner Integration', () => {
 
     test('should respect derivation depth limits', async () => {
         const narLimited = new NAR(createReasonerConfig({
-            reasoning: { useStreamReasoner: true, maxDerivationDepth: 1 }
+            reasoning: {useStreamReasoner: true, maxDerivationDepth: 1}
         }));
 
         await narLimited.initialize();

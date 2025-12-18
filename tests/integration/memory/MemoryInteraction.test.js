@@ -1,15 +1,15 @@
-import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { inputAll, wait } from '../../support/testHelpers.js';
-import { generateBeliefs } from '../../support/integrationTestUtils.js';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {inputAll, wait} from '../../support/testHelpers.js';
+import {generateBeliefs} from '../../support/integrationTestUtils.js';
 
 describe('Memory Cross-Layer Interaction', () => {
     let nar;
 
     beforeEach(async () => {
         nar = new NAR({
-            debug: { enabled: false },
-            cycle: { delay: 5, maxTasksPerCycle: 10 },
+            debug: {enabled: false},
+            cycle: {delay: 5, maxTasksPerCycle: 10},
             memory: {
                 priorityThreshold: 0.3,
                 consolidationInterval: 5,
@@ -116,7 +116,7 @@ describe('Memory Cross-Layer Interaction', () => {
     });
 
     test('Concept indexing under load', async () => {
-        const inheritances = Array.from({ length: 25 }, (_, i) =>
+        const inheritances = Array.from({length: 25}, (_, i) =>
             `<item_${i} --> category_${i % 5}>.`
         );
 

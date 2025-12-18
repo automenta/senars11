@@ -1,11 +1,11 @@
-import { TRUTH } from '../../../core/src/config/constants.js';
-import { Truth } from '../../../core/src/Truth.js';
+import {TRUTH} from '../../../core/src/config/constants.js';
+import {Truth} from '../../../core/src/Truth.js';
 
 describe('Truth', () => {
     test('initialization', () => {
-        expect(new Truth()).toMatchObject({ frequency: TRUTH.DEFAULT_FREQUENCY, confidence: TRUTH.DEFAULT_CONFIDENCE });
-        expect(new Truth(0.8, 0.9)).toMatchObject({ frequency: 0.8, confidence: 0.9 });
-        expect(new Truth(-0.5, 1.5)).toMatchObject({ frequency: 0, confidence: 1 });
+        expect(new Truth()).toMatchObject({frequency: TRUTH.DEFAULT_FREQUENCY, confidence: TRUTH.DEFAULT_CONFIDENCE});
+        expect(new Truth(0.8, 0.9)).toMatchObject({frequency: 0.8, confidence: 0.9});
+        expect(new Truth(-0.5, 1.5)).toMatchObject({frequency: 0, confidence: 1});
         expect(new Truth(NaN, NaN)).toMatchObject({
             frequency: TRUTH.DEFAULT_FREQUENCY,
             confidence: TRUTH.DEFAULT_CONFIDENCE
@@ -28,7 +28,7 @@ describe('Truth', () => {
         ['analogy', t1, t2, 0.8 * 0.7, 0.9 * 0.6 * 0.7],
         ['resemblance', t1, t2, (0.8 + 0.7) / 2, 0.9 * 0.6]
     ])('operation: %s', (op, a, b, f, c) => {
-        expect(Truth[op](a, b)).toMatchObject({ frequency: f, confidence: c });
+        expect(Truth[op](a, b)).toMatchObject({frequency: f, confidence: c});
     });
 
     test('revision', () => {
@@ -41,11 +41,11 @@ describe('Truth', () => {
     });
 
     test('negation', () => {
-        expect(Truth.negation(t1)).toMatchObject({ frequency: 1 - 0.8, confidence: 0.9 });
+        expect(Truth.negation(t1)).toMatchObject({frequency: 1 - 0.8, confidence: 0.9});
     });
 
     test('conversion', () => {
-        expect(Truth.conversion(t1)).toMatchObject({ frequency: 0.8, confidence: 0.8 * 0.9 });
+        expect(Truth.conversion(t1)).toMatchObject({frequency: 0.8, confidence: 0.8 * 0.9});
     });
 
     test('comparison', () => {

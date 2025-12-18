@@ -1,24 +1,24 @@
-import { Tensor } from '../../core/src/functor/Tensor.js';
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
-import { SGDOptimizer, AdamOptimizer, RMSpropOptimizer } from '../../core/src/functor/Optimizer.js';
+import {Tensor} from '../../core/src/functor/Tensor.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+import {AdamOptimizer, RMSpropOptimizer, SGDOptimizer} from '../../core/src/functor/Optimizer.js';
 
 console.log('=== Tensor Logic: Optimizer Race ===\n');
 console.log('Goal: Minimize f(x) = (x - 3)² starting from x = 10\n');
 
 // Create optimizers
 const optimizers = [
-    { name: 'SGD', opt: new SGDOptimizer(0.1), color: '🔵' },
-    { name: 'SGD+Mom', opt: new SGDOptimizer(0.1, 0.9), color: '🟢' },
-    { name: 'Adam', opt: new AdamOptimizer(0.5), color: '🟡' },
-    { name: 'RMSprop', opt: new RMSpropOptimizer(0.3), color: '🟠' }
+    {name: 'SGD', opt: new SGDOptimizer(0.1), color: '🔵'},
+    {name: 'SGD+Mom', opt: new SGDOptimizer(0.1, 0.9), color: '🟢'},
+    {name: 'Adam', opt: new AdamOptimizer(0.5), color: '🟡'},
+    {name: 'RMSprop', opt: new RMSpropOptimizer(0.3), color: '🟠'}
 ];
 
 const target = 3;
 const maxIters = 20;
 
 // Track trajectories
-const trajectories = optimizers.map(({ name, opt }) => {
-    const x = new Tensor([10], { requiresGrad: true, backend: T });
+const trajectories = optimizers.map(({name, opt}) => {
+    const x = new Tensor([10], {requiresGrad: true, backend: T});
     const params = new Map([['x', x]]);
     const history = [x.data[0]];
 
@@ -26,7 +26,7 @@ const trajectories = optimizers.map(({ name, opt }) => {
         opt.zeroGrad(params);
 
         // f(x) = (x - 3)²
-        const diff = T.sub(x, new Tensor([target], { backend: T }));
+        const diff = T.sub(x, new Tensor([target], {backend: T}));
         const loss = T.mul(diff, diff);
         loss.backward();
 
@@ -34,7 +34,7 @@ const trajectories = optimizers.map(({ name, opt }) => {
         history.push(x.data[0]);
     }
 
-    return { name, history, final: x.data[0] };
+    return {name, history, final: x.data[0]};
 });
 
 // Print race results

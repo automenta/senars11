@@ -1,20 +1,20 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { Memory } from '../../../core/src/memory/Memory.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
-import { Task } from '../../../core/src/task/Task.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {Memory} from '../../../core/src/memory/Memory.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {Task} from '../../../core/src/task/Task.js';
 
 describe('Memory', () => {
     let memory, termFactory;
 
     beforeEach(() => {
-        memory = new Memory({ maxConcepts: 10, forgetPolicy: 'priority' });
+        memory = new Memory({maxConcepts: 10, forgetPolicy: 'priority'});
         termFactory = new TermFactory();
     });
 
     const createTask = (termName) => new Task({
         term: termFactory.create(termName),
         punctuation: '.',
-        truth: { frequency: 1.0, confidence: 0.9 }
+        truth: {frequency: 1.0, confidence: 0.9}
     });
 
     test('adds tasks and creates concepts', () => {

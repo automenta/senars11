@@ -1,9 +1,9 @@
 export class DataLoader {
     constructor(dataset, batchSize = 32, shuffle = false, collateFn = null) {
-        Object.assign(this, { dataset, batchSize, shuffle, collateFn: collateFn ?? (batch => batch) });
+        Object.assign(this, {dataset, batchSize, shuffle, collateFn: collateFn ?? (batch => batch)});
     }
 
-    *[Symbol.iterator]() {
+    * [Symbol.iterator]() {
         let indices = [...Array(this.dataset.length).keys()];
         if (this.shuffle) {
             for (let i = indices.length - 1; i > 0; i--) {
@@ -42,7 +42,7 @@ export class LRScheduler {
 
 export class EarlyStopping {
     constructor(patience = 5, minDelta = 0) {
-        Object.assign(this, { patience, minDelta, bestLoss: Infinity, counter: 0 });
+        Object.assign(this, {patience, minDelta, bestLoss: Infinity, counter: 0});
     }
 
     step(loss) {
@@ -67,7 +67,7 @@ export class MetricsTracker {
 
     log(epoch, metrics) {
         Object.entries(metrics).forEach(([key, value]) => {
-            (this.history[key] ??= []).push({ epoch, value });
+            (this.history[key] ??= []).push({epoch, value});
         });
     }
 
@@ -84,7 +84,7 @@ export class MetricsTracker {
             const latest = values[values.length - 1];
             const isMin = metric.includes('loss') || metric.includes('error');
             const best = values.reduce((acc, v) => (isMin ? v.value < acc.value : v.value > acc.value) ? v : acc);
-            return [metric, { latest: latest.value, best: best.value, bestEpoch: best.epoch }];
+            return [metric, {latest: latest.value, best: best.value, bestEpoch: best.epoch}];
         }));
     }
 }
@@ -92,13 +92,19 @@ export class MetricsTracker {
 // === Tier 3 Scaffolds (inline stubs) ===
 
 export class SymbolicBackend {
-    constructor() { throw new Error('SymbolicBackend not implemented'); }
+    constructor() {
+        throw new Error('SymbolicBackend not implemented');
+    }
 }
 
 export class TensorOptimizer {
-    constructor() { throw new Error('TensorOptimizer not implemented'); }
+    constructor() {
+        throw new Error('TensorOptimizer not implemented');
+    }
 }
 
 export class ONNXExporter {
-    constructor() { throw new Error('ONNXExporter not implemented'); }
+    constructor() {
+        throw new Error('ONNXExporter not implemented');
+    }
 }

@@ -1,13 +1,13 @@
 // training-utilities.mjs
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
-import { Linear } from '../../core/src/functor/Module.js';
-import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
-import { SGDOptimizer } from '../../core/src/functor/Optimizer.js';
-import { DataLoader, LRScheduler, EarlyStopping, MetricsTracker } from '../../core/src/functor/TrainingUtils.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+import {Linear} from '../../core/src/functor/Module.js';
+import {LossFunctor} from '../../core/src/functor/LossFunctor.js';
+import {SGDOptimizer} from '../../core/src/functor/Optimizer.js';
+import {DataLoader, EarlyStopping, LRScheduler, MetricsTracker} from '../../core/src/functor/TrainingUtils.js';
 
 console.log('=== Training Utilities ===\n');
 
-const dataset = Array.from({ length: 20 }, (_, i) => ({
+const dataset = Array.from({length: 20}, (_, i) => ({
     x: T.tensor([[i * 0.1]]),
     y: T.tensor([[i * 0.2 + 1]])
 }));
@@ -16,7 +16,7 @@ const loader = new DataLoader(dataset, 4, true);
 console.log(`DataLoader: ${[...loader].length} batches (20 samples / batch_size=4)`);
 
 console.log('\n--- LR Scheduler ---');
-const dummyOpt = { lr: 0.1 };
+const dummyOpt = {lr: 0.1};
 const stepScheduler = new LRScheduler(dummyOpt, 'step', 10, 0.5);
 [0, 5, 10, 15, 20].forEach(epoch => {
     stepScheduler.step(epoch);
@@ -41,7 +41,7 @@ const stopper = new EarlyStopping(3, 0.01);
 console.log('\n--- Metrics Tracker ---');
 const tracker = new MetricsTracker();
 for (let epoch = 0; epoch < 5; epoch++) {
-    tracker.log(epoch, { loss: 1.0 - epoch * 0.15, accuracy: 0.5 + epoch * 0.1 });
+    tracker.log(epoch, {loss: 1.0 - epoch * 0.15, accuracy: 0.5 + epoch * 0.1});
 }
 console.log('Loss history:', tracker.get('loss').map(e => e.value.toFixed(2)).join(', '));
 console.log('Accuracy history:', tracker.get('accuracy').map(e => e.value.toFixed(2)).join(', '));
@@ -67,7 +67,7 @@ for (let epoch = 0; epoch < 100; epoch++) {
     }
 
     const avgLoss = epochLoss / [...new DataLoader(dataset, 4)].length;
-    metrics.log(epoch, { loss: avgLoss, lr: optimizer.lr });
+    metrics.log(epoch, {loss: avgLoss, lr: optimizer.lr});
     scheduler.step(epoch);
 
     if (early_stopping.step(avgLoss)) {

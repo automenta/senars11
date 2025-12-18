@@ -1,9 +1,9 @@
-import { TensorBackend } from './TensorBackend.js';
-import { Tensor } from '../Tensor.js';
+import {TensorBackend} from './TensorBackend.js';
+import {Tensor} from '../Tensor.js';
 
 export class NativeBackend extends TensorBackend {
     _unaryWithGrad(a, forwardFn, gradMaskFn) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        if (!(a instanceof Tensor)) a = new Tensor([a], {backend: this});
         const result = this._createTensor(a.data.map(forwardFn), [...a.shape]);
         if (a.requiresGrad) {
             result.requiresGrad = true;
@@ -23,7 +23,7 @@ export class NativeBackend extends TensorBackend {
         if (k1 !== k2) throw new Error(`Incompatible shapes: ${a.shape} vs ${b.shape}`);
 
         if (a.ndim === 1 && b.ndim === 1) {
-            result = new Tensor([a.data.reduce((s, v, i) => s + v * b.data[i], 0)], { backend: this });
+            result = new Tensor([a.data.reduce((s, v, i) => s + v * b.data[i], 0)], {backend: this});
         } else {
             const data = new Array(m * n).fill(0);
             for (let i = 0; i < m; i++)
@@ -45,14 +45,25 @@ export class NativeBackend extends TensorBackend {
         return result;
     }
 
-    add(a, b) { return this._elementwise(a, b, (x, y) => x + y, (g) => [g, g]); }
-    sub(a, b) { return this._elementwise(a, b, (x, y) => x - y, (g, a, b, bk) => [g, bk.neg(g)]); }
-    mul(a, b) { return this._elementwise(a, b, (x, y) => x * y, (g, a, b, bk) => [bk.mul(g, b), bk.mul(g, a)]); }
-    div(a, b) { return this._elementwise(a, b, (x, y) => x / y, (g, a, b, bk) => [bk.div(g, b), bk.neg(bk.div(bk.mul(g, a), bk.mul(b, b)))]); }
+    add(a, b) {
+        return this._elementwise(a, b, (x, y) => x + y, (g) => [g, g]);
+    }
+
+    sub(a, b) {
+        return this._elementwise(a, b, (x, y) => x - y, (g, a, b, bk) => [g, bk.neg(g)]);
+    }
+
+    mul(a, b) {
+        return this._elementwise(a, b, (x, y) => x * y, (g, a, b, bk) => [bk.mul(g, b), bk.mul(g, a)]);
+    }
+
+    div(a, b) {
+        return this._elementwise(a, b, (x, y) => x / y, (g, a, b, bk) => [bk.div(g, b), bk.neg(bk.div(bk.mul(g, a), bk.mul(b, b)))]);
+    }
 
     _elementwise(a, b, op, gradOp) {
-        if (typeof a === 'number') a = new Tensor([a], { backend: this });
-        if (typeof b === 'number') b = new Tensor([b], { backend: this });
+        if (typeof a === 'number') a = new Tensor([a], {backend: this});
+        if (typeof b === 'number') b = new Tensor([b], {backend: this});
 
         // Broadcasting logic
         let data;
@@ -93,10 +104,12 @@ export class NativeBackend extends TensorBackend {
         return result;
     }
 
-    _accumulateGrad(t, g) { t.grad = t.grad ? this.add(t.grad, g) : g; }
+    _accumulateGrad(t, g) {
+        t.grad = t.grad ? this.add(t.grad, g) : g;
+    }
 
     _createTensor(data, shape) {
-        const t = new Tensor(0, { backend: this });
+        const t = new Tensor(0, {backend: this});
         t.data = data;
         t.shape = shape;
         return t;
@@ -122,8 +135,13 @@ export class NativeBackend extends TensorBackend {
         return res;
     }
 
-    neg(a) { return this._unaryWithGrad(a, x => -x, () => this._createTensor(Array(a.size).fill(-1), a.shape)); }
-    relu(a) { return this._unaryWithGrad(a, x => Math.max(0, x), i => this._createTensor(i.data.map(x => x > 0 ? 1 : 0), i.shape)); }
+    neg(a) {
+        return this._unaryWithGrad(a, x => -x, () => this._createTensor(Array(a.size).fill(-1), a.shape));
+    }
+
+    relu(a) {
+        return this._unaryWithGrad(a, x => Math.max(0, x), i => this._createTensor(i.data.map(x => x > 0 ? 1 : 0), i.shape));
+    }
 
     sigmoid(a) {
         return this._unaryWithGrad(a, x => 1 / (1 + Math.exp(-x)), (_, r) => {
@@ -137,7 +155,7 @@ export class NativeBackend extends TensorBackend {
     }
 
     softmax(a, axis = -1) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        if (!(a instanceof Tensor)) a = new Tensor([a], {backend: this});
         if (axis < 0) axis = a.ndim + axis;
         if (a.ndim !== 1 && axis !== a.ndim - 1) throw new Error('Softmax only implemented for 1D or last axis');
 
@@ -160,12 +178,20 @@ export class NativeBackend extends TensorBackend {
         );
     }
 
-    exp(a) { return this._unaryWithGrad(a, Math.exp, (_, r) => r); }
-    log(a) { return this._unaryWithGrad(a, Math.log, i => this._createTensor(i.data.map(x => 1 / x), i.shape)); }
-    sqrt(a) { return this._unaryWithGrad(a, Math.sqrt, (_, r) => this._createTensor(r.data.map(s => 0.5 / s), r.shape)); }
+    exp(a) {
+        return this._unaryWithGrad(a, Math.exp, (_, r) => r);
+    }
+
+    log(a) {
+        return this._unaryWithGrad(a, Math.log, i => this._createTensor(i.data.map(x => 1 / x), i.shape));
+    }
+
+    sqrt(a) {
+        return this._unaryWithGrad(a, Math.sqrt, (_, r) => this._createTensor(r.data.map(s => 0.5 / s), r.shape));
+    }
 
     pow(a, n) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        if (!(a instanceof Tensor)) a = new Tensor([a], {backend: this});
         const res = this._createTensor(a.data.map(x => Math.pow(x, n)), [...a.shape]);
         if (a.requiresGrad) {
             res.requiresGrad = true;
@@ -175,10 +201,12 @@ export class NativeBackend extends TensorBackend {
         return res;
     }
 
-    abs(a) { return this._unaryWithGrad(a, Math.abs, i => this._createTensor(i.data.map(x => x >= 0 ? 1 : -1), i.shape)); }
+    abs(a) {
+        return this._unaryWithGrad(a, Math.abs, i => this._createTensor(i.data.map(x => x >= 0 ? 1 : -1), i.shape));
+    }
 
     _reduceAxis(a, axis, reduceFn, gradFn) {
-        if (!(a instanceof Tensor)) a = new Tensor([a], { backend: this });
+        if (!(a instanceof Tensor)) a = new Tensor([a], {backend: this});
         if (axis < 0) axis = a.ndim + axis;
 
         const newShape = a.shape.filter((_, i) => i !== axis);
@@ -208,7 +236,7 @@ export class NativeBackend extends TensorBackend {
 
     sum(a, axis = null) {
         if (axis === null) {
-            const res = new Tensor([a.data.reduce((s, v) => s + v, 0)], { backend: this });
+            const res = new Tensor([a.data.reduce((s, v) => s + v, 0)], {backend: this});
             if (a.requiresGrad) {
                 res.requiresGrad = true;
                 res._parents = [a];
@@ -229,7 +257,7 @@ export class NativeBackend extends TensorBackend {
 
     mean(a, axis = null) {
         if (axis === null) {
-            const res = new Tensor([a.data.reduce((s, v) => s + v, 0) / a.size], { backend: this });
+            const res = new Tensor([a.data.reduce((s, v) => s + v, 0) / a.size], {backend: this});
             if (a.requiresGrad) {
                 res.requiresGrad = true;
                 res._parents = [a];
@@ -257,7 +285,7 @@ export class NativeBackend extends TensorBackend {
     max(a, axis = null) {
         if (axis === null) {
             const max = Math.max(...a.data);
-            const res = new Tensor([max], { backend: this });
+            const res = new Tensor([max], {backend: this});
             if (a.requiresGrad) {
                 res.requiresGrad = true;
                 res._parents = [a];
@@ -273,7 +301,10 @@ export class NativeBackend extends TensorBackend {
                     const max = r.data[ridx];
                     for (let x = 0; x < as; x++) {
                         const idx = o * as * is + x * is + i;
-                        if (a.data[idx] === max) { g[idx] = r.grad.data[ridx]; break; }
+                        if (a.data[idx] === max) {
+                            g[idx] = r.grad.data[ridx];
+                            break;
+                        }
                     }
                 }
             bk._accumulateGrad(a, bk._createTensor(g, a.shape));
@@ -283,7 +314,7 @@ export class NativeBackend extends TensorBackend {
     min(a, axis = null) {
         if (axis === null) {
             const min = Math.min(...a.data);
-            const res = new Tensor([min], { backend: this });
+            const res = new Tensor([min], {backend: this});
             if (a.requiresGrad) {
                 res.requiresGrad = true;
                 res._parents = [a];
@@ -299,7 +330,10 @@ export class NativeBackend extends TensorBackend {
                     const min = r.data[ridx];
                     for (let x = 0; x < as; x++) {
                         const idx = o * as * is + x * is + i;
-                        if (a.data[idx] === min) { g[idx] = r.grad.data[ridx]; break; }
+                        if (a.data[idx] === min) {
+                            g[idx] = r.grad.data[ridx];
+                            break;
+                        }
                     }
                 }
             bk._accumulateGrad(a, bk._createTensor(g, a.shape));
@@ -348,7 +382,7 @@ export class NativeBackend extends TensorBackend {
         const n = Math.min(a.shape[0], a.shape[1]);
         let val = 0;
         for (let i = 0; i < n; i++) val += a.data[i * a.shape[1] + i];
-        const res = new Tensor([val], { backend: this });
+        const res = new Tensor([val], {backend: this});
         if (a.requiresGrad) {
             res.requiresGrad = true;
             res._parents = [a];
@@ -384,7 +418,7 @@ export class NativeBackend extends TensorBackend {
     }
 
     clamp(x, min, max) {
-        if (!(x instanceof Tensor)) x = new Tensor([x], { backend: this });
+        if (!(x instanceof Tensor)) x = new Tensor([x], {backend: this});
         const res = this._createTensor(x.data.map(v => Math.max(min, Math.min(max, v))), [...x.shape]);
         if (x.requiresGrad) {
             res.requiresGrad = true;
@@ -472,10 +506,12 @@ export class NativeBackend extends TensorBackend {
         return a.reshape(s);
     }
 
-    stack(tensors, axis = 0) { return this.concat(tensors.map(t => this.unsqueeze(t, axis)), axis); }
+    stack(tensors, axis = 0) {
+        return this.concat(tensors.map(t => this.unsqueeze(t, axis)), axis);
+    }
 
     gather(a, indices, axis = 0) {
-        if (!(indices instanceof Tensor)) indices = new Tensor(indices, { backend: this });
+        if (!(indices instanceof Tensor)) indices = new Tensor(indices, {backend: this});
         if (axis < 0) axis = a.ndim + axis;
 
         const idxData = indices.data.map(Math.floor);
@@ -534,14 +570,33 @@ export class NativeBackend extends TensorBackend {
         return this.randn(shape, 0, gain / Math.sqrt(fan));
     }
 
-    forall(a, axis = null) { return this.min(a, axis); }
-    exists(a, axis = null) { return this.max(a, axis); }
+    forall(a, axis = null) {
+        return this.min(a, axis);
+    }
 
-    zeros(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0), shape); }
-    ones(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1), shape); }
-    random(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0).map(Math.random), shape); }
-    full(shape, value) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(value), shape); }
-    empty(shape) { return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)), shape); }
+    exists(a, axis = null) {
+        return this.max(a, axis);
+    }
+
+    zeros(shape) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0), shape);
+    }
+
+    ones(shape) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1), shape);
+    }
+
+    random(shape) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0).map(Math.random), shape);
+    }
+
+    full(shape, value) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)).fill(value), shape);
+    }
+
+    empty(shape) {
+        return this._createTensor(Array(shape.reduce((a, b) => a * b, 1)), shape);
+    }
 
     arange(start, end, step = 1) {
         const data = [];
@@ -556,7 +611,9 @@ export class NativeBackend extends TensorBackend {
         return this._createTensor(data, [steps]);
     }
 
-    tensor(data, options = {}) { return new Tensor(data, { ...options, backend: this }); }
+    tensor(data, options = {}) {
+        return new Tensor(data, {...options, backend: this});
+    }
 }
 
 export const T = new NativeBackend();

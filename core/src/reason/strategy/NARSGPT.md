@@ -5,6 +5,7 @@ NARS-GPT style premise formation strategy combining embedding-based retrieval wi
 ## Features
 
 ### Core (from [original NARS-GPT](https://github.com/opennars/NARS-GPT))
+
 - **Attention Buffer**: Relevance (embedding similarity) + recency weighting
 - **Atomization**: Term deduplication via embedding similarity threshold
 - **Grounding**: Sentence→Narsese mapping with verification
@@ -12,6 +13,7 @@ NARS-GPT style premise formation strategy combining embedding-based retrieval wi
 - **Perspective Swap**: I↔You pronoun exchange
 
 ### SeNARS Enhancements
+
 - **Perspective Neutralization**: 3rd-person conversion ("you" → "one")
 - **Batch Embedding**: Efficient similarity computation
 - **EventBus Integration**: Observability events

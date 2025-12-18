@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { TruthTensorBridge } from '../../../core/src/functor/TruthTensorBridge.js';
-import { Tensor } from '../../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../../core/src/functor/backends/NativeBackend.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {TruthTensorBridge} from '../../../core/src/functor/TruthTensorBridge.js';
+import {Tensor} from '../../../core/src/functor/Tensor.js';
+import {NativeBackend} from '../../../core/src/functor/backends/NativeBackend.js';
 
 describe('TruthTensorBridge', function () {
     let bridge, backend;
@@ -13,7 +13,7 @@ describe('TruthTensorBridge', function () {
 
     describe('truthToTensor', function () {
         test('scalar mode - extracts frequency', function () {
-            const truth = { f: 0.8, c: 0.9 };
+            const truth = {f: 0.8, c: 0.9};
             const tensor = bridge.truthToTensor(truth, 'scalar');
 
             expect(tensor).toBeInstanceOf(Tensor);
@@ -22,7 +22,7 @@ describe('TruthTensorBridge', function () {
         });
 
         test('bounds mode - calculates upper and lower bounds', function () {
-            const truth = { f: 0.8, c: 0.9 };
+            const truth = {f: 0.8, c: 0.9};
             // lower = f * c = 0.72
             // upper = f * c + (1 - c) = 0.72 + 0.1 = 0.82
             const tensor = bridge.truthToTensor(truth, 'bounds');
@@ -33,7 +33,7 @@ describe('TruthTensorBridge', function () {
         });
 
         test('vector mode - includes frequency, confidence, and expectation', function () {
-            const truth = { f: 0.8, c: 0.9 };
+            const truth = {f: 0.8, c: 0.9};
             // e = c * (f - 0.5) + 0.5 = 0.9 * 0.3 + 0.5 = 0.77
             const tensor = bridge.truthToTensor(truth, 'vector');
 
@@ -49,14 +49,14 @@ describe('TruthTensorBridge', function () {
         });
 
         test('throws on unknown mode', function () {
-            expect(() => bridge.truthToTensor({ f: 0.5, c: 0.9 }, 'unknown'))
+            expect(() => bridge.truthToTensor({f: 0.5, c: 0.9}, 'unknown'))
                 .toThrow('Unknown truthToTensor mode');
         });
     });
 
     describe('tensorToTruth', function () {
         test('sigmoid mode - uses default confidence', function () {
-            const tensor = new Tensor([0.7], { backend });
+            const tensor = new Tensor([0.7], {backend});
             const truth = bridge.tensorToTruth(tensor, 'sigmoid');
 
             expect(truth.f).toBe(0.7);
@@ -64,7 +64,7 @@ describe('TruthTensorBridge', function () {
         });
 
         test('dual mode - extracts both f and c', function () {
-            const tensor = new Tensor([0.7, 0.8], { backend });
+            const tensor = new Tensor([0.7, 0.8], {backend});
             const truth = bridge.tensorToTruth(tensor, 'dual');
 
             expect(truth.f).toBe(0.7);
@@ -72,7 +72,7 @@ describe('TruthTensorBridge', function () {
         });
 
         test('softmax mode - uses max probability', function () {
-            const tensor = new Tensor([0.1, 0.7, 0.2], { backend });
+            const tensor = new Tensor([0.1, 0.7, 0.2], {backend});
             const truth = bridge.tensorToTruth(tensor, 'softmax');
 
             expect(truth.f).toBe(0.7);  // max
@@ -80,7 +80,7 @@ describe('TruthTensorBridge', function () {
         });
 
         test('throws on unknown mode', function () {
-            const tensor = new Tensor([0.5], { backend });
+            const tensor = new Tensor([0.5], {backend});
             expect(() => bridge.tensorToTruth(tensor, 'unknown'))
                 .toThrow('Unknown tensorToTruth mode');
         });
@@ -88,7 +88,7 @@ describe('TruthTensorBridge', function () {
 
     describe('round-trip conversion', function () {
         test('scalar mode preserves frequency', function () {
-            const original = { f: 0.75, c: 0.85 };
+            const original = {f: 0.75, c: 0.85};
             const tensor = bridge.truthToTensor(original, 'scalar');
             const recovered = bridge.tensorToTruth(tensor, 'sigmoid');
 
@@ -96,7 +96,7 @@ describe('TruthTensorBridge', function () {
         });
 
         test('dual mode preserves both values', function () {
-            const original = { f: 0.75, c: 0.85 };
+            const original = {f: 0.75, c: 0.85};
             const tensor = bridge.truthToTensor(original, 'bounds');
             const recovered = bridge.tensorToTruth(tensor, 'dual');
 
@@ -109,7 +109,7 @@ describe('TruthTensorBridge', function () {
 
     describe('truthToExpectation', function () {
         test('calculates NAL expectation', function () {
-            const expectation = bridge.truthToExpectation({ f: 0.8, c: 0.9 });
+            const expectation = bridge.truthToExpectation({f: 0.8, c: 0.9});
             // e = c * (f - 0.5) + 0.5 = 0.9 * 0.3 + 0.5 = 0.77
             expect(expectation).toBeCloseTo(0.77);
         });
@@ -123,9 +123,9 @@ describe('TruthTensorBridge', function () {
     describe('truthsToTensor', function () {
         test('batch converts scalar mode', function () {
             const truths = [
-                { f: 0.7, c: 0.8 },
-                { f: 0.6, c: 0.9 },
-                { f: 0.8, c: 0.7 }
+                {f: 0.7, c: 0.8},
+                {f: 0.6, c: 0.9},
+                {f: 0.8, c: 0.7}
             ];
             const tensor = bridge.truthsToTensor(truths, 'scalar');
 
@@ -135,8 +135,8 @@ describe('TruthTensorBridge', function () {
 
         test('batch converts vector mode', function () {
             const truths = [
-                { f: 0.7, c: 0.8 },
-                { f: 0.6, c: 0.9 }
+                {f: 0.7, c: 0.8},
+                {f: 0.6, c: 0.9}
             ];
             const tensor = bridge.truthsToTensor(truths, 'vector');
 

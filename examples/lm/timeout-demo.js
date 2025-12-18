@@ -1,13 +1,13 @@
 /**
  * Timeout Demo - Model Load Timeout Protection
- * 
+ *
  * This example demonstrates how to configure and handle model loading timeouts
  * to prevent indefinite hangs during initialization.
  */
 
-import { LM } from '../../core/src/lm/LM.js';
-import { TransformersJSProvider } from '../../core/src/lm/TransformersJSProvider.js';
-import { EventBus } from '../../core/src/util/EventBus.js';
+import {LM} from '../../core/src/lm/LM.js';
+import {TransformersJSProvider} from '../../core/src/lm/TransformersJSProvider.js';
+import {EventBus} from '../../core/src/util/EventBus.js';
 
 async function main() {
     console.log('='.repeat(60));

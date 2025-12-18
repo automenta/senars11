@@ -1,6 +1,6 @@
-import { Agent } from './Agent.js';
-import { LMConfig, PluginManager } from '@senars/core';
-import { FunctorProvider } from './FunctorProvider.js';
+import {Agent} from './Agent.js';
+import {LMConfig, PluginManager} from '@senars/core';
+import {FunctorProvider} from './FunctorProvider.js';
 
 export class AgentBuilder {
     constructor(initialConfig = {}) {
@@ -19,10 +19,10 @@ export class AgentBuilder {
                 tools: false,
                 lm: false,
             },
-            memory: { enableMemoryValidation: true, memoryValidationInterval: 30000 },
+            memory: {enableMemoryValidation: true, memoryValidationInterval: 30000},
             nar: {},
             lm: {
-                circuitBreaker: { failureThreshold: 5, timeout: 60000, resetTimeout: 30000 },
+                circuitBreaker: {failureThreshold: 5, timeout: 60000, resetTimeout: 30000},
             },
             persistence: {},
             inputProcessing: {}
@@ -54,7 +54,7 @@ export class AgentBuilder {
                 functors: ['core-arithmetic', 'set-operations'],
                 rules: ['syllogistic-core', 'temporal'],
                 tools: true,
-                lm: { enabled: true },
+                lm: {enabled: true},
             },
         };
         return new AgentBuilder(advancedConfig).withConfig(config).build();
@@ -62,7 +62,7 @@ export class AgentBuilder {
 
     withConfig(config) {
         if (config.subsystems && this.config.subsystems) {
-            const subsystems = { ...this.config.subsystems, ...config.subsystems };
+            const subsystems = {...this.config.subsystems, ...config.subsystems};
             Object.assign(this.config, config);
             this.config.subsystems = subsystems;
         } else {
@@ -119,8 +119,8 @@ export class AgentBuilder {
     }
 
     _buildAgentConfig() {
-        const { subsystems, nar, memory, persistence, inputProcessing, lm } = this.config;
-        const { lm: lmSubsystem, tools, embeddingLayer, metrics } = subsystems;
+        const {subsystems, nar, memory, persistence, inputProcessing, lm} = this.config;
+        const {lm: lmSubsystem, tools, embeddingLayer, metrics} = subsystems;
 
         const getSubsystemConfig = (subsystem) => ({
             enabled: !!subsystem,
@@ -132,7 +132,7 @@ export class AgentBuilder {
             memory,
             persistence,
             inputProcessing,
-            lm: { ...getSubsystemConfig(lmSubsystem), ...lm },
+            lm: {...getSubsystemConfig(lmSubsystem), ...lm},
             tools: getSubsystemConfig(tools),
             embeddingLayer: getSubsystemConfig(embeddingLayer),
             metricsMonitor: metrics ? (typeof metrics === 'object' ? metrics : {}) : undefined
@@ -140,7 +140,7 @@ export class AgentBuilder {
     }
 
     _setupPlugins(agent) {
-        agent._pluginManager = new PluginManager({ nar: agent, agent: agent, eventBus: agent._eventBus });
+        agent._pluginManager = new PluginManager({nar: agent, agent: agent, eventBus: agent._eventBus});
         if (this.config.subsystems.plugins) {
             this._registerPlugins(agent._pluginManager, this.config.subsystems.plugins);
         }

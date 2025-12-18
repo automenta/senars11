@@ -1,8 +1,8 @@
-import { WebSocketServer } from 'ws';
-import { EventEmitter } from 'events';
-import { ClientMessageHandlers } from './ClientMessageHandlers.js';
-import { DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG } from '@senars/core';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {WebSocketServer} from 'ws';
+import {EventEmitter} from 'events';
+import {ClientMessageHandlers} from './ClientMessageHandlers.js';
+import {DEFAULT_CLIENT_CAPABILITIES, WEBSOCKET_CONFIG} from '@senars/core';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 const DEFAULT_OPTIONS = Object.freeze({
     port: WEBSOCKET_CONFIG.defaultPort,
@@ -115,10 +115,10 @@ class WebSocketMonitor {
                     this.clientRateLimiters.delete(clientId);
                     this.clientCapabilities.delete(clientId);
                     this.metrics.clientDisconnectionCount++;
-                    this.eventEmitter.emit('clientDisconnected', { clientId, timestamp: Date.now() });
+                    this.eventEmitter.emit('clientDisconnected', {clientId, timestamp: Date.now()});
                 });
 
-                this.eventEmitter.emit('clientConnected', { clientId, timestamp: Date.now() });
+                this.eventEmitter.emit('clientConnected', {clientId, timestamp: Date.now()});
             });
 
             this.server.on('error', (error) => {
@@ -343,7 +343,7 @@ class WebSocketMonitor {
 
         Logger.error(isSyntaxError ? 'Invalid JSON received:' : 'Error handling client message:', errorMessage);
 
-        this._sendToClient(client, { type: 'error', message: errorMsg, error: errorMessage });
+        this._sendToClient(client, {type: 'error', message: errorMsg, error: errorMessage});
     }
 
     _sendHandlerError(client, messageType, handlerError) {
@@ -353,7 +353,7 @@ class WebSocketMonitor {
     }
 
     _sendError(client, message, error = null) {
-        this._sendToClient(client, { type: 'error', message, error });
+        this._sendToClient(client, {type: 'error', message, error});
     }
 
     /**
@@ -423,4 +423,4 @@ class WebSocketMonitor {
     }
 }
 
-export { WebSocketMonitor };
+export {WebSocketMonitor};

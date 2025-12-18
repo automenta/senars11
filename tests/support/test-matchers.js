@@ -29,7 +29,7 @@ export const customMatchers = {
         }
 
         if (minTruth && received.truth) {
-            const { f: minF = 0, c: minC = 0 } = minTruth;
+            const {f: minF = 0, c: minC = 0} = minTruth;
             if (received.truth.f < minF || received.truth.c < minC) {
                 return {
                     pass: false,
@@ -38,7 +38,7 @@ export const customMatchers = {
             }
         }
 
-        return { pass: true };
+        return {pass: true};
     },
 
     toHaveTruthCloseTo(received, expected, tolerance = 0.01) {

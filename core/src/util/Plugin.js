@@ -1,4 +1,5 @@
 import {Logger} from './Logger.js';
+
 export class Plugin {
     constructor(id, config = {}) {
         if (new.target === Plugin) {

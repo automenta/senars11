@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { DummyProvider } from '../../../core/src/lm/DummyProvider.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
 
 describe('DummyProvider', () => {
     let provider;
@@ -22,7 +22,7 @@ describe('DummyProvider', () => {
     });
 
     test('handles tools (mock)', async () => {
-        provider = new DummyProvider({ tools: [{ name: 'test_tool', description: 'test' }] });
+        provider = new DummyProvider({tools: [{name: 'test_tool', description: 'test'}]});
         const result = await provider.generateText('Use test_tool');
         expect(result).toMatch(/.+/);
     });

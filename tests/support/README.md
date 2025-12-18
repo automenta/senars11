@@ -78,6 +78,7 @@ import { TestSuiteFactory, taggedTest } from './support/index.js';
 ### Writing Non-Brittle Tests
 
 **Use Custom Matchers for Flexibility:**
+
 ```javascript
 // ❌ Brittle - exact match
 expect(task.truth.f).toBe(0.90);
@@ -87,6 +88,7 @@ expect(task.truth).toHaveTruthCloseTo({f: 0.90, c: 0.85}, 0.02);
 ```
 
 **Use TaskMatch for Complex Matching:**
+
 ```javascript
 const matcher = new TaskMatch('<cat --> animal>')
     .withMinimumTruth(0.8, 0.7)
@@ -94,6 +96,7 @@ const matcher = new TaskMatch('<cat --> animal>')
 ```
 
 **Use Range Assertions for Probabilistic Behavior:**
+
 ```javascript
 // ❌ Brittle - exact count
 expect(memory.stats.totalConcepts).toBe(10);

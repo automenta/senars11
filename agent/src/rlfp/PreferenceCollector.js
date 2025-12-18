@@ -1,6 +1,6 @@
 import fs from 'fs';
 import inquirer from 'inquirer';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 class PreferenceCollector {
     constructor() {
@@ -24,14 +24,14 @@ class PreferenceCollector {
         Logger.info(this._formatTrajectory(trajectoryB));
         Logger.info('==========================================\n');
 
-        const { preference } = await inquirer.prompt([{
+        const {preference} = await inquirer.prompt([{
             type: 'list',
             name: 'preference',
             message: 'Which trajectory do you prefer?',
             choices: [
-                { name: 'Trajectory A', value: 'A' },
-                { name: 'Trajectory B', value: 'B' },
-                { name: 'Skip / Neither', value: 'SKIP' }
+                {name: 'Trajectory A', value: 'A'},
+                {name: 'Trajectory B', value: 'B'},
+                {name: 'Skip / Neither', value: 'SKIP'}
             ]
         }]);
 
@@ -42,7 +42,7 @@ class PreferenceCollector {
             trajectoryB,
             preference,
             timestamp: Date.now(),
-            files: { A: pathA, B: pathB }
+            files: {A: pathA, B: pathB}
         };
 
         this.preferences.push(data);
@@ -88,4 +88,4 @@ class PreferenceCollector {
     }
 }
 
-export { PreferenceCollector };
+export {PreferenceCollector};

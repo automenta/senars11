@@ -1,10 +1,12 @@
 # Tensor Logic Module
 
-A complete implementation of **Tensor Logic** (Domingos, 2024) - a unified framework for neuro-symbolic AI that treats logical reasoning and neural operations as fundamentally the same using tensor mathematics.
+A complete implementation of **Tensor Logic** (Domingos, 2024) - a unified framework for neuro-symbolic AI that treats
+logical reasoning and neural operations as fundamentally the same using tensor mathematics.
 
 ## Overview
 
 This module provides differentiable tensor operations integrated with SeNARS's symbolic reasoning, enabling:
+
 - **Neural networks expressible as Prolog terms**
 - **Automatic differentiation (autograd)** for end-to-end learning
 - **Truth-value ↔ tensor conversions** for neuro-symbolic integration
@@ -112,33 +114,40 @@ train(Input, Target) :-
 ## Core Components
 
 ### Tensor (`Tensor.js`)
+
 N-dimensional array with optional gradient tracking.
 
 **Key features**:
+
 - Shape inference and manipulation (reshape, transpose)
 - Automatic differentiation via `backward()`
 - Serialization (toJSON, fromJSON)
 - Memory-efficient flat storage
 
 ### Backends (`backends/`)
+
 Abstract tensor operations for different computation engines.
 
 **NativeBackend**: Pure JavaScript implementation
+
 - Binary ops: add, sub, mul, div, matmul
 - Activations: relu, sigmoid, tanh, gelu, softmax
 - Reductions: sum, mean, max, min
 - All operations support autograd
 
 ### TensorFunctor (`TensorFunctor.js`)
+
 Evaluates tensor operations as Prolog terms.
 
 **Integration with PrologStrategy**:
+
 ```javascript
 const tensorFunctor = new TensorFunctor();
 const strategy = new PrologStrategy({ tensorFunctor });
 ```
 
 ### TruthTensorBridge (`TruthTensorBridge.js`)
+
 Bidirectional conversion between NARS truth values and tensors.
 
 **Modes**:
@@ -151,18 +160,22 @@ Bidirectional conversion between NARS truth values and tensors.
 | `softmax` | N/A | `{f: max(t), c: 1-1/(n+1)}` |
 
 ### LossFunctor (`LossFunctor.js`)
+
 Differentiable loss functions with automatic gradients.
 
 **Available losses**:
+
 - `mse(pred, target)` - Mean Squared Error
 - `mae(pred, target)` - Mean Absolute Error
 - `binaryCrossEntropy(pred, target)` - Binary cross-entropy
 - `crossEntropy(pred, target)` - Categorical cross-entropy
 
 ### Optimizers (`Optimizer.js`)
+
 Parameter update algorithms for gradient descent.
 
 **Optimizers**:
+
 - `SGDOptimizer(lr, momentum)` - Stochastic Gradient Descent
 - `AdamOptimizer(lr, beta1, beta2)` - Adaptive Moment Estimation
 - `RMSpropOptimizer(lr, decay)` - RMSprop
@@ -193,6 +206,7 @@ Autograd
 ## Examples
 
 See [`docs/examples/tensor_logic_layers.pl`](../../docs/examples/tensor_logic_layers.pl) for:
+
 - Multi-layer perceptrons (MLPs)
 - Batch normalization
 - Residual blocks
@@ -201,10 +215,12 @@ See [`docs/examples/tensor_logic_layers.pl`](../../docs/examples/tensor_logic_la
 
 ## Implementation Status
 
-✅ **Phase 6 (Complete)**: Core Tensor Logic  
-- Forward operations, autograd, truth-tensor bridge, loss functions, optimizers  
+✅ **Phase 6 (Complete)**: Core Tensor Logic
+
+- Forward operations, autograd, truth-tensor bridge, loss functions, optimizers
 
 🔄 **Phase 6.5 (Planned)**: ~20 hrs (Platinum Optimized)
+
 - **Tier 1**: Einsum, Composed Ops, Initialization, TensorFunctor Integration
 - **Tier 2**: TrainingUtils.js, Module System (Layers, Sequential)
 - **Tier 3**: Merged into Tier 2

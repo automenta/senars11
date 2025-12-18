@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { TransformersJSProvider } from '../../core/src/lm/TransformersJSProvider.js';
+import {TransformersJSProvider} from '../../core/src/lm/TransformersJSProvider.js';
 
 const countTokens = text => text.split(/\s+/).filter(t => t.length > 0).length;
 const tokensPerSec = (tokens, ms) => ((tokens / ms) * 1000).toFixed(2);
@@ -25,7 +25,7 @@ async function main() {
         let tokenCount = 0;
         let fullOutput = '';
 
-        for await (const chunk of provider.streamText(prompt, { maxTokens: 100, temperature: 0.7 })) {
+        for await (const chunk of provider.streamText(prompt, {maxTokens: 100, temperature: 0.7})) {
             if (firstTokenTime === null) firstTokenTime = Date.now();
 
             process.stdout.write(chunk);

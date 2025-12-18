@@ -1,6 +1,6 @@
-import { AgentBuilder } from '../../../agent/src/agent/AgentBuilder.js';
-import { Agent } from '../../../agent/src/agent/Agent.js';
-import { NAR } from '../../../core/src/nar/NAR.js';
+import {AgentBuilder} from '../../../agent/src/agent/AgentBuilder.js';
+import {Agent} from '../../../agent/src/agent/Agent.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
     const agents = [];
@@ -33,7 +33,7 @@ describe('AgentBuilder', () => {
             enabled: true,
             model: 'test'
         }))).embeddingLayer).toBeDefined();
-        expect((await build(new AgentBuilder().withLM(true).withConfig({ lm: { modelName: 'test-model' } }))).lm).toBeDefined();
+        expect((await build(new AgentBuilder().withLM(true).withConfig({lm: {modelName: 'test-model'}}))).lm).toBeDefined();
         expect((await build(new AgentBuilder().withTools(true))).tools).toBeDefined();
     });
 
@@ -47,11 +47,11 @@ describe('AgentBuilder', () => {
     test('configuration object', async () => {
         const config = {
             subsystems: {
-                metrics: true, embeddingLayer: { enabled: true },
+                metrics: true, embeddingLayer: {enabled: true},
                 functors: ['core-arithmetic'], rules: ['syllogistic-core'],
                 tools: false, lm: true
             },
-            lm: { modelName: 'test-model' }
+            lm: {modelName: 'test-model'}
         };
         const a = await build(new AgentBuilder().withConfig(config));
 
@@ -64,7 +64,7 @@ describe('AgentBuilder', () => {
     test('selective disabling', async () => {
         const config = {
             subsystems: {
-                metrics: false, embeddingLayer: { enabled: false },
+                metrics: false, embeddingLayer: {enabled: false},
                 tools: false, lm: false, functors: []
             }
         };

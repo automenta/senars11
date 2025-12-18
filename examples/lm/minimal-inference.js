@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { TransformersJSProvider } from '../../core/src/lm/TransformersJSProvider.js';
-import { EventEmitter } from 'events';
+import {TransformersJSProvider} from '../../core/src/lm/TransformersJSProvider.js';
+import {EventEmitter} from 'events';
 
 const countTokens = text => text.split(/\s+/).length;
 const tokensPerSec = (tokens, ms) => ((tokens / ms) * 1000).toFixed(2);
@@ -28,7 +28,7 @@ async function main() {
 
     try {
         const startTime = Date.now();
-        const result = await provider.generateText(prompt, { maxTokens: 50, temperature: 0.7 });
+        const result = await provider.generateText(prompt, {maxTokens: 50, temperature: 0.7});
         const duration = Date.now() - startTime;
         const tokens = countTokens(result);
 

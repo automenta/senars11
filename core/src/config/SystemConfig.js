@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { CYCLE, MEMORY, PERFORMANCE, SYSTEM } from './constants.js';
+import {z} from 'zod';
+import {CYCLE, MEMORY, PERFORMANCE, SYSTEM} from './constants.js';
 
 export const DEFAULT_CONFIG = {
     system: {
@@ -100,7 +100,7 @@ export class SystemConfig {
     }
 
     _deepMerge(target, source) {
-        const result = { ...target };
+        const result = {...target};
         for (const [key, value] of Object.entries(source)) {
             result[key] = SystemConfig._isObject(value) && SystemConfig._isObject(result[key])
                 ? this._deepMerge(result[key], value)

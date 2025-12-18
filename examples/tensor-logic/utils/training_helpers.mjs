@@ -1,12 +1,11 @@
-import { Tensor } from '../../../core/src/functor/Tensor.js';
-import { T } from '../../../core/src/functor/backends/NativeBackend.js';
+import {T} from '../../../core/src/functor/backends/NativeBackend.js';
 
 export function createDataset(fn, numSamples) {
-    return Array.from({ length: numSamples }, (_, i) => fn(i));
+    return Array.from({length: numSamples}, (_, i) => fn(i));
 }
 
 export function trainLoop(model, dataloader, lossFn, optimizer, epochs, callbacks = {}) {
-    const { onEpochEnd, afterBatch, shouldStop } = callbacks;
+    const {onEpochEnd, afterBatch, shouldStop} = callbacks;
 
     for (let epoch = 0; epoch < epochs; epoch++) {
         let epochLoss = 0, correct = 0, total = 0;
@@ -16,7 +15,7 @@ export function trainLoop(model, dataloader, lossFn, optimizer, epochs, callback
 
             if (Array.isArray(batch)) {
                 batch.forEach(sample => {
-                    const { input, target, label } = sample;
+                    const {input, target, label} = sample;
                     const pred = model.forward(input);
                     const loss = lossFn(pred, target);
                     epochLoss += loss.item?.() ?? loss.data[0];
@@ -34,7 +33,7 @@ export function trainLoop(model, dataloader, lossFn, optimizer, epochs, callback
             afterBatch?.(epoch, batch);
         }
 
-        const metrics = { loss: epochLoss / dataloader.length, accuracy: total > 0 ? correct / total : null };
+        const metrics = {loss: epochLoss / dataloader.length, accuracy: total > 0 ? correct / total : null};
 
         onEpochEnd?.(epoch, metrics);
 
@@ -46,7 +45,7 @@ export function visualizeGrid(points, width = 40, height = 15, range = [0, 7]) {
     const grid = Array(height).fill().map(() => Array(width).fill(' '));
     const [min, max] = range;
 
-    points.forEach(({ x, y, label, char }) => {
+    points.forEach(({x, y, label, char}) => {
         const px = Math.floor((x - min) / (max - min) * (width - 1));
         const py = height - 1 - Math.floor((y - min) / (max - min) * (height - 1));
         if (py >= 0 && py < height && px >= 0 && px < width) {
@@ -71,7 +70,7 @@ export function visualizeDecisionBoundary(model, width = 40, height = 15, range 
         }
     }
 
-    dataPoints.forEach(({ x, y, label }) => {
+    dataPoints.forEach(({x, y, label}) => {
         const px = Math.floor((x - min) / (max - min) * (width - 1));
         const py = height - 1 - Math.floor((y - min) / (max - min) * (height - 1));
         if (py >= 0 && py < height && px >= 0 && px < width) {
@@ -84,7 +83,7 @@ export function visualizeDecisionBoundary(model, width = 40, height = 15, range 
 }
 
 export function printMetrics(epoch, metrics, config = {}) {
-    const { pad = 3, decimals = 4, prefix = 'Epoch' } = config;
+    const {pad = 3, decimals = 4, prefix = 'Epoch'} = config;
     const parts = [`${prefix} ${String(epoch).padStart(pad)}`];
 
     for (const [key, value] of Object.entries(metrics)) {

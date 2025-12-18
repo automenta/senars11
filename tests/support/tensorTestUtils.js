@@ -1,4 +1,4 @@
-import { Tensor } from '../../core/src/functor/Tensor.js';
+import {Tensor} from '../../core/src/functor/Tensor.js';
 
 /**
  * Checks the gradient of a unary operation numerically.
@@ -15,8 +15,8 @@ export function checkUnaryGradient(backend, op, inputTensor, eps = 1e-4, toleran
     const analytical = inputTensor.grad.data[0];
 
     // Numerical gradient: (f(x+ε) - f(x-ε)) / 2ε
-    const xPlus = new Tensor([inputTensor.data[0] + eps], { backend });
-    const xMinus = new Tensor([inputTensor.data[0] - eps], { backend });
+    const xPlus = new Tensor([inputTensor.data[0] + eps], {backend});
+    const xMinus = new Tensor([inputTensor.data[0] - eps], {backend});
 
     // We need to bind the op to backend if it's a method, or call it directly
     const fPlus = op.call(backend, xPlus).data[0];
@@ -43,8 +43,8 @@ export function checkBinaryGradientA(backend, op, a, b, eps = 1e-4, tolerance = 
     const analytical = a.grad.data[0];
 
     // Numerical
-    const aPlus = new Tensor([a.data[0] + eps], { backend });
-    const aMinus = new Tensor([a.data[0] - eps], { backend });
+    const aPlus = new Tensor([a.data[0] + eps], {backend});
+    const aMinus = new Tensor([a.data[0] - eps], {backend});
 
     // Create copies of b to avoid side effects if op modifies in place (unlikely but safe)
     // For simple ops we can reuse b usually, but let's be safe if b is a tensor

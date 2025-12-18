@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { TensorFunctor } from '../../../core/src/functor/TensorFunctor.js';
-import { Tensor } from '../../../core/src/functor/Tensor.js';
-import { NativeBackend } from '../../../core/src/functor/backends/NativeBackend.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {TensorFunctor} from '../../../core/src/functor/TensorFunctor.js';
+import {Tensor} from '../../../core/src/functor/Tensor.js';
+import {NativeBackend} from '../../../core/src/functor/backends/NativeBackend.js';
 
 describe('TensorFunctor', () => {
     let functor;
@@ -26,8 +26,8 @@ describe('TensorFunctor', () => {
         const term = {
             operator: 'add',
             components: [
-                { operator: 'tensor', components: [[1, 2]] },
-                { operator: 'tensor', components: [[3, 4]] }
+                {operator: 'tensor', components: [[1, 2]]},
+                {operator: 'tensor', components: [[3, 4]]}
             ]
         };
         const result = functor.evaluate(term, new Map());
@@ -36,13 +36,13 @@ describe('TensorFunctor', () => {
 
     test('resolves variables from bindings', () => {
         const bindings = new Map();
-        bindings.set('x', new Tensor([10], { backend }));
+        bindings.set('x', new Tensor([10], {backend}));
 
         const term = {
             operator: 'mul',
             components: [
-                { isVariable: true, name: 'x' },
-                { operator: 'tensor', components: [[2]] }
+                {isVariable: true, name: 'x'},
+                {operator: 'tensor', components: [[2]]}
             ]
         };
 
@@ -58,11 +58,11 @@ describe('TensorFunctor', () => {
                 {
                     operator: 'add',
                     components: [
-                        { operator: 'tensor', components: [[1]] },
-                        { operator: 'tensor', components: [[2]] }
+                        {operator: 'tensor', components: [[1]]},
+                        {operator: 'tensor', components: [[2]]}
                     ]
                 },
-                { operator: 'tensor', components: [[3]] }
+                {operator: 'tensor', components: [[3]]}
             ]
         };
         const result = functor.evaluate(term, new Map());
@@ -73,7 +73,7 @@ describe('TensorFunctor', () => {
         const term = {
             operator: 'reshape',
             components: [
-                { operator: 'tensor', components: [[1, 2, 3, 4]] },
+                {operator: 'tensor', components: [[1, 2, 3, 4]]},
                 [2, 2]
             ]
         };
@@ -82,7 +82,7 @@ describe('TensorFunctor', () => {
     });
 
     test('handles gradient operations', () => {
-        const x = new Tensor([2], { requiresGrad: true, backend });
+        const x = new Tensor([2], {requiresGrad: true, backend});
         const bindings = new Map([['x', x]]);
 
         // y = x * x
@@ -92,11 +92,11 @@ describe('TensorFunctor', () => {
                 {
                     operator: 'mul',
                     components: [
-                        { isVariable: true, name: 'x' },
-                        { isVariable: true, name: 'x' }
+                        {isVariable: true, name: 'x'},
+                        {isVariable: true, name: 'x'}
                     ]
                 },
-                { isVariable: true, name: 'x' }
+                {isVariable: true, name: 'x'}
             ]
         };
 
@@ -109,7 +109,7 @@ describe('TensorFunctor', () => {
         const term = {
             operator: 'truth_to_tensor',
             components: [
-                { f: 1.0, c: 0.9 },
+                {f: 1.0, c: 0.9},
                 'scalar'
             ]
         };
@@ -119,14 +119,14 @@ describe('TensorFunctor', () => {
     });
 
     test('handles optimizer steps', () => {
-        const param = new Tensor([1.0], { requiresGrad: true, backend });
-        param.grad = new Tensor([0.1], { backend });
+        const param = new Tensor([1.0], {requiresGrad: true, backend});
+        param.grad = new Tensor([0.1], {backend});
         const bindings = new Map([['w', param]]);
 
         const term = {
             operator: 'sgd_step',
             components: [
-                { isVariable: true, name: 'w' },
+                {isVariable: true, name: 'w'},
                 0.1 // lr
             ]
         };

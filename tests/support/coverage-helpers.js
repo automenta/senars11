@@ -28,8 +28,8 @@ export function analyzeCoverageGaps(srcDir, testDir) {
             testName: path.basename(srcFile, '.js') + '.test.js',
             hasTest: testFiles.some(tf => path.basename(tf) === path.basename(srcFile, '.js') + '.test.js')
         }))
-        .filter(({ hasTest }) => !hasTest)
-        .map(({ file }) => ({
+        .filter(({hasTest}) => !hasTest)
+        .map(({file}) => ({
             file,
             reason: 'No corresponding test file found',
             priority: 'High'

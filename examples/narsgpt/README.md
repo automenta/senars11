@@ -5,11 +5,13 @@ Production-ready NARS-GPT integration examples with real LM providers.
 ## Quick Start
 
 ### Feature Demo (Mock LM)
+
 ```bash
 node examples/narsgpt/demo-narsgpt.js
 ```
 
 ### Production with Ollama
+
 ```bash
 # Start Ollama
 ollama serve
@@ -20,24 +22,26 @@ node examples/narsgpt/production-ollama.js
 ```
 
 ### Production with OpenAI
+
 ```bash
 OPENAI_API_KEY=your-key node examples/narsgpt/production-openai.js
 ```
 
 ### Domain Knowledge Grounding
+
 ```bash
 node examples/narsgpt/domain-knowledge.js
 ```
 
 ## Examples
 
-| File | Description | Requirements |
-|------|-------------|--------------|
-| [demo-narsgpt.js](demo-narsgpt.js) | Feature demonstration | None (mock LM) |
-| [integration-narsgpt.js](integration-narsgpt.js) | NAR integration | None (mock LM) |
-| [production-ollama.js](production-ollama.js) | Ollama integration | Ollama running |
-| [production-openai.js](production-openai.js) | OpenAI API | API key |
-| [domain-knowledge.js](domain-knowledge.js) | Grounding patterns | None |
+| File                                             | Description           | Requirements   |
+|--------------------------------------------------|-----------------------|----------------|
+| [demo-narsgpt.js](demo-narsgpt.js)               | Feature demonstration | None (mock LM) |
+| [integration-narsgpt.js](integration-narsgpt.js) | NAR integration       | None (mock LM) |
+| [production-ollama.js](production-ollama.js)     | Ollama integration    | Ollama running |
+| [production-openai.js](production-openai.js)     | OpenAI API            | API key        |
+| [domain-knowledge.js](domain-knowledge.js)       | Grounding patterns    | None           |
 
 ## Features Demonstrated
 
@@ -51,6 +55,7 @@ node examples/narsgpt/domain-knowledge.js
 ## Production Setup
 
 ### Ollama
+
 ```javascript
 const lm = new LangChainProvider({
   provider: 'ollama',
@@ -65,6 +70,7 @@ const strategy = new NarsGPTStrategy({
 ```
 
 ### OpenAI
+
 ```javascript
 const lm = new LangChainProvider({
   provider: 'openai',
@@ -74,6 +80,7 @@ const lm = new LangChainProvider({
 ```
 
 ### EventBus Logging
+
 ```javascript
 eventBus.on('narsgpt:candidates', ({ query, bufferSize }) => {
   console.log(`Buffer: ${bufferSize} items for "${query}"`);

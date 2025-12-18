@@ -1,14 +1,14 @@
-import { LM } from '../../../core/src/lm/LM.js';
-import { DummyProvider } from '../../../core/src/lm/DummyProvider.js';
-import { ProviderRegistry } from '../../../core/src/lm/ProviderRegistry.js';
-import { jest } from '@jest/globals';
+import {LM} from '../../../core/src/lm/LM.js';
+import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
+import {ProviderRegistry} from '../../../core/src/lm/ProviderRegistry.js';
+import {jest} from '@jest/globals';
 
 describe('LM System', () => {
     let lm;
     beforeEach(async () => {
         lm = new LM();
         await lm.initialize();
-        lm.registerProvider('test-provider', new DummyProvider({ id: 'test-provider' }));
+        lm.registerProvider('test-provider', new DummyProvider({id: 'test-provider'}));
     });
 
     test('initialization', () => {
@@ -19,20 +19,20 @@ describe('LM System', () => {
 
     describe('Provider Management', () => {
         test('registration', () => {
-            const p = new DummyProvider({ id: 'p1' });
+            const p = new DummyProvider({id: 'p1'});
             lm.registerProvider('p1', p);
             expect(lm.providers.get('p1')).toBe(p);
             expect(lm.getAvailableModels()).toContain('p1');
         });
 
         test('selection', () =>
-            expect(lm.selectOptimalModel({ type: 'test' })).toBe('test-provider')
+            expect(lm.selectOptimalModel({type: 'test'})).toBe('test-provider')
         );
     });
 
     describe('Generation & Processing', () => {
         test('generateText', async () => {
-            lm.registerProvider('gen', new DummyProvider({ responseTemplate: 'G:{prompt}' }));
+            lm.registerProvider('gen', new DummyProvider({responseTemplate: 'G:{prompt}'}));
             expect(await lm.generateText('Hi', {}, 'gen')).toBe('G:Hi');
             await expect(lm.generateText('Hi', {}, 'missing')).rejects.toThrow();
         });
@@ -43,12 +43,12 @@ describe('LM System', () => {
         });
 
         test('streamText', async () => {
-            lm.registerProvider('str', { streamText: jest.fn().mockResolvedValue('stream-res') });
+            lm.registerProvider('str', {streamText: jest.fn().mockResolvedValue('stream-res')});
             expect(await lm.streamText('Hi', {}, 'str')).toBe('stream-res');
         });
 
         test('process & translate', async () => {
-            lm.registerProvider('proc', new DummyProvider({ responseTemplate: 'P:{prompt}' }));
+            lm.registerProvider('proc', new DummyProvider({responseTemplate: 'P:{prompt}'}));
             expect(await lm.process('Hi', {}, 'proc')).toBe('P:Hi');
 
             expect(lm.translateToNarsese('cat is a mammal')).toEqual(expect.stringMatching(/cat.*-->.*mammal/));
@@ -58,10 +58,10 @@ describe('LM System', () => {
 
     describe('Interface Compatibility', () => {
         const methods = [
-            ['generateText', { generateText: async () => 'ok' }],
-            ['invoke obj', { invoke: async () => ({ content: 'ok' }) }],
-            ['invoke str', { invoke: async () => 'ok' }],
-            ['generate', { generate: async () => 'ok' }]
+            ['generateText', {generateText: async () => 'ok'}],
+            ['invoke obj', {invoke: async () => ({content: 'ok'})}],
+            ['invoke str', {invoke: async () => 'ok'}],
+            ['generate', {generate: async () => 'ok'}]
         ];
 
         test.each(methods)('%s', async (_, mock) => {
@@ -76,7 +76,7 @@ describe('LM System', () => {
     });
 
     test('metrics', () => {
-        expect(lm.getMetrics()).toMatchObject({ providerCount: 1 });
+        expect(lm.getMetrics()).toMatchObject({providerCount: 1});
         expect(lm.lmStats._countTokens('a b')).toBe(2);
     });
 });

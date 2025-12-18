@@ -1,15 +1,15 @@
-import { jest } from '@jest/globals';
-import { Reasoner } from '../../../core/src/reason/Reasoner.js';
-import { Logger } from '../../../core/src/util/Logger.js';
-import { Focus } from '../../../core/src/memory/Focus.js';
-import { createTestMemory, createTestReasoner } from '../../support/baseTestUtils.js';
+import {jest} from '@jest/globals';
+import {Reasoner} from '../../../core/src/reason/Reasoner.js';
+import {Logger} from '../../../core/src/util/Logger.js';
+import {Focus} from '../../../core/src/memory/Focus.js';
+import {createTestMemory, createTestReasoner} from '../../support/baseTestUtils.js';
 
 describe('Reasoner', () => {
     let reasoner;
 
     describe('Default (SimpleRunner)', () => {
         beforeEach(() => {
-            reasoner = createTestReasoner({ focus: new Focus(), memory: createTestMemory() });
+            reasoner = createTestReasoner({focus: new Focus(), memory: createTestMemory()});
         });
 
         test('config', () => {
@@ -23,9 +23,9 @@ describe('Reasoner', () => {
 
         test('metrics', () => {
             const metrics = reasoner.getMetrics();
-            expect(metrics).toMatchObject({ totalDerivations: expect.any(Number) });
+            expect(metrics).toMatchObject({totalDerivations: expect.any(Number)});
             expect(metrics.mode).toBe('simple');
-            expect(reasoner.getState()).toMatchObject({ isRunning: false });
+            expect(reasoner.getState()).toMatchObject({isRunning: false});
             expect(reasoner.getComponentStatus()).toHaveProperty('premiseSource');
             expect(reasoner.getDebugInfo()).toHaveProperty('state');
         });
@@ -34,7 +34,8 @@ describe('Reasoner', () => {
             reasoner.start();
             expect(reasoner.isRunning).toBe(true);
 
-            const warn = jest.spyOn(Logger, 'warn').mockImplementation(() => { });
+            const warn = jest.spyOn(Logger, 'warn').mockImplementation(() => {
+            });
             reasoner.start();
             expect(warn).toHaveBeenCalledWith('Reasoner is already running');
             warn.mockRestore();
@@ -56,7 +57,7 @@ describe('Reasoner', () => {
             reasoner = createTestReasoner({
                 focus: new Focus(),
                 memory: createTestMemory(),
-                config: { executionMode: 'pipeline' }
+                config: {executionMode: 'pipeline'}
             });
         });
 
@@ -67,10 +68,10 @@ describe('Reasoner', () => {
         test('feedback', () => {
             const handler = jest.fn();
             reasoner.registerConsumerFeedbackHandler(handler);
-            reasoner.notifyConsumption({ id: 'test' }, 10, { consumerId: 'c1' });
-            expect(handler).toHaveBeenCalledWith({ id: 'test' }, 10, expect.objectContaining({ consumerId: 'c1' }));
+            reasoner.notifyConsumption({id: 'test'}, 10, {consumerId: 'c1'});
+            expect(handler).toHaveBeenCalledWith({id: 'test'}, 10, expect.objectContaining({consumerId: 'c1'}));
 
-            reasoner.receiveConsumerFeedback({ processingSpeed: 5, backlogSize: 20 });
+            reasoner.receiveConsumerFeedback({processingSpeed: 5, backlogSize: 20});
             // These properties exist on PipelineRunner.
             // Reasoner delegates properties? No, I need to check runner properties.
             expect(reasoner.runner.outputConsumerSpeed).toBe(5);

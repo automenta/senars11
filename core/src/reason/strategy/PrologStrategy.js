@@ -4,17 +4,17 @@
  * using the PrologParser to convert between Prolog and SeNARS representations.
  */
 
-import { Strategy } from '../Strategy.js';
-import { PrologParser } from '../../parser/PrologParser.js';
-import { Task } from '../../task/Task.js';
-import { Truth } from '../../Truth.js';
-import { TermFactory } from '../../term/TermFactory.js';
-import { Unifier } from '../../term/Unifier.js';
-import { FunctorRegistry } from '../FunctorRegistry.js';
-import { TensorFunctor } from '../../functor/TensorFunctor.js';
-import { Tensor } from '../../functor/Tensor.js';
-import { isQuestion } from '../RuleHelpers.js';
-import { getComponents, getVariableName, isCompound, isVariable } from '../../term/TermUtils.js';
+import {Strategy} from '../Strategy.js';
+import {PrologParser} from '../../parser/PrologParser.js';
+import {Task} from '../../task/Task.js';
+import {Truth} from '../../Truth.js';
+import {TermFactory} from '../../term/TermFactory.js';
+import {Unifier} from '../../term/Unifier.js';
+import {FunctorRegistry} from '../FunctorRegistry.js';
+import {TensorFunctor} from '../../functor/TensorFunctor.js';
+import {Tensor} from '../../functor/Tensor.js';
+import {isQuestion} from '../RuleHelpers.js';
+import {getComponents, getVariableName, isCompound, isVariable} from '../../term/TermUtils.js';
 
 export class PrologStrategy extends Strategy {
     constructor(config = {}) {
@@ -30,7 +30,7 @@ export class PrologStrategy extends Strategy {
         this.functorRegistry = config.functorRegistry ?? new FunctorRegistry();
         this.tensorFunctor = config.tensorFunctor ?? null; // Optional tensor support
         this._registerPrologOperatorAliases();
-        this.config = { maxDepth: 10, maxSolutions: 5, backtrackingEnabled: true, ...config };
+        this.config = {maxDepth: 10, maxSolutions: 5, backtrackingEnabled: true, ...config};
     }
 
     _registerPrologOperatorAliases() {
@@ -48,7 +48,7 @@ export class PrologStrategy extends Strategy {
                 arity: 2,
                 category: 'comparison',
                 description: desc,
-                ...(aliases && { aliases })
+                ...(aliases && {aliases})
             })
         );
 
@@ -94,9 +94,9 @@ export class PrologStrategy extends Strategy {
 
         for (const rule of applicableRules) {
             // Standardize variables apart to prevent collisions in recursion
-            const { head, body, isFact } = this._standardizeRuleVariables(rule);
+            const {head, body, isFact} = this._standardizeRuleVariables(rule);
 
-            const { success, substitution: newSubstitution } = this.unifier.unify(goalTask.term, head, substitution);
+            const {success, substitution: newSubstitution} = this.unifier.unify(goalTask.term, head, substitution);
 
             if (success) {
                 if (isFact) {
@@ -169,7 +169,7 @@ export class PrologStrategy extends Strategy {
                 const success = this.functorRegistry.execute(pred, val1, val2);
 
                 if (success) {
-                    return [{ substitution, task: goalTask }];
+                    return [{substitution, task: goalTask}];
                 }
                 return [];
             }
@@ -283,7 +283,7 @@ export class PrologStrategy extends Strategy {
             term: this.unifier.applySubstitution(task.term, substitution),
             punctuation: task.punctuation,
             truth: task.truth ? new Truth(task.truth.frequency, task.truth.confidence) : undefined,
-            budget: task.budget ? { ...task.budget } : undefined
+            budget: task.budget ? {...task.budget} : undefined
         });
     }
 
@@ -292,7 +292,7 @@ export class PrologStrategy extends Strategy {
             term: term,
             punctuation: punctuation,
             truth: punctuation === '?' ? null : truth || new Truth(1.0, 0.9),
-            budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
+            budget: {priority: 0.8, durability: 0.7, quality: 0.8}
         });
     }
 

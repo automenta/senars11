@@ -1,4 +1,4 @@
-import { NAR } from '../../core/src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 
 /**
  * Base test setup for NAR integration tests
@@ -7,8 +7,8 @@ import { NAR } from '../../core/src/nar/NAR.js';
 export class NARTestSetup {
     constructor(config = {}) {
         this.config = {
-            debug: { enabled: false },
-            cycle: { delay: 10, maxTasksPerCycle: 5 },
+            debug: {enabled: false},
+            cycle: {delay: 10, maxTasksPerCycle: 5},
             ...config
         };
         this.nar = null;
@@ -47,7 +47,7 @@ export class ComponentTestSetup {
     }
 
     setup(config = {}) {
-        const finalConfig = { ...this.defaultConfig, ...config };
+        const finalConfig = {...this.defaultConfig, ...config};
         this.instance = new this.ComponentClass(finalConfig);
         return this.instance;
     }

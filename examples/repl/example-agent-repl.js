@@ -5,7 +5,7 @@
  * Demonstrates hybrid intelligence with LM and NARS integration
  */
 
-import { App } from '@senars/agent';
+import {App} from '@senars/agent';
 
 async function runAdvancedAgentDemo() {
     console.log('🤖🎨 SeNARS Advanced Agent REPL Demo with Ollama Integration\n');

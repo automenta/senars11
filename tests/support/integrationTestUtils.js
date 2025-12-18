@@ -1,4 +1,4 @@
-import { assertEventuallyTrue, hasTermMatch } from './testHelpers.js';
+import {assertEventuallyTrue, hasTermMatch} from './testHelpers.js';
 
 export const withCleanup = (fn) => async () => {
     const resources = [];
@@ -22,7 +22,7 @@ export const allTerms = (...patterns) => (terms) => patterns.every(p => terms.so
 export const matchAny = (...patterns) => (terms) => hasTermMatch(terms, ...patterns);
 
 export const generateBeliefs = (count, prefix = 'belief') =>
-    Array.from({ length: count }, (_, i) => `${prefix}_${i}.`);
+    Array.from({length: count}, (_, i) => `${prefix}_${i}.`);
 
 export const generateInheritance = (count, prefix = 'item') =>
-    Array.from({ length: count }, (_, i) => `<${prefix}_${i} --> entity>.`);
+    Array.from({length: count}, (_, i) => `<${prefix}_${i} --> entity>.`);

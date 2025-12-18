@@ -3,16 +3,16 @@
  * NARS-GPT style belief formation from natural language.
  */
 
-import { LMRule } from '../../LMRule.js';
-import { Punctuation, Task } from '../../../task/Task.js';
-import { Truth } from '../../../Truth.js';
-import { isBelief, tryParseNarsese } from '../../RuleHelpers.js';
-import { NarsGPTPrompts } from './NarsGPTPrompts.js';
+import {LMRule} from '../../LMRule.js';
+import {Punctuation, Task} from '../../../task/Task.js';
+import {Truth} from '../../../Truth.js';
+import {isBelief, tryParseNarsese} from '../../RuleHelpers.js';
+import {NarsGPTPrompts} from './NarsGPTPrompts.js';
 
 const NARSESE_PATTERN = /^[(<].*?(-->|<->|==>)/;
 const TRUTH_PATTERN = /\{(\d+\.?\d*)\s+(\d+\.?\d*)\}/;
 
-export const createNarsGPTBeliefRule = ({ lm, narsGPTStrategy, parser, eventBus, memory }) =>
+export const createNarsGPTBeliefRule = ({lm, narsGPTStrategy, parser, eventBus, memory}) =>
     LMRule.create({
         id: 'narsgpt-belief',
         lm,
@@ -59,10 +59,10 @@ export const createNarsGPTBeliefRule = ({ lm, narsGPTStrategy, parser, eventBus,
                 term: parsed.term,
                 punctuation: Punctuation.BELIEF,
                 truth,
-                budget: { priority: 0.8, durability: 0.8, quality: 0.6 },
-                metadata: { source: 'narsgpt-belief' }
+                budget: {priority: 0.8, durability: 0.8, quality: 0.6},
+                metadata: {source: 'narsgpt-belief'}
             })];
         },
 
-        lm_options: { temperature: 0.2, max_tokens: 200 }
+        lm_options: {temperature: 0.2, max_tokens: 200}
     });

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 class RLFPLearner {
     constructor(agent) {
@@ -65,4 +65,4 @@ class RLFPLearner {
     }
 }
 
-export { RLFPLearner };
+export {RLFPLearner};

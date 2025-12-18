@@ -1,5 +1,5 @@
-import { ReplMessageHandler } from '../messaging/MessageHandler.js';
-import { Logger } from '../../../core/src/util/Logger.js';
+import {ReplMessageHandler} from '../messaging/MessageHandler.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 export class SessionServerAdapter {
     /**
@@ -62,11 +62,11 @@ export class SessionServerAdapter {
         commandEvents.forEach(cmd => {
             this.agent.on(`command.${cmd}`, (data) => {
                 if (this.websocketServer && typeof this.websocketServer.bufferEvent === 'function') {
-                    this.websocketServer.bufferEvent('command.output', { command: cmd, result: data.result });
+                    this.websocketServer.bufferEvent('command.output', {command: cmd, result: data.result});
                 } else {
                     this._broadcastToAllClients({
                         type: 'command.output',
-                        payload: { command: cmd, result: data.result }
+                        payload: {command: cmd, result: data.result}
                     });
                 }
             });
@@ -85,7 +85,7 @@ export class SessionServerAdapter {
             Logger.error('Error handling WebSocket message:', error);
             this._sendToClient(client, {
                 type: 'error',
-                payload: { error: error.message }
+                payload: {error: error.message}
             });
         }
     }

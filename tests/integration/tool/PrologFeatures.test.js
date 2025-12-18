@@ -1,6 +1,6 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { NARTool } from '../../../core/src/tool/NARTool.js';
-import { PrologStrategy } from '../../../core/src/reason/strategy/PrologStrategy.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {NARTool} from '../../../core/src/tool/NARTool.js';
+import {PrologStrategy} from '../../../core/src/reason/strategy/PrologStrategy.js';
 
 describe('Prolog Features Exploration', () => {
     let nar;
@@ -12,11 +12,11 @@ describe('Prolog Features Exploration', () => {
                 type: 'stream',
                 maxDerivationDepth: 20
             },
-            debug: { reasoning: false }
+            debug: {reasoning: false}
         });
         await nar.initialize();
 
-        const prologStrategy = new PrologStrategy({ termFactory: nar._termFactory });
+        const prologStrategy = new PrologStrategy({termFactory: nar._termFactory});
         nar.streamReasoner.strategy.addStrategy(prologStrategy);
         narTool = new NARTool(nar);
     });
@@ -28,11 +28,11 @@ describe('Prolog Features Exploration', () => {
         ];
 
         for (const k of knowledge) {
-            await narTool.execute({ action: 'assert_prolog', content: k });
+            await narTool.execute({action: 'assert_prolog', content: k});
         }
 
         const query = 'append([1], [2], X)?';
-        const answer = await narTool.execute({ action: 'query_prolog', content: query });
+        const answer = await narTool.execute({action: 'query_prolog', content: query});
 
         expect(answer.success).toBe(true);
         expect(answer.result.length).toBeGreaterThan(0);
@@ -43,10 +43,10 @@ describe('Prolog Features Exploration', () => {
 
     test('should support basic Math (is)', async () => {
         const rule = 'addOne(X, Y) :- Y is X + 1.';
-        await narTool.execute({ action: 'assert_prolog', content: rule });
+        await narTool.execute({action: 'assert_prolog', content: rule});
 
         const query = 'addOne(1, Y)?';
-        const answer = await narTool.execute({ action: 'query_prolog', content: query });
+        const answer = await narTool.execute({action: 'query_prolog', content: query});
 
         expect(answer.success).toBe(true);
         expect(answer.result.length).toBeGreaterThan(0);

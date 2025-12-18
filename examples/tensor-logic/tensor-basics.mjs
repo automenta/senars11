@@ -1,4 +1,4 @@
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
 
 console.log('--- Tensor Basics ---');
 

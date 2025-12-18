@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 
 jest.unstable_mockModule('fs', () => ({
     default: {
@@ -13,7 +13,7 @@ jest.unstable_mockModule('fs', () => ({
     mkdirSync: jest.fn(),
 }));
 
-const { ConfigManager, DEFAULT_CONFIG } = await import('../../../core/src/config/ConfigManager.js');
+const {ConfigManager, DEFAULT_CONFIG} = await import('../../../core/src/config/ConfigManager.js');
 
 describe('ConfigManager', () => {
     let configManager;
@@ -29,12 +29,12 @@ describe('ConfigManager', () => {
     });
 
     test('updates config values', () => {
-        configManager.update({ lm: { enabled: true } });
+        configManager.update({lm: {enabled: true}});
         expect(configManager._config.lm.enabled).toBe(true);
     });
 
     test('validates config on update', () => {
-        const result = configManager.update({ webSocket: { port: 1234 } });
+        const result = configManager.update({webSocket: {port: 1234}});
         expect(result).toBe(configManager);
     });
 });

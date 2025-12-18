@@ -2,11 +2,11 @@
  * Linear Regression — Learn y = mx + b with gradient descent
  * Run: node examples/tensor-logic/linear-regression.mjs
  */
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
-import { Linear } from '../../core/src/functor/Module.js';
-import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
-import { SGDOptimizer } from '../../core/src/functor/Optimizer.js';
-import { MetricsTracker } from '../../core/src/functor/TrainingUtils.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+import {Linear} from '../../core/src/functor/Module.js';
+import {LossFunctor} from '../../core/src/functor/LossFunctor.js';
+import {SGDOptimizer} from '../../core/src/functor/Optimizer.js';
+import {MetricsTracker} from '../../core/src/functor/TrainingUtils.js';
 
 console.log('=== Tensor Logic: Linear Regression ===\n');
 
@@ -15,9 +15,9 @@ const trueW = 2.5, trueB = -1.3;
 const numSamples = 50;
 
 // Generate synthetic data: y = 2.5x - 1.3 + noise
-const data = Array.from({ length: numSamples }, () => {
+const data = Array.from({length: numSamples}, () => {
     const x = (Math.random() - 0.5) * 10;
-    return { x, y: trueW * x + trueB + (Math.random() - 0.5) * 2 };
+    return {x, y: trueW * x + trueB + (Math.random() - 0.5) * 2};
 });
 
 const X = data.map(d => [d.x]);
@@ -72,7 +72,7 @@ for (let epoch = 0; epoch < epochs; epoch++) {
     }
 
     const avgLoss = totalLoss / numSamples;
-    tracker.log(epoch, { loss: avgLoss });
+    tracker.log(epoch, {loss: avgLoss});
 
     if (epoch % 20 === 0 || epoch === epochs - 1) {
         const w = model.weight.data[0].toFixed(4);

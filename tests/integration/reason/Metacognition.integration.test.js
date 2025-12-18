@@ -1,5 +1,4 @@
-import { jest } from '@jest/globals';
-import { NAR } from '../../../core/src/nar/NAR.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 describe('Metacognition Integration', () => {
     let nar;

@@ -1,5 +1,5 @@
-import { NarseseParser } from '../../../core/src/parser/NarseseParser.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('NarseseParser Operators & Syntax', () => {
     let parser;

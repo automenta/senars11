@@ -1,5 +1,5 @@
-import { createTestAgent } from './factories.js';
-import { assertEventuallyTrue, getTerms, hasTermMatch } from './testHelpers.js';
+import {createTestAgent} from './factories.js';
+import {assertEventuallyTrue, getTerms, hasTermMatch} from './testHelpers.js';
 
 export const DEFAULT_LM_RESPONSES = {
     '"Dogs are animals"': '<dog --> animal>.',
@@ -23,13 +23,13 @@ export const DEFAULT_LM_RESPONSES = {
 };
 
 export const createLMNALTestAgent = async (mockResponses = {}, config = {}) => {
-    const { app, agent, cleanup } = await createTestAgent(config);
+    const {app, agent, cleanup} = await createTestAgent(config);
 
     // Only mock if LM is enabled
     if (!config.lm || config.lm.enabled !== false) {
         const jestModule = await import('@jest/globals');
         jestModule.jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {
-            const allResponses = { ...DEFAULT_LM_RESPONSES, ...mockResponses };
+            const allResponses = {...DEFAULT_LM_RESPONSES, ...mockResponses};
             for (const [pattern, response] of Object.entries(allResponses)) {
                 if (prompt.includes(pattern)) return response;
             }
@@ -37,14 +37,14 @@ export const createLMNALTestAgent = async (mockResponses = {}, config = {}) => {
         });
     }
 
-    return { app, agent, cleanup };
+    return {app, agent, cleanup};
 };
 
 export const assertLMTranslation = async (agent, input, expectedPatterns) => {
     await agent.input(input);
     await assertEventuallyTrue(
         () => hasTermMatch(getTerms(agent), ...expectedPatterns),
-        { description: `LM translation of "${input}" → [${expectedPatterns.join(', ')}]` }
+        {description: `LM translation of "${input}" → [${expectedPatterns.join(', ')}]`}
     );
 };
 
@@ -52,6 +52,6 @@ export const assertNALDerivation = async (agent, premises, conclusionPatterns) =
     for (const premise of premises) await agent.input(premise);
     await assertEventuallyTrue(
         () => hasTermMatch(getTerms(agent), ...conclusionPatterns),
-        { description: `NAL derives [${conclusionPatterns.join(' ')}] from premises` }
+        {description: `NAL derives [${conclusionPatterns.join(' ')}] from premises`}
     );
 };

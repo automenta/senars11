@@ -38,10 +38,13 @@ node examples/tensor-logic/model-serialization.mjs
 ### Core Functionality
 
 #### [tensor-basics.mjs](./tensor-basics.mjs)
+
 Introduction to Tensor primitives: creation, shapes, reshape, transpose, indexing, serialization.
 
 #### [autograd-demo.mjs](./autograd-demo.mjs)
+
 Automatic differentiation examples:
+
 - `y = x²` gradient
 - Chain rule: `y = (x+1)²`
 - Multivariate: `z = x*y`
@@ -49,7 +52,9 @@ Automatic differentiation examples:
 - ReLU gradient masking
 
 #### [mlp-training.mjs](./mlp-training.mjs)
+
 Train a Multi-Layer Perceptron on XOR:
+
 - Build network with `Linear` layers
 - Adam optimizer + binary cross-entropy loss
 - Full training loop with convergence
@@ -57,13 +62,17 @@ Train a Multi-Layer Perceptron on XOR:
 ### Advanced Features
 
 #### [attention-mechanism.mjs](./attention-mechanism.mjs)
+
 Self-attention and einsum:
+
 - Scaled dot-product attention
 - Einsum patterns (matmul, transpose, outer, trace)
 - Cosine similarity
 
 #### [training-utilities.mjs](./training-utilities.mjs)
+
 Production training ergonomics:
+
 - `DataLoader` with batching and shuffling
 - `LRScheduler` (step, cosine, exponential)
 - `EarlyStopping` for validation-based stopping
@@ -73,32 +82,42 @@ Production training ergonomics:
 ### Deep Dives
 
 #### [loss-functions.mjs](./loss-functions.mjs)
+
 Compare all loss functions:
+
 - MSE, MAE for regression
 - Binary cross-entropy for classification
 - Cross-entropy for multi-class
 - Loss sensitivity analysis
 
 #### [optimizer-race.mjs](./optimizer-race.mjs)
+
 Race different optimizers:
+
 - SGD, SGD+Momentum, Adam, RMSprop
 - Convergence comparison on `f(x) = (x-3)²`
 - Optimizer characteristics explained
 
 #### [activations.mjs](./activations.mjs)
+
 Visual comparison of activation functions:
+
 - ReLU, Sigmoid, Tanh, GELU
 - Softmax with temperature scaling
 - Gradient flow characteristics
 
 #### [gradient-check.mjs](./gradient-check.mjs)
+
 Verify autograd correctness:
+
 - Numerical vs analytical gradients
 - 15+ operations tested
 - Matrix gradient verification
 
 #### [initialization.mjs](./initialization.mjs)
+
 Initialization strategies:
+
 - Zeros, Random, Randn (Box-Muller)
 - Xavier Uniform (tanh/sigmoid)
 - Kaiming Normal (ReLU)
@@ -107,21 +126,27 @@ Initialization strategies:
 ### End-to-End Applications
 
 #### [linear-regression.mjs](./linear-regression.mjs)
+
 Classic linear regression:
+
 - Synthetic data generation
 - ASCII scatter plot visualization
 - Learned line overlay
 - Error analysis
 
 #### [binary-classification.mjs](./binary-classification.mjs)
+
 2D binary classification:
+
 - Two cluster classification
 - Decision boundary visualization
 - MLP classifier training
 - ASCII heatmap of predictions
 
 #### [model-serialization.mjs](./model-serialization.mjs)
+
 Save and load models:
+
 - `stateDict()` / `loadStateDict()`
 - JSON serialization
 - Train/eval modes
@@ -131,14 +156,14 @@ Save and load models:
 
 See [core/src/functor/README.md](../../core/src/functor/README.md) for full API documentation.
 
-| Module | Description |
-|--------|-------------|
-| `Tensor.js` | N-dimensional arrays with autograd |
-| `NativeBackend.js` | 50+ tensor operations (matmul, einsum, activations, etc.) |
-| `Module.js` | PyTorch-like layers (Linear, Embedding, Sequential, MultiHeadAttention) |
-| `Optimizer.js` | SGD (momentum), Adam, RMSprop |
-| `LossFunctor.js` | MSE, MAE, binary/cross-entropy |
-| `TrainingUtils.js` | DataLoader, LRScheduler, EarlyStopping, MetricsTracker |
+| Module             | Description                                                             |
+|--------------------|-------------------------------------------------------------------------|
+| `Tensor.js`        | N-dimensional arrays with autograd                                      |
+| `NativeBackend.js` | 50+ tensor operations (matmul, einsum, activations, etc.)               |
+| `Module.js`        | PyTorch-like layers (Linear, Embedding, Sequential, MultiHeadAttention) |
+| `Optimizer.js`     | SGD (momentum), Adam, RMSprop                                           |
+| `LossFunctor.js`   | MSE, MAE, binary/cross-entropy                                          |
+| `TrainingUtils.js` | DataLoader, LRScheduler, EarlyStopping, MetricsTracker                  |
 
 ## Coverage Map
 

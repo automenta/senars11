@@ -2,16 +2,16 @@
  * Batch Training Demo — Vectorized batch processing for efficiency
  * Run: node examples/tensor-logic/batch-training.mjs
  */
-import { T } from '../../core/src/functor/backends/NativeBackend.js';
-import { Linear, Sequential } from '../../core/src/functor/Module.js';
-import { LossFunctor } from '../../core/src/functor/LossFunctor.js';
-import { AdamOptimizer } from '../../core/src/functor/Optimizer.js';
-import { DataLoader } from '../../core/src/functor/TrainingUtils.js';
+import {T} from '../../core/src/functor/backends/NativeBackend.js';
+import {Linear} from '../../core/src/functor/Module.js';
+import {LossFunctor} from '../../core/src/functor/LossFunctor.js';
+import {AdamOptimizer} from '../../core/src/functor/Optimizer.js';
+import {DataLoader} from '../../core/src/functor/TrainingUtils.js';
 
 console.log('=== Tensor Logic: Batch Training ===\n');
 
 // Generate synthetic dataset: y = 2x₁ + 3x₂ + noise
-const createDataset = (n) => Array.from({ length: n }, () => {
+const createDataset = (n) => Array.from({length: n}, () => {
     const x1 = Math.random() * 2 - 1;
     const x2 = Math.random() * 2 - 1;
     return {
@@ -114,13 +114,13 @@ const padCollate = (batch, maxLen = 4) => {
         while (x.length < maxLen) x.push(0);
         return x.slice(0, maxLen);
     });
-    return { x: T.tensor(padded), y: T.tensor(batch.map(s => s.y)) };
+    return {x: T.tensor(padded), y: T.tensor(batch.map(s => s.y))};
 };
 
 const varLenData = [
-    { x: [1, 2], y: [1] },
-    { x: [3], y: [0] },
-    { x: [4, 5, 6], y: [1] },
+    {x: [1, 2], y: [1]},
+    {x: [3], y: [0]},
+    {x: [4, 5, 6], y: [1]},
 ];
 
 const paddedBatch = padCollate(varLenData);

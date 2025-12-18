@@ -22,7 +22,8 @@ if (!envValidation.isValid) {
 
 // Global console silencing for cleaner test output
 if (!process.env.SHOW_LOGS_IN_TESTS) {
-    const noop = () => { };
+    const noop = () => {
+    };
     global.console = {
         ...console,
         log: noop,

@@ -237,7 +237,7 @@ export class GraphManager {
             'question.answered': () => this.addQuestionNode(message.payload),
             'memorySnapshot': () => {
                 this.updateFromSnapshot(message.payload);
-                 // Snapshot updates already run layout
+                // Snapshot updates already run layout
             }
         };
 

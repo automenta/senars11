@@ -1,16 +1,16 @@
-import { describe, test, expect } from '@jest/globals';
-import { validateConfig, validateConfigWithDefaults } from '../../../core/src/config/ConfigSchemas.js';
+import {describe, expect, test} from '@jest/globals';
+import {validateConfig, validateConfigWithDefaults} from '../../../core/src/config/ConfigSchemas.js';
 
 describe('ConfigSchemas', () => {
     describe('validateConfig', () => {
         test('validates a correct minimal config', () => {
-            const result = validateConfig({ memory: { capacity: 1000 } });
+            const result = validateConfig({memory: {capacity: 1000}});
             expect(result.error).toBeNull();
             expect(result.value.memory.capacity).toBe(1000);
         });
 
         test('returns error for invalid config', () => {
-            const result = validateConfig({ memory: { capacity: -1 } });
+            const result = validateConfig({memory: {capacity: -1}});
             expect(result.error).not.toBeNull();
             expect(result.value).toBeNull();
         });
@@ -24,7 +24,7 @@ describe('ConfigSchemas', () => {
         });
 
         test('throws error for invalid config', () =>
-            expect(() => validateConfigWithDefaults({ cycle: { delay: -10 } }))
+            expect(() => validateConfigWithDefaults({cycle: {delay: -10}}))
                 .toThrow(/validation failed/i)
         );
     });
@@ -50,7 +50,7 @@ describe('ConfigSchemas', () => {
         test('allows passthrough for unknown keys', () => {
             const result = validateConfigWithDefaults({
                 extra: 'value',
-                memory: { custom: 123 }
+                memory: {custom: 123}
             });
             expect(result.extra).toBe('value');
             expect(result.memory.custom).toBe(123);
