@@ -1,6 +1,6 @@
-import {HumanMessage, ToolMessage} from "@langchain/core/messages";
-import {handleError} from '@senars/core';
-import {AGENT_EVENTS} from './constants.js';
+import { HumanMessage, ToolMessage } from "@langchain/core/messages";
+import { handleError } from '@senars/core';
+import { AGENT_EVENTS } from './constants.js';
 
 export class AgentStreamer {
     constructor(agent) {
@@ -16,18 +16,27 @@ export class AgentStreamer {
     }
 
     async* streamExecution(input) {
-        if (!this.agent.lm || !this._getProvider()) {
+        if (!this.agent.ai) {
             yield* this._handleMissingProvider(input);
             return;
         }
 
-        const provider = this._getProvider();
-        this._currentToolCalls = [];
-
         try {
-            const assistantContent = yield* this._streamAssistantResponse([new HumanMessage(input)], provider);
-            if (this._currentToolCalls.length > 0) {
-                yield* this._executeAllToolCalls(this._currentToolCalls, input, assistantContent, provider);
+            const { fullStream } = await this.agent.ai.stream(input, {
+                temperature: this.agent.inputProcessingConfig.lmTemperature
+            });
+
+            for await (const chunk of fullStream) {
+                if (chunk.type === 'text-delta') {
+                    yield { type: "agent_response", content: chunk.textDelta };
+                } else if (chunk.type === 'tool-call') {
+                    yield { type: "tool_call", name: chunk.toolName, args: chunk.args };
+                    this._emit(AGENT_EVENTS.TOOL_CALL, { name: chunk.toolName, args: chunk.args, id: chunk.toolCallId });
+                } else if (chunk.type === 'tool-result') {
+                    yield { type: "tool_result", content: JSON.stringify(chunk.result) };
+                } else if (chunk.type === 'error') {
+                    yield { type: "error", content: chunk.error };
+                }
             }
         } catch (error) {
             yield* this._handleStreamingError(error, input);
@@ -35,117 +44,31 @@ export class AgentStreamer {
         }
     }
 
-    _getProvider() {
-        return this.agent.lm?._getProvider(this.agent.lm.providers.defaultProviderId);
+    _handleMissingProvider(input) {
+        return this._handleStreamingError(new Error("No AI Provider configured"), input);
     }
 
     async* _handleMissingProvider(input) {
         if (this.agent.inputProcessingConfig.enableNarseseFallback && this.agent.inputProcessor._isPotentialNarsese(input)) {
             try {
                 const result = await this.agent.inputProcessor.processNarsese(input);
-                yield {type: "agent_response", content: result || "Input processed"};
+                yield { type: "agent_response", content: result || "Input processed" };
                 return;
             } catch (error) {
-                yield {type: "agent_response", content: "❌ Agent initialized but Narsese processing failed."};
+                yield { type: "agent_response", content: "❌ Agent initialized but Narsese processing failed." };
                 return;
             }
         }
-        yield {type: "agent_response", content: "❌ No LM provider available and input not recognized as Narsese."};
+        yield { type: "agent_response", content: "❌ No LM provider available and input not recognized as Narsese." };
     }
 
-    async* _streamAssistantResponse(messages, provider) {
-        this._emit(AGENT_EVENTS.LLM_PROMPT, {
-            messages: messages.map(m => ({type: m.constructor.name, content: m.content})),
-            provider: provider.modelName || provider.model?.name || 'unknown'
-        });
 
-        let model = provider.model || provider;
-        let stream;
-
-        if (typeof model.stream === 'function') {
-            stream = await model.stream(messages);
-        } else if (typeof provider.streamText === 'function') {
-            stream = await provider.streamText(messages[0].content, {
-                temperature: this.agent.inputProcessingConfig.lmTemperature
-            });
-        } else {
-            const response = await provider.invoke(messages[0].content);
-            yield {type: "agent_response", content: response};
-            return response;
-        }
-
-        let assistantContent = "";
-        for await (const chunk of stream) {
-            const content = typeof chunk === 'object' ? chunk.content : chunk;
-            if (content) {
-                assistantContent += content;
-                yield {type: "agent_response", content};
-            }
-            if (typeof chunk === 'object' && chunk.tool_calls?.length > 0) {
-                this._collectToolCalls(chunk.tool_calls);
-            }
-        }
-
-        this._emit(AGENT_EVENTS.LLM_RESPONSE, {
-            content: assistantContent,
-            provider: provider.modelName || provider.model?.name || 'unknown'
-        });
-
-        return assistantContent;
-    }
-
-    _collectToolCalls(calls) {
-        this._currentToolCalls = this._currentToolCalls.concat(calls);
-    }
-
-    async* _executeAllToolCalls(toolCalls, originalInput, assistantContent, provider) {
-        for (const tc of toolCalls) {
-            yield {type: "tool_call", name: tc.name, args: tc.args};
-
-            this._emit(AGENT_EVENTS.TOOL_CALL, {
-                name: tc.name,
-                args: tc.args,
-                id: tc.id
-            });
-
-            const result = await this._executeTool(tc.name, tc.args, provider);
-            yield {type: "tool_result", content: result};
-
-            const messages = [
-                new HumanMessage(originalInput),
-                {role: "assistant", content: assistantContent, tool_calls: toolCalls},
-                new ToolMessage({content: result, tool_call_id: tc.id, name: tc.name})
-            ];
-
-            try {
-                const model = provider.model || provider;
-                if (typeof model.stream === 'function') {
-                    for await (const chunk of await model.stream(messages)) {
-                        if (chunk.content) yield {type: "agent_response", content: chunk.content};
-                    }
-                }
-            } catch (error) {
-                yield {type: "agent_response", content: `Error generating final response: ${error.message}`};
-            }
-        }
-    }
-
-    async _executeTool(name, args, provider) {
-        const tool = (provider.tools || []).find(t => t.name === name);
-        if (!tool) return `Error: Tool ${name} not found`;
-
-        try {
-            return await tool.invoke(args);
-        } catch (error) {
-            return `Error executing ${name}: ${error.message}`;
-        }
-    }
 
     async* _handleStreamingError(error, input) {
         if (!this.agent.inputProcessingConfig.enableNarseseFallback || !this.agent.inputProcessor._isPotentialNarsese(input)) {
-            console.error('Streaming execution error:', {error, input});
+            console.error('Streaming execution error:', { error, input });
         }
-        yield {type: "error", content: `❌ Streaming error: ${error.message}`};
+        yield { type: "error", content: `❌ Streaming error: ${error.message}` };
     }
 
     _emit(event, payload) {

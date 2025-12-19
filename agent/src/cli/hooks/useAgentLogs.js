@@ -1,6 +1,6 @@
-import {useCallback, useEffect, useState} from 'react';
-import {v4 as uuidv4} from 'uuid';
-import {ActivityViewModel} from '../../ui/model/ActivityViewModel.js';
+import { useCallback, useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { ActivityViewModel } from '../../app/model/ActivityViewModel.js';
 
 export const useAgentLogs = (engine, app) => {
     const [logs, setLogs] = useState([{
@@ -13,7 +13,7 @@ export const useAgentLogs = (engine, app) => {
         type: 'activity.system.log'
     }]);
 
-    const [status, setStatus] = useState({isRunning: false, cycle: 0});
+    const [status, setStatus] = useState({ isRunning: false, cycle: 0 });
 
     // Add log message (supports legacy string or new ViewModel object)
     const addLog = useCallback((content, type = 'info') => {
@@ -22,8 +22,8 @@ export const useAgentLogs = (engine, app) => {
 
             // Construct log object
             const newLog = (typeof content === 'object' && content !== null)
-                ? {id: uuidv4(), timestamp, ...content}
-                : {id: uuidv4(), timestamp, message: content, type};
+                ? { id: uuidv4(), timestamp, ...content }
+                : { id: uuidv4(), timestamp, message: content, type };
 
             // Check duplicates (simple check based on message/title)
             const isDuplicate = prevLogs.slice(-2).some(log =>
@@ -40,20 +40,20 @@ export const useAgentLogs = (engine, app) => {
     const updateLog = useCallback((id, message, type) => {
         setLogs(prevLogs => prevLogs.map(log =>
             log.id === id
-                ? {...log, message, type: type || log.type}
+                ? { ...log, message, type: type || log.type }
                 : log
         ));
     }, []);
 
     useEffect(() => {
         // Shared listeners (status, cycle)
-        const handleStatus = (newStatus) => setStatus(prev => ({...prev, ...newStatus}));
+        const handleStatus = (newStatus) => setStatus(prev => ({ ...prev, ...newStatus }));
         const handleCycleStep = (data) => setStatus(prev => ({
             ...prev,
             cycle: data.cycleAfter ?? data.cycle ?? 0
         }));
-        const handleCycleRunning = () => setStatus(prev => ({...prev, isRunning: true}));
-        const handleCycleStop = () => setStatus(prev => ({...prev, isRunning: false}));
+        const handleCycleRunning = () => setStatus(prev => ({ ...prev, isRunning: true }));
+        const handleCycleStop = () => setStatus(prev => ({ ...prev, isRunning: false }));
 
         engine.on('status', handleStatus);
         engine.on('nar.cycle.step', handleCycleStep);
@@ -92,5 +92,5 @@ export const useAgentLogs = (engine, app) => {
 
     }, [engine, app, addLog]);
 
-    return {logs, status, addLog, setLogs, updateLog};
+    return { logs, status, addLog, setLogs, updateLog };
 };

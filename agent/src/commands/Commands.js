@@ -2,11 +2,12 @@
  * Standardized Command Interface and Implementations
  */
 
-import {handleError} from '../../../core/src/util/ErrorHandler.js';
-import {fileURLToPath} from 'url';
-import {basename, dirname, join, resolve} from 'path';
-import {promises as fs} from 'fs';
-import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
+import { handleError } from '../../../core/src/util/ErrorHandler.js';
+import { fileURLToPath } from 'url';
+import { basename, dirname, join, resolve } from 'path';
+import { promises as fs } from 'fs';
+import { FormattingUtils } from '../../../core/src/util/FormattingUtils.js';
+import { z } from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = resolve(__dirname, '../../../examples');
@@ -138,10 +139,21 @@ export class PlanCommand extends AgentCommand {
 
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: plan <description>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
+        if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[PlanCommand] Generating plan for: "${args.join(' ')}"`);
-        const response = await agent.lm.generateText(`Generate a step-by-step plan to achieve: "${args.join(' ')}"`, {temperature: 0.7});
-        return `📋 Generated Plan:\n${response}`;
+
+        try {
+            const { object } = await agent.ai.generateObject(
+                `Generate a step-by-step plan to achieve: "${args.join(' ')}"`,
+                z.object({
+                    steps: z.array(z.string()).describe('List of steps to execute the plan'),
+                    estimatedTime: z.string().describe('Estimated time to complete')
+                })
+            );
+            return `📋 Generated Plan (${object.estimatedTime}):\n${object.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
+        } catch (e) {
+            return `❌ Planning failed: ${e.message}`;
+        }
     }
 }
 
@@ -152,10 +164,10 @@ export class ThinkCommand extends AgentCommand {
 
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: think <topic>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
+        if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[ThinkCommand] Thinking about: "${args.join(' ')}"`);
-        const response = await agent.lm.generateText(`Reflect on: "${args.join(' ')}"`, {temperature: 0.8});
-        return `💭 Reflection:\n${response}`;
+        const { text } = await agent.ai.generate(`Reflect on: "${args.join(' ')}"`, { temperature: 0.8 });
+        return `💭 Reflection:\n${text}`;
     }
 }
 
@@ -166,10 +178,10 @@ export class ReasonCommand extends AgentCommand {
 
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: reason <statement>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
+        if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[ReasonCommand] Reasoning about: "${args.join(' ')}"`);
-        const response = await agent.lm.generateText(`Reason about: "${args.join(' ')}"`, {temperature: 0.3});
-        return `🧠 Reasoning Result:\n${response}`;
+        const { text } = await agent.ai.generate(`Reason about: "${args.join(' ')}"`, { temperature: 0.3 });
+        return `🧠 Reasoning Result:\n${text}`;
     }
 }
 
@@ -180,32 +192,24 @@ export class LMCommand extends AgentCommand {
 
     async _executeImpl(agent, ...args) {
         if (args.length < 1) return 'Usage: lm <prompt>';
-        if (!agent.lm) return '❌ No Language Model enabled.';
+        if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[LMCommand] Prompting: "${args.join(' ')}"`);
-        const response = await agent.lm.generateText(args.join(' '), {temperature: 0.7});
-        return `🤖 LM Response:\n${response}`;
+        const { text } = await agent.ai.generate(args.join(' '), { temperature: 0.7 });
+        return `🤖 LM Response:\n${text}`;
     }
 }
 
 export class ProvidersCommand extends AgentCommand {
     constructor() {
-        super('providers', 'Manage LM providers', 'providers [list|select <id>]');
+        super('providers', 'Manage AI providers', 'providers [list]');
     }
 
     async _executeImpl(agent, ...args) {
-        if (!agent.lm) return '❌ No Language Model enabled.';
-        if (args.length === 0 || args[0] === 'list') {
-            const providers = Array.from(agent.lm.providers.providers.keys());
-            if (providers.length === 0) return 'No LM providers registered.';
-            const list = providers.map((id, i) => `  ${i + 1}. ${id}${agent.lm.providers.defaultProviderId === id ? ' [DEFAULT]' : ''}`).join('\n');
-            return `🔌 Providers:\n${list}`;
-        }
-        if (args[0] === 'select' && args.length > 1) {
-            if (!agent.lm.providers.has(args[1])) return `Provider '${args[1]}' not found.`;
-            agent.lm.providers.setDefault(args[1]);
-            return `✅ Provider '${args[1]}' selected.`;
-        }
-        return 'Usage: providers [list|select <provider_id>]';
+        if (!agent.ai) return '❌ No AI Client enabled.';
+        const providers = Array.from(agent.ai.providers.keys());
+        if (providers.length === 0) return 'No AI providers registered.';
+        const list = providers.map((id, i) => `  ${i + 1}. ${id}${agent.ai.defaultProvider === id ? ' [DEFAULT]' : ''}`).join('\n');
+        return `🔌 Providers:\n${list}`;
     }
 }
 
@@ -570,7 +574,7 @@ export class TasksCommand extends AgentCommand {
                 const task = item.task;
                 // We add a temporary property for display source, carefully not to mutate original if it matters
                 // but formatTask probably won't show it. We'll prepend it in output.
-                return {task, source: 'Input'};
+                return { task, source: 'Input' };
             }));
         }
 
@@ -584,7 +588,7 @@ export class TasksCommand extends AgentCommand {
         }
 
         if (focus && focus.getTasks) {
-            tasks.push(...focus.getTasks(50).map(t => ({task: t, source: 'Focus'})));
+            tasks.push(...focus.getTasks(50).map(t => ({ task: t, source: 'Focus' })));
         }
 
         // Filter by term if provided

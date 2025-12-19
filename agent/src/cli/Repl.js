@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import React from 'react';
-import {render} from 'ink';
-import {Config, Logger} from '@senars/core';
-import {App} from '@senars/agent';
-import {TUI} from './components/TUI.js';
+import { render } from 'ink';
+import { Config, Logger } from '@senars/core';
+import { App } from '../../app/App.js';
+import { TUI } from './components/TUI.js';
 
 class Repl {
     constructor() {
@@ -24,10 +24,10 @@ class Repl {
         }
 
         this.log.info('🚀 Starting REPL engine...\n');
-        const agent = await this.app.start({startAgent: false});
+        const agent = await this.app.start({ startAgent: false });
         this.log.info('✅ Engine ready. Rendering UI...');
 
-        this.inkInstance = render(React.createElement(TUI, {engine: agent, app: this.app}));
+        this.inkInstance = render(React.createElement(TUI, { engine: agent, app: this.app }));
     }
 
     async shutdown() {
@@ -43,7 +43,7 @@ async function main() {
     try {
         await repl.start();
     } catch (error) {
-        console.error('❌ Error starting Agent REPL:', {error: error.message, stack: error.stack});
+        console.error('❌ Error starting Agent REPL:', { error: error.message, stack: error.stack });
         process.exit(1);
     }
 }
