@@ -1,5 +1,8 @@
-export class BaseProvider {
+import EventEmitter from 'events';
+
+export class BaseProvider extends EventEmitter {
     constructor(config = {}) {
+        super();
         this.id = config.id || this.constructor.name.toLowerCase();
         this.temperature = config.temperature ?? 0.7;
         this.maxTokens = config.maxTokens ?? 100;
@@ -21,12 +24,18 @@ export class BaseProvider {
     }
 
     _emitEvent(eventName, data = {}) {
+        const payload = {
+            provider: this.id,
+            timestamp: Date.now(),
+            ...data
+        };
+
+        // Emit locally for listeners on this provider
+        this.emit(eventName, payload);
+
+        // Emit to central event bus if configured
         if (this.eventBus) {
-            this.eventBus.emit(eventName, {
-                provider: this.id,
-                timestamp: Date.now(),
-                ...data
-            });
+            this.eventBus.emit(eventName, payload);
         }
     }
 

@@ -14,9 +14,15 @@ node examples/advanced/stream-reasoning.js
 # Tensor Logic (neural components)
 node examples/tensor-logic/mlp-training.mjs
 
-# NARS-GPT with production LM
+# Comprehensive LM Integration Demo (NAL/LM synergy)
+node examples/run-lm-demos.js --model=transformers
+
+# NARS-GPT with production LM (requires Ollama)
+ollama serve  # separate terminal
 node examples/narsgpt/production-lm.js
 ```
+
+**→ [Complete LM Demo Guide](LM_DEMO_GUIDE.md)** - Model configs, transcript collection, troubleshooting
 
 ---
 
@@ -96,8 +102,9 @@ Neural-symbolic computation with PyTorch-like API.
 
 | Example                                               | Description                 |
 |-------------------------------------------------------|-----------------------------|
-| [lm-providers.js](lm/lm-providers.js)                 | LM provider examples        |
-| [demo-transformers-js.js](lm/demo-transformers-js.js) | Transformers.js integration |
+| [lm-providers.js](lm/lm-providers.js)                 | LM provider configuration   |
+| [minimal-inference.js](lm/minimal-inference.js)       | Minimal Transformers.js     |
+| [demo-system-verification.js](demos/demo-system-verification.js) | Full System Verification |
 
 ---
 

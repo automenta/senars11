@@ -66,3 +66,23 @@ export const measure = async (fn, label = 'Operation') => {
     metric(`${label} duration`, duration, 'ms');
     return result;
 };
+
+/**
+ * Hard timeout wrapper - rejects if operation exceeds timeout
+ * @param {Promise} promise - The promise to wrap
+ * @param {number} ms - Timeout in milliseconds
+ * @param {string} label - Description for error message
+ * @returns {Promise} Resolves with result or rejects with timeout error
+ */
+export const withTimeout = (promise, ms, label = 'Operation') =>
+    Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+        )
+    ]);
+
+/**
+ * Demo timeout constant (5 seconds per demo)
+ */
+export const DEMO_TIMEOUT_MS = 5000;

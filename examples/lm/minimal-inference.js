@@ -1,56 +1,25 @@
 #!/usr/bin/env node
+import { TransformersJSProvider } from '../../core/src/lm/TransformersJSProvider.js';
 
-import {TransformersJSProvider} from '../../core/src/lm/TransformersJSProvider.js';
-import {EventEmitter} from 'events';
-
-const countTokens = text => text.split(/\s+/).length;
-const tokensPerSec = (tokens, ms) => ((tokens / ms) * 1000).toFixed(2);
-
-async function main() {
-    console.log('=== Minimal LM Inference Example ===\n');
-
-    const eventBus = new EventEmitter();
-    eventBus.on('lm:debug', data => {
-        console.log('[DEBUG]', data.message, data.output ? '(output captured)' : '');
-    });
-
+const main = async () => {
+    console.log('=== Minimal LM Inference ===\n');
     const provider = new TransformersJSProvider({
         modelName: 'Xenova/LaMini-Flan-T5-248M',
-        debug: true,
-        eventBus
+        loadTimeout: 120000 // Allow slow download
     });
 
-    console.log('Initializing model (first run downloads ~250MB)...');
-    console.log('This may take 30-60 seconds on first run.\n');
-
-    const prompt = 'Summarize: The cat sat on the mat.';
-    console.log(`Prompt: "${prompt}"\n`);
-
     try {
-        const startTime = Date.now();
-        const result = await provider.generateText(prompt, {maxTokens: 50, temperature: 0.7});
-        const duration = Date.now() - startTime;
-        const tokens = countTokens(result);
-
-        console.log(`Result: "${result}"\n`);
-        console.log(`Inference time: ${duration}ms`);
-        console.log(`Tokens: ~${tokens}`);
-        console.log(`Throughput: ~${tokensPerSec(tokens, duration)} tokens/sec`);
-
-    } catch (error) {
-        console.error('Error during inference:', error.message);
-        await provider.destroy();
+        console.log(`Loading ${provider.config.modelName}...`);
+        const start = Date.now();
+        const result = await provider.generateText('Summarize: The cat sat on the mat.', { maxTokens: 50, temperature: 0.1 });
+        console.log(`Result: "${result}" (${Date.now() - start}ms)`);
+    } catch (e) {
+        console.error('Inference failed:', e.message);
         process.exit(1);
+    } finally {
+        await provider.destroy();
+        process.exit(0);
     }
+};
 
-    console.log('\n✅ Example completed successfully!');
-
-    // Cleanup and exit
-    await provider.destroy();
-    process.exit(0);
-}
-
-main().catch(err => {
-    console.error(err);
-    process.exit(1);
-});
+main();

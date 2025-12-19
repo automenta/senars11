@@ -9,7 +9,7 @@
  * - Metrics and performance tracking
  */
 
-import {NAR} from '../../core/src/nar/NAR.js';
+import { NAR } from '../../core/src/nar/NAR.js';
 
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
 const metric = (label, value) => console.log(`  ${label.padEnd(25)} ${value}`);
@@ -19,12 +19,12 @@ async function runStreamDemo() {
     section('Stream-Based Reasoner Demo');
 
     const nar = new NAR({
-        lm: {enabled: false},
+        lm: { enabled: false },
         reasoning: {
             useStreamReasoner: true,
             maxDerivationDepth: 7,
             cpuThrottleInterval: 0,
-            streamSamplingObjectives: {priority: true, recency: true, novelty: true}
+            streamSamplingObjectives: { priority: true, recency: true, novelty: true }
         }
     });
     await nar.initialize();
@@ -42,12 +42,12 @@ async function runStreamDemo() {
     ];
     for (const b of beliefs) await nar.input(b);
 
-    // Run reasoning for 3 seconds
-    log('\nStarting stream reasoning (3 seconds)...');
+    // Run reasoning for 500ms (sufficient for demo)
+    log('\nStarting stream reasoning (500ms demo)...');
     const startTime = Date.now();
     nar.start();
 
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 500));
     nar.stop();
 
     const elapsed = Date.now() - startTime;
@@ -78,8 +78,8 @@ async function runCycleDemo() {
     section('Cycle-Based Reasoner Demo (Comparison)');
 
     const nar = new NAR({
-        lm: {enabled: false},
-        reasoning: {useStreamReasoner: false}
+        lm: { enabled: false },
+        reasoning: { useStreamReasoner: false }
     });
     await nar.initialize();
 
@@ -95,8 +95,9 @@ async function runCycleDemo() {
     ];
     for (const b of beliefs) await nar.input(b);
 
-    log('\nRunning 50 reasoning cycles...');
-    await nar.runCycles(50);
+    // Run 5 reasoning cycles (sufficient for comparison)
+    log('Running 5 reasoning cycles...');
+    await nar.runCycles(5);
 
     const stats = nar.getStats();
     log('\n📊 Results:');
@@ -130,7 +131,7 @@ async function main() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-    main();
+    main().then(() => process.exit(0));
 }
 
-export {runStreamDemo, runCycleDemo};
+export { runStreamDemo, runCycleDemo };

@@ -1,4 +1,4 @@
-import {BaseProvider} from './BaseProvider.js';
+import { BaseProvider } from './BaseProvider.js';
 
 let pipelinePromise = null;
 const importPipeline = () => {
@@ -22,11 +22,27 @@ export class TransformersJSProvider extends BaseProvider {
         if (this.pipeline) return;
 
         const startTime = Date.now();
-        this._emitEvent('lm:model-load-start', {modelName: this.modelName, task: this.task});
+        this._emitEvent('lm:model-load-start', { modelName: this.modelName, task: this.task });
 
         try {
             const pipeline = await importPipeline();
-            const loadModelPromise = pipeline(this.task, this.modelName, {device: this.device});
+            const loadModelPromise = pipeline(this.task, this.modelName, {
+                device: this.device,
+                progress_callback: (progress) => {
+                    // progress is usually an object like { status: 'progress', name: 'config.json', file: 'config.json', progress: 10, loaded: 1024, total: 10240 }
+                    // or sometimes just a percentage number depending on version, safely handle both
+                    if (progress) {
+                        this._emitEvent('lm:model-dl-progress', {
+                            modelName: this.modelName,
+                            progress
+                        });
+                        // Simple log for immediate visibility in standard output if needed (optional, but requested by plan)
+                        if (typeof progress === 'object' && progress.status === 'progress') {
+                            // E.g. console.log(`[DL] ${progress.file}: ${Math.round(progress.progress)}%`);
+                        }
+                    }
+                }
+            });
 
             this.pipeline = await this._withTimeout(
                 loadModelPromise,
@@ -40,7 +56,7 @@ export class TransformersJSProvider extends BaseProvider {
                 task: this.task,
                 elapsedMs: elapsed
             });
-            this._emitDebug('Model loaded successfully', {modelName: this.modelName, elapsedMs: elapsed});
+            this._emitDebug('Model loaded successfully', { modelName: this.modelName, elapsedMs: elapsed });
         } catch (error) {
             const elapsed = Date.now() - startTime;
 
@@ -59,142 +75,48 @@ export class TransformersJSProvider extends BaseProvider {
     }
 
     async generateText(prompt, options = {}) {
-        const stream = this.streamText(prompt, options);
-        let fullResponse = '';
-        for await (const chunk of stream) {
-            fullResponse += chunk;
-        }
-        return fullResponse;
-    }
-
-    async* streamText(prompt, options = {}) {
         await this._initialize();
 
-        let currentPrompt = prompt;
-        const maxTurns = 5;
+        const { maxTokens, temperature } = options;
+        const temp = temperature ?? this.temperature ?? 0.7;
 
-        for (let turn = 0; turn < maxTurns; turn++) {
-            const formattedPrompt = this.tools.length > 0
-                ? this._formatPromptWithTools(currentPrompt)
-                : currentPrompt;
+        try {
+            const generatePromise = this.pipeline(prompt, {
+                max_new_tokens: maxTokens ?? this.maxTokens ?? 100,
+                temperature: temp,
+                do_sample: temp > 0,
+            });
 
-            let fullOutput = '';
-            for await (const chunk of this._streamPipeline(formattedPrompt, options)) {
-                fullOutput += chunk;
-                yield chunk;
-            }
+            const output = await this._withTimeout(
+                generatePromise,
+                this.loadTimeout,
+                'Inference'
+            );
 
-            const toolCall = this._parseToolCall(fullOutput);
-
-            if (toolCall) {
-                const toolResult = await this._executeTool(toolCall);
-                currentPrompt = `${fullOutput}\nTool Result: ${toolResult}`;
-            } else {
-                return; // End of generation
-            }
-        }
-    }
-
-    _formatPromptWithTools(prompt) {
-        const toolDescriptions = this.tools.map(tool =>
-            `${tool.name}: ${tool.description} - Schema: ${JSON.stringify(tool.schema)}`
-        ).join('\n');
-
-        return `You have access to the following tools:\n${toolDescriptions}\n\nTo use a tool, respond with a JSON object with "tool" and "args" keys, wrapped in \`\`\`json blocks, e.g., \`\`\`json\n{"tool": "tool_name", "args": {"arg1": "value1"}}\n\`\`\`\n\n${prompt}`;
-    }
-
-    _parseToolCall(text) {
-        const toolCallRegex = /```json\s*(\{[\s\S]*?\})\s*```/;
-        const match = text.match(toolCallRegex);
-
-        if (match && match[1]) {
-            try {
-                const parsed = JSON.parse(match[1]);
-                if (parsed.tool && parsed.args) {
-                    return parsed;
+            if (Array.isArray(output) && output[0]?.generated_text) {
+                let text = output[0].generated_text;
+                // Remove prompt prefix if present (common in text-generation)
+                if (text.startsWith(prompt)) {
+                    text = text.slice(prompt.length);
                 }
-            } catch (error) {
-                // Not a valid tool call
+                return text.trim();
             }
+            return String(output);
+        } catch (error) {
+            this._emitDebug('Pipeline error', { error: error.message });
+            throw error;
         }
-        return null;
     }
 
-    async _executeTool(toolCall) {
-        const tool = this.tools.find(t => t.name === toolCall.tool);
-        if (tool) {
-            try {
-                const result = await tool.execute(toolCall.args);
-                return JSON.stringify(result);
-            } catch (error) {
-                return `Error executing tool: ${error.message}`;
-            }
-        }
-        return `Tool "${toolCall.tool}" not found.`;
-    }
-
-    async* _streamPipeline(prompt, options) {
-        const {maxTokens, temperature, ...restOptions} = options;
-        const temp = temperature ?? 0.7;
-
-        let resolvePromise, rejectPromise;
-        const promise = new Promise((resolve, reject) => {
-            resolvePromise = resolve;
-            rejectPromise = reject;
-        });
-
-        const outputQueue = [];
-        let processing = true;
-        let fullOutput = '';
-
-        const callback_function = (beams) => {
-            const decodedText = this.pipeline.tokenizer.decode(beams[0].output_token_ids, {skip_special_tokens: true});
-            if (decodedText.length > fullOutput.length && decodedText.startsWith(fullOutput)) {
-                const newText = decodedText.substring(fullOutput.length);
-                outputQueue.push(newText);
-            }
-            fullOutput = decodedText;
-        };
-
-        const resultPromise = this.pipeline(prompt, {
-            max_new_tokens: maxTokens ?? 256,
-            temperature: temp,
-            do_sample: temp > 0,
-            callback_function,
-            ...restOptions
-        });
-
-        resultPromise.then((output) => {
-            this._emitDebug('Pipeline output', {output});
-
-            // If streaming didn't capture anything but we have output, enqueue it
-            if (fullOutput.length === 0 && Array.isArray(output) && output[0]?.generated_text) {
-                const generated = output[0].generated_text;
-                // Remove prompt if included (common in text-generation task)
-                const cleanText = generated.startsWith(prompt) ? generated.slice(prompt.length) : generated;
-                if (cleanText) outputQueue.push(cleanText);
-            }
-            processing = false;
-            resolvePromise();
-        }).catch(err => {
-            processing = false;
-            rejectPromise(err);
-        });
-
-        while (processing || outputQueue.length > 0) {
-            if (outputQueue.length > 0) {
-                yield outputQueue.shift();
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-        }
+    async * streamText(prompt, options = {}) {
+        // Streaming not reliably supported by transformers.js
+        // Fall back to generating full text and yielding it
+        const result = await this.generateText(prompt, options);
+        yield result;
     }
 
     async destroy() {
-        // Clear pipeline reference to allow GC
         this.pipeline = null;
-        // Note: The underlying pipeline from transformers.js might not have an explicit destroy method
-        // but clearing the reference helps.
-        // Also ensure any pending streams are stopped (though generator logic handles this via loop conditions)
     }
 }
+

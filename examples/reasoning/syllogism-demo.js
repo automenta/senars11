@@ -4,7 +4,7 @@
  * Updated to show both traditional and new stream-based reasoner approaches.
  */
 
-import {NAR} from '../../core/src/nar/NAR.js';
+import { NAR } from '../../core/src/nar/NAR.js';
 
 async function syllogismDemo() {
     console.log('=== NAL-only Syllogistic Reasoning Demo ===\n');
@@ -12,7 +12,7 @@ async function syllogismDemo() {
     console.log('🧪 Testing with Traditional Cycle-Based Reasoner:');
     // Initialize NAR with traditional cycle-based reasoner (default)
     const traditionalConfig = {
-        lm: {enabled: false},
+        lm: { enabled: false },
         reasoning: {
             useStreamReasoner: false  // Use traditional cycle-based reasoner
         }
@@ -45,7 +45,7 @@ async function syllogismDemo() {
 
     // Initialize NAR with new stream-based reasoner
     const streamConfig = {
-        lm: {enabled: false},
+        lm: { enabled: false },
         reasoning: {
             useStreamReasoner: true,  // Enable new stream-based reasoner
             maxDerivationDepth: 5,
@@ -73,8 +73,8 @@ async function syllogismDemo() {
         await new Promise(resolve => setTimeout(resolve, 50)); // Small delay to allow processing
     }
 
-    // Wait a bit more for any async derivations
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait briefly for any async derivations
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Stop the stream reasoner
     streamNar.stop();
@@ -103,7 +103,7 @@ async function syllogismDemo() {
 
 // Run the demo
 if (import.meta.url === `file://${process.argv[1]}`) {
-    syllogismDemo().catch(console.error);
+    syllogismDemo().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
 }
 
 export default syllogismDemo;

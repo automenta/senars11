@@ -1,12 +1,12 @@
-import {BaseComponent} from '../util/BaseComponent.js';
-import {Metrics} from '../util/Metrics.js';
-import {ProviderRegistry} from './ProviderRegistry.js';
-import {ModelSelector} from './ModelSelector.js';
-import {NarseseTranslator} from './NarseseTranslator.js';
-import {CircuitBreaker} from '../util/CircuitBreaker.js';
-import {LMStats} from './LMStats.js';
-import {ProviderUtils} from './ProviderUtils.js';
-import {EmptyOutputError} from './EmptyOutputError.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { Metrics } from '../util/Metrics.js';
+import { ProviderRegistry } from './ProviderRegistry.js';
+import { ModelSelector } from './ModelSelector.js';
+import { NarseseTranslator } from './NarseseTranslator.js';
+import { CircuitBreaker } from '../util/CircuitBreaker.js';
+import { LMStats } from './LMStats.js';
+import { ProviderUtils } from './ProviderUtils.js';
+import { EmptyOutputError } from './EmptyOutputError.js';
 
 export class LM extends BaseComponent {
     constructor(config = {}, eventBus = null) {
@@ -22,7 +22,7 @@ export class LM extends BaseComponent {
     }
 
     get config() {
-        return {...this._config};
+        return { ...this._config };
     }
 
     get metrics() {
@@ -55,6 +55,12 @@ export class LM extends BaseComponent {
             providerId: id,
             default: id === this.providers.defaultProviderId
         });
+        // Forward custom events from provider
+        if (typeof provider.on === 'function') {
+            provider.on('lm:model-dl-progress', (data) => {
+                this.eventBus?.emit('lm:model-dl-progress', { ...data, providerId: id });
+            });
+        }
         return this;
     }
 
@@ -106,8 +112,8 @@ export class LM extends BaseComponent {
             const error = new EmptyOutputError('LM returned empty output', providerId);
             if (emptyOutputMode === 'error') throw error;
             if (emptyOutputMode === 'warn') {
-                this.logWarn('Empty output detected', {providerId});
-                this.eventBus?.emit('lm:empty-output', {providerId, timestamp: Date.now()});
+                this.logWarn('Empty output detected', { providerId });
+                this.eventBus?.emit('lm:empty-output', { providerId, timestamp: Date.now() });
             }
         }
 
@@ -197,5 +203,18 @@ export class LM extends BaseComponent {
 
     translateFromNarsese(narsese) {
         return this.narseseTranslator.fromNarsese(narsese);
+    }
+    async _stop() {
+        this.logInfo('Stopping LM component...');
+        const providers = this.providers.getAll();
+        for (const [id, provider] of providers) {
+            try {
+                if (typeof provider.destroy === 'function') await provider.destroy();
+                else if (typeof provider.shutdown === 'function') await provider.shutdown();
+                else if (typeof provider.stop === 'function') await provider.stop();
+            } catch (error) {
+                this.logError(`Error stopping provider ${id}:`, error);
+            }
+        }
     }
 }

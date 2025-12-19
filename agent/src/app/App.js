@@ -1,10 +1,10 @@
-import {AgentBuilder} from '../agent/AgentBuilder.js';
+import { AgentBuilder } from '../agent/AgentBuilder.js';
 import EventEmitter from 'events';
-import {Logger} from '@senars/core';
-import {ActivityModel} from './model/ActivityModel.js';
-import {ActivityMonitor} from './model/ActivityMonitor.js';
-import {ActionDispatcher} from './model/ActionDispatcher.js';
-import {PreferenceCollector} from '../rlfp/PreferenceCollector.js';
+import { Logger } from '@senars/core';
+import { ActivityModel } from './model/ActivityModel.js';
+import { ActivityMonitor } from './model/ActivityMonitor.js';
+import { ActionDispatcher } from './model/ActionDispatcher.js';
+import { PreferenceCollector } from '../rlfp/PreferenceCollector.js';
 
 export class App extends EventEmitter {
     constructor(config = {}) {
@@ -97,7 +97,7 @@ export class App extends EventEmitter {
         return true;
     }
 
-    async start({startAgent = true, setupSignals = false} = {}) {
+    async start({ startAgent = true, setupSignals = false } = {}) {
         await this.initialize();
         if (startAgent) this.agent?.start?.();
         if (setupSignals) this.setupGracefulShutdown();
@@ -107,7 +107,7 @@ export class App extends EventEmitter {
 
     async shutdown() {
         this.log.info('\nShutting down application...');
-        const promises = Array.from(this.agents.entries()).map(([id, {agent}]) =>
+        const promises = Array.from(this.agents.entries()).map(([id, { agent }]) =>
             this._shutdownAgent(agent, id)
         );
         await Promise.all(promises);
@@ -119,7 +119,12 @@ export class App extends EventEmitter {
         this.log.info(`Stopping agent ${agentId}...`);
         try {
             await agent.save?.();
-            await (agent.shutdown?.() ?? agent.stop?.());
+            await agent.save?.();
+            if (typeof agent.dispose === 'function') {
+                await agent.dispose();
+            } else {
+                await (agent.shutdown?.() ?? agent.stop?.());
+            }
         } catch (error) {
             this.log.error(`Error stopping agent ${agentId}:`, error.message);
         }

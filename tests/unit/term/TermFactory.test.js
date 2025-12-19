@@ -1,5 +1,5 @@
-import {beforeEach, describe, expect, test} from '@jest/globals';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import { beforeEach, describe, expect, test } from '@jest/globals';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('TermFactory', () => {
     let termFactory;
@@ -96,6 +96,36 @@ describe('TermFactory', () => {
             const term = termFactory.negation(a);
             expect(term.operator).toBe('--');
             expect(term.toString()).toBe('(--, a)');
+        });
+
+        describe('Reflexive Terms', () => {
+            test('rejects reflexive inheritance as null', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.inheritance(a, a);
+                expect(term).toBeNull();
+            });
+
+            test('rejects reflexive similarity as null', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.similarity(a, a);
+                expect(term).toBeNull();
+            });
+
+            test('reduces reflexive implication to True', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.implication(a, a);
+                expect(term).not.toBeNull();
+                expect(term.name).toBe('True');
+                expect(term.isAtomic).toBe(true);
+            });
+
+            test('reduces reflexive equivalence to True', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.equivalence(a, a);
+                expect(term).not.toBeNull();
+                expect(term.name).toBe('True');
+                expect(term.isAtomic).toBe(true);
+            });
         });
     });
 
