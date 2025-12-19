@@ -15,7 +15,7 @@ node examples/advanced/stream-reasoning.js
 node examples/tensor-logic/mlp-training.mjs
 
 # NARS-GPT with production LM
-node examples/narsgpt/production-ollama.js
+node examples/narsgpt/production-lm.js
 ```
 
 ---
@@ -24,17 +24,21 @@ node examples/narsgpt/production-ollama.js
 
 ### 🧠 Core Reasoning (`reasoning/`)
 
-| Example                                                                | Description                         |
-|------------------------------------------------------------------------|-------------------------------------|
-| [syllogism-demo.js](reasoning/syllogism-demo.js)                       | Classic syllogistic inference       |
-| [syllogism-comparison-demo.js](reasoning/syllogism-comparison-demo.js) | Stream vs cycle reasoner comparison |
-| [causal-reasoning-demo.js](reasoning/causal-reasoning-demo.js)         | Causal relationships                |
-| [inductive-reasoning-demo.js](reasoning/inductive-reasoning-demo.js)   | Inductive generalization            |
-| [temporal-reasoning-demo.js](reasoning/temporal-reasoning-demo.js)     | Temporal logic                      |
-| [advanced-reasoning-demo.js](reasoning/advanced-reasoning-demo.js)     | Advanced reasoning features         |
-| [truth-class-demo.js](reasoning/truth-class-demo.js)                   | Truth value operations              |
-| [truth-value-reasoning.js](reasoning/truth-value-reasoning.js)         | Reasoning with truth values         |
-| [operator-examples.js](reasoning/operator-examples.js)                 | Narsese operator usage              |
+| Example                                                                | Description                   |
+|------------------------------------------------------------------------|-------------------------------|
+| [syllogism-demo.js](reasoning/syllogism-demo.js)                       | Classic syllogistic inference                        |
+| [syllogism-comparison-demo.js](reasoning/syllogism-comparison-demo.js) | Stream vs cycle comparison                           |
+| [causal-reasoning-demo.js](reasoning/causal-reasoning-demo.js)         | Causal relationships                                 |
+| [inductive-reasoning-demo.js](reasoning/inductive-reasoning-demo.js)   | Inductive generalization                             |
+| [temporal-reasoning-demo.js](reasoning/temporal-reasoning-demo.js)     | Temporal logic                                       |
+| [advanced-reasoning-demo.js](reasoning/advanced-reasoning-demo.js)     | Advanced reasoning features                          |
+| [truth-class-demo.js](reasoning/truth-class-demo.js)                   | Truth value operations                               |
+| [truth-value-reasoning.js](reasoning/truth-value-reasoning.js)         | Reasoning with truth values                          |
+| [operator-examples.js](reasoning/operator-examples.js)                 | Narsese operator usage                               |
+| [eventbus-patterns-demo.js](reasoning/eventbus-patterns-demo.js)       | EventBus for observability                           |
+| [memory-operations-demo.js](reasoning/memory-operations-demo.js)       | Memory API: concepts, beliefs, queries               |
+| [focus-management-demo.js](reasoning/focus-management-demo.js)         | Focus system: attention direction                    |
+| [goal-driven-demo.js](reasoning/goal-driven-demo.js)                   | Goal-driven reasoning and planning                   |
 
 ---
 
@@ -42,12 +46,12 @@ node examples/narsgpt/production-ollama.js
 
 Production-ready LLM integration with NARS reasoning.
 
-| Example                                              | Description                          | Requirements |
-|------------------------------------------------------|--------------------------------------|--------------|
-| [demo-narsgpt.js](narsgpt/demo-narsgpt.js)           | Feature demo (mock LM)               | None         |
-| [production-lm.js](narsgpt/production-lm.js)         | LM integration (Ollama/Transformers) | Provider     |
-| [production-openai.js](narsgpt/production-openai.js) | OpenAI API                           | API key      |
-| [domain-knowledge.js](narsgpt/domain-knowledge.js)   | Grounding patterns                   | None         |
+| Example                                              | Description            | Requirements |
+|------------------------------------------------------|------------------------|--------------|
+| [demo-narsgpt.js](narsgpt/demo-narsgpt.js)           | Feature demo (mock LM) | None         |
+| [production-lm.js](narsgpt/production-lm.js)         | LM with Ollama/TJS     | Provider     |
+| [production-openai.js](narsgpt/production-openai.js) | OpenAI API             | API key      |
+| [domain-knowledge.js](narsgpt/domain-knowledge.js)   | Grounding patterns     | None         |
 
 [→ NARS-GPT Documentation](narsgpt/README.md)
 
@@ -55,15 +59,19 @@ Production-ready LLM integration with NARS reasoning.
 
 ### 🔄 Advanced Features (`advanced/`)
 
-| Example                                                                   | Description                    |
-|---------------------------------------------------------------------------|--------------------------------|
-| [stream-reasoning.js](advanced/stream-reasoning.js)                       | Stream vs cycle reasoner demo  |
-| [prolog-strategy-demo.js](advanced/prolog-strategy-demo.js)               | Prolog-style backward chaining |
-| [agent-builder-demo.js](advanced/agent-builder-demo.js)                   | Agent configuration patterns   |
-| [components-integration-demo.js](advanced/components-integration-demo.js) | Full component integration     |
-| [performance-benchmark.js](advanced/performance-benchmark.js)             | Performance metrics            |
-| [mcp-demo.js](advanced/mcp-demo.js)                                       | Model Context Protocol         |
-| [websocket-monitoring-test.js](advanced/websocket-monitoring-test.js)     | WebSocket debugging            |
+| Example                                                                           | Description                               |
+|-----------------------------------------------------------------------------------|-------------------------------------------|
+| [stream-reasoning.js](advanced/stream-reasoning.js)                               | Stream vs cycle reasoner                  |
+| [prolog-strategy-demo.js](advanced/prolog-strategy-demo.js)                       | Prolog-style backward chaining            |
+| [agent-builder-demo.js](advanced/agent-builder-demo.js)                           | Agent configuration patterns              |
+| [components-integration-demo.js](advanced/components-integration-demo.js)         | Stream reasoner components                |
+| [transformers-integration-demo.js](advanced/transformers-integration-demo.js)     | Transformers.js + NAR + MCP               |
+| [tool-usage-demo.js](advanced/tool-usage-demo.js)                                 | FileOperations, CommandExecutor tools     |
+| [custom-tool-demo.js](advanced/custom-tool-demo.js)                               | Creating custom tools                     |
+| [config-patterns-demo.js](advanced/config-patterns-demo.js)                       | NAR configuration best practices          |
+| [error-handling-demo.js](advanced/error-handling-demo.js)                         | Error handling and recovery               |
+| [performance-benchmark.js](advanced/performance-benchmark.js)                     | Performance metrics                       |
+| [mcp-demo.js](advanced/mcp-demo.js)                                               | Model Context Protocol                    |
 
 ---
 
@@ -71,15 +79,16 @@ Production-ready LLM integration with NARS reasoning.
 
 Neural-symbolic computation with PyTorch-like API.
 
-| Example                                                         | Description         |
-|-----------------------------------------------------------------|---------------------|
-| [tensor-basics.mjs](tensor-logic/tensor-basics.mjs)             | Tensor primitives   |
-| [mlp-training.mjs](tensor-logic/mlp-training.mjs)               | Train XOR MLP       |
-| [attention-mechanism.mjs](tensor-logic/attention-mechanism.mjs) | Self-attention      |
-| [batch-training.mjs](tensor-logic/batch-training.mjs)           | Vectorized training |
-| [embedding-demo.mjs](tensor-logic/embedding-demo.mjs)           | Word embeddings     |
+| Example                                                         | Description           |
+|-----------------------------------------------------------------|-----------------------|
+| [tensor-basics.mjs](tensor-logic/tensor-basics.mjs)             | Tensor primitives     |
+| [mlp-training.mjs](tensor-logic/mlp-training.mjs)               | Train XOR MLP         |
+| [attention-mechanism.mjs](tensor-logic/attention-mechanism.mjs) | Self-attention        |
+| [batch-training.mjs](tensor-logic/batch-training.mjs)           | Vectorized training   |
+| [embedding-demo.mjs](tensor-logic/embedding-demo.mjs)           | Word embeddings       |
+| [verify_tensor_logic.mjs](tensor-logic/verify_tensor_logic.mjs) | Phase 6 verification  |
 
-[→ Full Tensor Logic Guide](tensor-logic/README.md) (19 examples)
+[→ Full Tensor Logic Guide](tensor-logic/README.md) (20 examples)
 
 ---
 
@@ -121,12 +130,13 @@ Neural-symbolic computation with PyTorch-like API.
 ```
 examples/
 ├── README.md                # This file
+├── demos.js                 # Demo runner
 ├── reasoning/               # Core reasoning (9 files)
 ├── narsgpt/                 # NARS-GPT integration (5 files)
-├── advanced/                # Advanced features (15 files)
-├── tensor-logic/            # Tensor examples (19 files)
-├── lm/                      # LM integration (2 files)
-├── repl/                    # Agent REPL (4 files)
+├── advanced/                # Advanced features (7 files)
+├── tensor-logic/            # Tensor examples (20 files)
+├── lm/                      # LM integration (7 files)
+├── repl/                    # Agent REPL (6 files)
 ├── scripts/                 # .nars scripts (14 files)
 └── utils/                   # Helper utilities
 ```
@@ -144,25 +154,17 @@ npm install  # Install dependencies
 ### With Ollama (for LM examples)
 
 ```bash
-# Install Ollama
-curl https://ollama.ai/install.sh | sh
-
-# Start server and pull model
 ollama serve
-ollama pull llama2
-
-# Run demo
-node examples/narsgpt/production-ollama.js
+ollama pull llama3
+node examples/narsgpt/production-lm.js
 ```
 
 ### With Demo Runner
 
 ```bash
-# Run all working demos
-node examples/demos.js
-
-# Specific provider
-node examples/demos.js --provider transformers
+node examples/demos.js              # Run all non-LM demos
+node examples/demos.js --quick      # Quick subset
+node examples/demos.js --lm-only --provider transformers
 ```
 
 ---
@@ -173,7 +175,7 @@ node examples/demos.js --provider transformers
 |----------------|--------------------------------------------|
 | Import error   | Run from project root: `node examples/...` |
 | Ollama timeout | Ensure `ollama serve` is running           |
-| Missing model  | Run `ollama pull llama2`                   |
+| Missing model  | Run `ollama pull llama3`                   |
 
 ---
 
