@@ -21,14 +21,14 @@ export const COLORS = {
 };
 
 export const DEFAULT_MODELS = {
-    OLLAMA: 'hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M',
+    OLLAMA: 'llama3.2',
     OPENAI: 'gpt-4',
     ANTHROPIC: 'claude-3-sonnet-20240229'
 };
 
 export const DEFAULT_CONFIG = {
     OLLAMA: {
-        modelName: 'hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M',
+        modelName: 'Xenova/LaMini-Flan-T5-248M',
         baseUrl: 'http://localhost:11434',
         temperature: 0
     }

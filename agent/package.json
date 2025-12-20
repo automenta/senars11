@@ -28,6 +28,7 @@
     "ink-text-input": "^6.0.0",
     "inquirer": "^13.1.0",
     "node-fetch": "^3.3.2",
+    "ollama-ai-provider": "^1.2.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

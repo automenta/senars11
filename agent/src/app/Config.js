@@ -1,18 +1,18 @@
-import {fileURLToPath} from 'url';
-import {dirname} from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const DEFAULT_CONFIG = Object.freeze({
     nar: {
-        tools: {enabled: true},
-        lm: {enabled: false},
-        reasoningAboutReasoning: {enabled: true},
-        debug: {pipeline: false}
+        tools: { enabled: true },
+        lm: { enabled: false },
+        reasoningAboutReasoning: { enabled: true },
+        debug: { pipeline: false }
     },
     lm: {
         provider: 'ollama',
-        modelName: "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M",
+        modelName: "Xenova/LaMini-Flan-T5-248M",
         baseUrl: "http://localhost:11434",
         temperature: 0,
         enabled: false
