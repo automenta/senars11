@@ -1,9 +1,9 @@
 /**
- * @file ReplConstants.js
- * @description Common constants for REPL implementations
+ * Common constants for REPL implementations
+ * Uses shared DESIGN_TOKENS from core for consistency with web UI
  */
+import { DESIGN_TOKENS } from '@senars/core';
 
-// Define reusable constants for logging and UI
 export const LOG_TYPES = {
     INFO: 'info',
     SUCCESS: 'success',
@@ -12,12 +12,13 @@ export const LOG_TYPES = {
     TOOL_CALL: 'tool_call'
 };
 
+// Re-export colors from shared tokens for CLI compatibility
 export const COLORS = {
-    ERROR: 'red',
-    INFO: 'blue',
-    SUCCESS: 'green',
-    USER: 'yellow',
-    TOOL_CALL: 'cyan'
+    ERROR: DESIGN_TOKENS.colors.error,
+    INFO: DESIGN_TOKENS.colors.info,
+    SUCCESS: DESIGN_TOKENS.colors.success,
+    USER: DESIGN_TOKENS.colors.user,
+    TOOL_CALL: DESIGN_TOKENS.colors.toolCall
 };
 
 export const DEFAULT_MODELS = {

@@ -1,350 +1,146 @@
-# SeNARS Graph-Centric UI Roadmap
+# SeNARS Observable UI Roadmap
 
-A pragmatic, incremental plan for evolving the existing UI into an observable "neural galaxy" visualization of hybrid NAL-LM reasoning.
+> **Vision**: Transform SeNARS into an **observable "neural galaxy"** where the graph is the primary interface for exploring hybrid NAL-LM reasoning.
+> **Philosophy**: "The Graph *IS* the Logic."
 
-## Current State
-
-The `ui/` directory contains a functional foundation:
-- **Stack**: Vanilla JS + Cytoscape.js + WebSocket + Express server
-- **Features**: Real-time logs, interactive graph, Narsese command input
-- **Testing**: Playwright E2E, Jest unit tests, Storybook components
-- **Key Files**: `SeNARSUI.js` (orchestrator), `GraphManager.js` (Cytoscape wrapper), `GraphConfig.js` (styling)
-
-## Design Principles
-
-- **Incremental**: Each phase delivers working, tested functionality
-- **Observable**: Every reasoning event is visible and explorable
-- **Performant**: Smooth interactions at 60fps, lazy-load large graphs
-- **Accessible**: Dark/light modes, keyboard navigation, readable labels
+**Status**: Ready for Agentic Execution
+**Goal**: Unified Observability Platform (CLI + Web)
 
 ---
 
-## Architecture Enhancements
+## 1. Architecture: The "Observability Core"
 
-> **Maximize results with minimal effort through smart architecture choices**
+We unify the CLI (`npm run repl`) and Web UI (`ui/`) around a shared core, ensuring that "if it happens in the reasoned, it appears in the UI."
 
-### Event-Driven State Management
+### Unified Data Flow
 
-Instead of prop-drilling or complex state libraries, leverage the existing `EventBus` pattern:
+```mermaid
+graph TD
+    subgraph Core ["Shared Core (core/src)"]
+        NAR[NAR Engine]
+        EB[EventBus]
+        CMD[CommandRegistry]
+        DT[DesignTokens.js]
+    end
 
-```js
-// Single source of truth for UI state changes
-eventBus.on('graph:node:selected', (data) => { /* update all listeners */ });
-eventBus.on('graph:layout:changed', (data) => { /* sync panels */ });
+    subgraph Bridges ["Bridges"]
+        WSM[WebSocketMonitor] <-->|JSON Stream| WSC[WebSocketClient]
+        Hooks[useAgentLogs]
+    end
+
+    subgraph Interfaces ["Interfaces"]
+        CLI[CLI REPL (Ink)]
+        Web[Web UI (Vanilla JS + Cytoscape)]
+    end
+
+    NAR -->|IntrospectionEvents| EB
+    EB -->|Stream| WSM
+    EB -->|Stream| Hooks
+    
+    WSM --> Web
+    Hooks --> CLI
+    
+    Web -.->|Commands| CMD
+    CLI -.->|Commands| CMD
+    
+    DT -.->|Styles| Web
+    DT -.->|Styles| CLI
 ```
 
-**Benefit**: Zero new dependencies, consistent with core architecture.
-
-### Component Lazy-Loading
-
-Load heavy components (graph, timeline) only when visible:
-
-```js
-// In SeNARSUI.js - defer graph init until sidebar opens
-const graphManager = new Proxy({}, {
-  get: (_, prop) => {
-    if (!this._graphManager) this._graphManager = new GraphManager(...);
-    return this._graphManager[prop];
-  }
-});
-```
-
-**Benefit**: Faster initial load, lower memory when graph hidden.
-
-### Shared Style Tokens
-
-Create a single source for colors/spacing used across CSS and JS:
-
-```js
-// ui/src/config/DesignTokens.js
-export const TOKENS = {
-  colors: { concept: '#4ec9b0', goal: '#ff8c00', focus: '#ffd700' },
-  timing: { pulse: '300ms', transition: '150ms' },
-  spacing: { nodePadding: 8, panelGap: 16 }
-};
-```
-
-**Benefit**: Change once, update everywhere (CSS vars + JS config).
-
-### Message Protocol Versioning
-
-Future-proof WebSocket messages:
-
-```js
-// Add version field to all messages
-{ version: 1, type: 'reasoning:derivation', payload: {...} }
-```
-
-**Benefit**: Graceful upgrades, backward compatibility.
+### Key Integration Points
+1.  **Event Ontology**: `core/src/util/IntrospectionEvents.js` is the single source of truth.
+    *   *Rule*: A feature exists only if an event exists for it.
+2.  **Visual Language**: `core/src/util/DesignTokens.js` defines shared colors, timings, and semantic meanings.
+3.  **Control Plane**: `core/src/util/CommandRegistry.js` unifies input handling (`run`, `step`, `input`) across TUI and Web.
 
 ---
 
-## Codebase Integration Points
+## 2. Development Methodology: Agentic & Incremental
 
-> **Shortcuts**: Leverage existing infrastructure for rapid development
+We utilize an **incremental, agent-driven workflow** designed to automate ~80% of routine coding tasks while maintaining high strategic coherence.
 
-### Ready-to-Use Event Sources
+### The Automated Loop (Planner → Generator → Healer)
+1.  **Define**: Human sets a micro-goal (e.g., "Visualize goal derivation edges").
+2.  **Act**: Agents execute changes using the "Shortcuts" and "Power Moves" defined below.
+3.  **Verify**:
+    *   **Functional**: Playwright E2E tests (interaction, updates).
+    *   **Visual**: Regression testing against baselines.
+    *   **Perceptual**: AI-based aesthetic scoring (Target: >7.0/10) to ensure the "Neural Galaxy" feel.
+4.  **Tune**: Feedback loop to refine aesthetics and performance.
 
-| Event | Location | UI Use Case |
-|-------|----------|-------------|
-| `reasoning:derivation` | `IntrospectionEvents.js` | Animate new belief creation |
-| `memory:concept:created` | `IntrospectionEvents.js` | Add node to graph |
-| `cycle:step` | `IntrospectionEvents.js` | Timeline tick |
-| `rule:fired` | `IntrospectionEvents.js` | Edge highlight animation |
-| `memory:consolidation:*` | `IntrospectionEvents.js` | Focus→long-term transition |
-
-```js
-// Quick integration via WebSocketMonitor.listenToNAR(nar)
-// Already bridges all NAR_EVENTS to WebSocket clients
-```
-
-### Existing Graph Styling (`GraphConfig.js`)
-
-Already supports node types via selectors:
-```css
-node[type = "concept"]  → #4ec9b0 (teal)
-node[type = "task"]     → #ff8c00 (orange)
-node[type = "question"] → #9d68f0 (purple)
-```
-
-**Shortcut**: Add new selectors for goals, focus nodes, LM-active nodes without restructuring.
-
-### RLFP Integration (`ReasoningTrajectoryLogger`)
-
-Trajectory logging already captures:
-- `llm_prompt`, `llm_response`, `lm_failure`
-- `tool_call` events
-
-**Shortcut**: Pipe logged trajectories to UI for visual diff/ranking interface.
+### Verification Standards
+*   **Performance check**: Graph updates must handle >30fps at 500 nodes.
+*   **Aesthetic check**: Automated scoring (using local vision models or APIs) for layout harmony and clutter reduction.
 
 ---
 
-## Phase 1: Foundation Polish
+## 3. Implementation Plan: The 10-Step Progression
 
-> **Goal**: Refine existing UI for production quality
+We execute in 4 parallel tracks, broken down into granular, testable increments (The "Element → Gesture → Dynamic" Sequence).
 
-- [ ] **Viewport meta**: Add `<meta name="viewport" content="width=device-width, initial-scale=1">` to `index.html`
-- [ ] **Theme system**: CSS custom properties in `style.css` for dark/light mode
-- [ ] **Typography**: Google Fonts (Inter/Roboto) via CDN in `index.html`
-- [ ] **Layout**: Full-screen responsive canvas, collapsible side panels
-- [ ] **Accessibility**: Focus indicators, aria-labels, contrast compliance
+### Track A: Foundation Consolidation
+*Goal: Solid bedrock for shared assets.*
 
-**Verification**: Visual regression tests, Lighthouse accessibility audit
+1.  **Unified Command Registry**: Refactor `TUI.js` commands into `core/src/util/CommandRegistry.js`.
+2.  **Design Token Injection**: Create `ui/src/utils/ThemeGenerator.js` to map `DesignTokens` to CSS variables.
 
----
+### Track B: The "Neural Galaxy" (Visuals)
+*Goal: Beautiful, organic, informative graph.*
 
-## Phase 2: Enhanced Graph Visualization
+3.  **Static Nodes (Elements)**: Render nodes using `GraphConfig` styles mapping to Narsese semantics (Concept=Blue, Goal=Amber).
+4.  **Organic Layout (Structure)**: Implement high-quality force-directed layout (e.g., `fcose` or similar) for non-overlapping, harmonious clusters.
+5.  **Smart Edges (Connections)**: Color-code edges by type (Inheritance=Green, Similarity=Blue). Implement hover details.
 
-> **Goal**: Make concept relationships beautiful and informative
+### Track C: Deep Observability
+*Goal: Seeing the machine think in real-time.*
 
-**Shortcut**: Modify existing `GraphConfig.getGraphStyle()` and `getGraphLayout()`.
+6.  **Live Deltas (Dynamics)**: Animate graph updates from the Event Stream.
+    *   *Shortcut*: Listen to `reasoning:derivation` -> Trigger `.pulse-new` animation.
+7.  **Focus & Attention**: Visual saliency for active processing.
+    *   *Shortcut*: Map `memory:focus:promote` -> Node Glow effect.
+    *   *Shortcut*: Map `lm:prompt` -> Spinner overlay on node.
+8.  **Vital Signs**: Real-time gauges for CPU Throttle, Derivation Depth, and Cycle/Sec.
 
-**Dependencies** (add to `index.html` before cytoscape init):
-```html
-<script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
-<script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
-<script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
-```
+### Track D: Interactive Time-Travel
+*Goal: Rewind, Replay, Reinforce.*
 
-- [ ] **Organic layout**: Switch from `cose` to `fcose` in `GraphConfig.js`
-- [ ] **Edge styling**: Type-based colors (inheritance=green, similarity=blue) 
-  - Add selectors: `edge[type = "inheritance"]`, `edge[type = "similarity"]`
-- [ ] **Node sizing**: Already uses `mapData(weight, 0, 100, 20, 80)` — connect weight to priority
-- [ ] **Zoom behavior**: Add style rules for zoom-dependent label sizing
-
-**Power move**: Add compound nodes for concept clustering:
-```js
-// In GraphManager.addNode(), support parent grouping
-cy.add({ data: { id: 'cluster_robin', parent: 'bird' } });
-```
-
-**Verification**: E2E tests for zoom/pan gestures, screenshot comparisons
+9.  **Timeline Scrubber**: Allow users to scroll back through reasoning cycles.
+    *   *Impl*: Snapshot `GraphManager` state into a `RingBuffer`.
+10. **RLFP Interface**: "Teacher" mode.
+    *   *Impl*: Drag-to-rank derivation paths in the UI; emit feedback events to the backend.
 
 ---
 
-## Phase 3: Real-Time Streaming
+## 4. Technical Specifications & Power Moves
 
-> **Goal**: Live updates with attention-drawing animations
+| Feature | Specification | Power Move / Shortcut |
+| :--- | :--- | :--- |
+| **Graph Engine** | **Cytoscape.js** (Vanilla JS) | Use `compound nodes` for concept clustering (`cy.add({ parent: ... })`). |
+| **Streaming** | **WebSocket** (Native) | Use `WebSocketMonitor.bufferEvent()` to batch high-frequency updates (10ms window). |
+| **Layout** | **Organic / Force-Directed** | Prioritize specific layout extensions (like `fcose`) that support constraints and clustering. |
+| **Semantics** | **Visual Ontology** | Map Narsese directly to CSS: `node[type="goal"] { shape: diamond }`. |
+| **Perception** | **Aesthetics > 7.0** | Use any available Perceptual/Vision model (CLIP/SigLIP) to validate "beauty" in CI/CD. |
 
-**Shortcut**: `WebSocketMonitor.bufferEvent()` already batches events for efficiency.
+### Visual Ontology Reference (`GraphConfig.js`)
 
-- [ ] **Delta protocol**: Use existing `updateFromMessage()` in `GraphManager.js`
-- [ ] **Pulse animations**: Add CSS animation class `.pulse-new` triggered on add
-- [ ] **Derivation highlighting**: On `reasoning:derivation`, highlight parent→child edge
-- [ ] **Backpressure handling**: Respect `WEBSOCKET_CONFIG.minBroadcastInterval` (10ms)
-
-**Power move**: Subscribe to specific events via client capabilities:
-```js
-// Client can request only needed events
-ws.send({ type: 'subscribe', events: ['reasoning:derivation', 'memory:concept:created'] });
-```
-
-**Verification**: Integration tests with mock event streams, performance profiling
-
----
-
-## Phase 4: Task & Goal Visualization
-
-> **Goal**: Distinguish goals, questions, and beliefs visually
-
-**Shortcut**: Extend existing `GraphConfig.GRAPH_COLORS` and node type selectors.
-
-- [ ] **Node shapes**: Add to `GraphConfig.getGraphStyle()`:
-  - `node[type = "goal"] { shape: 'diamond' }`
-  - `node[type = "question"] { shape: 'triangle' }`
-- [ ] **Orbit badges**: Use Cytoscape compound nodes or overlays for active tasks
-- [ ] **Side panel**: Enhance existing `graphDetails` element with task history
-- [ ] **Goal tracking**: Progress bar based on expectation vs. derived confirmation
-
-**Flexibility**: Support custom punctuation-to-style mapping via config.
-
-**Verification**: E2E tests for task interactions
+| Semantic Element | Shape | Color (Token) | Motion / Effect |
+| :--- | :--- | :--- | :--- |
+| **Belief** `.` | Ellipse | `concept` (Teal) | Static |
+| **Goal** `!` | Diamond | `task` (Amber) | Pulse if active |
+| **Question** `?` | Triangle | `query` (Purple) | Spin on processing |
+| **Operation** `^` | Square | `action` (Red) | Flash on execution |
 
 ---
 
-## Phase 5: Focus & Memory Effects
+## 5. Development Rules
 
-> **Goal**: Visualize attention and memory dynamics
+1.  **No Logic in UI**: The UI is a "dumb" terminal. It only renders what the Event Stream says.
+2.  **Event-First**: If you want to see it, emit an event for it (`IntrospectionEvents.js`).
+3.  **Performance First**: Lazy-load graph details. Throttle rendering to 30fps.
+4.  **Accessibility**: Ensure high contrast and keyboard navigation for the core graph.
 
-**Shortcut**: Subscribe to `memory:consolidation:*` events already emitted.
+## 6. Verification Commands
 
-- [ ] **Focus glow**: Add `.focus-active` class, animate via CSS `box-shadow`
-- [ ] **LM indicator**: On `lm.prompt`/`lm.response`, show spinner/glow on relevant node
-- [ ] **Memory depth**: Map `recency` to node opacity (fresher = more opaque)
-- [ ] **Consolidation animation**: Animate node transition from focus→long-term
-
-**Power move**: Use `Memory.focusConcepts` getter to highlight focus set.
-
-**Verification**: E2E tests with controlled memory state
-
----
-
-## Phase 6: Timeline & Replay
-
-> **Goal**: Navigate reasoning history
-
-**Shortcut**: `DerivationTracer` already captures derivation chains.
-
-- [ ] **Timeline scrubber**: Store graph snapshots per cycle
-- [ ] **Snapshot system**: Serialize `GraphManager.graphData` (nodes/edges Maps)
-- [ ] **Diff view**: Highlight added/removed nodes between timepoints
-- [ ] **Export**: Download reasoning traces as JSON (leverages `ReasoningTrajectoryLogger`)
-
-**Power move**: Integrate with `nar.getReasoningTrace()` for cycle-accurate replay.
-
-**Verification**: Unit tests for snapshot logic, E2E for scrubber
-
----
-
-## Phase 7: Interactive Reasoning (RLFP)
-
-> **Goal**: User feedback shapes future reasoning
-
-**Shortcut**: `ReasoningTrajectoryLogger` already captures full trajectories.
-
-- [ ] **Path ranking**: Drag-to-rank UI over derivation paths
-- [ ] **Preference capture**: Send rankings via WebSocket to `PreferenceCollector`
-- [ ] **Adaptive styling**: Preferred paths get enhanced styling (thicker edges, brighter)
-- [ ] **Feedback indicators**: Show visual diff when RLFP adjustments apply
-
-**Power move**: Use `RLFPLearner` predictions to pre-style high-preference paths.
-
-**Verification**: Integration with RLFP subsystem tests
-
----
-
-## Optional: Perceptual Refinements
-
-> **Goal**: AI-assisted aesthetic validation (future enhancement)
-
-These optional techniques can augment manual visual review:
-
-- [ ] **Aesthetics scoring**: Choose model based on use case:
-  - **LAION Aesthetics V2**: General image aesthetics (baseline)
-  - **sac+logos+ava1-l14**: Improved predictor with better calibration
-  - **UNIAA/HumanAesExpert**: UI-specific scoring for screenshot evaluation
-  - Target: Aesthetics score >7.0
-- [ ] **Saliency validation**: Ensure >70% attention on key nodes/concepts
-  - Mask background, measure model attention on interactive elements
-- [ ] **Legibility checks**: Automated contrast ratio validation on labels
-- [ ] **Clutter detection**: Flag overly dense graph regions for layout adjustment
-
-**Integration Example**:
-```ts
-async function evaluatePerceptual(screenshot: Buffer) {
-  const scores = await hfInference(screenshot, { model: 'UNIAA/HumanAesExpert' });
-  expect(scores.aesthetic).toBeGreaterThan(7.0);
-  expect(scores.saliency_on_nodes).toBeGreaterThan(0.7);
-}
-```
-
-> [!NOTE]
-> Perceptual evaluation requires Hugging Face API access and is best suited for periodic design audits rather than every CI run.
-
----
-
-## Development Workflow
-
-```
-1. Pick next uncompleted item from current phase
-2. Write/update E2E test for expected behavior
-3. Implement feature in ui/src/
-4. Verify against test suite: npm run test:e2e
-5. Visual review in browser
-6. Run perceptual audit (optional, phases 3+)
-7. Commit
-```
-
-### Efficiency Multipliers
-
-| Technique | Effort Saved | When to Use |
-|-----------|--------------|-------------|
-| **Copy existing selector patterns** | ~30% | Adding new node/edge types |
-| **Extend GraphConfig vs. new file** | ~50% | Any styling change |
-| **Use IntrospectionEvents directly** | ~70% | New event subscriptions |
-| **Storybook for component iteration** | ~40% | UI component dev |
-| **Mock WebSocket in tests** | ~60% | Integration testing |
-
-### Quick Wins Checklist
-
-- [ ] Update Cytoscape CDN to 3.33.0 in `index.html` (performance boost)
-- [ ] Add viewport meta tag (mobile-ready)
-- [ ] Create `DesignTokens.js` shared config
-- [ ] Add message version field to `WebSocketMonitor`
-
----
-
-## Key Files Reference
-
-| File | Purpose | Modify For |
-|------|---------|------------|
-| `ui/index.html` | Entry point, CDN scripts | Phase 1-2 deps |
-| `ui/src/config/GraphConfig.js` | Cytoscape styling | Phase 2-5 styling |
-| `ui/src/visualization/GraphManager.js` | Graph CRUD operations | Phase 2-6 logic |
-| `ui/src/SeNARSUI.js` | Main orchestrator | Event subscriptions |
-| `ui/style.css` | Global styles | Phase 1 theming |
-| `core/src/util/IntrospectionEvents.js` | Event definitions | New event types |
-| `agent/src/rlfp/ReasoningTrajectoryLogger.js` | Trajectory capture | Phase 7 RLFP |
-
-## Test Commands
-
-```bash
-cd ui
-npm run test:e2e          # Playwright E2E tests
-npm run test:unit         # Jest unit tests  
-npm run storybook         # Component explorer
-npm start                 # Dev server at :8080
-```
-
-## Technology Notes
-
-| Component | Version | Notes |
-|-----------|---------|-------|
-| Cytoscape.js | 3.33.0 | Latest stable, improved animations |
-| cytoscape-fcose | 2.2.0 | Requires layout-base + cose-base |
-| layout-base | 2.0.1 | fcose dependency |
-| cose-base | 2.2.0 | fcose dependency |
-
-- **Streaming**: Native WebSocket via `WebSocketMonitor`
-- **Hosting**: Node.js server (`ui/server.js`)
-- **Future option**: Migrate to Vite if bundling becomes necessary
+*   **CLI Check**: `node agent/src/cli/Repl.js` -> Verify `run`, `step` via shared Registry.
+*   **Web Check**: `cd ui && npm start` -> Verify connection and live graph updates.
+*   **Load Test**: `node examples/demo-agent.js` -> Verify smooth rendering under load (500+ nodes).

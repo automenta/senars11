@@ -1,21 +1,25 @@
+import { DESIGN_TOKENS } from '@senars/core';
+
 /**
  * Graph configuration constants and styles
+ * Uses shared DESIGN_TOKENS from core for consistency with CLI
  */
 export const GraphConfig = {
     DEFAULT_NODE_WEIGHT: 50,
     TASK_NODE_WEIGHT: 30,
     QUESTION_NODE_WEIGHT: 40,
 
+    // Re-export colors from shared design tokens
     GRAPH_COLORS: {
-        NODE_COLOR: '#4ec9b0',
-        CONCEPT_COLOR: '#4ec9b0',
-        TASK_COLOR: '#ff8c00',
-        QUESTION_COLOR: '#9d68f0',
-        EDGE_COLOR: '#dcdcdc'
+        NODE_COLOR: DESIGN_TOKENS.colors.concept,
+        CONCEPT_COLOR: DESIGN_TOKENS.colors.concept,
+        TASK_COLOR: DESIGN_TOKENS.colors.task,
+        QUESTION_COLOR: DESIGN_TOKENS.colors.question,
+        EDGE_COLOR: DESIGN_TOKENS.colors.edge
     },
 
     getGraphStyle() {
-        const {CONCEPT_COLOR, TASK_COLOR, QUESTION_COLOR, EDGE_COLOR, NODE_COLOR} = this.GRAPH_COLORS;
+        const { CONCEPT_COLOR, TASK_COLOR, QUESTION_COLOR, EDGE_COLOR, NODE_COLOR } = this.GRAPH_COLORS;
 
         return [
             {
@@ -68,6 +72,6 @@ export const GraphConfig = {
     },
 
     getGraphLayout() {
-        return {name: 'cose'};
+        return { name: 'cose' };
     }
 };
