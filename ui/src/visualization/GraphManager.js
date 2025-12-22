@@ -1,4 +1,5 @@
-import {Config} from '../config/Config.js';
+import { Config } from '../config/Config.js';
+import { ContextMenu } from '../components/ContextMenu.js';
 
 export class GraphManager {
     constructor(uiElements = null, callbacks = {}) {
@@ -15,6 +16,9 @@ export class GraphManager {
         this.pendingLayout = false;
         this.layoutDebounceTime = 300; // milliseconds
         this.updatesEnabled = false; // Disabled by default (since sidebar is hidden by default)
+
+        // Will be initialized later with command processor
+        this.contextMenu = null;
     }
 
     /**
@@ -142,7 +146,7 @@ export class GraphManager {
 
         // Pan to node
         this.cy.animate({
-            center: {elt: node},
+            center: { elt: node },
             zoom: this.cy.zoom()
         }, {
             duration: 200
@@ -179,7 +183,7 @@ export class GraphManager {
                 this.cy = cytoscape({
                     container: this.uiElements.graphContainer,
                     style: Config.getGraphStyle(),
-                    layout: {name: 'random'}
+                    layout: { name: 'random' }
                 });
             } else {
                 return false;
@@ -188,6 +192,11 @@ export class GraphManager {
 
         // Initialize keyboard navigation
         this.initializeKeyboardNavigation();
+
+        // Initialize context menu (if command processor available)
+        if (this.callbacks.commandProcessor) {
+            this.contextMenu = new ContextMenu(this, this.callbacks.commandProcessor);
+        }
 
         // Add event delegation for details panel buttons
         if (this.uiElements.graphDetails) {
@@ -198,7 +207,7 @@ export class GraphManager {
                     const term = e.target.dataset.term;
 
                     if (this.callbacks.onNodeAction) {
-                        this.callbacks.onNodeAction(action, {id: nodeId, term});
+                        this.callbacks.onNodeAction(action, { id: nodeId, term });
                     }
                 }
             });
@@ -235,6 +244,36 @@ export class GraphManager {
             });
         });
 
+        // Right-click context menu for nodes
+        this.cy.on('cxttap', 'node', (event) => {
+            event.preventDefault();
+            if (this.contextMenu) {
+                const pos = event.renderedPosition || event.position;
+                this.contextMenu.show(pos.x, pos.y, event.target, 'node');
+            }
+        });
+
+        // Right-click context menu for edges
+        this.cy.on('cxttap', 'edge', (event) => {
+            event.preventDefault();
+            if (this.contextMenu) {
+                const pos = event.renderedPosition || event.position;
+                this.contextMenu.show(pos.x, pos.y, event.target, 'edge');
+            }
+        });
+
+        // Double-click on node for primary action
+        this.cy.on('dbltap', 'node', (event) => {
+            const node = event.target;
+            // Center and zoom to node
+            this.cy.animate({
+                center: { eles: node },
+                zoom: 2,
+                duration: 300
+            });
+            this.animateGlow(node.id(), 1.0);
+        });
+
         return true;
     }
 
@@ -253,7 +292,7 @@ export class GraphManager {
     addNode(nodeData, runLayout = true) {
         if (!this.cy) return false;
 
-        const {id, label, term, type: nodeType, nodeType: nodeTypeOverride} = nodeData;
+        const { id, label, term, type: nodeType, nodeType: nodeTypeOverride } = nodeData;
         const nodeId = id || `concept_${Date.now()}`;
 
         // Don't add duplicate nodes
@@ -264,7 +303,7 @@ export class GraphManager {
         // Create node data object efficiently
         let displayLabel = label || term || id;
         if (nodeData.truth) {
-            const {frequency, confidence} = nodeData.truth;
+            const { frequency, confidence } = nodeData.truth;
             const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
             const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
             displayLabel += `\n{${freq}, ${conf}}`;
@@ -295,7 +334,7 @@ export class GraphManager {
      * Calculate node weight based on input data
      */
     getNodeWeight(nodeData) {
-        const {truth, weight} = nodeData;
+        const { truth, weight } = nodeData;
         return weight || (truth?.confidence ? truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT);
     }
 
@@ -305,7 +344,7 @@ export class GraphManager {
     addEdge(edgeData, runLayout = true) {
         if (!this.cy) return false;
 
-        const {id, source, target, label, type: edgeType, edgeType: edgeTypeOverride} = edgeData;
+        const { id, source, target, label, type: edgeType, edgeType: edgeTypeOverride } = edgeData;
         const edgeId = id || `edge_${Date.now()}_${source}_${target}`;
 
         // Don't add duplicate edges
@@ -370,8 +409,8 @@ export class GraphManager {
         const messageUpdates = {
             'concept.created': () => this.addNodeWithPayload(message.payload, false),
             'concept.added': () => this.addNodeWithPayload(message.payload, false),
-            'task.added': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
-            'task.input': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
+            'task.added': () => this.addNodeWithPayload({ ...message.payload, nodeType: 'task' }, false),
+            'task.input': () => this.addNodeWithPayload({ ...message.payload, nodeType: 'task' }, false),
             'question.answered': () => this.addQuestionNode(message.payload),
             'memorySnapshot': () => {
                 this.updateFromSnapshot(message.payload);
@@ -404,7 +443,7 @@ export class GraphManager {
      */
     addQuestionNode(payload) {
         if (payload) {
-            const {answer, question} = payload;
+            const { answer, question } = payload;
             this.addNode({
                 label: answer || question || 'Answer',
                 nodeType: 'question',
@@ -489,14 +528,14 @@ export class GraphManager {
         ].join('');
 
         if (data.truth) {
-            const {frequency, confidence} = data.truth;
+            const { frequency, confidence } = data.truth;
             const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
             const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
             html += `<div style="margin-bottom:4px"><strong>Truth:</strong> <span style="color:#ce9178; font-family:monospace">{${freq}, ${conf}}</span></div>`;
         }
 
         if (data.budget) {
-            const {priority} = data.budget;
+            const { priority } = data.budget;
             const pri = typeof priority === 'number' ? priority.toFixed(2) : '0.00';
             html += `<div style="margin-bottom:4px"><strong>Priority:</strong> ${pri}</div>`;
         }
@@ -567,10 +606,10 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const {DESIGN_TOKENS} = window.SeNARS_Core || {
+        const { DESIGN_TOKENS } = window.SeNARS_Core || {
             DESIGN_TOKENS: {
-                colors: {highlight: '#ff0000'},
-                timing: {pulse: 300}
+                colors: { highlight: '#ff0000' },
+                timing: { pulse: 300 }
             }
         };
         const originalColor = node.style('border-color');
@@ -603,7 +642,7 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const {DESIGN_TOKENS} = window.SeNARS_Core || {DESIGN_TOKENS: {timing: {glow: 300}}};
+        const { DESIGN_TOKENS } = window.SeNARS_Core || { DESIGN_TOKENS: { timing: { glow: 300 } } };
         const baseSize = node.data('weight') || 50;
         const targetSize = baseSize * (0.8 + intensity * 0.4); // Range: 80%-120% of base
         const borderWidth = 2 + intensity * 6; // Range: 2-8px
@@ -629,13 +668,53 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const {DESIGN_TOKENS} = window.SeNARS_Core || {DESIGN_TOKENS: {timing: {glow: 300}}};
+        const { DESIGN_TOKENS } = window.SeNARS_Core || { DESIGN_TOKENS: { timing: { glow: 300 } } };
 
         // Start invisible, fade to full opacity
         node.style('opacity', 0);
         node.animate({
-            style: {'opacity': 1},
+            style: { 'opacity': 1 },
             duration: DESIGN_TOKENS.timing.glow
+        });
+    }
+
+    /**
+     * Zoom in on the graph
+     */
+    zoomIn() {
+        if (!this.cy) return;
+        const currentZoom = this.cy.zoom();
+        const newZoom = Math.min(currentZoom * 1.2, 3); // Max zoom 3x
+        this.cy.animate({
+            zoom: newZoom,
+            duration: 200
+        });
+    }
+
+    /**
+     * Zoom out on the graph
+     */
+    zoomOut() {
+        if (!this.cy) return;
+        const currentZoom = this.cy.zoom();
+        const newZoom = Math.max(currentZoom / 1.2, 0.3); // Min zoom 0.3x
+        this.cy.animate({
+            zoom: newZoom,
+            duration: 200
+        });
+    }
+
+    /**
+     * Fit graph to screen
+     */
+    fitToScreen() {
+        if (!this.cy) return;
+        this.cy.animate({
+            fit: {
+                eles: this.cy.elements(),
+                padding: 30
+            },
+            duration: 300
         });
     }
 
@@ -646,6 +725,10 @@ export class GraphManager {
         if (this.layoutTimeout) {
             clearTimeout(this.layoutTimeout);
             this.layoutTimeout = null;
+        }
+        if (this.contextMenu) {
+            this.contextMenu.destroy();
+            this.contextMenu = null;
         }
         if (this.cy) {
             this.cy.destroy();

@@ -53,6 +53,11 @@ export const UIConfig = {
         lmProviderSelect: 'lm-provider-select',
         showTasksToggle: 'show-tasks-toggle',
 
+        // Zoom Controls
+        btnZoomIn: 'btn-zoom-in',
+        btnZoomOut: 'btn-zoom-out',
+        btnFit: 'btn-fit',
+
         // Modals
         confirmationModal: 'confirmation-modal',
         btnConfirmReset: 'btn-confirm-reset',

@@ -1,6 +1,6 @@
-import {Config} from '../config/Config.js';
-import {Logger} from '../logging/Logger.js';
-import {WebSocketConnectionError} from '../errors/CustomErrors.js';
+import { Config } from '../config/Config.js';
+import { Logger } from '../logging/Logger.js';
+import { WebSocketConnectionError } from '../errors/CustomErrors.js';
 
 
 export class WebSocketManager {
@@ -12,11 +12,9 @@ export class WebSocketManager {
         this.reconnectDelay = Config.getConstants().RECONNECT_DELAY;
         this.messageHandlers = new Map();
         this.logger = new Logger();
-
-        // Performance optimization: Time-sliced event queue
         this.eventQueue = [];
         this.isProcessingQueue = false;
-        this.processSliceMs = 12; // Target ~60fps (16ms) - overhead to ensure responsiveness
+        this.processSliceMs = 12;
     }
 
 
@@ -37,7 +35,6 @@ export class WebSocketManager {
                 this.logger.log('Disconnected from server', 'warning', '🔌');
                 this.notifyStatusChange('disconnected');
 
-
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
                     setTimeout(() => this.connect(), this.reconnectDelay);
@@ -46,7 +43,7 @@ export class WebSocketManager {
                 }
             };
 
-            this.ws.onerror = (error) => {
+            this.ws.onerror = () => {
                 this.connectionStatus = 'error';
                 this.logger.log('WebSocket connection error', 'error', '🚨');
                 this.notifyStatusChange('error');
@@ -54,8 +51,7 @@ export class WebSocketManager {
 
             this.ws.onmessage = (event) => {
                 try {
-                    const message = JSON.parse(event.data);
-                    this.handleMessage(message);
+                    this.handleMessage(JSON.parse(event.data));
                 } catch (e) {
                     this.logger.log(`Invalid message format: ${event.data}`, 'error', '🚨');
                 }
@@ -71,12 +67,9 @@ export class WebSocketManager {
 
 
     sendMessage(type, payload) {
-        if (this.isConnected()) {
-            const messageStr = JSON.stringify({type, payload});
-            this.ws.send(messageStr);
-            return true;
-        }
-        return false;
+        if (!this.isConnected()) return false;
+        this.ws.send(JSON.stringify({ type, payload }));
+        return true;
     }
 
 
@@ -86,19 +79,15 @@ export class WebSocketManager {
 
 
     subscribe(type, handler) {
-        if (!this.messageHandlers.has(type)) {
-            this.messageHandlers.set(type, []);
-        }
+        !this.messageHandlers.has(type) && this.messageHandlers.set(type, []);
         this.messageHandlers.get(type).push(handler);
     }
 
 
     unsubscribe(type, handler) {
         const handlers = this.messageHandlers.get(type);
-        if (handlers) {
-            const index = handlers.indexOf(handler);
-            if (index > -1) handlers.splice(index, 1);
-        }
+        const index = handlers?.indexOf(handler);
+        index > -1 && handlers.splice(index, 1);
     }
 
 
@@ -106,20 +95,13 @@ export class WebSocketManager {
         return this.connectionStatus;
     }
 
-    // Time-sliced message processing to maintain UI responsiveness
     handleMessage(message) {
         if (!message) return;
 
         if (message.type === 'eventBatch') {
-            const events = message.data || [];
+            const events = message.data ?? [];
             this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
-
-
-            const normalized = events.map(e => ({
-                type: e.type,
-                payload: e.data,
-                timestamp: e.timestamp
-            }));
+            const normalized = events.map(e => ({ type: e.type, payload: e.data, timestamp: e.timestamp }));
             this.eventQueue.push(...normalized);
         } else {
             this.eventQueue.push(message);
@@ -131,8 +113,6 @@ export class WebSocketManager {
     scheduleQueueProcessing() {
         if (this.isProcessingQueue) return;
         this.isProcessingQueue = true;
-
-
         setTimeout(() => this.processQueue(), 0);
     }
 
@@ -140,27 +120,21 @@ export class WebSocketManager {
         const startTime = performance.now();
 
         while (this.eventQueue.length > 0) {
-
             if (performance.now() - startTime > this.processSliceMs) {
-
                 setTimeout(() => this.processQueue(), 0);
                 return;
             }
-
-            const message = this.eventQueue.shift();
-            this.dispatchMessage(message);
+            this.dispatchMessage(this.eventQueue.shift());
         }
 
         this.isProcessingQueue = false;
     }
 
     dispatchMessage(message) {
-
         if (message.type === 'cycle.start' || message.type === 'cycle.complete') return;
 
-        const specificHandlers = this.messageHandlers.get(message.type) || [];
-        const generalHandlers = this.messageHandlers.get('*') || [];
-
+        const specificHandlers = this.messageHandlers.get(message.type) ?? [];
+        const generalHandlers = this.messageHandlers.get('*') ?? [];
 
         [...specificHandlers, ...generalHandlers].forEach((handler, index) => {
             const handlerType = index < specificHandlers.length ? message.type : '*';
@@ -191,7 +165,7 @@ export class WebSocketManager {
 
 
     notifyStatusChange(status) {
-        (this.messageHandlers.get('connection.status') || []).forEach(handler =>
+        (this.messageHandlers.get('connection.status') ?? []).forEach(handler =>
             this.tryExecuteHandler(handler, status, 'status handler')
         );
     }

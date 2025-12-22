@@ -1,4 +1,4 @@
-import {Component} from './Component.js';
+import { Component } from './Component.js';
 
 export class SystemMetricsPanel extends Component {
     constructor(containerId) {
@@ -15,18 +15,17 @@ export class SystemMetricsPanel extends Component {
     update(metrics) {
         if (!metrics) return;
 
-        // Parse metrics from the event payload
-        const perf = metrics.performance || {};
-        const res = metrics.resourceUsage || {};
-        const proc = metrics.taskProcessing || {};
+        const perf = metrics.performance ?? {};
+        const res = metrics.resourceUsage ?? {};
+        const proc = metrics.taskProcessing ?? {};
 
         this.metrics = {
-            throughput: perf.throughput || 0,
+            throughput: perf.throughput ?? 0,
             memoryUtilization: res.heapTotal ? (res.heapUsed / res.heapTotal) : 0,
             successRate: proc.totalProcessed ? (proc.successful / proc.totalProcessed) : 0,
-            cycleCount: metrics.reasoningSteps || 0,
-            avgLatency: perf.avgLatency || 0,
-            uptime: metrics.uptime || 0
+            cycleCount: metrics.reasoningSteps ?? 0,
+            avgLatency: perf.avgLatency ?? 0,
+            uptime: metrics.uptime ?? 0
         };
 
         this.render();
@@ -71,8 +70,6 @@ export class SystemMetricsPanel extends Component {
     }
 
     getMemoryColor(usage) {
-        if (usage > 0.8) return 'danger';
-        if (usage > 0.6) return 'warning';
-        return 'success';
+        return usage > 0.8 ? 'danger' : usage > 0.6 ? 'warning' : 'success';
     }
 }

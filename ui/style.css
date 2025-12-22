@@ -300,6 +300,42 @@ select {
     padding: 10px;
 }
 
+/* Command Autocomplete Dropdown */
+.command-autocomplete {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: #2d2d2d;
+    border: 1px solid #4ec9b0;
+    border-radius: 4px 4px 0 0;
+    margin-bottom: 2px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #dcdcdc;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+    background: #3c3c3c;
+    color: #4ec9b0;
+}
+
+
 /* Sidebar (Graph Panel) */
 .graph-panel {
     width: 40%;
@@ -796,6 +832,49 @@ select {
 .hidden {
     display: none !important;
 }
+
+/* Context Menu */
+.context-menu {
+    position: fixed;
+    background: #2d2d2d;
+    border: 1px solid #4ec9b0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+.context-menu-item {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #dcdcdc;
+    border-bottom: 1px solid #3c3c3c;
+    transition: background 0.15s ease;
+}
+
+.context-menu-item:last-child {
+    border-bottom: none;
+}
+
+.context-menu-item:hover {
+    background: #3c3c3c;
+    color: #4ec9b0;
+}
+
+.context-menu-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.context-menu-label {
+    flex: 1;
+}
+
 
 .playback-controls {
     display: flex;

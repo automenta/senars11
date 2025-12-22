@@ -3,8 +3,65 @@
 > **Vision**: Transform SeNARS into an **observable "neural galaxy"** where the graph is the primary interface for exploring hybrid NAL-LM reasoning.
 > **Philosophy**: "The Graph *IS* the Logic."
 
-**Status**: Planning / Pre-Alpha (Phase 0 ~80% Complete)
+**Status**: Pre-Alpha (Phase 0 ~80% Complete, Blocking Issues Identified)
 **Goal**: Unified Observability Platform (CLI + Web)
+
+---
+
+## 0. Known Issues & Fixes ✅ RESOLVED
+
+> [!NOTE]
+> Both blocking issues have been fixed.
+
+### ✅ Issue 1: fcose Layout - FIXED
+- **Solution:** Updated `ui/index.html` to load CDN dependencies in correct order: `layout-base` → `cose-base` → `cytoscape-fcose`
+
+### ✅ Issue 2: LM Default Provider - FIXED  
+- **Solution:** Changed `agent/src/app/Config.js` default from `'ollama'` to `'transformers'`
+
+---
+
+## 0.1 Automated Development Commands
+
+> [!IMPORTANT]
+> These commands enable fully automated UI development without manual testing.
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `npm run test:e2e` | Playwright E2E tests (7 specs) | After any UI change |
+| `npm run test:all` | Full unit + integration + e2e | Before committing |
+| `npm run dev:workflow --all` | Visual inspection + regression + tuning | Full validation |
+| `npm run ai:develop` | Evolutionary parameter tuning | Optimize heuristics |
+| `npm run capture` | Generate screenshots/movies | Visual documentation |
+
+### The Self-Improvement Loop
+
+```mermaid
+graph LR
+    A[Define Micro-Goal] --> B[Implement Change]
+    B --> C[npm run test:e2e]
+    C -->|Pass| D[npm run capture]
+    C -->|Fail| E[Auto-Fix or Report]
+    D --> F[Review Observability]
+    F --> A
+    E --> B
+```
+
+### Test Infrastructure
+
+| Component | Path | Coverage |
+|-----------|------|----------|
+| **Page Object** | `ui/tests/e2e/utils/NarPage.js` | All UI selectors |
+| **E2E Specs** | `ui/tests/e2e/*.spec.js` | golden_path, demos, graph, config, debug, advanced, production |
+| **Fixtures** | `ui/tests/e2e/fixtures/` | Mock backend, production backend |
+| **Playwright Config** | `ui/playwright.config.js` | Chromium, auto-start server |
+
+### Verification Contract Per Phase
+
+Each phase in this roadmap must define:
+1. **Test Script:** Exact `npm run` command
+2. **Pass Criteria:** Expected test outcomes  
+3. **Observable Metrics:** Screenshots, logs, performance data
 
 ---
 
@@ -129,7 +186,11 @@ These provide immediate observable improvements and should be done first:
 
 3.  **Organic Layout** (Phase 3):
     *   Replace `cose` with `fcose` (force-directed with constraints).
-    *   **Fix**: Properly vendor or bundle `cytoscape-fcose` to avoid runtime errors.
+    *   **BLOCKING**: Fix fcose loading error (see Issue 1 above):
+        - `cytoscape-fcose` requires `cose-base` and `layout-base` as peer dependencies
+        - Current vendored version uses UMD with external requires that fail in browser
+        - Solution: Either bundle all dependencies into single file or load them in correct order
+    *   Fallback: Random layout works but provides poor visualization quality.
     *   Benefit: No node overlap; harmonious spread of existing concepts.
 
 4.  **Smart Edges** (Phase 4):
@@ -181,27 +242,29 @@ These provide immediate observable improvements and should be done first:
 
 ---
 
-## 7. Phase 3: Interaction (Track D) - 8-12 hours
+## 7. Phase 3: Interaction (Track D) - 8-12 hours ✅
+
+**Status**: COMPLETE
 
 **Goal**: User agency and feedback (Phases 5 & 7 of Incremental Sequence).
 
-1.  **Web REPL Overlay** (4-6 hours):
-    *   Implement [`ui/src/components/WebRepl.js`](file:///home/me/senars10/ui/src/components/WebRepl.js) as terminal overlay.
-    *   Connect to [`CommandRegistry`](file:///home/me/senars10/core/src/util/CommandRegistry.js).
-    *   Support commands: `/help`, `/step`, `/beliefs`, `/goals`, Narsese input.
-    *   Toggle visibility with keyboard shortcut (e.g., `` ` ``).
+1.  ✅ **Enhanced Command Input** (4-6 hours):
+    *   Backtick (`` ` ``) keyboard shortcut to focus input
+    *   Command history navigation (⬆️/⬇️ arrows)
+    *   Command autocomplete with Tab completion
+    *   New commands: `/goals`, `/beliefs`, `/step`, `/run`, `/stop`
 
-2.  **Graph Interaction** (2-4 hours):
-    *   Click node → Show details panel (already exists).
-    *   Right-click node → Context menu (focus, inspect, expand).
-    *   Double-click → Execute associated action.
-    *   Drag nodes to adjust layout (persist positions).
+2.  ✅ **Graph Context Menu** (2-4 hours):
+    *   Right-click on nodes → Context menu (focus, inspect, expand, copy)
+    *   Right-click on edges → Context menu (inspect, remove)
+    *   Double-click → Center and zoom to node
+    *   ESC to close, click-outside to close
 
-3.  **Infinite Pan/Zoom Gestures** (Phase 5):
-    *   Smooth; labels scale/readable.
-    *   Mouse wheel zoom (already in Cytoscape).
-    *   Pan by dragging background.
-    *   Zoom controls (+/- buttons) & Fit-to-screen.
+3.  ✅ **Pan/Zoom Controls** (Phase 5):
+    *   Zoom in/out buttons (+/-)
+    *   Fit-to-screen button
+    *   Smooth zoom with limits (0.3x-3x)
+    *   Labels remain readable at all zoom levels
 
 ---
 
