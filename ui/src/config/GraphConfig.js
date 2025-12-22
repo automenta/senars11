@@ -19,7 +19,7 @@ export const GraphConfig = {
     },
 
     getGraphStyle() {
-        const { concept, task, question, edge } = DESIGN_TOKENS.colors;
+        const { concept, task, question, edge, inheritance, similarity, implication, relation } = DESIGN_TOKENS.colors;
         return [
             {
                 selector: 'node',
@@ -36,15 +36,17 @@ export const GraphConfig = {
                     'text-background-opacity': 0.7,
                     'text-background-padding': 4,
                     'width': 'mapData(weight, 0, 100, 20, 80)',
-                    'height': 'mapData(weight, 0, 100, 20, 80)'
+                    'height': 'mapData(weight, 0, 100, 20, 80)',
+                    'border-width': 2,
+                    'border-color': concept
                 }
             },
             {
                 selector: 'edge',
                 style: {
                     'width': 2,
-                    'line-color': edge,
-                    'target-arrow-color': edge,
+                    'line-color': relation,
+                    'target-arrow-color': relation,
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'bezier'
                 }
@@ -52,8 +54,9 @@ export const GraphConfig = {
             { selector: 'node[type = "concept"]', style: { 'background-color': concept } },
             { selector: 'node[type = "task"]', style: { 'background-color': task } },
             { selector: 'node[type = "question"]', style: { 'background-color': question } },
-            { selector: 'edge[type = "inheritance"]', style: { 'line-color': DESIGN_TOKENS.colors.inheritance } },
-            { selector: 'edge[type = "similarity"]', style: { 'line-color': DESIGN_TOKENS.colors.similarity } }
+            { selector: 'edge[type = "inheritance"]', style: { 'line-color': inheritance, 'target-arrow-color': inheritance } },
+            { selector: 'edge[type = "similarity"]', style: { 'line-color': similarity, 'target-arrow-color': similarity } },
+            { selector: 'edge[type = "implication"]', style: { 'line-color': implication, 'target-arrow-color': implication } }
         ];
     },
 

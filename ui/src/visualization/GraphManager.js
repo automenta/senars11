@@ -139,7 +139,9 @@ export class GraphManager {
                 type: nodeTypeOverride || nodeType || 'concept',
                 weight: this.getNodeWeight(nodeData),
                 fullData: nodeData
-            }
+            },
+            // ARIA support for accessibility
+            ariaLabel: `${nodeTypeOverride || nodeType || 'concept'} node: ${displayLabel.split('\n')[0]}`
         };
 
         this.cy.add(newNode);
@@ -413,6 +415,84 @@ export class GraphManager {
         if (this.cy) {
             this.cy.elements().remove();
         }
+    }
+
+    /**
+     * Animate a node with pulse effect (for derivations, new concepts)
+     * @param {string} nodeId - Node ID to animate
+     * @param {string} effect - Animation effect type (currently supports 'pulse')
+     */
+    animateNode(nodeId, effect = 'pulse') {
+        if (!this.cy) return;
+
+        const node = this.cy.getElementById(nodeId);
+        if (!node.length) return;
+
+        const { DESIGN_TOKENS } = require('@senars/core');
+        const originalColor = node.style('border-color');
+        const originalWidth = node.style('border-width');
+
+        // Pulse: expand border with highlight color, then return to normal
+        node.animate({
+            style: {
+                'border-width': 8,
+                'border-color': DESIGN_TOKENS.colors.highlight
+            },
+            duration: DESIGN_TOKENS.timing.pulse
+        }).animate({
+            style: {
+                'border-width': originalWidth || 2,
+                'border-color': originalColor
+            },
+            duration: DESIGN_TOKENS.timing.pulse
+        });
+    }
+
+    /**
+     * Animate glow effect on node (for focus promotion/demotion)
+     * @param {string} nodeId - Node ID to animate
+     * @param {number} intensity - Glow intensity (0-1), where 1 is full glow, 0 is dim
+     */
+    animateGlow(nodeId, intensity = 1.0) {
+        if (!this.cy) return;
+
+        const node = this.cy.getElementById(nodeId);
+        if (!node.length) return;
+
+        const { DESIGN_TOKENS } = require('@senars/core');
+        const baseSize = node.data('weight') || 50;
+        const targetSize = baseSize * (0.8 + intensity * 0.4); // Range: 80%-120% of base
+        const borderWidth = 2 + intensity * 6; // Range: 2-8px
+
+        node.animate({
+            style: {
+                'width': targetSize,
+                'height': targetSize,
+                'border-width': borderWidth,
+                'opacity': 0.6 + intensity * 0.4 // Range: 0.6-1.0
+            },
+            duration: DESIGN_TOKENS.timing.glow
+        });
+    }
+
+    /**
+     * Animate fade-in effect for newly added nodes
+     * @param {string} nodeId - Node ID to animate
+     */
+    animateFadeIn(nodeId) {
+        if (!this.cy) return;
+
+        const node = this.cy.getElementById(nodeId);
+        if (!node.length) return;
+
+        const { DESIGN_TOKENS } = require('@senars/core');
+
+        // Start invisible, fade to full opacity
+        node.style('opacity', 0);
+        node.animate({
+            style: { 'opacity': 1 },
+            duration: DESIGN_TOKENS.timing.glow
+        });
     }
 
     /**

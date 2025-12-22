@@ -1041,3 +1041,70 @@ select {
     background-color: #333;
     color: #ccc;
 }
+
+/* High-Contrast Mode */
+body.high-contrast {
+    background: #000000;
+    color: #ffffff;
+}
+
+body.high-contrast .log-panel,
+body.high-contrast .graph-panel,
+body.high-contrast #graph-container {
+    background: #000000;
+}
+
+body.high-contrast .panel-header,
+body.high-contrast .status-bar,
+body.high-contrast .input-section {
+    background: #000000;
+    border-color: #ffffff;
+}
+
+body.high-contrast .log-entry {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+body.high-contrast .type-concept {
+    border-left-color: #00ffcc;
+}
+
+body.high-contrast .type-task {
+    border-left-color: #ffaa00;
+}
+
+body.high-contrast .type-info {
+    border-left-color: #66ccff;
+}
+
+body.high-contrast .cycle-badge {
+    color: #00ffcc;
+}
+
+body.high-contrast #command-input,
+body.high-contrast select {
+    background: #000000;
+    border-color: #ffffff;
+    color: #ffffff;
+}
+
+body.high-contrast button {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #ffffff;
+}
+
+body.high-contrast button:hover {
+    background: #cccccc;
+}
+
+body.high-contrast .icon-btn {
+    background: #000000;
+    border: 1px solid #ffffff;
+    color: #ffffff;
+}
+
+body.high-contrast .icon-btn:hover {
+    background: #333333;
+}

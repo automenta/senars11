@@ -1,15 +1,15 @@
-import {UIElements} from './ui/UIElements.js';
-import {WebSocketManager} from './connection/WebSocketManager.js';
-import {GraphManager} from './visualization/GraphManager.js';
-import {Logger} from './logging/Logger.js';
-import {CommandProcessor} from './command/CommandProcessor.js';
-import {DemoManager} from './demo/DemoManager.js';
-import {UIEventHandlers} from './ui/UIEventHandlers.js';
-import {MessageHandler} from '@senars/agent';
-import {capitalizeFirst} from './utils/Helpers.js';
-import {ControlPanel} from './ui/ControlPanel.js';
-import {SystemMetricsPanel} from './components/SystemMetricsPanel.js';
-import {ActivityLogPanel} from './components/ActivityLogPanel.js';
+import { UIElements } from './ui/UIElements.js';
+import { WebSocketManager } from './connection/WebSocketManager.js';
+import { GraphManager } from './visualization/GraphManager.js';
+import { Logger } from './logging/Logger.js';
+import { CommandProcessor } from './command/CommandProcessor.js';
+import { DemoManager } from './demo/DemoManager.js';
+import { UIEventHandlers } from './ui/UIEventHandlers.js';
+import { MessageHandler } from '@senars/agent';
+import { capitalizeFirst } from './utils/Helpers.js';
+import { ControlPanel } from './ui/ControlPanel.js';
+import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
+import { ActivityLogPanel } from './components/ActivityLogPanel.js';
 
 /**
  * Main SeNARS UI Application class - orchestrator that combines all modules
@@ -66,7 +66,7 @@ export class SeNARSUI {
 
         // Setup global action handler
         document.addEventListener('senars:action', (e) => {
-            const {type, payload, context} = e.detail;
+            const { type, payload, context } = e.detail;
             this.webSocketManager.sendMessage('activity.action', {
                 type, payload, context, id: Date.now()
             });
@@ -100,6 +100,36 @@ export class SeNARSUI {
         this.webSocketManager.subscribe('connection.status', (status) => {
             this._updateStatus(status);
         });
+
+        // Subscribe to animation events for real-time visual feedback
+        this.webSocketManager.subscribe('reasoning:derivation', (message) => {
+            const nodeId = message.payload?.nodeId || message.payload?.conceptId;
+            if (nodeId) {
+                this.graphManager.animateNode(nodeId, 'pulse');
+            }
+        });
+
+        this.webSocketManager.subscribe('memory:focus:promote', (message) => {
+            const nodeId = message.payload?.nodeId || message.payload?.conceptId;
+            if (nodeId) {
+                this.graphManager.animateGlow(nodeId, 1.0); // Full glow
+            }
+        });
+
+        this.webSocketManager.subscribe('memory:focus:demote', (message) => {
+            const nodeId = message.payload?.nodeId || message.payload?.conceptId;
+            if (nodeId) {
+                this.graphManager.animateGlow(nodeId, 0.3); // Dimmed
+            }
+        });
+
+        this.webSocketManager.subscribe('concept.created', (message) => {
+            const nodeId = message.payload?.id;
+            if (nodeId) {
+                // Small delay to allow node to be added first
+                setTimeout(() => this.graphManager.animateFadeIn(nodeId), 50);
+            }
+        });
     }
 
     /**
@@ -122,7 +152,7 @@ export class SeNARSUI {
             }
 
             // Process message with appropriate handler
-            const {content, type, icon} = this.messageHandler.processMessage(message);
+            const { content, type, icon } = this.messageHandler.processMessage(message);
 
             // Update Observability Panels
             if (message.type === 'metrics.updated') {
@@ -226,7 +256,7 @@ export class SeNARSUI {
      * Update connection status display
      */
     _updateStatus(status) {
-        const {connectionStatus, statusIndicator} = this.uiElements.getAll();
+        const { connectionStatus, statusIndicator } = this.uiElements.getAll();
 
         if (connectionStatus) {
             connectionStatus.textContent = capitalizeFirst(status);

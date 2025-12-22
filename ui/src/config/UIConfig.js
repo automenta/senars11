@@ -43,6 +43,7 @@ export const UIConfig = {
         metricsPanel: 'metrics-panel',
         tracePanel: 'trace-panel',
         btnToggleTrace: 'btn-toggle-trace', // Toggle between Log and Trace
+        btnToggleContrast: 'btn-toggle-contrast', // Toggle high-contrast mode
         logView: 'log-view-container', // Wrapper for logs
         traceView: 'trace-view-container', // Wrapper for traces
 

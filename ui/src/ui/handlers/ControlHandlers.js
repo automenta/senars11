@@ -71,4 +71,13 @@ export class ControlHandlers {
             if (btn) btn.textContent = 'Show Trace';
         }
     }
+
+    handleToggleContrast() {
+        const btn = this.uiElements.get('btnToggleContrast');
+        const isHighContrast = document.body.classList.toggle('high-contrast');
+
+        if (btn) {
+            btn.textContent = isHighContrast ? 'Normal Mode' : 'High Contrast';
+        }
+    }
 }

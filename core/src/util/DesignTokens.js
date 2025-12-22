@@ -10,8 +10,16 @@ export const DESIGN_TOKENS = Object.freeze({
         question: '#9d68f0',
         goal: '#ffd700',
         edge: '#dcdcdc',
-        inheritance: '#4ec9b0', // Matches concept
-        similarity: '#9d68f0',   // Matches question
+
+        // Edge/Relation types
+        inheritance: '#4ec9b0', // Matches concept (teal)
+        similarity: '#9d68f0',   // Matches question (purple)
+        implication: '#569cd6',  // Blue
+        relation: '#808080',     // Gray (default for other relations)
+
+        // Animation/Interaction
+        highlight: '#ffeb3b',    // Bright yellow for focus/pulse
+        dim: '#404040',          // Dimmed state
 
         // Status/feedback
         success: 'green',
@@ -22,10 +30,28 @@ export const DESIGN_TOKENS = Object.freeze({
         toolCall: 'cyan'
     }),
 
+    // High-contrast color palette (for accessibility)
+    colorsHighContrast: Object.freeze({
+        concept: '#00ffcc',
+        task: '#ffaa00',
+        question: '#cc88ff',
+        goal: '#ffff00',
+        edge: '#ffffff',
+        inheritance: '#00ffcc',
+        similarity: '#cc88ff',
+        implication: '#66ccff',
+        relation: '#cccccc',
+        highlight: '#ffff00',
+        dim: '#666666',
+        background: '#000000',
+        text: '#ffffff'
+    }),
+
     timing: Object.freeze({
         pulse: 300,
         transition: 150,
-        debounce: 100
+        debounce: 100,
+        glow: 400  // Glow animation duration
     }),
 
     spacing: Object.freeze({
