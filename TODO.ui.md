@@ -31,6 +31,7 @@ graph TD
     subgraph Interfaces ["Interfaces"]
         CLI[CLI REPL (Ink)]
         Web[Web UI (Vanilla JS + Cytoscape)]
+        WebREPL[Web REPL Overlay]
     end
 
     NAR -->|IntrospectionEvents| EB
@@ -38,12 +39,15 @@ graph TD
     EB -->|Stream| Hooks
     
     WSM --> Web
+    WSM --> WebREPL
     Hooks --> CLI
     
     Web -.->|Commands| CMD
+    WebREPL -.->|Commands| CMD
     CLI -.->|Commands| CMD
     
     DT -.->|Styles| Web
+    DT -.->|Styles| WebREPL
     DT -.->|Styles| CLI
 ```
 
@@ -125,7 +129,11 @@ We utilize an **incremental, agent-driven workflow**.
 10. **Timeline Scrubber** (Time-Travel):
     *   Snapshot `GraphManager` state every N cycles into a RingBuffer.
     *   UI slider to rewind/replay.
-11. **RLFP Interface** (Teacher Mode):
+11. **Web REPL Panel**:
+    *   Implement `ui/src/components/WebRepl.js`.
+    *   Terminal overlay on graph connecting to `CommandRegistry`.
+    *   Supports `run`, `step`, and full logic interaction.
+12. **RLFP Interface** (Teacher Mode):
     *   *Backend*: Implement feedback ingestion.
     *   *UI*: Drag-to-rank derivation paths -> Emit `reasoning:feedback` events.
 
@@ -155,7 +163,7 @@ We utilize an **incremental, agent-driven workflow**.
 | **A. Core** | `GraphConfig.js` | `ThemeGenerator.js`, `useAgentLogs.js` |
 | **B. Visuals** | `GraphManager.js`, `GraphStyles.js` | — |
 | **C. Observe** | `WebSocketMonitor.js`, `NodeRenderer.js` | — |
-| **D. Interact** | `ReplKeyHandler.js` | `TimeTravelManager.js`, `RLFPOverlay.js` |
+| **D. Interact** | `ReplKeyHandler.js` | `TimeTravelManager.js`, `WebRepl.js` |
 | **E. Dev** | `App.js` | `DebugPanel.js`, `EventInspector.js` |
 | **F. A11y** | `CanvasWrapper.js` | `A11yController.js` |
 
