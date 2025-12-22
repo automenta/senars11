@@ -71,24 +71,22 @@ export const GraphConfig = {
     },
 
     getGraphLayout: () => ({
-        name: 'fcose',
-        // fcose (force-directed with constraints) configuration
-        quality: 'default',
-        randomize: false,
+        name: 'cose',
+        // Standard cose configuration
+        ready: function () { },
+        stop: function () { },
         animate: false,
-        fit: true,
-        padding: 30,
-        nodeSeparation: 75,
-        idealEdgeLength: 50,
-        edgeElasticity: 0.45,
-        nestingFactor: 0.1,
-        gravity: 0.25,
-        numIter: 2500,
-        tile: true,
-        tilingPaddingVertical: 10,
-        tilingPaddingHorizontal: 10,
-        gravityRangeCompound: 1.5,
-        gravityCompound: 1.0,
-        gravityRange: 3.8
+        randomize: false,
+        componentSpacing: 100,
+        nodeRepulsion: function (node) { return 400000; },
+        nodeOverlap: 10,
+        idealEdgeLength: function (edge) { return 50; },
+        edgeElasticity: function (edge) { return 100; },
+        nestingFactor: 5,
+        gravity: 80,
+        numIter: 1000,
+        initialTemp: 200,
+        coolingFactor: 0.95,
+        minTemp: 1.0
     })
 };

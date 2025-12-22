@@ -157,6 +157,11 @@ export class SeNARSUI {
             // Update Observability Panels
             if (message.type === 'metrics.updated') {
                 this.metricsPanel.update(message.payload);
+                return; // Suppress from main log
+            } else if (message.type === 'metrics.anomaly') {
+                // TODO: Maybe show anomaly in a special indicator or toaster?
+                // For now, suppress from main log to avoid pollution
+                return;
             } else if (message.type === 'activity.new') {
                 this.activityLogPanel.addActivity(message.payload);
             }

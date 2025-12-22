@@ -164,23 +164,7 @@ export class GraphManager {
             return false;
         }
 
-        // Register fcose layout if available and not already registered
-        if (typeof cytoscape !== 'undefined' && (window.fcose || window['cytoscape-fcose'])) {
-            try {
-                // Check if fcose is already registered to avoid warnings
-                // The library attaches itself to window.fcose or similar?
-                // Actually, cytoscape.use() expects the extension object.
-                // When loaded via script tag, it's typically 'cytoscapeFcose' or similar, but the local lib might behave differently.
-                // Let's assume standard behavior:
-                const fcose = window.fcose || window['cytoscape-fcose'];
-                if (fcose) {
-                    cytoscape.use(fcose);
-                    console.log('Registered fcose layout');
-                }
-            } catch (e) {
-                console.warn('Could not register fcose layout:', e);
-            }
-        }
+
 
         try {
             this.cy = cytoscape({

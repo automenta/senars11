@@ -107,6 +107,11 @@ These provide immediate observable improvements and should be done first:
 | **Glow Effect on Focus** | 1 hour | `GraphManager.js`, CSS | Highlight active concepts |
 | **ARIA Labels for Nodes** | 30 min | `GraphManager.js` | Basic accessibility |
 | **High-Contrast Mode** | 45 min | `DesignTokens.js`, CSS toggle | Better visibility |
+| **High-Contrast Mode** | 45 min | `DesignTokens.js`, CSS toggle | Better visibility |
+| **Suppress Noisy Metrics** | 15 min | `SeNARSUI.js` | Cleaner logs (inputs/outputs only) |
+| **Empty State / Help Overlay** | 30 min | `index.html`, CSS | Orient user when graph is empty |
+| **Visual Heartbeat** | 30 min | `SystemMetricsPanel.js` | Visual activity indicator (replaces log noise) |
+| **Connection Visuals** | 15 min | `SeNARSUI.js`, CSS | Gray out UI on disconnect |
 
 ---
 
@@ -124,6 +129,7 @@ These provide immediate observable improvements and should be done first:
 
 3.  **Organic Layout** (Phase 3):
     *   Replace `cose` with `fcose` (force-directed with constraints).
+    *   **Fix**: Properly vendor or bundle `cytoscape-fcose` to avoid runtime errors.
     *   Benefit: No node overlap; harmonious spread of existing concepts.
 
 4.  **Smart Edges** (Phase 4):
