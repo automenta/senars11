@@ -1,4 +1,4 @@
-import { BaseComponent } from '../util/BaseComponent.js';
+import {BaseComponent} from '../util/BaseComponent.js';
 
 
 export class TermCache extends BaseComponent {
@@ -10,7 +10,9 @@ export class TermCache extends BaseComponent {
         this._misses = 0;
     }
 
-    get size() { return this._cache.size; }
+    get size() {
+        return this._cache.size;
+    }
 
     get stats() {
         const total = this._hits + this._misses;
@@ -44,8 +46,13 @@ export class TermCache extends BaseComponent {
         this._cache.set(key, value);
     }
 
-    has(key) { return this._cache.has(key); }
-    delete(key) { return this._cache.delete(key); }
+    has(key) {
+        return this._cache.has(key);
+    }
+
+    delete(key) {
+        return this._cache.delete(key);
+    }
 
     clear() {
         this._cache.clear();
@@ -61,7 +68,9 @@ export class TermCache extends BaseComponent {
         }
     }
 
-    getOldestKey() { return this._cache.keys().next().value; }
+    getOldestKey() {
+        return this._cache.keys().next().value;
+    }
 
     setWithEviction(key, value) {
         let evictedKey = null;

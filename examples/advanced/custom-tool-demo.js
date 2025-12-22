@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { BaseTool } from '../../core/src/tool/BaseTool.js';
-import { App } from '@senars/agent';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import {BaseTool} from '../../core/src/tool/BaseTool.js';
+import {App} from '@senars/agent';
+import {exec} from 'child_process';
+import {promisify} from 'util';
 
 const execAsync = promisify(exec);
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
@@ -16,9 +16,9 @@ class MathTool extends BaseTool {
             schema: {
                 type: 'object',
                 properties: {
-                    operation: { type: 'string', enum: ['add', 'subtract', 'multiply', 'divide', 'power'] },
-                    a: { type: 'number' },
-                    b: { type: 'number' }
+                    operation: {type: 'string', enum: ['add', 'subtract', 'multiply', 'divide', 'power']},
+                    a: {type: 'number'},
+                    b: {type: 'number'}
                 },
                 required: ['operation', 'a', 'b']
             },
@@ -26,7 +26,7 @@ class MathTool extends BaseTool {
         });
     }
 
-    async execute({ operation, a, b }) {
+    async execute({operation, a, b}) {
         const ops = {
             add: (x, y) => x + y,
             subtract: (x, y) => x - y,
@@ -54,7 +54,7 @@ class JSONValidatorTool extends BaseTool {
             schema: {
                 type: 'object',
                 properties: {
-                    json: { type: 'string' }
+                    json: {type: 'string'}
                 },
                 required: ['json']
             },
@@ -62,7 +62,7 @@ class JSONValidatorTool extends BaseTool {
         });
     }
 
-    async execute({ json }) {
+    async execute({json}) {
         try {
             const parsed = JSON.parse(json);
             return {
@@ -95,8 +95,8 @@ class GitTool extends BaseTool {
             schema: {
                 type: 'object',
                 properties: {
-                    command: { type: 'string', enum: ['status', 'log', 'branch', 'diff'] },
-                    args: { type: 'array', items: { type: 'string' } }
+                    command: {type: 'string', enum: ['status', 'log', 'branch', 'diff']},
+                    args: {type: 'array', items: {type: 'string'}}
                 },
                 required: ['command']
             },
@@ -105,10 +105,10 @@ class GitTool extends BaseTool {
         this.timeout = config.timeout || 5000;
     }
 
-    async execute({ command, args = [] }) {
+    async execute({command, args = []}) {
         try {
             const gitCmd = `git ${command} ${args.join(' ')}`;
-            const { stdout, stderr } = await execAsync(gitCmd, {
+            const {stdout, stderr} = await execAsync(gitCmd, {
                 timeout: this.timeout,
                 maxBuffer: 1024 * 1024
             });
@@ -139,10 +139,10 @@ async function demonstrateCustomTools() {
     const mathTool = new MathTool();
 
     const results = [
-        await mathTool.execute({ operation: 'add', a: 5, b: 3 }),
-        await mathTool.execute({ operation: 'multiply', a: 4, b: 7 }),
-        await mathTool.execute({ operation: 'power', a: 2, b: 8 }),
-        await mathTool.execute({ operation: 'divide', a: 10, b: 0 })
+        await mathTool.execute({operation: 'add', a: 5, b: 3}),
+        await mathTool.execute({operation: 'multiply', a: 4, b: 7}),
+        await mathTool.execute({operation: 'power', a: 2, b: 8}),
+        await mathTool.execute({operation: 'divide', a: 10, b: 0})
     ];
 
     results.forEach(r => {
@@ -156,12 +156,12 @@ async function demonstrateCustomTools() {
     const validJSON = '{"name": "SeNARS", "type": "reasoning-system"}';
     const invalidJSON = '{invalid json}';
 
-    const validResult = await jsonTool.execute({ json: validJSON });
+    const validResult = await jsonTool.execute({json: validJSON});
     log(`Valid JSON: ${validResult.valid ? '✅' : '❌'}`);
     log(`  Keys: ${validResult.keys?.join(', ')}`);
     log(`  Type: ${validResult.type}`);
 
-    const invalidResult = await jsonTool.execute({ json: invalidJSON });
+    const invalidResult = await jsonTool.execute({json: invalidJSON});
     log(`\nInvalid JSON: ${invalidResult.valid ? '✅' : '❌'}`);
     log(`  Error: ${invalidResult.error}`);
 
@@ -170,7 +170,7 @@ async function demonstrateCustomTools() {
     const gitTool = new GitTool();
 
     try {
-        const statusResult = await gitTool.execute({ command: 'status', args: ['--short'] });
+        const statusResult = await gitTool.execute({command: 'status', args: ['--short']});
         if (statusResult.success) {
             log('Git status: ✅');
             const lines = statusResult.stdout.split('\n').slice(0, 5);
@@ -179,7 +179,7 @@ async function demonstrateCustomTools() {
             log(`Git status: ❌ ${statusResult.error}`);
         }
 
-        const branchResult = await gitTool.execute({ command: 'branch', args: ['--show-current'] });
+        const branchResult = await gitTool.execute({command: 'branch', args: ['--show-current']});
         if (branchResult.success) {
             log(`\nCurrent branch: ${branchResult.stdout}`);
         }
@@ -189,7 +189,7 @@ async function demonstrateCustomTools() {
 
     // 4. Integration with Agent
     section('4️⃣  Registering Custom Tools with Agent');
-    const app = new App({ lm: { enabled: false }, subsystems: { tools: true } });
+    const app = new App({lm: {enabled: false}, subsystems: {tools: true}});
     await app.initialize();
 
     const agent = app.agent;

@@ -1,5 +1,5 @@
-import { CommandHandlers } from './handlers/CommandHandlers.js';
-import { ControlHandlers } from './handlers/ControlHandlers.js';
+import {CommandHandlers} from './handlers/CommandHandlers.js';
+import {ControlHandlers} from './handlers/ControlHandlers.js';
 
 /**
  * UIEventHandlers module to handle all UI events and connect UI to business logic
@@ -32,18 +32,18 @@ export class UIEventHandlers {
         // Define handler mapping to reduce duplication
         const handlerMap = {
             // Command Input handlers
-            'sendButton': { event: 'click', handler: () => this.commandHandlers.handleCommandSubmit() },
-            'commandInput': { event: 'keypress', handler: (e) => this.commandHandlers.handleCommandKeyPress(e) },
-            'execQuick': { event: 'click', handler: () => this.commandHandlers.handleQuickCommand() },
-            'showHistory': { event: 'click', handler: () => this.commandHandlers.showCommandHistory() },
+            'sendButton': {event: 'click', handler: () => this.commandHandlers.handleCommandSubmit()},
+            'commandInput': {event: 'keypress', handler: (e) => this.commandHandlers.handleCommandKeyPress(e)},
+            'execQuick': {event: 'click', handler: () => this.commandHandlers.handleQuickCommand()},
+            'showHistory': {event: 'click', handler: () => this.commandHandlers.showCommandHistory()},
 
             // Controls & Logs handlers
-            'clearLogs': { event: 'click', handler: () => this.controlHandlers.handleClearLogs() },
-            'refreshGraph': { event: 'click', handler: () => this.controlHandlers.handleRefresh() },
-            'toggleLive': { event: 'click', handler: () => this.controlHandlers.handleToggleLive() },
-            'runDemo': { event: 'click', handler: () => this.controlHandlers.handleRunDemo() },
-            'btnToggleTrace': { event: 'click', handler: () => this.controlHandlers.handleToggleTrace() },
-            'btnToggleContrast': { event: 'click', handler: () => this.controlHandlers.handleToggleContrast() },
+            'clearLogs': {event: 'click', handler: () => this.controlHandlers.handleClearLogs()},
+            'refreshGraph': {event: 'click', handler: () => this.controlHandlers.handleRefresh()},
+            'toggleLive': {event: 'click', handler: () => this.controlHandlers.handleToggleLive()},
+            'runDemo': {event: 'click', handler: () => this.controlHandlers.handleRunDemo()},
+            'btnToggleTrace': {event: 'click', handler: () => this.controlHandlers.handleToggleTrace()},
+            'btnToggleContrast': {event: 'click', handler: () => this.controlHandlers.handleToggleContrast()},
             'showTasksToggle': {
                 event: 'change',
                 handler: (e) => this.controlHandlers.handleTaskVisibility(e.target.checked)
@@ -51,7 +51,7 @@ export class UIEventHandlers {
         };
 
         // Transform the handlerMap into the required format
-        return Object.entries(handlerMap).map(([element, { event, handler }]) => ({
+        return Object.entries(handlerMap).map(([element, {event, handler}]) => ({
             element,
             event,
             handler
@@ -61,11 +61,11 @@ export class UIEventHandlers {
     /**
      * Attach a single event handler based on configuration
      */
-    _attachEventHandler({ element, event, handler }) {
+    _attachEventHandler({element, event, handler}) {
         const elementRef = this.uiElements.get(element);
         if (elementRef) {
             elementRef.addEventListener(event, handler);
-            this._eventHandlers.set(`${element}-${event}`, { element: elementRef, event, handler });
+            this._eventHandlers.set(`${element}-${event}`, {element: elementRef, event, handler});
         } else {
             // Optional: log warning only in debug mode to reduce noise
             // this.commandProcessor.logger.log(`UI element not found: ${element}`, 'warning', '⚠️');
@@ -76,7 +76,7 @@ export class UIEventHandlers {
      * Remove all attached event handlers
      */
     removeEventListeners() {
-        for (const [key, { element: elementRef, event, handler }] of this._eventHandlers) {
+        for (const [key, {element: elementRef, event, handler}] of this._eventHandlers) {
             elementRef.removeEventListener(event, handler);
         }
         this._eventHandlers.clear();

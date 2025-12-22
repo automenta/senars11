@@ -16,131 +16,131 @@
 </head>
 
 <body>
-    <div class="app-container">
-        <!-- REPL Panel (Main View) -->
-        <div class="log-panel" id="main-panel">
-            <div class="panel-header">
-                <span>SeNARS Control</span>
-                <div class="control-toolbar">
-                    <button class="icon-btn" id="btn-play-pause" title="Play/Pause">▶</button>
-                    <button class="icon-btn" id="btn-step" title="Single Step">⏯</button>
-                    <button class="icon-btn" id="btn-reset" title="Reset System">🔄</button>
-                    <div class="divider"></div>
-                    <button class="icon-btn" id="btn-toggle-sidebar" title="Toggle Graph Sidebar">📊</button>
-                </div>
-            </div>
-
-            <div class="status-bar">
-                <div class="status-item">
-                    <div class="status-indicator status-disconnected" id="status-indicator"></div>
-                    <span id="connection-status">Disconnected</span>
-                </div>
-                <div class="status-item">
-                    <span class="cycle-badge" id="cycle-count">Cycle: 0</span>
-                    <span class="divider">|</span>
-                    <span id="message-count">0</span> msgs
-                </div>
-                <div class="view-toggles">
-                    <button id="btn-toggle-trace" title="Toggle Log/Trace View">Show Trace</button>
-                    <button id="btn-toggle-contrast" title="Toggle High-Contrast Mode">High Contrast</button>
-                </div>
-            </div>
-
-            <div class="main-content-area">
-                <div class="view-layer active" id="log-view-container">
-                    <div class="logs-container" id="logs-container"></div>
-                </div>
-                <div class="view-layer hidden" id="trace-view-container">
-                    <div class="trace-container" id="trace-panel"></div>
-                </div>
-            </div>
-
-            <div class="input-section">
-                <div class="input-mode-toggle">
-                    <label class="mode-option"><input checked id="mode-narsese" name="input-mode" type="radio"
-                            value="narsese"> Narsese</label>
-                    <label class="mode-option"><input id="mode-agent" name="input-mode" type="radio" value="agent">
-                        Agent</label>
-                </div>
-                <div class="input-group">
-                    <input autocomplete="off" id="command-input" placeholder="Enter Narsese command..." type="text">
-                    <button id="send-button">Send</button>
-                </div>
-                <div class="input-group">
-                    <select id="quick-commands">
-                        <option value="">Quick Commands...</option>
-                        <option value="&lt;cat --&gt; animal&gt; .">Basic Assertion</option>
-                        <option value="&lt;bird --&gt; flyer&gt; . %1.0;0.9%">Assertion with Truth Value</option>
-                        <option value="&lt;dog --&gt; pet&gt; ?">Question</option>
-                        <option value="&lt;(cat & dog) --&gt; pets&gt; .">Compound Term</option>
-                        <option value="&lt;swan --&gt; flyer&gt; !">Goal</option>
-                        <option value="*step">Single Step</option>
-                        <option value="*run">Run Continuous</option>
-                        <option value="*stop">Stop</option>
-                        <option value="*reset">Reset</option>
-                    </select>
-                    <button id="exec-quick">Execute</button>
-                    <button id="show-history">History</button>
-                    <button id="clear-logs">Clear</button>
-                </div>
+<div class="app-container">
+    <!-- REPL Panel (Main View) -->
+    <div class="log-panel" id="main-panel">
+        <div class="panel-header">
+            <span>SeNARS Control</span>
+            <div class="control-toolbar">
+                <button class="icon-btn" id="btn-play-pause" title="Play/Pause">▶</button>
+                <button class="icon-btn" id="btn-step" title="Single Step">⏯</button>
+                <button class="icon-btn" id="btn-reset" title="Reset System">🔄</button>
+                <div class="divider"></div>
+                <button class="icon-btn" id="btn-toggle-sidebar" title="Toggle Graph Sidebar">📊</button>
             </div>
         </div>
 
-        <!-- Graph Panel (Sidebar) -->
-        <div class="graph-panel hidden" id="sidebar-panel">
-            <div class="panel-header">
-                <span>Graph View</span>
-                <button class="icon-btn" id="btn-close-sidebar" title="Close Sidebar">×</button>
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator status-disconnected" id="status-indicator"></div>
+                <span id="connection-status">Disconnected</span>
             </div>
+            <div class="status-item">
+                <span class="cycle-badge" id="cycle-count">Cycle: 0</span>
+                <span class="divider">|</span>
+                <span id="message-count">0</span> msgs
+            </div>
+            <div class="view-toggles">
+                <button id="btn-toggle-trace" title="Toggle Log/Trace View">Show Trace</button>
+                <button id="btn-toggle-contrast" title="Toggle High-Contrast Mode">High Contrast</button>
+            </div>
+        </div>
 
-            <div class="metrics-container" id="metrics-panel"></div>
+        <div class="main-content-area">
+            <div class="view-layer active" id="log-view-container">
+                <div class="logs-container" id="logs-container"></div>
+            </div>
+            <div class="view-layer hidden" id="trace-view-container">
+                <div class="trace-container" id="trace-panel"></div>
+            </div>
+        </div>
 
-            <div class="cytoscape-container" id="graph-container"></div>
-            <div class="graph-controls">
-                <button id="refresh-graph" title="Refresh Graph">🔄 Graph</button>
-                <button id="toggle-live" title="Toggle Live Updates">📡 Live</button>
-                <div class="separator"></div>
-                <button id="btn-save" title="Save State">💾 Save</button>
-                <button id="btn-load" title="Load State">📂 Load</button>
-                <div class="separator"></div>
-                <label class="checkbox-control" title="Show/Hide Tasks">
-                    <input checked id="show-tasks-toggle" type="checkbox"> Tasks
-                </label>
-                <div class="separator"></div>
-                <select id="demo-select">
-                    <option value="">Select Demo...</option>
+        <div class="input-section">
+            <div class="input-mode-toggle">
+                <label class="mode-option"><input checked id="mode-narsese" name="input-mode" type="radio"
+                                                  value="narsese"> Narsese</label>
+                <label class="mode-option"><input id="mode-agent" name="input-mode" type="radio" value="agent">
+                    Agent</label>
+            </div>
+            <div class="input-group">
+                <input autocomplete="off" id="command-input" placeholder="Enter Narsese command..." type="text">
+                <button id="send-button">Send</button>
+            </div>
+            <div class="input-group">
+                <select id="quick-commands">
+                    <option value="">Quick Commands...</option>
+                    <option value="&lt;cat --&gt; animal&gt; .">Basic Assertion</option>
+                    <option value="&lt;bird --&gt; flyer&gt; . %1.0;0.9%">Assertion with Truth Value</option>
+                    <option value="&lt;dog --&gt; pet&gt; ?">Question</option>
+                    <option value="&lt;(cat & dog) --&gt; pets&gt; .">Compound Term</option>
+                    <option value="&lt;swan --&gt; flyer&gt; !">Goal</option>
+                    <option value="*step">Single Step</option>
+                    <option value="*run">Run Continuous</option>
+                    <option value="*stop">Stop</option>
+                    <option value="*reset">Reset</option>
                 </select>
-                <button id="run-demo">Run Demo</button>
-            </div>
-            <div class="graph-details-panel" id="graph-details">
-                Click on nodes or edges to see details
-            </div>
-        </div>
-    </div>
-
-    <div class="notification-container" id="notification-container"></div>
-
-    <!-- Confirmation Modal -->
-    <div class="modal hidden" id="confirmation-modal">
-        <div class="modal-content">
-            <h3>Confirm Reset</h3>
-            <p>Are you sure you want to reset the system? This cannot be undone.</p>
-            <div class="modal-buttons">
-                <button class="primary-btn" id="btn-confirm-reset">Yes, Reset</button>
-                <button class="secondary-btn" id="btn-cancel-reset">Cancel</button>
+                <button id="exec-quick">Execute</button>
+                <button id="show-history">History</button>
+                <button id="clear-logs">Clear</button>
             </div>
         </div>
     </div>
 
-    <script>
-        // Inject WebSocket configuration from server
-        window.WEBSOCKET_CONFIG = {
-            port: '{{WEBSOCKET_PORT}}',
-            host: window.location.hostname || 'localhost'
-        };
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
-    <script src="src/SeNARSUI.js" type="module"></script>
+    <!-- Graph Panel (Sidebar) -->
+    <div class="graph-panel hidden" id="sidebar-panel">
+        <div class="panel-header">
+            <span>Graph View</span>
+            <button class="icon-btn" id="btn-close-sidebar" title="Close Sidebar">×</button>
+        </div>
+
+        <div class="metrics-container" id="metrics-panel"></div>
+
+        <div class="cytoscape-container" id="graph-container"></div>
+        <div class="graph-controls">
+            <button id="refresh-graph" title="Refresh Graph">🔄 Graph</button>
+            <button id="toggle-live" title="Toggle Live Updates">📡 Live</button>
+            <div class="separator"></div>
+            <button id="btn-save" title="Save State">💾 Save</button>
+            <button id="btn-load" title="Load State">📂 Load</button>
+            <div class="separator"></div>
+            <label class="checkbox-control" title="Show/Hide Tasks">
+                <input checked id="show-tasks-toggle" type="checkbox"> Tasks
+            </label>
+            <div class="separator"></div>
+            <select id="demo-select">
+                <option value="">Select Demo...</option>
+            </select>
+            <button id="run-demo">Run Demo</button>
+        </div>
+        <div class="graph-details-panel" id="graph-details">
+            Click on nodes or edges to see details
+        </div>
+    </div>
+</div>
+
+<div class="notification-container" id="notification-container"></div>
+
+<!-- Confirmation Modal -->
+<div class="modal hidden" id="confirmation-modal">
+    <div class="modal-content">
+        <h3>Confirm Reset</h3>
+        <p>Are you sure you want to reset the system? This cannot be undone.</p>
+        <div class="modal-buttons">
+            <button class="primary-btn" id="btn-confirm-reset">Yes, Reset</button>
+            <button class="secondary-btn" id="btn-cancel-reset">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inject WebSocket configuration from server
+    window.WEBSOCKET_CONFIG = {
+        port: '{{WEBSOCKET_PORT}}',
+        host: window.location.hostname || 'localhost'
+    };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
+<script src="src/SeNARSUI.js" type="module"></script>
 </body>
 
 </html>

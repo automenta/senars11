@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { App } from '@senars/agent';
-import { FileOperationsTool } from '../../core/src/tool/FileOperationsTool.js';
-import { CommandExecutorTool } from '../../core/src/tool/CommandExecutorTool.js';
+import {App} from '@senars/agent';
+import {FileOperationsTool} from '../../core/src/tool/FileOperationsTool.js';
+import {CommandExecutorTool} from '../../core/src/tool/CommandExecutorTool.js';
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
@@ -18,11 +18,11 @@ async function demonstrateTools() {
 
     try {
         // Setup test directory
-        await fs.mkdir(testDir, { recursive: true });
+        await fs.mkdir(testDir, {recursive: true});
 
         // 1. FileOperationsTool
         section('1️⃣  FileOperationsTool');
-        const fileTool = new FileOperationsTool({ baseDir: testDir, allowedOperations: ['read', 'write', 'list'] });
+        const fileTool = new FileOperationsTool({baseDir: testDir, allowedOperations: ['read', 'write', 'list']});
         await fileTool.initialize();
 
         log('Writing test file...');
@@ -79,8 +79,8 @@ async function demonstrateTools() {
         // 3. Tool Integration with NAR
         section('3️⃣  Tool Integration with NAR');
         const app = new App({
-            lm: { enabled: false },
-            subsystems: { tools: true }
+            lm: {enabled: false},
+            subsystems: {tools: true}
         });
 
         await app.initialize();
@@ -111,7 +111,7 @@ async function demonstrateTools() {
         await app.shutdown();
 
         // Cleanup
-        await fs.rm(testDir, { recursive: true, force: true });
+        await fs.rm(testDir, {recursive: true, force: true});
 
         section('✨ Key Takeaways');
         log('• FileOperationsTool: safe file read/write/list with baseDir restriction');
@@ -123,7 +123,8 @@ async function demonstrateTools() {
 
     } catch (error) {
         console.error('❌ Error:', error.message);
-        await fs.rm(testDir, { recursive: true, force: true }).catch(() => { });
+        await fs.rm(testDir, {recursive: true, force: true}).catch(() => {
+        });
         throw error;
     }
 }

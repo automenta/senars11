@@ -1,6 +1,6 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { WebSocketMonitor } from '../../../agent/src/server/WebSocketMonitor.js';
-import { IntrospectionEvents } from '../../../core/src/util/IntrospectionEvents.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {WebSocketMonitor} from '../../../agent/src/server/WebSocketMonitor.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 import WebSocket from 'ws';
 
 // Skip: WebSocket timing dependencies cause unreliable test results
@@ -62,7 +62,7 @@ describe.skip('Web UI Simulation Integration Test', () => {
         });
 
         // Subscribe to all events
-        client.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
+        client.send(JSON.stringify({type: 'subscribe', channel: 'all'}));
 
         // Wait a bit for subscription to be processed
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -105,7 +105,7 @@ describe.skip('Web UI Simulation Integration Test', () => {
             }
         });
 
-        client.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
+        client.send(JSON.stringify({type: 'subscribe', channel: 'all'}));
         await new Promise(resolve => setTimeout(resolve, 50));
 
         // Send multiple inputs rapidly

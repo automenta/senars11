@@ -1,5 +1,4 @@
-
-import { App } from '@senars/agent';
+import {App} from '@senars/agent';
 
 const log = (msg) => console.error(`[${new Date().toISOString()}] ${msg}`);
 
@@ -19,7 +18,7 @@ async function main() {
         });
 
         log('3. Starting App (this triggers Agent setup)...');
-        const agent = await app.start({ startAgent: true });
+        const agent = await app.start({startAgent: true});
 
         if (!agent) throw new Error('Agent failed to start');
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { TransformersJSProvider } from '../../core/src/lm/TransformersJSProvider.js';
+import {TransformersJSProvider} from '../../core/src/lm/TransformersJSProvider.js';
 
 const main = async () => {
     console.log('=== Minimal LM Inference ===\n');
@@ -11,7 +11,10 @@ const main = async () => {
     try {
         console.log(`Loading ${provider.config.modelName}...`);
         const start = Date.now();
-        const result = await provider.generateText('Summarize: The cat sat on the mat.', { maxTokens: 50, temperature: 0.1 });
+        const result = await provider.generateText('Summarize: The cat sat on the mat.', {
+            maxTokens: 50,
+            temperature: 0.1
+        });
         console.log(`Result: "${result}" (${Date.now() - start}ms)`);
     } catch (e) {
         console.error('Inference failed:', e.message);

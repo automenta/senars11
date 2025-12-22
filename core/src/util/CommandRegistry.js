@@ -25,7 +25,7 @@ export class CommandRegistry {
         if (typeof handler !== 'function') {
             throw new Error('Command handler must be a function');
         }
-        this.commands.set(command.toLowerCase(), { handler, metadata });
+        this.commands.set(command.toLowerCase(), {handler, metadata});
         return this;
     }
 
@@ -47,7 +47,7 @@ export class CommandRegistry {
         const cmdEntry = this.commands.get(cmdName);
 
         if (cmdEntry) {
-            return cmdEntry.handler({ ...context, args });
+            return cmdEntry.handler({...context, args});
         } else {
             this.logger.warn(`Unknown command: ${cmdName}. Type /help for available commands.`);
             return false;

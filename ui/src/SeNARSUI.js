@@ -1,15 +1,15 @@
-import { UIElements } from './ui/UIElements.js';
-import { WebSocketManager } from './connection/WebSocketManager.js';
-import { GraphManager } from './visualization/GraphManager.js';
-import { Logger } from './logging/Logger.js';
-import { CommandProcessor } from './command/CommandProcessor.js';
-import { DemoManager } from './demo/DemoManager.js';
-import { UIEventHandlers } from './ui/UIEventHandlers.js';
-import { MessageHandler } from '@senars/agent';
-import { capitalizeFirst } from './utils/Helpers.js';
-import { ControlPanel } from './ui/ControlPanel.js';
-import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
-import { ActivityLogPanel } from './components/ActivityLogPanel.js';
+import {UIElements} from './ui/UIElements.js';
+import {WebSocketManager} from './connection/WebSocketManager.js';
+import {GraphManager} from './visualization/GraphManager.js';
+import {Logger} from './logging/Logger.js';
+import {CommandProcessor} from './command/CommandProcessor.js';
+import {DemoManager} from './demo/DemoManager.js';
+import {UIEventHandlers} from './ui/UIEventHandlers.js';
+import {MessageHandler} from '@senars/agent';
+import {capitalizeFirst} from './utils/Helpers.js';
+import {ControlPanel} from './ui/ControlPanel.js';
+import {SystemMetricsPanel} from './components/SystemMetricsPanel.js';
+import {ActivityLogPanel} from './components/ActivityLogPanel.js';
 
 /**
  * Main SeNARS UI Application class - orchestrator that combines all modules
@@ -66,7 +66,7 @@ export class SeNARSUI {
 
         // Setup global action handler
         document.addEventListener('senars:action', (e) => {
-            const { type, payload, context } = e.detail;
+            const {type, payload, context} = e.detail;
             this.webSocketManager.sendMessage('activity.action', {
                 type, payload, context, id: Date.now()
             });
@@ -152,7 +152,7 @@ export class SeNARSUI {
             }
 
             // Process message with appropriate handler
-            const { content, type, icon } = this.messageHandler.processMessage(message);
+            const {content, type, icon} = this.messageHandler.processMessage(message);
 
             // Update Observability Panels
             if (message.type === 'metrics.updated') {
@@ -261,7 +261,7 @@ export class SeNARSUI {
      * Update connection status display
      */
     _updateStatus(status) {
-        const { connectionStatus, statusIndicator } = this.uiElements.getAll();
+        const {connectionStatus, statusIndicator} = this.uiElements.getAll();
 
         if (connectionStatus) {
             connectionStatus.textContent = capitalizeFirst(status);

@@ -39,7 +39,9 @@ export class CognitiveDiversity {
         };
     }
 
-    calculateDiversity() { return this.diversityMetrics; }
+    calculateDiversity() {
+        return this.diversityMetrics;
+    }
 
     _calculateComplexityDistribution(complexities) {
         const distribution = new Map();
@@ -65,17 +67,28 @@ export class CognitiveDiversity {
         return variety;
     }
 
-    getMetrics() { return { ...this.diversityMetrics }; }
-    getRegisteredTermNames() { return Array.from(this.registeredTerms.keys()); }
-    isHighDiversity(threshold = 1.5) { return this.diversityMetrics.diversityScore > threshold; }
-    isLowDiversity(threshold = 0.5) { return this.diversityMetrics.diversityScore < threshold; }
+    getMetrics() {
+        return {...this.diversityMetrics};
+    }
+
+    getRegisteredTermNames() {
+        return Array.from(this.registeredTerms.keys());
+    }
+
+    isHighDiversity(threshold = 1.5) {
+        return this.diversityMetrics.diversityScore > threshold;
+    }
+
+    isLowDiversity(threshold = 0.5) {
+        return this.diversityMetrics.diversityScore < threshold;
+    }
 
     suggestDiversityTerm() {
         const currentComplexities = Array.from(this.diversityMetrics.complexityDistribution.keys())
             .sort((a, b) => a - b);
 
         if (!currentComplexities.length) {
-            return { suggestedComplexity: 1, reason: 'No terms exist, suggest simple term' };
+            return {suggestedComplexity: 1, reason: 'No terms exist, suggest simple term'};
         }
 
         if (this.isLowDiversity()) {
@@ -118,10 +131,10 @@ export class CognitiveDiversity {
     }
 
     evaluateDiversity(term) {
-        if (!term?.name) return { diversityImpact: 0, normalizationFactor: 1 };
+        if (!term?.name) return {diversityImpact: 0, normalizationFactor: 1};
 
         const termComplexity = this.termFactory.getComplexity(term);
-        const { averageComplexity: currentAvg, variety: currentVariety } = this.diversityMetrics;
+        const {averageComplexity: currentAvg, variety: currentVariety} = this.diversityMetrics;
         const complexityDistanceFromAvg = Math.abs(termComplexity - currentAvg);
 
         return {

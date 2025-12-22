@@ -1,5 +1,5 @@
-import { Component } from './Component.js';
-import { GraphManager } from '../visualization/GraphManager.js';
+import {Component} from './Component.js';
+import {GraphManager} from '../visualization/GraphManager.js';
 
 export class GraphPanel extends Component {
     constructor(containerId) {

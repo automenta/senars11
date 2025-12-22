@@ -1,10 +1,10 @@
-import { Term, TermType } from './Term.js';
-import { CognitiveDiversity } from './CognitiveDiversity.js';
-import { BaseComponent } from '../util/BaseComponent.js';
-import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
-import { TermCache } from './TermCache.js';
+import {Term, TermType} from './Term.js';
+import {CognitiveDiversity} from './CognitiveDiversity.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
+import {TermCache} from './TermCache.js';
 
-export { Term };
+export {Term};
 
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&', '<~>', '{}', '[]']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
@@ -34,7 +34,7 @@ const CANONICAL_NAME_PATTERNS = {
 export class TermFactory extends BaseComponent {
     constructor(config = {}, eventBus = null) {
         super(config, 'TermFactory', eventBus);
-        this._cache = new TermCache({ maxSize: this.config.maxCacheSize || 5000 });
+        this._cache = new TermCache({maxSize: this.config.maxCacheSize || 5000});
         this._complexityCache = new Map();
         this._cognitiveDiversity = new CognitiveDiversity(this);
     }
@@ -52,7 +52,7 @@ export class TermFactory extends BaseComponent {
     }
 
     _createCompound(operator, components) {
-        const { operator: op, components: comps } = this._normalizeTermData(operator, components);
+        const {operator: op, components: comps} = this._normalizeTermData(operator, components);
 
         if (this._reflexiveMarker) {
             const shouldBeTrue = this._reflexiveMarker.shouldBeTrue;
@@ -82,40 +82,104 @@ export class TermFactory extends BaseComponent {
         const cachedTerm = this._cache.get(name);
 
         if (cachedTerm) {
-            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, { termName: name });
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
             return cachedTerm;
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, { termName: name });
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
         const term = this._createAndCache(operator, normalizedComponents, name);
         this._calculateComplexityMetrics(term, normalizedComponents);
         this._cognitiveDiversity.registerTerm(term);
         return term;
     }
 
-    atomic(name) { return this.create(name); }
-    variable(name) { return this.create(name.startsWith('?') ? name : `?${name}`); }
-    inheritance(sub, pred) { return this._createCompound('-->', [sub, pred]); }
-    similarity(sub, pred) { return this._createCompound('<->', [sub, pred]); }
-    implication(pre, post) { return this._createCompound('==>', [pre, post]); }
-    equivalence(left, right) { return this._createCompound('<=>', [left, right]); }
-    equality(left, right) { return this._createCompound('=', [left, right]); }
-    conjunction(...terms) { return this._createCompound('&', this._flattenArgs(terms)); }
-    disjunction(...terms) { return this._createCompound('|', this._flattenArgs(terms)); }
-    parallel(...terms) { return this._createCompound('||', this._flattenArgs(terms)); }
-    sequence(...terms) { return this._createCompound('&/', this._flattenArgs(terms)); }
-    product(...terms) { return this._createCompound('*', this._flattenArgs(terms)); }
-    setExt(...terms) { return this._createCompound('{}', this._flattenArgs(terms)); }
-    setInt(...terms) { return this._createCompound('[]', this._flattenArgs(terms)); }
-    tuple(...terms) { return this._createCompound(',', this._flattenArgs(terms)); }
-    negation(term) { return this._createCompound('--', [term]); }
-    difference(a, b) { return this._createCompound('<~>', [a, b]); }
-    delta(term) { return this._createCompound('Δ', [term]); }
-    extImage(relation, ...terms) { return this._createCompound('/', [relation, ...this._flattenArgs(terms)]); }
-    intImage(relation, ...terms) { return this._createCompound('\\', [relation, ...this._flattenArgs(terms)]); }
-    predicate(pred, args) { return this._createCompound('^', [pred, args]); }
+    atomic(name) {
+        return this.create(name);
+    }
 
-    _flattenArgs(args) { return args.length === 1 && Array.isArray(args[0]) ? args[0] : args; }
+    variable(name) {
+        return this.create(name.startsWith('?') ? name : `?${name}`);
+    }
+
+    inheritance(sub, pred) {
+        return this._createCompound('-->', [sub, pred]);
+    }
+
+    similarity(sub, pred) {
+        return this._createCompound('<->', [sub, pred]);
+    }
+
+    implication(pre, post) {
+        return this._createCompound('==>', [pre, post]);
+    }
+
+    equivalence(left, right) {
+        return this._createCompound('<=>', [left, right]);
+    }
+
+    equality(left, right) {
+        return this._createCompound('=', [left, right]);
+    }
+
+    conjunction(...terms) {
+        return this._createCompound('&', this._flattenArgs(terms));
+    }
+
+    disjunction(...terms) {
+        return this._createCompound('|', this._flattenArgs(terms));
+    }
+
+    parallel(...terms) {
+        return this._createCompound('||', this._flattenArgs(terms));
+    }
+
+    sequence(...terms) {
+        return this._createCompound('&/', this._flattenArgs(terms));
+    }
+
+    product(...terms) {
+        return this._createCompound('*', this._flattenArgs(terms));
+    }
+
+    setExt(...terms) {
+        return this._createCompound('{}', this._flattenArgs(terms));
+    }
+
+    setInt(...terms) {
+        return this._createCompound('[]', this._flattenArgs(terms));
+    }
+
+    tuple(...terms) {
+        return this._createCompound(',', this._flattenArgs(terms));
+    }
+
+    negation(term) {
+        return this._createCompound('--', [term]);
+    }
+
+    difference(a, b) {
+        return this._createCompound('<~>', [a, b]);
+    }
+
+    delta(term) {
+        return this._createCompound('Δ', [term]);
+    }
+
+    extImage(relation, ...terms) {
+        return this._createCompound('/', [relation, ...this._flattenArgs(terms)]);
+    }
+
+    intImage(relation, ...terms) {
+        return this._createCompound('\\', [relation, ...this._flattenArgs(terms)]);
+    }
+
+    predicate(pred, args) {
+        return this._createCompound('^', [pred, args]);
+    }
+
+    _flattenArgs(args) {
+        return args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
+    }
 
     _getOrCreateAtomic(name) {
         const cached = this._cache.get(name);
@@ -143,7 +207,7 @@ export class TermFactory extends BaseComponent {
             this._cognitiveDiversity.unregisterTerm(evictedKey);
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { term: term.serialize() });
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
         return term;
     }
 
@@ -157,7 +221,7 @@ export class TermFactory extends BaseComponent {
         if (operator && normalizedComponents.length === 2 && RELATIONAL_OPERATORS.includes(operator)) {
             const [left, right] = normalizedComponents;
             if (left.name === right.name) {
-                this._reflexiveMarker = { operator, shouldBeTrue: true };
+                this._reflexiveMarker = {operator, shouldBeTrue: true};
             }
         }
 
@@ -175,7 +239,7 @@ export class TermFactory extends BaseComponent {
             }
         }
 
-        return { operator, components: normalizedComponents };
+        return {operator, components: normalizedComponents};
     }
 
     _validateOperator(op) {
@@ -269,7 +333,9 @@ export class TermFactory extends BaseComponent {
         if (typeof size === 'number' && size > 0) this._cache.setMaxSize(size);
     }
 
-    getCacheSize() { return this._cache.size; }
+    getCacheSize() {
+        return this._cache.size;
+    }
 
     clearCache() {
         this._cache.clear();
@@ -307,14 +373,14 @@ export class TermFactory extends BaseComponent {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({ name, complexity }));
+            .map(([name, complexity]) => ({name, complexity}));
     }
 
     getSimplestTerms(limit = 10) {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => a[1] - b[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({ name, complexity }));
+            .map(([name, complexity]) => ({name, complexity}));
     }
 
     getAverageComplexity() {
@@ -322,12 +388,29 @@ export class TermFactory extends BaseComponent {
             : Array.from(this._complexityCache.values()).reduce((sum, c) => sum + c, 0) / this._complexityCache.size;
     }
 
-    getCognitiveDiversityMetrics() { return this._cognitiveDiversity.getMetrics(); }
-    calculateCognitiveDiversity() { return this._cognitiveDiversity.calculateDiversity(); }
-    createTrue() { return this._getOrCreateAtomic('True'); }
-    createFalse() { return this._getOrCreateAtomic('False'); }
-    createNull() { return this._getOrCreateAtomic('Null'); }
-    isSystemAtom(term) { return term?.isAtomic && ['True', 'False', 'Null'].includes(term.name); }
+    getCognitiveDiversityMetrics() {
+        return this._cognitiveDiversity.getMetrics();
+    }
+
+    calculateCognitiveDiversity() {
+        return this._cognitiveDiversity.calculateDiversity();
+    }
+
+    createTrue() {
+        return this._getOrCreateAtomic('True');
+    }
+
+    createFalse() {
+        return this._getOrCreateAtomic('False');
+    }
+
+    createNull() {
+        return this._getOrCreateAtomic('Null');
+    }
+
+    isSystemAtom(term) {
+        return term?.isAtomic && ['True', 'False', 'Null'].includes(term.name);
+    }
 
     async _dispose() {
         this.clearCache();

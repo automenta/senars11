@@ -1,12 +1,10 @@
-import { AGENT_EVENTS } from '../agent/constants.js';
-
 export class ReplMessageHandler {
     constructor(engine) {
         this.engine = engine;
     }
 
     async processMessage(message) {
-        const { type, payload } = message;
+        const {type, payload} = message;
 
         try {
             if (type.startsWith('control/')) {
@@ -19,7 +17,7 @@ export class ReplMessageHandler {
                     case 'step':
                         return await this.engine.step();
                     default:
-                        return { error: `Unknown control action: ${action}` };
+                        return {error: `Unknown control action: ${action}`};
                 }
             }
 
@@ -44,7 +42,7 @@ export class ReplMessageHandler {
             return await this.engine.executeCommand(type);
 
         } catch (error) {
-            return { error: error.message };
+            return {error: error.message};
         }
     }
 }

@@ -1,5 +1,5 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { IntrospectionEvents } from '../../../core/src/util/IntrospectionEvents.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('Reasoner Pipeline Tests', () => {
     let nar;
@@ -11,7 +11,7 @@ describe('Reasoner Pipeline Tests', () => {
                 cpuThrottleInterval: 0,
                 maxDerivationDepth: 5
             },
-            cycle: { delay: 1 }
+            cycle: {delay: 1}
         });
 
         await nar.initialize();
@@ -102,7 +102,7 @@ describe('Reasoner Pipeline Tests', () => {
                 cpuThrottleInterval: 0,
                 maxDerivationDepth: 1  // Very low limit
             },
-            cycle: { delay: 1 }
+            cycle: {delay: 1}
         });
 
         await narLimited.initialize();

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { NAR } from '../../core/src/nar/NAR.js';
+import {NAR} from '../../core/src/nar/NAR.js';
 
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
 const log = (...args) => console.log('  ', ...args);
@@ -8,7 +8,7 @@ async function demonstrateFocusManagement() {
     section('Focus Management Demo');
     log('Demonstrating Focus system: attention direction and priority management\n');
 
-    const nar = new NAR({ lm: { enabled: false } });
+    const nar = new NAR({lm: {enabled: false}});
     await nar.initialize();
     const focus = nar.focus;
 

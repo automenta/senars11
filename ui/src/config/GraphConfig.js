@@ -1,4 +1,4 @@
-import { DESIGN_TOKENS } from '@senars/core';
+import {DESIGN_TOKENS} from '@senars/core';
 
 /**
  * Graph configuration constants and styles
@@ -19,7 +19,17 @@ export const GraphConfig = {
     },
 
     getGraphStyle() {
-        const { concept, task, question, edge, inheritance, similarity, implication, relation, highlight } = DESIGN_TOKENS.colors;
+        const {
+            concept,
+            task,
+            question,
+            edge,
+            inheritance,
+            similarity,
+            implication,
+            relation,
+            highlight
+        } = DESIGN_TOKENS.colors;
         return [
             {
                 selector: 'node',
@@ -51,12 +61,21 @@ export const GraphConfig = {
                     'curve-style': 'bezier'
                 }
             },
-            { selector: 'node[type = "concept"]', style: { 'background-color': concept } },
-            { selector: 'node[type = "task"]', style: { 'background-color': task } },
-            { selector: 'node[type = "question"]', style: { 'background-color': question } },
-            { selector: 'edge[type = "inheritance"]', style: { 'line-color': inheritance, 'target-arrow-color': inheritance } },
-            { selector: 'edge[type = "similarity"]', style: { 'line-color': similarity, 'target-arrow-color': similarity } },
-            { selector: 'edge[type = "implication"]', style: { 'line-color': implication, 'target-arrow-color': implication } },
+            {selector: 'node[type = "concept"]', style: {'background-color': concept}},
+            {selector: 'node[type = "task"]', style: {'background-color': task}},
+            {selector: 'node[type = "question"]', style: {'background-color': question}},
+            {
+                selector: 'edge[type = "inheritance"]',
+                style: {'line-color': inheritance, 'target-arrow-color': inheritance}
+            },
+            {
+                selector: 'edge[type = "similarity"]',
+                style: {'line-color': similarity, 'target-arrow-color': similarity}
+            },
+            {
+                selector: 'edge[type = "implication"]',
+                style: {'line-color': implication, 'target-arrow-color': implication}
+            },
             // Keyboard navigation highlight
             {
                 selector: '.keyboard-selected',
@@ -73,15 +92,23 @@ export const GraphConfig = {
     getGraphLayout: () => ({
         name: 'cose',
         // Standard cose configuration
-        ready: function () { },
-        stop: function () { },
+        ready: function () {
+        },
+        stop: function () {
+        },
         animate: false,
         randomize: false,
         componentSpacing: 100,
-        nodeRepulsion: function (node) { return 400000; },
+        nodeRepulsion: function (node) {
+            return 400000;
+        },
         nodeOverlap: 10,
-        idealEdgeLength: function (edge) { return 50; },
-        edgeElasticity: function (edge) { return 100; },
+        idealEdgeLength: function (edge) {
+            return 50;
+        },
+        edgeElasticity: function (edge) {
+            return 100;
+        },
         nestingFactor: 5,
         gravity: 80,
         numIter: 1000,

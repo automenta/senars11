@@ -5,7 +5,7 @@
  * for efficient matching against the stream.
  */
 
-import {Term} from '../../../term/Term.js';
+import {Term} from '../../term/Term.js';
 
 /**
  * Check if an object is already a Term instance or a mock term object

@@ -1,5 +1,3 @@
-import {z} from 'zod';
-
 const PROVIDER_REQUIREMENTS = {
     openai: {requiredFields: ['apiKey', 'modelName'], supportsStreaming: true},
     ollama: {requiredFields: ['modelName'], supportsStreaming: true},

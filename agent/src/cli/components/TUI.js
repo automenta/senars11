@@ -1,17 +1,17 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React, {useMemo, useRef, useState} from 'react';
+import {Box, Text, useInput} from 'ink';
 import TextInput from 'ink-text-input';
-import { v4 as uuidv4 } from 'uuid';
-import { handleError } from '@senars/core';
-import { ReplMessageHandler } from '../ReplMessageHandler.js';
-import { useCommandHistory } from '../hooks/useCommandHistory.js';
-import { useAgentLogs } from '../hooks/useAgentLogs.js';
-import { useAgentMetrics } from '../hooks/useAgentMetrics.js';
-import { LogEntry } from './LogEntry.js';
-import { ActionRegistry } from '../../app/model/ActionRegistry.js';
+import {v4 as uuidv4} from 'uuid';
+import {handleError} from '@senars/core';
+import {ReplMessageHandler} from '../ReplMessageHandler.js';
+import {useCommandHistory} from '../hooks/useCommandHistory.js';
+import {useAgentLogs} from '../hooks/useAgentLogs.js';
+import {useAgentMetrics} from '../hooks/useAgentMetrics.js';
+import {LogEntry} from './LogEntry.js';
+import {ActionRegistry} from '../../app/model/ActionRegistry.js';
 
-export const TUI = ({ engine, app }) => {
-    const { logs, status, addLog, setLogs, updateLog } = useAgentLogs(engine, app);
+export const TUI = ({engine, app}) => {
+    const {logs, status, addLog, setLogs, updateLog} = useAgentLogs(engine, app);
     const metrics = useAgentMetrics(engine);
     const [inputValue, setInputValue] = useState('');
     const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
@@ -19,12 +19,12 @@ export const TUI = ({ engine, app }) => {
     const streamingResponseRef = useRef(null);
     const streamControllerRef = useRef(null);
 
-    const { navigateHistory, addToHistory } = useCommandHistory();
+    const {navigateHistory, addToHistory} = useCommandHistory();
 
     const messageHandler = useMemo(() => new ReplMessageHandler(engine), [engine]);
 
     const handleControlCommand = async (type) => {
-        const res = await messageHandler.processMessage({ type: `control/${type}` });
+        const res = await messageHandler.processMessage({type: `control/${type}`});
         if (res.payload?.result) {
             const result = res.payload.result;
             if (typeof result === 'string') {
@@ -48,7 +48,7 @@ export const TUI = ({ engine, app }) => {
     };
 
     const handleHelpCommand = async () => {
-        const res = await messageHandler.processMessage({ type: '/help' });
+        const res = await messageHandler.processMessage({type: '/help'});
         if (typeof res === 'string') {
             res.split('\n').forEach(line => addLog(line, 'info'));
         } else {
@@ -119,7 +119,10 @@ export const TUI = ({ engine, app }) => {
                     return;
                 case 'c':
                     addLog('👋 Agent TUI terminated', 'info');
-                    try { engine.shutdown(); } catch (e) { }
+                    try {
+                        engine.shutdown();
+                    } catch (e) {
+                    }
                     return process.exit(0);
                 case 'm':
                     toggleMode();
@@ -185,7 +188,7 @@ export const TUI = ({ engine, app }) => {
                             await app.actionDispatcher.dispatch({
                                 type: actionDef.type,
                                 payload: actionDef.payload,
-                                context: { activityId: lastLog.raw.id, rawActivity: lastLog.raw }
+                                context: {activityId: lastLog.raw.id, rawActivity: lastLog.raw}
                             });
                         } else {
                             addLog('❌ ActionDispatcher not available', 'error');
@@ -193,7 +196,7 @@ export const TUI = ({ engine, app }) => {
                         return;
                     }
 
-                    const res = await messageHandler.processMessage({ type: command });
+                    const res = await messageHandler.processMessage({type: command});
                     const output = res.payload?.result ?? res;
                     if (output) {
                         if (typeof output === 'string') {
@@ -214,7 +217,7 @@ export const TUI = ({ engine, app }) => {
                     }
                 } else {
                     if (mode === 'narsese') {
-                        const res = await messageHandler.processMessage({ type: 'narseseInput', payload: command });
+                        const res = await messageHandler.processMessage({type: 'narseseInput', payload: command});
                         if (res.payload?.result) {
                             const result = res.payload.result;
                             if (typeof result === 'string') {
@@ -296,7 +299,7 @@ export const TUI = ({ engine, app }) => {
 
     return React.createElement(
         Box,
-        { flexDirection: 'column', width: '100%', height: '100%' },
+        {flexDirection: 'column', width: '100%', height: '100%'},
         React.createElement(
             Box,
             {
@@ -304,27 +307,27 @@ export const TUI = ({ engine, app }) => {
                 backgroundColor: mode === 'agent' ? 'blue' : 'green',
                 width: '100%',
             },
-            React.createElement(Text, { color: 'white', bold: true },
+            React.createElement(Text, {color: 'white', bold: true},
                 `SeNARS REPL [${mode.toUpperCase()}]`
             )
         ),
         React.createElement(
             Box,
-            { flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%' },
-            React.createElement(Text, { bold: true, color: 'cyan' }, `Logs (${logs.length})`),
+            {flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%'},
+            React.createElement(Text, {bold: true, color: 'cyan'}, `Logs (${logs.length})`),
             React.createElement(
                 Box,
-                { flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1 },
-                ...logs.slice(-50).map(log => React.createElement(LogEntry, { key: log.id, log }))
+                {flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1},
+                ...logs.slice(-50).map(log => React.createElement(LogEntry, {key: log.id, log}))
             )
         ),
         React.createElement(
             Box,
-            { borderStyle: 'round', width: '100%', borderColor: mode === 'agent' ? 'blue' : 'green' },
+            {borderStyle: 'round', width: '100%', borderColor: mode === 'agent' ? 'blue' : 'green'},
             React.createElement(
                 Box,
-                { flexDirection: 'row', alignItems: 'center' },
-                React.createElement(Text, { color: mode === 'agent' ? 'blue' : 'green', bold: true }, `${mode}> `),
+                {flexDirection: 'row', alignItems: 'center'},
+                React.createElement(Text, {color: mode === 'agent' ? 'blue' : 'green', bold: true}, `${mode}> `),
                 React.createElement(
                     TextInput,
                     {
@@ -347,20 +350,20 @@ export const TUI = ({ engine, app }) => {
             },
             React.createElement(
                 Box,
-                { flexDirection: 'row' },
+                {flexDirection: 'row'},
                 React.createElement(Text, {
                     color: 'white',
                     bold: true
                 }, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
-                React.createElement(Text, { color: 'white' }, `| Cycle: ${status.cycle} `),
-                metrics.uptime > 0 && React.createElement(Text, { color: 'green' }, `| TP: ${metrics.throughput.toFixed(1)}/s `),
-                metrics.uptime > 0 && React.createElement(Text, { color: 'yellow' }, `| Mem: ${metrics.memory}MB `),
-                React.createElement(Text, { color: 'cyan' }, `| Agent: ${app?.activeAgentId ?? engine.id ?? 'default'} `)
+                React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `),
+                metrics.uptime > 0 && React.createElement(Text, {color: 'green'}, `| TP: ${metrics.throughput.toFixed(1)}/s `),
+                metrics.uptime > 0 && React.createElement(Text, {color: 'yellow'}, `| Mem: ${metrics.memory}MB `),
+                React.createElement(Text, {color: 'cyan'}, `| Agent: ${app?.activeAgentId ?? engine.id ?? 'default'} `)
             ),
             React.createElement(
                 Box,
-                { flexDirection: 'row' },
-                React.createElement(Text, { color: 'yellow' }, 'Ctrl+M: Mode | Ctrl+C: Exit')
+                {flexDirection: 'row'},
+                React.createElement(Text, {color: 'yellow'}, 'Ctrl+M: Mode | Ctrl+C: Exit')
             )
         )
     );

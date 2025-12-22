@@ -2,12 +2,12 @@
  * Standardized Command Interface and Implementations
  */
 
-import { handleError } from '../../../core/src/util/ErrorHandler.js';
-import { fileURLToPath } from 'url';
-import { basename, dirname, join, resolve } from 'path';
-import { promises as fs } from 'fs';
-import { FormattingUtils } from '../../../core/src/util/FormattingUtils.js';
-import { z } from 'zod';
+import {handleError} from '../../../core/src/util/ErrorHandler.js';
+import {fileURLToPath} from 'url';
+import {basename, dirname, join, resolve} from 'path';
+import {promises as fs} from 'fs';
+import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
+import {z} from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = resolve(__dirname, '../../../examples');
@@ -143,7 +143,7 @@ export class PlanCommand extends AgentCommand {
         console.log(`[PlanCommand] Generating plan for: "${args.join(' ')}"`);
 
         try {
-            const { object } = await agent.ai.generateObject(
+            const {object} = await agent.ai.generateObject(
                 `Generate a step-by-step plan to achieve: "${args.join(' ')}"`,
                 z.object({
                     steps: z.array(z.string()).describe('List of steps to execute the plan'),
@@ -166,7 +166,7 @@ export class ThinkCommand extends AgentCommand {
         if (args.length < 1) return 'Usage: think <topic>';
         if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[ThinkCommand] Thinking about: "${args.join(' ')}"`);
-        const { text } = await agent.ai.generate(`Reflect on: "${args.join(' ')}"`, { temperature: 0.8 });
+        const {text} = await agent.ai.generate(`Reflect on: "${args.join(' ')}"`, {temperature: 0.8});
         return `💭 Reflection:\n${text}`;
     }
 }
@@ -180,7 +180,7 @@ export class ReasonCommand extends AgentCommand {
         if (args.length < 1) return 'Usage: reason <statement>';
         if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[ReasonCommand] Reasoning about: "${args.join(' ')}"`);
-        const { text } = await agent.ai.generate(`Reason about: "${args.join(' ')}"`, { temperature: 0.3 });
+        const {text} = await agent.ai.generate(`Reason about: "${args.join(' ')}"`, {temperature: 0.3});
         return `🧠 Reasoning Result:\n${text}`;
     }
 }
@@ -194,7 +194,7 @@ export class LMCommand extends AgentCommand {
         if (args.length < 1) return 'Usage: lm <prompt>';
         if (!agent.ai) return '❌ No AI Client enabled.';
         console.log(`[LMCommand] Prompting: "${args.join(' ')}"`);
-        const { text } = await agent.ai.generate(args.join(' '), { temperature: 0.7 });
+        const {text} = await agent.ai.generate(args.join(' '), {temperature: 0.7});
         return `🤖 LM Response:\n${text}`;
     }
 }
@@ -574,7 +574,7 @@ export class TasksCommand extends AgentCommand {
                 const task = item.task;
                 // We add a temporary property for display source, carefully not to mutate original if it matters
                 // but formatTask probably won't show it. We'll prepend it in output.
-                return { task, source: 'Input' };
+                return {task, source: 'Input'};
             }));
         }
 
@@ -588,7 +588,7 @@ export class TasksCommand extends AgentCommand {
         }
 
         if (focus && focus.getTasks) {
-            tasks.push(...focus.getTasks(50).map(t => ({ task: t, source: 'Focus' })));
+            tasks.push(...focus.getTasks(50).map(t => ({task: t, source: 'Focus'})));
         }
 
         // Filter by term if provided

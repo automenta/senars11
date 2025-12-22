@@ -1,6 +1,6 @@
-import { Config } from '../config/Config.js';
-import { Logger } from '../logging/Logger.js';
-import { WebSocketConnectionError } from '../errors/CustomErrors.js';
+import {Config} from '../config/Config.js';
+import {Logger} from '../logging/Logger.js';
+import {WebSocketConnectionError} from '../errors/CustomErrors.js';
 
 
 export class WebSocketManager {
@@ -72,7 +72,7 @@ export class WebSocketManager {
 
     sendMessage(type, payload) {
         if (this.isConnected()) {
-            const messageStr = JSON.stringify({ type, payload });
+            const messageStr = JSON.stringify({type, payload});
             this.ws.send(messageStr);
             return true;
         }

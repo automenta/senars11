@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { NAR } from '../../core/src/nar/NAR.js';
-import { section, log, takeaways } from '../utils/demo-helpers.js';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {log, section, takeaways} from '../utils/demo-helpers.js';
 
 async function demonstrateGoalDriven() {
     section('Goal-Driven Reasoning Demo');
     log('Demonstrating goal creation, pursuit, and achievement patterns\n');
 
-    const nar = new NAR({ lm: { enabled: false } });
+    const nar = new NAR({lm: {enabled: false}});
     await nar.initialize();
 
     // 1. Setting up environment knowledge

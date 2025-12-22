@@ -2,7 +2,7 @@
  * Common constants for REPL implementations
  * Uses shared DESIGN_TOKENS from core for consistency with web UI
  */
-import { DESIGN_TOKENS } from '@senars/core';
+import {DESIGN_TOKENS} from '@senars/core';
 
 export const LOG_TYPES = {
     INFO: 'info',

@@ -1,9 +1,9 @@
 import {beforeEach, describe, expect, it} from '@jest/globals';
 import {TermFactory} from '../../core/src/term/TermFactory.js';
 import {Unifier} from '../../core/src/term/Unifier.js';
-import {RuleCompiler} from '../../core/src/reason/rules/compiler/RuleCompiler.js';
-import {RuleExecutor} from '../../core/src/reason/rules/executor/RuleExecutor.js';
-import {StandardDiscriminators} from '../../core/src/reason/rules/Discriminators.js';
+import {RuleCompiler} from '@senars/core/src/reason/exec/RuleCompiler.js';
+import {RuleExecutor} from '@senars/core/src/reason/exec/RuleExecutor.js';
+import {StandardDiscriminators} from '@senars/core/src/reason/exec/Discriminators.js';
 import {NAL4} from '../../core/src/reason/rules/nal/definitions/NAL4.js';
 import {NAL5} from '../../core/src/reason/rules/nal/definitions/NAL5.js';
 import {Truth} from '../../core/src/Truth.js';

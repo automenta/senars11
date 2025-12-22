@@ -1,11 +1,11 @@
-import { Truth } from '../../../core/src/Truth.js';
-import { createNARIntegrationTestSuite } from '../../support/narTestSetup.js';
-import { flexibleAssertions, runPerformanceTest } from '../../support/baseTestUtils.js';
-import { IntrospectionEvents } from '../../../core/src/util/IntrospectionEvents.js';
+import {Truth} from '../../../core/src/Truth.js';
+import {createNARIntegrationTestSuite} from '../../support/narTestSetup.js';
+import {flexibleAssertions, runPerformanceTest} from '../../support/baseTestUtils.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('NAR Parser Integration', () => {
     // Using the new NAR test setup utilities
-    const { nar, testSetup, patterns } = createNARIntegrationTestSuite();
+    const {nar, testSetup, patterns} = createNARIntegrationTestSuite();
 
     describe('Parser Integration with NAR.input()', () => {
         test('accepts atomic belief statements', async () => {
@@ -177,7 +177,7 @@ describe('NAR Parser Integration', () => {
 
     describe('Performance Integration', () => {
         test('handles multiple rapid inputs', async () => {
-            const inputs = Array.from({ length: 100 }, (_, i) => `term${i}.`);
+            const inputs = Array.from({length: 100}, (_, i) => `term${i}.`);
 
             await runPerformanceTest(async () => {
                 for (const input of inputs) {

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 process.env.ORT_LOG_LEVEL = '3';
 
-import { App } from '@senars/agent';
-import { NARControlTool } from '../../core/src/tool/NARControlTool.js';
-import { MCPManager } from '../../core/src/mcp/MCPManager.js';
+import {App} from '@senars/agent';
+import {NARControlTool} from '../../core/src/tool/NARControlTool.js';
+import {MCPManager} from '../../core/src/mcp/MCPManager.js';
 
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
 const log = (...args) => console.log('  ', ...args);
@@ -13,14 +13,20 @@ async function runDemo() {
     console.log('Demonstrates: NAR control, LM-tool binding, MCP protocol\n');
 
     const app = new App({
-        lm: { provider: 'transformers', modelName: 'Xenova/LaMini-Flan-T5-248M', enabled: true, temperature: 0.1 },
-        subsystems: { lm: true, tools: true, embeddingLayer: true, metacognition: true, rules: ['syllogistic-core', 'temporal'] },
-        nar: { tools: { enabled: true } },
-        memory: { enableMemoryValidation: false }
+        lm: {provider: 'transformers', modelName: 'Xenova/LaMini-Flan-T5-248M', enabled: true, temperature: 0.1},
+        subsystems: {
+            lm: true,
+            tools: true,
+            embeddingLayer: true,
+            metacognition: true,
+            rules: ['syllogistic-core', 'temporal']
+        },
+        nar: {tools: {enabled: true}},
+        memory: {enableMemoryValidation: false}
     });
 
     try {
-        const agent = await app.start({ startAgent: true });
+        const agent = await app.start({startAgent: true});
         log('✅ SeNARS initialized with Transformers.js + tools + MCP\n');
 
         // NAR Control Tool
@@ -35,12 +41,12 @@ async function runDemo() {
         ];
 
         for (const belief of beliefs) {
-            const result = await narTool.execute({ action: 'add_belief', content: belief });
+            const result = await narTool.execute({action: 'add_belief', content: belief});
             log(`Added: ${belief} → ${result.message}`);
         }
 
-        await narTool.execute({ action: 'step' });
-        const queryResult = await narTool.execute({ action: 'query', content: '<dog --> warm-blooded>?' });
+        await narTool.execute({action: 'step'});
+        const queryResult = await narTool.execute({action: 'query', content: '<dog --> warm-blooded>?'});
         log(`Query result:`, JSON.stringify(queryResult, null, 2));
 
         // LM-Tool Integration
@@ -60,9 +66,9 @@ async function runDemo() {
         // MCP Integration
         section('3️⃣  MCP Protocol');
         try {
-            const mcpManager = new MCPManager({ nar: agent.nar || agent });
+            const mcpManager = new MCPManager({nar: agent.nar || agent});
             await mcpManager.initialize();
-            const server = await mcpManager.setupServer(8082, { nar: agent.nar || agent });
+            const server = await mcpManager.setupServer(8082, {nar: agent.nar || agent});
             log(`✅ MCP server on port 8082`);
             log(`Exposed tools: ${server.getExposedTools?.() ?? 'N/A'}`);
             await mcpManager.registerToolsWithNAR?.(agent);
@@ -93,7 +99,8 @@ async function runDemo() {
     } catch (error) {
         console.error('❌ Error:', error.message);
         if (error.stack) console.error(error.stack);
-        await app.shutdown().catch(() => { });
+        await app.shutdown().catch(() => {
+        });
     }
 }
 

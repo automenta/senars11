@@ -1,22 +1,22 @@
-import { ConfigManager } from '../config/ConfigManager.js';
-import { EmbeddingLayer } from '../lm/EmbeddingLayer.js';
-import { LM } from '../lm/LM.js';
-import { Focus } from '../memory/Focus.js';
-import { Memory } from '../memory/Memory.js';
-import { TermLayer } from '../memory/TermLayer.js';
-import { InputProcessor } from './InputProcessor.js';
-import { NarseseParser } from '../parser/NarseseParser.js';
-import { EvaluationEngine } from '../reason/EvaluationEngine.js';
-import { MetricsMonitor } from '../reason/MetricsMonitor.js';
-import { ReasonerBuilder } from '../reason/index.js';
-import { ReasoningAboutReasoning } from '../self/ReasoningAboutReasoning.js';
-import { TaskManager } from '../task/TaskManager.js';
-import { TermFactory } from '../term/TermFactory.js';
-import { ExplanationService } from '../tool/ExplanationService.js';
-import { ToolIntegration } from '../tool/ToolIntegration.js';
-import { BaseComponent } from '../util/BaseComponent.js';
-import { ComponentManager } from '../util/ComponentManager.js';
-import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
+import {ConfigManager} from '../config/ConfigManager.js';
+import {EmbeddingLayer} from '../lm/EmbeddingLayer.js';
+import {LM} from '../lm/LM.js';
+import {Focus} from '../memory/Focus.js';
+import {Memory} from '../memory/Memory.js';
+import {TermLayer} from '../memory/TermLayer.js';
+import {InputProcessor} from './InputProcessor.js';
+import {NarseseParser} from '../parser/NarseseParser.js';
+import {EvaluationEngine} from '../reason/EvaluationEngine.js';
+import {MetricsMonitor} from '../reason/MetricsMonitor.js';
+import {ReasonerBuilder} from '../reason/index.js';
+import {ReasoningAboutReasoning} from '../self/ReasoningAboutReasoning.js';
+import {TaskManager} from '../task/TaskManager.js';
+import {TermFactory} from '../term/TermFactory.js';
+import {ExplanationService} from '../tool/ExplanationService.js';
+import {ToolIntegration} from '../tool/ToolIntegration.js';
+import {BaseComponent} from '../util/BaseComponent.js';
+import {ComponentManager} from '../util/ComponentManager.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -121,7 +121,7 @@ export class NAR extends BaseComponent {
     }
 
     _initComponents() {
-        const { config } = this;
+        const {config} = this;
         const lmEnabled = config.lm?.enabled === true;
 
         this._termFactory = new TermFactory(config.termFactory, this._eventBus);
@@ -145,19 +145,19 @@ export class NAR extends BaseComponent {
     }
 
     _initOptionalComponents() {
-        const { config } = this;
+        const {config} = this;
         this._toolIntegration = config.tools?.enabled !== false ? new ToolIntegration(config.tools || {}) : null;
 
         if (this._toolIntegration) {
             this._toolIntegration.connectToReasoningCore(this);
-            this._explanationService = new ExplanationService({ lm: this._lm || null, ...config.tools?.explanation });
+            this._explanationService = new ExplanationService({lm: this._lm || null, ...config.tools?.explanation});
         }
 
-        this._metricsMonitor = new MetricsMonitor({ eventBus: this._eventBus, nar: this, ...config.metricsMonitor });
-        const embeddingConfig = config.embeddingLayer || { enabled: false };
+        this._metricsMonitor = new MetricsMonitor({eventBus: this._eventBus, nar: this, ...config.metricsMonitor});
+        const embeddingConfig = config.embeddingLayer || {enabled: false};
         this._embeddingLayer = embeddingConfig.enabled ? new EmbeddingLayer(embeddingConfig) : null;
-        this._termLayer = new TermLayer({ capacity: config.termLayer?.capacity || 1000, ...config.termLayer });
-        this._reasoningAboutReasoning = new ReasoningAboutReasoning(this, { ...config.reasoningAboutReasoning });
+        this._termLayer = new TermLayer({capacity: config.termLayer?.capacity || 1000, ...config.termLayer});
+        this._reasoningAboutReasoning = new ReasoningAboutReasoning(this, {...config.reasoningAboutReasoning});
     }
 
     _initStreamReasoner() {
@@ -176,7 +176,7 @@ export class NAR extends BaseComponent {
 
     async _handleStreamDerivation(derivation) {
         try {
-            const added = await this._inputTask(derivation, { traceId: 'stream' });
+            const added = await this._inputTask(derivation, {traceId: 'stream'});
 
             if (added && this.traceEnabled) {
                 this._eventBus.emit(IntrospectionEvents.REASONING_DERIVATION, {
@@ -272,7 +272,7 @@ export class NAR extends BaseComponent {
                 error: inputError.message,
                 input: inputError.input,
                 originalError: error
-            }, { traceId: options.traceId });
+            }, {traceId: options.traceId});
 
             this.logError('Input processing error', {
                 input: inputError.input,
@@ -297,15 +297,15 @@ export class NAR extends BaseComponent {
                     source,
                     originalInput,
                     parsed
-                }, { traceId: options.traceId });
+                }, {traceId: options.traceId});
 
                 // Now emit task.added since we confirmed it's in memory
-                this._eventBus.emit(IntrospectionEvents.TASK_ADDED, { task }, { traceId: options.traceId });
+                this._eventBus.emit(IntrospectionEvents.TASK_ADDED, {task}, {traceId: options.traceId});
 
                 if (this._focus) {
                     const addedToFocus = this._focus.addTaskToFocus(task);
                     if (addedToFocus) {
-                        this._eventBus.emit(IntrospectionEvents.TASK_FOCUS, task, { traceId: options.traceId });
+                        this._eventBus.emit(IntrospectionEvents.TASK_FOCUS, task, {traceId: options.traceId});
                     }
                 }
             } catch (error) {
@@ -330,7 +330,7 @@ export class NAR extends BaseComponent {
         const processed = this._processPendingTasks(options.traceId);
         if (processed) {
             for (const task of processed) {
-                this._eventBus.emit(IntrospectionEvents.TASK_ADDED, { task }, { traceId: options.traceId });
+                this._eventBus.emit(IntrospectionEvents.TASK_ADDED, {task}, {traceId: options.traceId});
             }
         }
 
@@ -340,8 +340,8 @@ export class NAR extends BaseComponent {
         // Set up monitoring process for stream reasoner metrics
         this._setupStreamMonitoring(options);
 
-        this._eventBus.emit(IntrospectionEvents.SYSTEM_START, { timestamp: Date.now() }, { traceId: options.traceId });
-        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_START, { timestamp: Date.now() });
+        this._eventBus.emit(IntrospectionEvents.SYSTEM_START, {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_START, {timestamp: Date.now()});
         this.logInfo(`NAR started successfully with stream-based reasoning`);
         return true;
     }
@@ -351,7 +351,7 @@ export class NAR extends BaseComponent {
         this._streamMonitoringInterval = setInterval(() => {
             if (this._streamReasoner) {
                 const metrics = this._streamReasoner.getMetrics();
-                this._eventBus.emit('streamReasoner.metrics', metrics, { traceId: options.traceId });
+                this._eventBus.emit('streamReasoner.metrics', metrics, {traceId: options.traceId});
             }
         }, 5000); // Report metrics every 5 seconds
     }
@@ -386,8 +386,8 @@ export class NAR extends BaseComponent {
 
         this._stopComponentsAsync();
 
-        this._eventBus.emit(IntrospectionEvents.SYSTEM_STOP, { timestamp: Date.now() }, { traceId: options.traceId });
-        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_STOP, { timestamp: Date.now() });
+        this._eventBus.emit(IntrospectionEvents.SYSTEM_STOP, {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_STOP, {timestamp: Date.now()});
         this.logInfo(`NAR stopped successfully (stream-based reasoning)`);
         return true;
     }
@@ -438,10 +438,10 @@ export class NAR extends BaseComponent {
             this._eventBus.emit('streamReasoner.step', {
                 results,
                 count: results.length
-            }, { traceId: options.traceId });
+            }, {traceId: options.traceId});
             return results;
         } catch (error) {
-            this._eventBus.emit('streamReasoner.error', { error: error.message }, { traceId: options.traceId });
+            this._eventBus.emit('streamReasoner.error', {error: error.message}, {traceId: options.traceId});
             this.logError('Error in reasoning step:', {
                 error: error.message,
                 stack: error.stack,
@@ -458,19 +458,19 @@ export class NAR extends BaseComponent {
         try {
             // Process all valid results with Promise.all for efficiency
             const addedResults = await Promise.all(validResults.map(async result => {
-                const added = await this._inputTask(result, { traceId });
-                return { result, added };
+                const added = await this._inputTask(result, {traceId});
+                return {result, added};
             }));
 
             // Emit individual events to maintain compatibility with existing tests
             // Only emit if the task was actually added (not a duplicate)
-            for (const { result, added } of addedResults) {
+            for (const {result, added} of addedResults) {
                 if (added && this.traceEnabled) {
                     this._eventBus.emit(IntrospectionEvents.REASONING_DERIVATION, {
                         derivedTask: result,
                         source: 'streamReasoner.step.method',
                         timestamp: Date.now()
-                    }, { traceId });
+                    }, {traceId});
                 }
             }
         } catch (error) {
@@ -488,9 +488,9 @@ export class NAR extends BaseComponent {
         const results = [];
         for (let i = 0; i < count; i++) {
             try {
-                results.push(await this.step({ ...options, cycleNumber: i + 1 }));
+                results.push(await this.step({...options, cycleNumber: i + 1}));
             } catch (error) {
-                results.push({ error: error.message, cycleNumber: i + 1 });
+                results.push({error: error.message, cycleNumber: i + 1});
             }
         }
         return results;
@@ -554,7 +554,7 @@ export class NAR extends BaseComponent {
         if (!this._memory) return [];
 
         return this._memory.getAllConcepts().map(concept => {
-            const { term, priority, activation, useCount, quality, totalTasks } = concept;
+            const {term, priority, activation, useCount, quality, totalTasks} = concept;
             return {
                 term: term.toString(),
                 priority: priority || activation || 0,
@@ -642,7 +642,7 @@ export class NAR extends BaseComponent {
         this.stop();
         this._memory.clear();
         this._taskManager.clearPendingTasks();
-        this._eventBus.emit(IntrospectionEvents.SYSTEM_RESET, { timestamp: Date.now() }, { traceId: options.traceId });
+        this._eventBus.emit(IntrospectionEvents.SYSTEM_RESET, {timestamp: Date.now()}, {traceId: options.traceId});
         this.logInfo('NAR reset completed');
     }
 
@@ -733,7 +733,7 @@ export class NAR extends BaseComponent {
         try {
             if (this._reasoningAboutReasoning?.getReasoningState) {
                 const state = this._reasoningAboutReasoning.getReasoningState();
-                this._eventBus.emit('reasoningState', state, { source: 'periodic' });
+                this._eventBus.emit('reasoningState', state, {source: 'periodic'});
             }
         } catch (error) {
             this.logError('Error in reasoning state update:', error);
@@ -878,7 +878,7 @@ export class NAR extends BaseComponent {
             this._eventBus.emit('input.error', {
                 error: error.message,
                 input: 'derived-task'
-            }, { traceId: options.traceId });
+            }, {traceId: options.traceId});
 
             this.logError('_inputTask failed:', {
                 error: error.message,

@@ -1,8 +1,8 @@
 import {EventEmitter} from 'eventemitter3';
 import {Logger} from '../util/Logger.js';
 import {getHeapUsed} from '../util/common.js';
-import {SimpleRunner} from './runner/SimpleRunner.js';
-import {PipelineRunner} from './runner/PipelineRunner.js';
+import {SimpleRunner} from './exec/SimpleRunner.js';
+import {PipelineRunner} from './exec/PipelineRunner.js';
 import {isAsyncRule, isSynchronousRule} from './RuleHelpers.js';
 
 /**

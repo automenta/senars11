@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { NAR } from '../../core/src/nar/NAR.js';
-import { Config } from '../../core/src/config/Config.js';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {Config} from '../../core/src/config/Config.js';
 
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
 const log = (...args) => console.log('  ', ...args);
@@ -11,7 +11,7 @@ async function demonstrateConfigPatterns() {
 
     // 1. Minimal Configuration
     section('1️⃣  Minimal Configuration (Defaults)');
-    const minimal = new NAR({ lm: { enabled: false } });
+    const minimal = new NAR({lm: {enabled: false}});
     await minimal.initialize();
     log('✅ Minimal config: uses all defaults');
     log(`  Stream reasoner: ${minimal.getStats().reasonerType === 'stream'}`);
@@ -20,7 +20,7 @@ async function demonstrateConfigPatterns() {
     // 2. Selective Subsystem Enablement
     section('2️⃣  Selective Subsystem Configuration');
     const selective = new NAR({
-        lm: { enabled: true, provider: 'transformers', modelName: 'Xenova/LaMini-Flan-T5-248M' },
+        lm: {enabled: true, provider: 'transformers', modelName: 'Xenova/LaMini-Flan-T5-248M'},
         subsystems: {
             lm: true,
             tools: false,
@@ -35,7 +35,7 @@ async function demonstrateConfigPatterns() {
     // 3. Memory Tuning
     section('3️⃣  Memory Configuration');
     const memoryTuned = new NAR({
-        lm: { enabled: false },
+        lm: {enabled: false},
         memory: {
             maxConcepts: 10000,
             enableMemoryValidation: false,
@@ -51,7 +51,7 @@ async function demonstrateConfigPatterns() {
     // 4. Reasoning Engine Tuning
     section('4️⃣  Reasoning Engine Configuration');
     const streamReasoner = new NAR({
-        lm: { enabled: false },
+        lm: {enabled: false},
         reasoning: {
             useStreamReasoner: true,
             maxDerivationDepth: 10,
@@ -95,9 +95,9 @@ async function demonstrateConfigPatterns() {
     // 6. Using Config Class
     section('6️⃣  Using Config Class for Validation');
     const config = new Config({
-        lm: { enabled: true, provider: 'transformers', modelName: 'Xenova/LaMini-Flan-T5-248M' },
-        subsystems: { lm: true, tools: true },
-        memory: { maxConcepts: 5000 }
+        lm: {enabled: true, provider: 'transformers', modelName: 'Xenova/LaMini-Flan-T5-248M'},
+        subsystems: {lm: true, tools: true},
+        memory: {maxConcepts: 5000}
     });
 
     log('Config validated: ✅');
@@ -112,7 +112,7 @@ async function demonstrateConfigPatterns() {
     // 7. Performance Tuning Patterns
     section('7️⃣  Performance Tuning Patterns');
     const performance = new NAR({
-        lm: { enabled: false },
+        lm: {enabled: false},
         reasoning: {
             useStreamReasoner: true,
             maxDerivationDepth: 5, // Lower = faster
@@ -131,16 +131,16 @@ async function demonstrateConfigPatterns() {
     section('8️⃣  Development vs Production Patterns');
 
     const devConfig = {
-        lm: { enabled: false }, // Fast iteration
-        reasoning: { useStreamReasoner: false }, // Deterministic
-        memory: { enableMemoryValidation: true } // Catch bugs
+        lm: {enabled: false}, // Fast iteration
+        reasoning: {useStreamReasoner: false}, // Deterministic
+        memory: {enableMemoryValidation: true} // Catch bugs
     };
     log('Dev config: validation on, deterministic, LM off');
 
     const prodConfig = {
-        lm: { enabled: true, provider: 'ollama', circuitBreaker: { failureThreshold: 5 } },
-        reasoning: { useStreamReasoner: true }, // Performance
-        memory: { enableMemoryValidation: false } // Performance
+        lm: {enabled: true, provider: 'ollama', circuitBreaker: {failureThreshold: 5}},
+        reasoning: {useStreamReasoner: true}, // Performance
+        memory: {enableMemoryValidation: false} // Performance
     };
     log('Prod config: LM on, stream reasoner, validation off, fault tolerance');
 

@@ -1,4 +1,4 @@
-import { BaseProvider } from './BaseProvider.js';
+import {BaseProvider} from './BaseProvider.js';
 
 let pipelinePromise = null;
 const importPipeline = () => {
@@ -22,7 +22,7 @@ export class TransformersJSProvider extends BaseProvider {
         if (this.pipeline) return;
 
         const startTime = Date.now();
-        this._emitEvent('lm:model-load-start', { modelName: this.modelName, task: this.task });
+        this._emitEvent('lm:model-load-start', {modelName: this.modelName, task: this.task});
 
         try {
             const pipeline = await importPipeline();
@@ -56,7 +56,7 @@ export class TransformersJSProvider extends BaseProvider {
                 task: this.task,
                 elapsedMs: elapsed
             });
-            this._emitDebug('Model loaded successfully', { modelName: this.modelName, elapsedMs: elapsed });
+            this._emitDebug('Model loaded successfully', {modelName: this.modelName, elapsedMs: elapsed});
         } catch (error) {
             const elapsed = Date.now() - startTime;
 
@@ -77,7 +77,7 @@ export class TransformersJSProvider extends BaseProvider {
     async generateText(prompt, options = {}) {
         await this._initialize();
 
-        const { maxTokens, temperature } = options;
+        const {maxTokens, temperature} = options;
         const temp = temperature ?? this.temperature ?? 0.7;
 
         try {
@@ -103,12 +103,12 @@ export class TransformersJSProvider extends BaseProvider {
             }
             return String(output);
         } catch (error) {
-            this._emitDebug('Pipeline error', { error: error.message });
+            this._emitDebug('Pipeline error', {error: error.message});
             throw error;
         }
     }
 
-    async * streamText(prompt, options = {}) {
+    async* streamText(prompt, options = {}) {
         // Streaming not reliably supported by transformers.js
         // Fall back to generating full text and yielding it
         const result = await this.generateText(prompt, options);

@@ -4,9 +4,9 @@
  * Runs isolated demo processes to ensure robustness and clean termination.
  */
 
-import { spawn } from 'child_process';
+import {spawn} from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,20 +50,20 @@ async function runDemo(demo) {
         child.on('close', (code) => {
             clearTimeout(timer);
             if (timedOut) {
-                resolve({ success: false, error: 'Timeout' });
+                resolve({success: false, error: 'Timeout'});
             } else if (code !== 0) {
                 log(`❌ Failed with exit code ${code}`);
-                resolve({ success: false, error: `Exit Code ${code}` });
+                resolve({success: false, error: `Exit Code ${code}`});
             } else {
                 log(`✅ Passed`);
-                resolve({ success: true });
+                resolve({success: true});
             }
         });
 
         child.on('error', (err) => {
             clearTimeout(timer);
             log(`❌ Spawn Error: ${err.message}`);
-            resolve({ success: false, error: err.message });
+            resolve({success: false, error: err.message});
         });
     });
 }
@@ -73,7 +73,7 @@ async function main() {
 
     for (const demo of DEMOS) {
         const result = await runDemo(demo);
-        results.push({ ...demo, ...result });
+        results.push({...demo, ...result});
 
         if (!result.success) {
             log(`⚠️  Stopping early due to failure.`);
