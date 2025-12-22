@@ -19,7 +19,7 @@ export const GraphConfig = {
     },
 
     getGraphStyle() {
-        const { concept, task, question, edge, inheritance, similarity, implication, relation } = DESIGN_TOKENS.colors;
+        const { concept, task, question, edge, inheritance, similarity, implication, relation, highlight } = DESIGN_TOKENS.colors;
         return [
             {
                 selector: 'node',
@@ -56,9 +56,39 @@ export const GraphConfig = {
             { selector: 'node[type = "question"]', style: { 'background-color': question } },
             { selector: 'edge[type = "inheritance"]', style: { 'line-color': inheritance, 'target-arrow-color': inheritance } },
             { selector: 'edge[type = "similarity"]', style: { 'line-color': similarity, 'target-arrow-color': similarity } },
-            { selector: 'edge[type = "implication"]', style: { 'line-color': implication, 'target-arrow-color': implication } }
+            { selector: 'edge[type = "implication"]', style: { 'line-color': implication, 'target-arrow-color': implication } },
+            // Keyboard navigation highlight
+            {
+                selector: '.keyboard-selected',
+                style: {
+                    'border-width': 6,
+                    'border-color': highlight,
+                    'border-style': 'solid',
+                    'z-index': 9999
+                }
+            }
         ];
     },
 
-    getGraphLayout: () => ({ name: 'cose' })
+    getGraphLayout: () => ({
+        name: 'fcose',
+        // fcose (force-directed with constraints) configuration
+        quality: 'default',
+        randomize: false,
+        animate: false,
+        fit: true,
+        padding: 30,
+        nodeSeparation: 75,
+        idealEdgeLength: 50,
+        edgeElasticity: 0.45,
+        nestingFactor: 0.1,
+        gravity: 0.25,
+        numIter: 2500,
+        tile: true,
+        tilingPaddingVertical: 10,
+        tilingPaddingHorizontal: 10,
+        gravityRangeCompound: 1.5,
+        gravityCompound: 1.0,
+        gravityRange: 3.8
+    })
 };

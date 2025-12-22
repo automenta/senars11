@@ -30,6 +30,131 @@ export class GraphManager {
     }
 
     /**
+     * Initialize keyboard navigation for accessibility
+     * - Tab: Cycle through nodes
+     * - Arrow keys: Navigate between connected nodes
+     * - Enter: Select/focus node and show details
+     */
+    initializeKeyboardNavigation() {
+        if (!this.uiElements?.graphContainer) return;
+
+        let currentNodeIndex = 0;
+        let selectedNode = null;
+
+        // Make graph container focusable
+        this.uiElements.graphContainer.setAttribute('tabindex', '0');
+        this.uiElements.graphContainer.setAttribute('role', 'application');
+        this.uiElements.graphContainer.setAttribute('aria-label', 'SeNARS concept graph visualization');
+
+        this.uiElements.graphContainer.addEventListener('keydown', (e) => {
+            if (!this.cy) return;
+
+            const nodes = this.cy.nodes();
+            if (nodes.length === 0) return;
+
+            switch (e.key) {
+                case 'Tab':
+                    e.preventDefault();
+                    // Cycle through nodes
+                    if (e.shiftKey) {
+                        currentNodeIndex = (currentNodeIndex - 1 + nodes.length) % nodes.length;
+                    } else {
+                        currentNodeIndex = (currentNodeIndex + 1) % nodes.length;
+                    }
+                    selectedNode = nodes[currentNodeIndex];
+                    this.highlightNode(selectedNode);
+                    break;
+
+                case 'ArrowUp':
+                case 'ArrowDown':
+                case 'ArrowLeft':
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (selectedNode) {
+                        const connectedNodes = selectedNode.neighborhood('node');
+                        if (connectedNodes.length > 0) {
+                            // Simple navigation: pick first connected node
+                            const nextNode = connectedNodes[0];
+                            selectedNode = nextNode;
+                            currentNodeIndex = nodes.indexOf(nextNode);
+                            this.highlightNode(nextNode);
+                        }
+                    } else {
+                        // No node selected, select first node
+                        selectedNode = nodes[0];
+                        currentNodeIndex = 0;
+                        this.highlightNode(selectedNode);
+                    }
+                    break;
+
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedNode) {
+                        // Trigger node selection (same as clicking)
+                        this.updateGraphDetails({
+                            type: 'node',
+                            label: selectedNode.data('label'),
+                            id: selectedNode.id(),
+                            term: selectedNode.data('fullData')?.term || selectedNode.data('label'),
+                            nodeType: selectedNode.data('type') || 'unknown',
+                            weight: selectedNode.data('weight') || 0,
+                            fullData: selectedNode.data('fullData')
+                        });
+
+                        if (this.callbacks.onNodeClick) {
+                            this.callbacks.onNodeClick({
+                                type: 'node',
+                                label: selectedNode.data('label'),
+                                id: selectedNode.id(),
+                                term: selectedNode.data('fullData')?.term || selectedNode.data('label'),
+                                nodeType: selectedNode.data('type') || 'unknown',
+                                weight: selectedNode.data('weight') || 0,
+                                fullData: selectedNode.data('fullData')
+                            });
+                        }
+                    }
+                    break;
+
+                case 'Escape':
+                    e.preventDefault();
+                    // Clear selection
+                    if (selectedNode) {
+                        this.cy.elements().removeClass('keyboard-selected');
+                        selectedNode = null;
+                    }
+                    break;
+            }
+        });
+    }
+
+    /**
+     * Highlight a node for keyboard navigation
+     * @param {Object} node - Cytoscape node object
+     */
+    highlightNode(node) {
+        if (!this.cy || !node) return;
+
+        // Remove previous highlight
+        this.cy.elements().removeClass('keyboard-selected');
+
+        // Add highlight to current node
+        node.addClass('keyboard-selected');
+
+        // Pan to node
+        this.cy.animate({
+            center: { elt: node },
+            zoom: this.cy.zoom()
+        }, {
+            duration: 200
+        });
+
+        // Announce to screen readers (ARIA live region would be ideal)
+        const label = node.data('label');
+        const nodeType = node.data('type');
+        console.log(`Selected ${nodeType} node: ${label}`);
+    }
+
+    /**
      * Initialize the Cytoscape instance
      */
     initialize() {
@@ -37,6 +162,24 @@ export class GraphManager {
         if (!this.uiElements?.graphContainer) {
             console.error('Graph container element not found');
             return false;
+        }
+
+        // Register fcose layout if available and not already registered
+        if (typeof cytoscape !== 'undefined' && (window.fcose || window['cytoscape-fcose'])) {
+            try {
+                // Check if fcose is already registered to avoid warnings
+                // The library attaches itself to window.fcose or similar?
+                // Actually, cytoscape.use() expects the extension object.
+                // When loaded via script tag, it's typically 'cytoscapeFcose' or similar, but the local lib might behave differently.
+                // Let's assume standard behavior:
+                const fcose = window.fcose || window['cytoscape-fcose'];
+                if (fcose) {
+                    cytoscape.use(fcose);
+                    console.log('Registered fcose layout');
+                }
+            } catch (e) {
+                console.warn('Could not register fcose layout:', e);
+            }
         }
 
         try {
@@ -47,8 +190,21 @@ export class GraphManager {
             });
         } catch (error) {
             console.error('Failed to initialize Cytoscape:', error);
-            return false;
+            // Fallback to grid or random layout if fcose fails
+            if (error.message.includes('No such layout')) {
+                console.warn('Falling back to "random" layout due to initialization error.');
+                this.cy = cytoscape({
+                    container: this.uiElements.graphContainer,
+                    style: Config.getGraphStyle(),
+                    layout: { name: 'random' }
+                });
+            } else {
+                return false;
+            }
         }
+
+        // Initialize keyboard navigation
+        this.initializeKeyboardNavigation();
 
         // Add event delegation for details panel buttons
         if (this.uiElements.graphDetails) {
@@ -428,7 +584,7 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const { DESIGN_TOKENS } = require('@senars/core');
+        const { DESIGN_TOKENS } = window.SeNARS_Core || { DESIGN_TOKENS: { colors: { highlight: '#ff0000' }, timing: { pulse: 300 } } };
         const originalColor = node.style('border-color');
         const originalWidth = node.style('border-width');
 
@@ -459,7 +615,7 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const { DESIGN_TOKENS } = require('@senars/core');
+        const { DESIGN_TOKENS } = window.SeNARS_Core || { DESIGN_TOKENS: { timing: { glow: 300 } } };
         const baseSize = node.data('weight') || 50;
         const targetSize = baseSize * (0.8 + intensity * 0.4); // Range: 80%-120% of base
         const borderWidth = 2 + intensity * 6; // Range: 2-8px
@@ -485,7 +641,7 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const { DESIGN_TOKENS } = require('@senars/core');
+        const { DESIGN_TOKENS } = window.SeNARS_Core || { DESIGN_TOKENS: { timing: { glow: 300 } } };
 
         // Start invisible, fade to full opacity
         node.style('opacity', 0);
