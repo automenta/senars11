@@ -1,13 +1,14 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
-import {inputAll} from '../../support/testHelpers.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import { IntrospectionEvents } from '../../../core/src/util/IntrospectionEvents.js';
+import { inputAll } from '../../support/testHelpers.js';
 
 describe('NAR Integration', () => {
     let nar;
     const tf = new TermFactory();
 
     beforeAll(async () => {
-        nar = new NAR({debug: {enabled: false}, cycle: {delay: 10, maxTasksPerCycle: 5}});
+        nar = new NAR({ debug: { enabled: false }, cycle: { delay: 10, maxTasksPerCycle: 5 } });
         if (nar.initialize) await nar.initialize();
     });
 
@@ -131,8 +132,8 @@ describe('NAR Integration', () => {
             const events = [];
             const taskAddedEvents = [];
 
-            nar.on('task.input', (data) => events.push(data));
-            nar.on('task.added', (data) => taskAddedEvents.push(data));
+            nar.on(IntrospectionEvents.TASK_INPUT, (data) => events.push(data));
+            nar.on(IntrospectionEvents.TASK_ADDED, (data) => taskAddedEvents.push(data));
 
             await nar.input('test.');
 

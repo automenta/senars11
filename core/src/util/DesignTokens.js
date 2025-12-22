@@ -10,6 +10,8 @@ export const DESIGN_TOKENS = Object.freeze({
         question: '#9d68f0',
         goal: '#ffd700',
         edge: '#dcdcdc',
+        inheritance: '#4ec9b0', // Matches concept
+        similarity: '#9d68f0',   // Matches question
 
         // Status/feedback
         success: 'green',

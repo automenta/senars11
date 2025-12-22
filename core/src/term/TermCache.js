@@ -1,9 +1,6 @@
-import {BaseComponent} from '../util/BaseComponent.js';
+import { BaseComponent } from '../util/BaseComponent.js';
 
-/**
- * specialized LRU Cache for Terms.
- * Uses Map's insertion order property for O(1) eviction.
- */
+
 export class TermCache extends BaseComponent {
     constructor(config = {}) {
         super(config, 'TermCache');
@@ -13,9 +10,7 @@ export class TermCache extends BaseComponent {
         this._misses = 0;
     }
 
-    get size() {
-        return this._cache.size;
-    }
+    get size() { return this._cache.size; }
 
     get stats() {
         const total = this._hits + this._misses;
@@ -31,7 +26,6 @@ export class TermCache extends BaseComponent {
     get(key) {
         const item = this._cache.get(key);
         if (item) {
-            // LRU update: remove and re-insert to move to end (most recently used)
             this._cache.delete(key);
             this._cache.set(key, item);
             this._hits++;
@@ -43,30 +37,15 @@ export class TermCache extends BaseComponent {
 
     set(key, value) {
         if (this._cache.has(key)) {
-            // Update existing
             this._cache.delete(key);
         } else if (this._cache.size >= this._maxSize) {
-            // Evict oldest (first in Map)
-            const oldestKey = this._cache.keys().next().value;
-            this._cache.delete(oldestKey);
-            // Note: We might want to emit an event here if needed,
-            // but for pure cache logic, we just drop it.
-            // If TermFactory needs to do cleanup (like unregistering from diversity),
-            // it should probably handle that via a callback or event if strictly necessary,
-            // but for now we'll keep it simple as TermFactory manages the "business logic" of terms.
-            // Wait, TermFactory.js did: this._cognitiveDiversity.unregisterTerm(key);
-            // I should probably allow a callback for eviction.
+            this._cache.delete(this._cache.keys().next().value);
         }
         this._cache.set(key, value);
     }
 
-    has(key) {
-        return this._cache.has(key);
-    }
-
-    delete(key) {
-        return this._cache.delete(key);
-    }
+    has(key) { return this._cache.has(key); }
+    delete(key) { return this._cache.delete(key); }
 
     clear() {
         this._cache.clear();
@@ -82,12 +61,8 @@ export class TermCache extends BaseComponent {
         }
     }
 
-    // Helper to get oldest key for external cleanup if needed
-    getOldestKey() {
-        return this._cache.keys().next().value;
-    }
+    getOldestKey() { return this._cache.keys().next().value; }
 
-    // Specialized set that returns evicted key if any
     setWithEviction(key, value) {
         let evictedKey = null;
         if (this._cache.has(key)) {

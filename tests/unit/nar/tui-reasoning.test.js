@@ -1,5 +1,6 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {FormattingUtils} from '../../../core/src/util/FormattingUtils.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { FormattingUtils } from '../../../core/src/util/FormattingUtils.js';
+import { IntrospectionEvents } from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
     let nar;
@@ -25,17 +26,17 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         };
 
         // Set up event listeners
-        nar.on('task.input', (data) => {
+        nar.on(IntrospectionEvents.TASK_INPUT, (data) => {
             events.taskInput++;
         });
 
-        nar.on('task.focus', (task) => {
+        nar.on(IntrospectionEvents.TASK_FOCUS, (task) => {
             events.taskFocus++;
             const formattedTask = FormattingUtils.formatTask(task);
             events.capturedFocusTasks.push(formattedTask);
         });
 
-        nar.on('reasoning.derivation', () => {
+        nar.on(IntrospectionEvents.REASONING_DERIVATION, () => {
             events.reasoningDerivation++;
         });
 
@@ -76,14 +77,14 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         };
 
         // Set up event listeners to capture task details
-        nar.on('task.input', (data) => {
+        nar.on(IntrospectionEvents.TASK_INPUT, (data) => {
             events.taskInput.push({
                 term: data.task.term?.toString?.(),
                 source: data.source,
             });
         });
 
-        nar.on('task.focus', (task) => {
+        nar.on(IntrospectionEvents.TASK_FOCUS, (task) => {
             events.taskFocus.push({
                 term: task.term?.toString?.(),
             });
@@ -114,7 +115,7 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         };
 
         // Set up event listeners
-        nar.on('task.focus', (task) => {
+        nar.on(IntrospectionEvents.TASK_FOCUS, (task) => {
             events.taskFocus++;
             const formattedTask = FormattingUtils.formatTask(task);
             events.capturedFocusTasks.push(formattedTask);
@@ -143,8 +144,8 @@ describe('TUIRepl NAR Reasoning with Duplicate Suppression', () => {
         await nar.step();
 
         // Verify it can be formatted properly
-        const events = {capturedTasks: []};
-        nar.on('task.focus', (task) => {
+        const events = { capturedTasks: [] };
+        nar.on(IntrospectionEvents.TASK_FOCUS, (task) => {
             const formatted = FormattingUtils.formatTask(task);
             events.capturedTasks.push(formatted);
         });

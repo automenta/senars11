@@ -1,6 +1,6 @@
 import fc from 'fast-check';
-import {TermType} from '../../../core/src/term/Term.js';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import { TermType } from '../../../core/src/term/Term.js';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 const tf = new TermFactory();
 
@@ -13,7 +13,7 @@ describe('Term', () => {
             {
                 name: 'atomic term',
                 term: atomA,
-                expected: {type: TermType.ATOM, name: 'A', components: ['A'], complexity: 1, string: 'A'}
+                expected: { type: TermType.ATOM, name: 'A', components: ['A'], complexity: 1, string: 'A' }
             },
             {
                 name: 'compound term',
@@ -37,7 +37,7 @@ describe('Term', () => {
                     string: '(<->, (-->, A, B), C)'
                 }
             },
-        ])('$name', ({term, expected}) => {
+        ])('$name', ({ term, expected }) => {
             expect(term).toMatchObject({
                 type: expected.type,
                 name: expected.name,
@@ -81,7 +81,7 @@ describe('Term', () => {
         });
 
         test('redundancy', () => {
-            expect(tf.conjunction(atomA, atomA).name).toBe('(&, A)');
+            expect(tf.conjunction(atomA, atomA).name).toBe('A');
         });
     });
 
@@ -151,15 +151,18 @@ describe('Term', () => {
             term: fc.oneof(atomicTermArb, tie('compound')),
             compound: fc.record({
                 op: fc.constantFrom('-->', '<->', '&', '|'),
-                components: fc.array(tie('term'), {minLength: 2, maxLength: 3})
-            }).map(({op, components}) => createCompoundTerm(op, components))
+                components: fc.array(tie('term'), { minLength: 2, maxLength: 3 })
+            }).map(({ op, components }) => createCompoundTerm(op, components))
         })).term;
 
         test('normalization idempotent', () => {
             fc.assert(fc.property(compoundTermArb, (term) => {
+                // Skip atomic terms (e.g., True from reflexive relations)
                 if (!term.operator) return;
 
                 const normalized = createCompoundTerm(term.operator, term.components);
+                // Skip reflexive relations that normalize to atomic True (e.g., (-->, a, a))
+                if (!normalized?.operator) return;
                 expect(normalized.equals(createCompoundTerm(normalized.operator, normalized.components))).toBe(true);
 
                 if (['&', '|', '<->'].includes(term.operator)) {

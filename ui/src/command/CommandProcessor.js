@@ -1,5 +1,5 @@
-import {Config} from '../config/Config.js';
-import {CommandRegistry} from './CommandRegistry.js';
+import { Config } from '../config/Config.js';
+import { CommandRegistry } from '@senars/core';
 
 /**
  * CommandProcessor handles command sending and history management
@@ -13,7 +13,15 @@ export class CommandProcessor {
         this.maxHistorySize = Config.getConstants().MAX_HISTORY_SIZE;
 
         // Initialize command registry for extensible command processing
-        this.commandRegistry = new CommandRegistry();
+        this.commandRegistry = new CommandRegistry({ logger: this.logger });
+        this._registerUICommands();
+    }
+
+    _registerUICommands() {
+        this.commandRegistry.registerCommand('/nodes', ctx => this._listNodes(ctx), { description: 'List all nodes in graph' });
+        this.commandRegistry.registerCommand('/tasks', ctx => this._listTasks(ctx), { description: 'Show task nodes' });
+        this.commandRegistry.registerCommand('/concepts', ctx => this._listConcepts(ctx), { description: 'Show concept nodes' });
+        this.commandRegistry.registerCommand('/refresh', ctx => this.executeRefresh(ctx), { description: 'Request graph refresh' });
     }
 
     /**
@@ -42,7 +50,7 @@ export class CommandProcessor {
         // Send via WebSocket
         if (this.webSocketManager.isConnected()) {
             // Use consistent message format
-            const messageData = {input: trimmedCommand};
+            const messageData = { input: trimmedCommand };
             const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
 
             this.webSocketManager.sendMessage(messageType, messageData);
@@ -71,7 +79,7 @@ export class CommandProcessor {
         // Check if it's a local command
         if (this.commandRegistry.commands.has(cmd)) {
             // Execute the command through the registry
-            this.commandRegistry.executeCommand(cmd, context);
+            this.commandRegistry.executeCommand(command, context);
         } else {
             // Forward to backend if not local
             const commandName = cmd.substring(1);

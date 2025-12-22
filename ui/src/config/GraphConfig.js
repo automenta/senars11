@@ -19,13 +19,12 @@ export const GraphConfig = {
     },
 
     getGraphStyle() {
-        const { CONCEPT_COLOR, TASK_COLOR, QUESTION_COLOR, EDGE_COLOR, NODE_COLOR } = this.GRAPH_COLORS;
-
+        const { concept, task, question, edge } = DESIGN_TOKENS.colors;
         return [
             {
                 selector: 'node',
                 style: {
-                    'background-color': NODE_COLOR,
+                    'background-color': concept,
                     'label': 'data(label)',
                     'color': '#ffffff',
                     'text-valign': 'bottom',
@@ -44,34 +43,19 @@ export const GraphConfig = {
                 selector: 'edge',
                 style: {
                     'width': 2,
-                    'line-color': EDGE_COLOR,
-                    'target-arrow-color': EDGE_COLOR,
+                    'line-color': edge,
+                    'target-arrow-color': edge,
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'bezier'
                 }
             },
-            {
-                selector: 'node[type = "concept"]',
-                style: {
-                    'background-color': CONCEPT_COLOR
-                }
-            },
-            {
-                selector: 'node[type = "task"]',
-                style: {
-                    'background-color': TASK_COLOR
-                }
-            },
-            {
-                selector: 'node[type = "question"]',
-                style: {
-                    'background-color': QUESTION_COLOR
-                }
-            }
+            { selector: 'node[type = "concept"]', style: { 'background-color': concept } },
+            { selector: 'node[type = "task"]', style: { 'background-color': task } },
+            { selector: 'node[type = "question"]', style: { 'background-color': question } },
+            { selector: 'edge[type = "inheritance"]', style: { 'line-color': DESIGN_TOKENS.colors.inheritance } },
+            { selector: 'edge[type = "similarity"]', style: { 'line-color': DESIGN_TOKENS.colors.similarity } }
         ];
     },
 
-    getGraphLayout() {
-        return { name: 'cose' };
-    }
+    getGraphLayout: () => ({ name: 'cose' })
 };
