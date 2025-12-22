@@ -1,9 +1,5 @@
-import {DESIGN_TOKENS} from '@senars/core';
+import { DESIGN_TOKENS } from '@senars/core';
 
-/**
- * Graph configuration constants and styles
- * Uses shared DESIGN_TOKENS from core for consistency with CLI
- */
 export const GraphConfig = {
     DEFAULT_NODE_WEIGHT: 50,
     TASK_NODE_WEIGHT: 30,
@@ -61,20 +57,20 @@ export const GraphConfig = {
                     'curve-style': 'bezier'
                 }
             },
-            {selector: 'node[type = "concept"]', style: {'background-color': concept}},
-            {selector: 'node[type = "task"]', style: {'background-color': task}},
-            {selector: 'node[type = "question"]', style: {'background-color': question}},
+            { selector: 'node[type = "concept"]', style: { 'background-color': concept } },
+            { selector: 'node[type = "task"]', style: { 'background-color': task } },
+            { selector: 'node[type = "question"]', style: { 'background-color': question } },
             {
                 selector: 'edge[type = "inheritance"]',
-                style: {'line-color': inheritance, 'target-arrow-color': inheritance}
+                style: { 'line-color': inheritance, 'target-arrow-color': inheritance }
             },
             {
                 selector: 'edge[type = "similarity"]',
-                style: {'line-color': similarity, 'target-arrow-color': similarity}
+                style: { 'line-color': similarity, 'target-arrow-color': similarity }
             },
             {
                 selector: 'edge[type = "implication"]',
-                style: {'line-color': implication, 'target-arrow-color': implication}
+                style: { 'line-color': implication, 'target-arrow-color': implication }
             },
             // Keyboard navigation highlight
             {
@@ -90,30 +86,29 @@ export const GraphConfig = {
     },
 
     getGraphLayout: () => ({
-        name: 'cose',
-        // Standard cose configuration
-        ready: function () {
-        },
-        stop: function () {
-        },
-        animate: false,
+        name: 'fcose',
+        quality: 'default',
         randomize: false,
-        componentSpacing: 100,
-        nodeRepulsion: function (node) {
-            return 400000;
-        },
-        nodeOverlap: 10,
-        idealEdgeLength: function (edge) {
-            return 50;
-        },
-        edgeElasticity: function (edge) {
-            return 100;
-        },
-        nestingFactor: 5,
-        gravity: 80,
-        numIter: 1000,
+        animate: false,
+        fit: true,
+        padding: 30,
+        nodeSeparation: 75,
+        idealEdgeLength: 50,
+        edgeElasticity: 0.45,
+        nestingFactor: 0.1,
+        gravity: 0.25,
+        numIter: 2500,
         initialTemp: 200,
         coolingFactor: 0.95,
-        minTemp: 1.0
+        minTemp: 1.0,
+        nodeRepulsion: 4500,
+        tile: true,
+        tilingPaddingVertical: 10,
+        tilingPaddingHorizontal: 10,
+        gravityRangeCompound: 1.5,
+        gravityCompound: 1.0,
+        gravityRange: 3.8,
+        stop: function () {
+        }
     })
 };

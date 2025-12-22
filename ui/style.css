@@ -1,3 +1,5 @@
+@import url('src/styles/lm-activity.css');
+
 * {
     margin: 0;
     padding: 0;
@@ -18,14 +20,16 @@ body {
     display: flex;
     flex: 1;
     min-height: 0;
-    position: relative; /* For absolute positioning of overlays if needed */
+    position: relative;
+    /* For absolute positioning of overlays if needed */
 }
 
 /* Main Panel (REPL) */
 .log-panel {
     flex: 1;
     display: grid;
-    grid-template-rows: 50px auto 1fr auto; /* Header, Status, Content, Input */
+    grid-template-rows: 50px auto 1fr auto;
+    /* Header, Status, Content, Input */
     background: #252525;
     min-width: 0;
     height: 100%;
@@ -166,7 +170,8 @@ body {
 .log-entry-content {
     flex: 1;
     word-break: break-word;
-    white-space: pre-wrap; /* Preserve formatting */
+    white-space: pre-wrap;
+    /* Preserve formatting */
 }
 
 .log-entry-time {
@@ -297,7 +302,8 @@ select {
 
 /* Sidebar (Graph Panel) */
 .graph-panel {
-    width: 40%; /* Initial width */
+    width: 40%;
+    /* Initial width */
     min-width: 300px;
     max-width: 60%;
     display: flex;
@@ -914,7 +920,8 @@ select {
 }
 
 /* Ensure containers scroll internally, not the layer */
-.logs-container, .trace-container {
+.logs-container,
+.trace-container {
     flex: 1;
     overflow-y: auto;
 }
