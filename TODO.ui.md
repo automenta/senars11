@@ -66,16 +66,18 @@ We utilize an **incremental, agent-driven workflow** focused on **quick wins** a
 
 ### The Automated Loop
 1.  **Define**: Micro-goal (e.g., "Add pulse animation on derivation").
-2.  **Act**: Execute changes using existing code and high-leverage patterns.
+2.  **Act**: Use Playwright Agents (Planner → Generator → Healer) via MCP tools.
 3.  **Verify**:
-    *   **Functional**: Use Playwright E2E.
-    *   **Visual**: Manual inspection or regression checks.
+    *   **Functional**: Use Playwright E2E (gestures, updates).
+    *   **Visual**: Regression screenshots with masks for dynamics.
+    *   **Perceptual (Future)**: LAION Aesthetics Predictor V2 (Target >7.0).
     *   **Performance**: Maintain >30fps.
 
 ### Verification Standards
 *   **Performance**: >30fps at 500 nodes.
     *   *Strategy*: Viewport filtering, layout debouncing (already implemented).
 *   **Aesthetics**: Clear node labels, semantic edge colors, smooth animations.
+    *   *Target*: Saliency on key elements >70%, low clutter.
 
 ---
 
@@ -110,25 +112,28 @@ These provide immediate observable improvements and should be done first:
 
 ## 5. Phase 1: Visual Foundation (Track B) - 4-6 hours
 
-**Goal**: Beautiful, organic, readable graph.
+**Goal**: Beautiful, organic, readable graph (Phases 1-4 of Incremental Sequence).
 
-1.  **Verify Current Styles** (15 min):
-    *   Confirm [`GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js) styles work for Concept, Task, Question nodes.
-    *   Test semantic colors: Concept=Teal, Task=Orange, Question=Purple, Goal=Gold.
+1.  **Base Canvas** (Phase 1):
+    *   Empty full-screen canvas with theme toggle.
+    *   Establish aesthetics baseline.
 
-2.  **Organic Layout** (2-3 hours):
-    *   Replace `cose` with `fcose` (force-directed with constraints) for better node distribution.
-    *   *Alternative*: Try `cola` or `elk` if bundle size is a concern.
-    *   *Optimization (if needed)*: Move layout calc to Web Worker.
+2.  **Styles & Nodes** (Phase 2):
+    *   Verify [`GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js) styles (Concept, Task, Question).
+    *   Single static node: Clickable; legible at zooms; priority sizing.
 
-3.  **Smart Edges** (15-30 min):
+3.  **Organic Layout** (Phase 3):
+    *   Replace `cose` with `fcose` (force-directed with constraints).
+    *   Benefit: No node overlap; harmonious spread of existing concepts.
+
+4.  **Smart Edges** (Phase 4):
     *   Already partially done - enhance with full semantic coloring:
         *   Inheritance → Teal (`#4ec9b0`)
         *   Similarity → Purple (`#9d68f0`)
         *   Implication → Blue
         *   Other relations → Gray
 
-4.  **Keyboard Navigation Basics** (1 hour):
+5.  **Keyboard Navigation Basics** (Phase 1+):
     *   Tab-index through graph nodes.
     *   Arrow keys to navigate between connected nodes.
     *   Enter to select/focus node.
@@ -137,16 +142,16 @@ These provide immediate observable improvements and should be done first:
 
 ## 6. Phase 2: Observability (Tracks C + E) - 8-10 hours
 
-**Goal**: See the machine think in real-time.
+**Goal**: See the machine think in real-time (Phases 6 & 8 of Incremental Sequence).
 
 ### Track C: Live Deltas & Vital Signs
 
-1.  **Animate Updates from EventStream** (1-2 hours):
+1.  **Live Deltas** (Phase 6):
     *   Pulse animation on `reasoning:derivation` events.
     *   Fade-in for newly created nodes.
-    *   Highlight active tasks during processing.
+    *   Real-time; eye drawn to changes.
 
-2.  **Visual Saliency** (2-3 hours):
+2.  **Focus Effects** (Phase 8):
     *   Glow effect for `memory:focus:promote` events.
     *   Dim nodes on `memory:focus:demote`.
     *   Node size based on priority/activation.
@@ -172,7 +177,7 @@ These provide immediate observable improvements and should be done first:
 
 ## 7. Phase 3: Interaction (Track D) - 8-12 hours
 
-**Goal**: User agency and feedback.
+**Goal**: User agency and feedback (Phases 5 & 7 of Incremental Sequence).
 
 1.  **Web REPL Overlay** (4-6 hours):
     *   Implement [`ui/src/components/WebRepl.js`](file:///home/me/senars10/ui/src/components/WebRepl.js) as terminal overlay.
@@ -186,11 +191,11 @@ These provide immediate observable improvements and should be done first:
     *   Double-click → Execute associated action.
     *   Drag nodes to adjust layout (persist positions).
 
-3.  **Basic Pan/Zoom Controls** (1-2 hours):
-    *   Mouse wheel zoom (already may exist in Cytoscape).
+3.  **Infinite Pan/Zoom Gestures** (Phase 5):
+    *   Smooth; labels scale/readable.
+    *   Mouse wheel zoom (already in Cytoscape).
     *   Pan by dragging background.
-    *   Zoom controls (+/- buttons).
-    *   Fit-to-screen button.
+    *   Zoom controls (+/- buttons) & Fit-to-screen.
 
 ---
 
@@ -198,14 +203,14 @@ These provide immediate observable improvements and should be done first:
 
 **Deferred for user feedback and iterative development:**
 
-### Timeline Scrubber (Time-Travel) - 8-12 hours
+### Timeline Scrubber (Phase 9) - 8-12 hours
 *   Snapshot GraphManager state every N cycles into RingBuffer.
 *   UI slider to rewind/replay system state.
 *   Export/import timeline data for offline analysis.
 
-### RLFP Teacher Mode - 12-16 hours
+### RLFP Teacher Mode (Phase 10) - 12-16 hours
 *   Backend: Implement feedback ingestion API.
-*   UI: Drag-to-rank derivation paths.
+*   UI: Drag-to-rank derivation paths; Adaptive styling.
 *   Emit `reasoning:feedback` events to training pipeline.
 
 ### Advanced Optimizations - 4-8 hours
