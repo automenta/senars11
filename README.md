@@ -299,6 +299,8 @@ objectives.
 
 #### Sampling Objectives:
 
+<a id="sampling-objectives"></a>
+
 - `priority`: Sample tasks based on their priority value (default: true)
 - `recency`: Favor tasks that are closest to a target time (default: false)
 - `punctuation`: Focus on Goals (`!`) or Questions (`?`) (default: false)
@@ -392,20 +394,16 @@ The main `Reasoner` class manages the continuous reasoning pipeline:
 
 ### Core Components Overview
 
-The system consists of several interconnected components:
+The system consists of several interconnected components. For detailed architecture including the processing pipeline
+and component relationships, see [Stream Reasoner Architecture](#stream-reasoner-architecture).
+
+**Processing Pipeline Components** (PremiseSource → Strategy → RuleProcessor → Reasoner):
+See [Stream Reasoner Architecture](#stream-reasoner-architecture) for full pipeline documentation.
+
+**Supporting Components:**
 
 - **NAR (NARS Reasoner Engine)**: The main entry point and orchestrator that manages the reasoning cycle and coordinates
-  all system components
-- **PremiseSource**: Generates a continuous stream of `Task`s, drawing from `Memory` based on tunable sampling
-  objectives (e.g., `TaskBagPremiseSource`)
-- **Strategy**: Creates premise pairs by finding suitable secondary premises for reasoning approaches (BagStrategy,
-  PrologStrategy, ExhaustiveStrategy, etc.)
-- **RuleExecutor**: Indexes all registered rules for fast retrieval and performs symbolic guard analysis to optimize
-  rule execution
-- **RuleProcessor**: Consumes premise pairs and executes rules in a non-blocking fashion, handling both synchronous NAL
-  and asynchronous LM rules
-- **Reasoner**: Manages the continuous reasoning pipeline with `start()`, `stop()`, `step()` methods and implements
-  resource constraints
+  all system components. See [NAR section](#nar-nars-reasoner-engine) for API details.
 - **Memory**: Manages concepts, tasks, and knowledge representation; implements both long-term and short-term (focus)
   memory systems
 - **Focus Manager**: Handles attention focus sets (short-term memory) that prioritize tasks for immediate processing
@@ -414,8 +412,6 @@ The system consists of several interconnected components:
   reasoning
 - **Task**: Represents units of work or information processed by the system; encapsulates a Term with associated truth
   values, stamps, and processing priorities
-- **Reasoning Engine**: Applies NAL and LM rules to generate inferences, conclusions, and new knowledge from existing
-  information
 - **Parser**: Handles Narsese syntax parsing and generation; converts between human-readable Narsese notation and
   internal Term representations
 - **LM (Language Model Integration)**: Provides language model capabilities that complement formal symbolic reasoning
@@ -669,13 +665,8 @@ The Stream Reasoner system exposes several key parameters for fine-tuning system
 - `maxDerivationDepth`: Maximum derivation depth to keep the derivation graph finite (default: 10)
 - `resourceLimits`: Resource management constraints for computational resources
 
-**PremiseSource Sampling Objectives:**
-
-- `priority`: Sample tasks based on their priority value (default: true)
-- `recency`: Favor tasks that are closest to a target time (default: false)
-- `punctuation`: Focus on Goals (`!`) or Questions (`?`) (default: false)
-- `novelty`: Favor tasks with fewer reasoning steps (lower derivation depth) (default: false)
-- `dynamic`: Enable performance-based strategy adaptation (default: false)
+**PremiseSource Sampling Objectives:** See [Sampling Objectives](#sampling-objectives) for the complete list of
+configurable objectives including priority, recency, punctuation, novelty, and dynamic adaptation.
 
 ### Configuration Examples
 
@@ -1148,8 +1139,6 @@ knowledge while goals drive exploration toward desired outcomes.
 ---
 
 ## Core Technical Challenges
-
-### Core Technical Challenges
 
 **Performance Optimization:**
 
