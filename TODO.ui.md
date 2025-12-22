@@ -3,14 +3,14 @@
 > **Vision**: Transform SeNARS into an **observable "neural galaxy"** where the graph is the primary interface for exploring hybrid NAL-LM reasoning.
 > **Philosophy**: "The Graph *IS* the Logic."
 
-**Status**: Ready for Agentic Execution
+**Status**: Planning / Pre-Alpha
 **Goal**: Unified Observability Platform (CLI + Web)
 
 ---
 
 ## 1. Architecture: The "Observability Core"
 
-We unify the CLI (`npm run repl`) and Web UI (`ui/`) around a shared core, ensuring that "if it happens in the reasoned, it appears in the UI."
+We unify the CLI (`npm run repl`) and Web UI (`ui/`) around a shared core, ensuring that "if it happens in the reasoner, it appears in the UI."
 
 ### Unified Data Flow
 
@@ -57,90 +57,124 @@ graph TD
 
 ## 2. Development Methodology: Agentic & Incremental
 
-We utilize an **incremental, agent-driven workflow** designed to automate ~80% of routine coding tasks while maintaining high strategic coherence.
+We utilize an **incremental, agent-driven workflow**.
 
-### The Automated Loop (Planner → Generator → Healer)
-1.  **Define**: Human sets a micro-goal (e.g., "Visualize goal derivation edges").
-2.  **Act**: Agents execute changes using the "Shortcuts" and "Power Moves" defined below.
+### The Automated Loop
+1.  **Define**: Micro-goal (e.g., "Visualize goal derivation").
+2.  **Act**: Execute changes using "Shortcuts" (existing code) and "Power Moves" (high-leverage libs).
 3.  **Verify**:
-    *   **Functional**: Playwright E2E tests (interaction, updates).
-    *   **Visual**: Regression testing against baselines.
-    *   **Perceptual**: AI-based aesthetic scoring (Target: >7.0/10) to ensure the "Neural Galaxy" feel.
-4.  **Tune**: Feedback loop to refine aesthetics and performance.
+    *   **Functional**: Use PLaywright E2E.
+    *   **Visual**: Regression checks.
+    *   **Performance**: Maintain >30fps.
 
 ### Verification Standards
-*   **Performance check**: Graph updates must handle >30fps at 500 nodes.
-*   **Aesthetic check**: Automated scoring (using local vision models or APIs) for layout harmony and clutter reduction.
+*   **Performance**: >30fps at 500 nodes.
+    *   *Strategy*: Level-of-Detail (LOD) culling, viewport filtering.
+*   **Aesthetics**: No overlapping nodes, clear edge routing.
 
 ---
 
 ## 3. Implementation Plan: The 10-Step Progression
 
-We execute in 4 parallel tracks, broken down into granular, testable increments (The "Element → Gesture → Dynamic" Sequence).
+### Phase 0: Foundations & Prerequisites
+*Goal: Ensure the plumbing exists before building the tapping.*
 
-### Track A: Foundation Consolidation
-*Goal: Solid bedrock for shared assets.*
+1.  **Command Infrastructure**:
+    *   Create `core/src/util/CommandRegistry.js`.
+    *   Pattern: `registry.register(name, handler, meta)`.
+    *   *Tasks*: Refactor `TUI.js` and `ReplMessageHandler.js` to use this.
+2.  **Event Ontology Expansion**:
+    *   Update `IntrospectionEvents.js` with missing events:
+        *   `memory:focus:promote`, `memory:focus:demote`
+        *   `lm:prompt:start`, `lm:prompt:complete`, `lm:error`
+        *   `reasoning:goal:achieved`, `reasoning:derivation:chain`
 
-1.  **Unified Command Registry**: Refactor `TUI.js` commands into `core/src/util/CommandRegistry.js`.
-2.  **Design Token Injection**: Create `ui/src/utils/ThemeGenerator.js` to map `DesignTokens` to CSS variables.
+### Track A: Core Infrastructure
+*Goal: Unified logic and shared assets.*
+
+3.  **Design Token Injection**: 
+    *   Create `ui/src/utils/ThemeGenerator.js` to map `DesignTokens` to CSS variables.
+4.  **Log Unification**:
+    *   Create `agent/src/cli/hooks/useAgentLogs.js` (if missing) to standardize CLI output.
 
 ### Track B: The "Neural Galaxy" (Visuals)
-*Goal: Beautiful, organic, informative graph.*
+*Goal: Beautiful, organic, readable graph.*
 
-3.  **Static Nodes (Elements)**: Render nodes using `GraphConfig` styles mapping to Narsese semantics (Concept=Blue, Goal=Amber).
-4.  **Organic Layout (Structure)**: Implement high-quality force-directed layout (e.g., `fcose` or similar) for non-overlapping, harmonious clusters.
-5.  **Smart Edges (Connections)**: Color-code edges by type (Inheritance=Green, Similarity=Blue). Implement hover details.
+5.  **Static Nodes (Elements)**: 
+    *   Render nodes using `GraphConfig` styles mapping to Narsese terms (Concept=Teal, Goal=Amber).
+6.  **Organic Layout (Structure)**: 
+    *   Implement `fcose` (or `cola`/`elk` if bundle size is high).
+    *   *Optimization*: Use Web Worker for layout calculation.
+7.  **Smart Edges (Connections)**: 
+    *   Full semantic coloring (Inheritance vs Similarity) via `DesignTokens`.
 
 ### Track C: Deep Observability
 *Goal: Seeing the machine think in real-time.*
 
-6.  **Live Deltas (Dynamics)**: Animate graph updates from the Event Stream.
-    *   *Shortcut*: Listen to `reasoning:derivation` -> Trigger `.pulse-new` animation.
-7.  **Focus & Attention**: Visual saliency for active processing.
-    *   *Shortcut*: Map `memory:focus:promote` -> Node Glow effect.
-    *   *Shortcut*: Map `lm:prompt` -> Spinner overlay on node.
-8.  **Vital Signs**: Real-time gauges for CPU Throttle, Derivation Depth, and Cycle/Sec.
+8.  **Live Deltas**:
+    *   Animate updates from `EventStream`.
+    *   *Shortcut*: `reasoning:derivation` -> Pulse animation.
+9.  **Vital Signs & Focus**:
+    *   Visual saliency: Glow effect for `memory:focus:promote`.
+    *   Spinners for `lm:prompt:start`.
+    *   Gauges for CPU/Cycle rate.
 
-### Track D: Interactive Time-Travel
-*Goal: Rewind, Replay, Reinforce.*
+### Track D: Interactive Control
+*Goal: User agency and feedback.*
 
-9.  **Timeline Scrubber**: Allow users to scroll back through reasoning cycles.
-    *   *Impl*: Snapshot `GraphManager` state into a `RingBuffer`.
-10. **RLFP Interface**: "Teacher" mode.
-    *   *Impl*: Drag-to-rank derivation paths in the UI; emit feedback events to the backend.
+10. **Timeline Scrubber** (Time-Travel):
+    *   Snapshot `GraphManager` state every N cycles into a RingBuffer.
+    *   UI slider to rewind/replay.
+11. **RLFP Interface** (Teacher Mode):
+    *   *Backend*: Implement feedback ingestion.
+    *   *UI*: Drag-to-rank derivation paths -> Emit `reasoning:feedback` events.
+
+### Track E: Developer Experience (New)
+*Goal: Tools for the builders.*
+
+12. **Debug Panel**:
+    *   Live Event Inspector (filter/pause stream).
+    *   Raw Memory View (JSON tree).
+    *   Performance Overlay (FPS, Latency).
+
+### Track F: Accessibility (New)
+*Goal: Observability for all.*
+
+13. **A11y Core**:
+    *   ARIA labels for graph nodes.
+    *   Keyboard navigation (Tab-index through focus concepts).
+    *   High-contrast mode toggled via `DesignTokens`.
 
 ---
 
-## 4. Technical Specifications & Power Moves
+## 4. File Impact Analysis
 
-| Feature | Specification | Power Move / Shortcut |
+| Track | Key Files Modified | New Files Created |
 | :--- | :--- | :--- |
-| **Graph Engine** | **Cytoscape.js** (Vanilla JS) | Use `compound nodes` for concept clustering (`cy.add({ parent: ... })`). |
-| **Streaming** | **WebSocket** (Native) | Use `WebSocketMonitor.bufferEvent()` to batch high-frequency updates (10ms window). |
-| **Layout** | **Organic / Force-Directed** | Prioritize specific layout extensions (like `fcose`) that support constraints and clustering. |
-| **Semantics** | **Visual Ontology** | Map Narsese directly to CSS: `node[type="goal"] { shape: diamond }`. |
-| **Perception** | **Aesthetics > 7.0** | Use any available Perceptual/Vision model (CLIP/SigLIP) to validate "beauty" in CI/CD. |
-
-### Visual Ontology Reference (`GraphConfig.js`)
-
-| Semantic Element | Shape | Color (Token) | Motion / Effect |
-| :--- | :--- | :--- | :--- |
-| **Belief** `.` | Ellipse | `concept` (Teal) | Static |
-| **Goal** `!` | Diamond | `task` (Amber) | Pulse if active |
-| **Question** `?` | Triangle | `query` (Purple) | Spin on processing |
-| **Operation** `^` | Square | `action` (Red) | Flash on execution |
+| **0. Infra** | `TUI.js`, `ReplMessageHandler.js`, `IntrospectionEvents.js` | `CommandRegistry.js` |
+| **A. Core** | `GraphConfig.js` | `ThemeGenerator.js`, `useAgentLogs.js` |
+| **B. Visuals** | `GraphManager.js`, `GraphStyles.js` | — |
+| **C. Observe** | `WebSocketMonitor.js`, `NodeRenderer.js` | — |
+| **D. Interact** | `ReplKeyHandler.js` | `TimeTravelManager.js`, `RLFPOverlay.js` |
+| **E. Dev** | `App.js` | `DebugPanel.js`, `EventInspector.js` |
+| **F. A11y** | `CanvasWrapper.js` | `A11yController.js` |
 
 ---
 
-## 5. Development Rules
+## 5. Risk Register
 
-1.  **No Logic in UI**: The UI is a "dumb" terminal. It only renders what the Event Stream says.
-2.  **Event-First**: If you want to see it, emit an event for it (`IntrospectionEvents.js`).
-3.  **Performance First**: Lazy-load graph details. Throttle rendering to 30fps.
-4.  **Accessibility**: Ensure high contrast and keyboard navigation for the core graph.
+| Risk | Likelihood | Impact | Mitigation |
+| :--- | :--- | :--- | :--- |
+| **Cytoscape Performance** | High | High | LOD culling, viewport filtering, max node limits. |
+| **Event Storms** | Medium | High | Batching in `WebSocketMonitor` (already exists). |
+| **Layout Instability** | Medium | Medium | Use deterministic seeds, run layout in Web Worker. |
+| **Command Divergence** | High | Medium | Strict adherence to `CommandRegistry` as sole source. |
 
-## 6. Verification Commands
+---
 
-*   **CLI Check**: `node agent/src/cli/Repl.js` -> Verify `run`, `step` via shared Registry.
-*   **Web Check**: `cd ui && npm start` -> Verify connection and live graph updates.
-*   **Load Test**: `node examples/demo-agent.js` -> Verify smooth rendering under load (500+ nodes).
+## 6. Future Enhancements (Post-MVP)
+
+*   **Perceptual Scoring**: Use CLIP/SigLIP to automate "beauty" scores (Moved from core path).
+*   **3D Visualization**: Three.js renderer for massive graphs (>10k nodes).
+*   **Plugin System**: Allow community custom renderers.
+*   **Offline Mode**: Load/Save event streams for offline analysis.
