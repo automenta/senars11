@@ -1,8 +1,5 @@
-import {Config} from '../config/Config.js';
+import { Config } from '../config/Config.js';
 
-/**
- * GraphManager handles the Cytoscape instance and graph operations
- */
 export class GraphManager {
     constructor(uiElements = null, callbacks = {}) {
         this.cy = null;
@@ -62,7 +59,7 @@ export class GraphManager {
                     const term = e.target.dataset.term;
 
                     if (this.callbacks.onNodeAction) {
-                        this.callbacks.onNodeAction(action, {id: nodeId, term});
+                        this.callbacks.onNodeAction(action, { id: nodeId, term });
                     }
                 }
             });
@@ -117,7 +114,7 @@ export class GraphManager {
     addNode(nodeData, runLayout = true) {
         if (!this.cy) return false;
 
-        const {id, label, term, type: nodeType, nodeType: nodeTypeOverride} = nodeData;
+        const { id, label, term, type: nodeType, nodeType: nodeTypeOverride } = nodeData;
         const nodeId = id || `concept_${Date.now()}`;
 
         // Don't add duplicate nodes
@@ -128,7 +125,7 @@ export class GraphManager {
         // Create node data object efficiently
         let displayLabel = label || term || id;
         if (nodeData.truth) {
-            const {frequency, confidence} = nodeData.truth;
+            const { frequency, confidence } = nodeData.truth;
             const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
             const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
             displayLabel += `\n{${freq}, ${conf}}`;
@@ -157,7 +154,7 @@ export class GraphManager {
      * Calculate node weight based on input data
      */
     getNodeWeight(nodeData) {
-        const {truth, weight} = nodeData;
+        const { truth, weight } = nodeData;
         return weight || (truth?.confidence ? truth.confidence * 100 : Config.getConstants().DEFAULT_NODE_WEIGHT);
     }
 
@@ -167,7 +164,7 @@ export class GraphManager {
     addEdge(edgeData, runLayout = true) {
         if (!this.cy) return false;
 
-        const {id, source, target, label, type: edgeType, edgeType: edgeTypeOverride} = edgeData;
+        const { id, source, target, label, type: edgeType, edgeType: edgeTypeOverride } = edgeData;
         const edgeId = id || `edge_${Date.now()}_${source}_${target}`;
 
         // Don't add duplicate edges
@@ -232,8 +229,8 @@ export class GraphManager {
         const messageUpdates = {
             'concept.created': () => this.addNodeWithPayload(message.payload, false),
             'concept.added': () => this.addNodeWithPayload(message.payload, false),
-            'task.added': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
-            'task.input': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
+            'task.added': () => this.addNodeWithPayload({ ...message.payload, nodeType: 'task' }, false),
+            'task.input': () => this.addNodeWithPayload({ ...message.payload, nodeType: 'task' }, false),
             'question.answered': () => this.addQuestionNode(message.payload),
             'memorySnapshot': () => {
                 this.updateFromSnapshot(message.payload);
@@ -266,7 +263,7 @@ export class GraphManager {
      */
     addQuestionNode(payload) {
         if (payload) {
-            const {answer, question} = payload;
+            const { answer, question } = payload;
             this.addNode({
                 label: answer || question || 'Answer',
                 nodeType: 'question',
@@ -351,14 +348,14 @@ export class GraphManager {
         ].join('');
 
         if (data.truth) {
-            const {frequency, confidence} = data.truth;
+            const { frequency, confidence } = data.truth;
             const freq = typeof frequency === 'number' ? frequency.toFixed(2) : '0.00';
             const conf = typeof confidence === 'number' ? confidence.toFixed(2) : '0.00';
             html += `<div style="margin-bottom:4px"><strong>Truth:</strong> <span style="color:#ce9178; font-family:monospace">{${freq}, ${conf}}</span></div>`;
         }
 
         if (data.budget) {
-            const {priority} = data.budget;
+            const { priority } = data.budget;
             const pri = typeof priority === 'number' ? priority.toFixed(2) : '0.00';
             html += `<div style="margin-bottom:4px"><strong>Priority:</strong> ${pri}</div>`;
         }

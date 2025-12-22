@@ -1,9 +1,6 @@
-import {Component} from './Component.js';
-import {GraphManager} from '../visualization/GraphManager.js';
+import { Component } from './Component.js';
+import { GraphManager } from '../visualization/GraphManager.js';
 
-/**
- * GraphPanel component for displaying and managing the visualization
- */
 export class GraphPanel extends Component {
     constructor(containerId) {
         super(containerId);
@@ -14,7 +11,6 @@ export class GraphPanel extends Component {
     initialize() {
         if (this.initialized || !this.container) return;
 
-        // GraphManager expects a map of elements
         const uiElements = {
             graphContainer: this.container,
             graphDetails: null
@@ -29,14 +25,10 @@ export class GraphPanel extends Component {
     }
 
     update(message) {
-        if (this.graphManager && this.initialized) {
-            this.graphManager.updateFromMessage(message);
-        }
+        this.graphManager?.initialized && this.graphManager.updateFromMessage(message);
     }
 
     reset() {
-        if (this.graphManager && this.initialized) {
-            this.graphManager.clear();
-        }
+        this.graphManager?.initialized && this.graphManager.clear();
     }
 }
