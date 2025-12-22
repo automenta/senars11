@@ -20,6 +20,20 @@ if (!envValidation.isValid) {
     console.warn('Warning: Not running in test environment');
 }
 
+// Global console silencing for cleaner test output
+if (!process.env.SHOW_LOGS_IN_TESTS) {
+    const noop = () => {
+    };
+    global.console = {
+        ...console,
+        log: noop,
+        info: noop,
+        warn: noop,
+        error: noop,
+        debug: noop,
+    };
+}
+
 // Initialize any shared resources needed for integration tests
 beforeAll(async () => {
     // Generate unique test ID for isolation

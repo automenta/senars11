@@ -31,7 +31,6 @@ describe('RuleProcessor', () => {
         expect(rp.getStats().syncRuleExecutions).toBe(5);
         rp.resetStats();
         expect(rp.getStats().syncRuleExecutions).toBe(0);
-
         expect(rp.getStatus().backpressure).toBeDefined();
     });
 

@@ -86,8 +86,9 @@ export const AgileNARTests = {
         const result = await operation();
         const duration = Date.now() - startTime;
 
-        // Log duration but don't fail unless significantly over limit
-        console.log(`${description} completed in ${duration}ms (max: ${maxDurationMs}ms)`);
+        if (process.env.SHOW_LOGS_IN_TESTS) {
+            console.log(`${description} completed in ${duration}ms (max: ${maxDurationMs}ms)`);
+        }
         expect(duration).toBeLessThanOrEqual(maxDurationMs);
 
         return result;
@@ -178,7 +179,9 @@ export const AgilePerformanceTests = {
         const tolerance = Math.max(1000, baselineDurationMs * 0.5); // 50% tolerance or 1s, whichever is larger
         const maxAllowed = baselineDurationMs + tolerance;
 
-        console.log(`${description} completed in ${duration}ms (baseline: ${baselineDurationMs}ms, max allowed: ${maxAllowed}ms)`);
+        if (process.env.SHOW_LOGS_IN_TESTS) {
+            console.log(`${description} completed in ${duration}ms (baseline: ${baselineDurationMs}ms, max allowed: ${maxAllowed}ms)`);
+        }
         expect(duration).toBeLessThanOrEqual(maxAllowed);
 
         return result;
@@ -197,7 +200,9 @@ export const AgilePerformanceTests = {
 
             // Log performance per item
             const durationPerItem = duration / scale;
-            console.log(`${description} at scale ${scale}: ${duration}ms total, ${durationPerItem.toFixed(2)}ms per item`);
+            if (process.env.SHOW_LOGS_IN_TESTS) {
+                console.log(`${description} at scale ${scale}: ${duration}ms total, ${durationPerItem.toFixed(2)}ms per item`);
+            }
 
             // Use flexible expectation - performance should scale reasonably
             expect(durationPerItem).toBeLessThan(500); // Each operation should take less than 500ms on average

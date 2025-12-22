@@ -25,9 +25,9 @@ describe('LM System', () => {
             expect(lm.getAvailableModels()).toContain('p1');
         });
 
-        test('selection', () => {
-            expect(lm.selectOptimalModel({type: 'test'})).toBe('test-provider');
-        });
+        test('selection', () =>
+            expect(lm.selectOptimalModel({type: 'test'})).toBe('test-provider')
+        );
     });
 
     describe('Generation & Processing', () => {

@@ -4,17 +4,12 @@ import {deepClone, formatNumber, safeAsync, safeGet} from '../../../core/src/uti
 describe('Common Utils', () => {
     describe('safeGet', () => {
         const obj = {a: {b: {c: 1}}};
-
-        test('existing nested value', () => {
-            expect(safeGet(obj, 'a.b.c')).toBe(1);
-        });
-
-        test('non-existent path -> default', () => {
-            expect(safeGet(obj, 'a.b.d', 'def')).toBe('def');
-        });
-
-        test('null parent -> default', () => {
-            expect(safeGet(null, 'a.b', 'def')).toBe('def');
+        test.each([
+            ['existing nested value', obj, 'a.b.c', undefined, 1],
+            ['non-existent path -> default', obj, 'a.b.d', 'def', 'def'],
+            ['null parent -> default', null, 'a.b', 'def', 'def']
+        ])('%s', (_, o, path, def, expected) => {
+            expect(safeGet(o, path, def)).toBe(expected);
         });
     });
 
@@ -22,7 +17,6 @@ describe('Common Utils', () => {
         test('object', () => {
             const orig = {a: 1, b: {c: 2}, d: [3, 4]};
             const clone = deepClone(orig);
-
             expect(clone).toEqual(orig);
             expect(clone).not.toBe(orig);
             expect(clone.b).not.toBe(orig.b);
@@ -38,13 +32,12 @@ describe('Common Utils', () => {
     });
 
     describe('formatNumber', () => {
-        test('decimals', () => {
-            expect(formatNumber(1.2345, 2)).toBe('1.23');
-        });
-
-        test('non-numbers', () => {
-            expect(formatNumber(null)).toBe('0');
-            expect(formatNumber('abc')).toBe('abc');
+        test.each([
+            ['decimals', 1.2345, 2, '1.23'],
+            ['non-numbers (null)', null, undefined, '0'],
+            ['non-numbers (string)', 'abc', undefined, 'abc']
+        ])('%s', (_, val, prec, expected) => {
+            expect(formatNumber(val, prec)).toBe(expected);
         });
     });
 

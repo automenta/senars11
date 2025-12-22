@@ -44,6 +44,34 @@ export class TaskMatch {
         return this;
     }
 
+    /**
+     * Add range-based truth matching
+     * @param {number} minFreq - Minimum frequency
+     * @param {number} maxFreq - Maximum frequency
+     * @param {number} minConf - Minimum confidence
+     * @param {number} maxConf - Maximum confidence
+     * @returns {TaskMatch} - Returns this for method chaining
+     */
+    withTruthRange(minFreq, maxFreq, minConf, maxConf) {
+        this.minFreq = minFreq;
+        this.maxFreq = maxFreq;
+        this.minConf = minConf;
+        this.maxConf = maxConf;
+        return this;
+    }
+
+    /**
+     * Cleaner API for minimum truth values
+     * @param {number} minFrequency - Minimum frequency value
+     * @param {number} minConfidence - Minimum confidence value
+     * @returns {TaskMatch} - Returns this for method chaining
+     */
+    withMinimumTruth(minFrequency, minConfidence) {
+        this.minFreq = minFrequency;
+        this.minConf = minConfidence;
+        return this;
+    }
+
     async matches(task) {
         // Check term match
         if (this.termFilter && !await this._checkTermMatch(task)) {
@@ -150,41 +178,50 @@ export class RemoteTaskMatch extends TaskMatch {
                 const termWithPunct = this.termFilter + (this.termFilter.endsWith('.') || this.termFilter.endsWith('!') || this.termFilter.endsWith('?') ? '' : '.');
                 expectedParsedTerm = parser.parse(termWithPunct).term;
             } catch (parseError) {
-                console.warn(`Could not parse expected term filter: ${this.termFilter}`, parseError);
+                // Silent failure for expected term parsing - just return false if we can't parse the filter
                 return false;
             }
 
             // The task.term from WebSocket is raw data, so we need to handle it properly
             // For the WebSocket pathway, we receive the actual term string in a format that can be parsed
             let actualParsedTerm = null;
-            try {
-                // Check if the task is already a properly formed term string that can be parsed
-                const taskTermStr = task.term?._name || task.term || 'unknown';
-                if (taskTermStr !== 'unknown') {
-                    // Try to parse the task term from server (it might be in internal format)
-                    // Try both external format <...> and internal format (...)
-                    if (typeof taskTermStr === 'string') {
-                        let parseString = taskTermStr;
-                        // If it's in internal format like (==> a b), we might need to convert to external format
-                        if (taskTermStr.startsWith('(') && taskTermStr.includes(',') && taskTermStr.endsWith(')')) {
-                            // Convert internal format (==> a b) to external format <a ==> b>
-                            const content = taskTermStr.substring(1, taskTermStr.length - 1); // remove ()
-                            const parts = content.split(',');
-                            if (parts.length >= 3) {
-                                const op = parts[0].trim();
-                                const args = parts.slice(1).map(arg => arg.trim());
-                                parseString = `<${args.join(` ${op} `)}>`;
+
+            // Optimization: If task.term is already a Term object (has equals method), use it directly
+            if (task.term && typeof task.term.equals === 'function') {
+                actualParsedTerm = task.term;
+            } else {
+                try {
+                    // Check if the task is already a properly formed term string that can be parsed
+                    const taskTermStr = task.term?._name || task.term || 'unknown';
+                    if (taskTermStr !== 'unknown') {
+                        // Try to parse the task term from server (it might be in internal format)
+                        // Try both external format <...> and internal format (...)
+                        if (typeof taskTermStr === 'string') {
+                            let parseString = taskTermStr;
+                            // If it's in internal format like (==> a b), we might need to convert to external format
+                            // NOTE: This simple conversion is brittle for complex terms. 
+                            // Ideally the server should send standard Narsese or we should use a proper parser.
+                            if (taskTermStr.startsWith('(') && taskTermStr.includes(',') && taskTermStr.endsWith(')')) {
+                                // Convert internal format (==> a b) to external format <a ==> b>
+                                const content = taskTermStr.substring(1, taskTermStr.length - 1); // remove ()
+                                // Simple split by comma is dangerous for nested terms, so we try to be careful
+                                // If it looks complex, we might skip this optimization and rely on the parser handling it if possible
+                                const parts = content.split(',');
+                                if (parts.length >= 3 && !content.includes('(')) {
+                                    const op = parts[0].trim();
+                                    const args = parts.slice(1).map(arg => arg.trim());
+                                    parseString = `<${args.join(` ${op} `)}>`;
+                                }
                             }
+                            actualParsedTerm = parser.parse(parseString + '.').term;
                         }
-                        actualParsedTerm = parser.parse(parseString + '.').term;
                     }
+                } catch (parseError) {
+                    // If we can't parse the actual term, we fall back to string matching
+                    // We suppress the warning to keep tests silent
+                    const taskTermStr = task.term?._name || task.term || String(task.term || '');
+                    return taskTermStr.includes(this.termFilter.replace(/[<>]/g, ''));
                 }
-            } catch (parseError) {
-                // If we can't parse the actual term, we may need to handle raw data differently
-                console.warn(`Could not parse actual task term:`, task.term, parseError);
-                // As fallback, attempt to match based on string
-                const taskTermStr = task.term?._name || task.term || String(task.term || '');
-                return taskTermStr.includes(this.termFilter.replace(/[<>]/g, ''));
             }
 
             // Compare the parsed terms with strict equality only

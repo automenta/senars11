@@ -2,6 +2,7 @@
  * Standardized error handling utilities for SeNARS
  */
 import {ConfigurationError, ConnectionError, ModelNotFoundError, ParseError, SeNARSError} from './Errors.js';
+import {Logger} from './Logger.js';
 
 // Re-export for compatibility
 export {
@@ -45,7 +46,7 @@ export const safeExecute = async (operation, context = '', defaultValue = null) 
     try {
         return await operation();
     } catch (error) {
-        console.error(`[${context}] Error:`, error);
+        Logger.error(`[${context}] Error:`, error);
         return defaultValue;
     }
 };
@@ -53,6 +54,6 @@ export const safeExecute = async (operation, context = '', defaultValue = null) 
 // Error logger with consistent format
 export const logError = (error, context = '') => {
     const errorMessage = handleError(error, context);
-    console.error(`[ERROR] ${new Date().toISOString()} - ${errorMessage}`);
+    Logger.error(`[ERROR] ${new Date().toISOString()} - ${errorMessage}`);
     return errorMessage;
 };

@@ -6,15 +6,14 @@
   "workspaces": [
     "core",
     "agent",
-    "repl",
     "ui"
   ],
   "scripts": {
-    "repl": "npm start --workspace=@senars/repl",
+    "repl": "npm run repl --workspace=@senars/agent --",
     "web": "node scripts/ui/launcher.js",
     "web:dev": "node scripts/ui/launcher.js --host 0.0.0.0",
     "demo": "node scripts/ui/launcher.js --demo basicUsage",
-    "demo:tui": "npm start --workspace=@senars/repl -- --demo",
+    "demo:tui": "npm run repl --workspace=@senars/agent -- --demo",
     "screenshots": "node scripts/utils/visualize.js --type screenshots",
     "movies": "node scripts/utils/visualize.js --type movie",
     "capture": "node scripts/utils/visualize.js",

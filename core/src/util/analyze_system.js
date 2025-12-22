@@ -1,24 +1,24 @@
-import { NAR } from '../nar/NAR.js';
-import { SystemConfig } from '../config/SystemConfig.js';
-import { Logger } from './Logger.js';
+import {NAR} from '../nar/NAR.js';
+import {SystemConfig} from '../config/SystemConfig.js';
+import {Logger} from './Logger.js';
 
 const DEFAULT_CONFIG = {
-    memory: { capacity: 100 },
-    cycle: { delay: 10 },
-    metacognition: { selfOptimization: { enabled: true } }
+    memory: {capacity: 100},
+    cycle: {delay: 10},
+    metacognition: {selfOptimization: {enabled: true}}
 };
 
 const INPUT_STATEMENTS = [
-    { statement: '(SeNARS --> system). %0.9;0.8%', type: 'belief' },
-    { statement: '(development --> progress). %0.7;0.9%', type: 'belief' },
-    { statement: '(implementation --> complete)! %0.8;0.7%', type: 'goal' },
-    { statement: '(planning --> needed)?', type: 'question' }
+    {statement: '(SeNARS --> system). %0.9;0.8%', type: 'belief'},
+    {statement: '(development --> progress). %0.7;0.9%', type: 'belief'},
+    {statement: '(implementation --> complete)! %0.8;0.7%', type: 'goal'},
+    {statement: '(planning --> needed)?', type: 'question'}
 ];
 
 const REFLECTIVE_STATEMENTS = [
-    { statement: '(system_analysis --> useful). %0.9;0.9%', type: 'belief' },
-    { statement: '(understanding_system --> important)! %0.9;0.8%', type: 'goal' },
-    { statement: '(how_to_improve)?', type: 'question' }
+    {statement: '(system_analysis --> useful). %0.9;0.9%', type: 'belief'},
+    {statement: '(understanding_system --> important)! %0.9;0.8%', type: 'goal'},
+    {statement: '(how_to_improve)?', type: 'question'}
 ];
 
 export async function runSystemAnalysis(config = DEFAULT_CONFIG) {
@@ -29,10 +29,10 @@ export async function runSystemAnalysis(config = DEFAULT_CONFIG) {
         await nar.initialize();
 
         // Input initial statements
-        for (const { statement } of INPUT_STATEMENTS) await nar.input(statement);
+        for (const {statement} of INPUT_STATEMENTS) await nar.input(statement);
 
         // Run initial cycles using Array.from for cleaner iteration
-        await Promise.all(Array.from({ length: 20 }, () => nar.step()));
+        await Promise.all(Array.from({length: 20}, () => nar.step()));
 
         // Capture state and perform meta-analysis
         const initialState = nar.getReasoningState();
@@ -40,10 +40,10 @@ export async function runSystemAnalysis(config = DEFAULT_CONFIG) {
         const correction = await nar.performSelfCorrection();
 
         // Input reflective statements
-        for (const { statement } of REFLECTIVE_STATEMENTS) await nar.input(statement);
+        for (const {statement} of REFLECTIVE_STATEMENTS) await nar.input(statement);
 
         // Run additional cycles
-        await Promise.all(Array.from({ length: 10 }, () => nar.step()));
+        await Promise.all(Array.from({length: 10}, () => nar.step()));
 
         // Return final state
         return {
@@ -59,7 +59,7 @@ export async function runSystemAnalysis(config = DEFAULT_CONFIG) {
 }
 
 export function displayResults(results) {
-    const { initialState, metaAnalysis, correction, finalState, trace } = results;
+    const {initialState, metaAnalysis, correction, finalState, trace} = results;
 
     // Initial state information
     Logger.info('=== ENHANCED SYSTEM ANALYSIS ===');

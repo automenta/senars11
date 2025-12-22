@@ -1,5 +1,6 @@
 import mitt from 'mitt';
 import {TraceId} from './TraceId.js';
+import {Logger} from './Logger.js';
 
 export class EventBus {
     constructor() {
@@ -15,7 +16,7 @@ export class EventBus {
         // Check for potential memory leak
         const currentCount = this.listenerCount(eventName);
         if (currentCount >= this._maxListeners) {
-            console.warn(`Possible memory leak detected: ${currentCount} listeners for event "${eventName}"`);
+            Logger.warn(`Possible memory leak detected: ${currentCount} listeners for event "${eventName}"`);
         }
 
         this._emitter.on(eventName, callback);
@@ -90,13 +91,13 @@ export class EventBus {
             try {
                 handler(error, type, context);
             } catch (handlerError) {
-                console.error('Error in EventBus error handler:', handlerError);
+                Logger.error('Error in EventBus error handler:', handlerError);
             }
         }
 
         // Default error logging if no custom handlers
         if (errorHandlers.length === 0) {
-            console.error(`EventBus error in ${type}:`, error, context);
+            Logger.error(`EventBus error in ${type}:`, error, context);
         }
     }
 

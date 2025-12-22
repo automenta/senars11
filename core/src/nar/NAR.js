@@ -193,15 +193,7 @@ export class NAR extends BaseComponent {
     }
 
     _registerComponents() {
-        this._componentManager.registerComponent('termFactory', {
-            initialize: () => Promise.resolve(true),
-            start: () => Promise.resolve(true),
-            stop: () => Promise.resolve(true),
-            dispose: () => Promise.resolve(true),
-            isInitialized: true,
-            isStarted: true,
-            isDisposed: false
-        });
+        this._componentManager.registerComponent('termFactory', this._termFactory);
 
         this._componentManager.registerComponent('memory', this._memory);
         this._componentManager.registerComponent('focus', this._focus, ['memory']);

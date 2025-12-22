@@ -8,7 +8,6 @@
 
 import {FlexibleTestPatterns, ParameterizedTestPatterns, StandardTestSuites} from './consolidatedTestSuites.js';
 import {flexibleAssertions, memoryAssertions, taskAssertions, truthAssertions} from './baseTestUtils.js';
-import {T} from './enhancedTestSuites.js';
 
 /**
  * Factory function to create comprehensive test suites for different types of classes
@@ -257,12 +256,7 @@ export const TestSuiteFactory = {
         }
     },
 
-    /**
-     * Create a combined suite using the T shorthand from enhancedTestSuites
-     */
-    createShorthandSuite: (type, ...args) => {
-        return T.suite(type, ...args);
-    }
+
 };
 
 // Export for convenience

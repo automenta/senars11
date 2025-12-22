@@ -28,8 +28,7 @@ describe('Prolog Features Exploration', () => {
         ];
 
         for (const k of knowledge) {
-            const result = await narTool.execute({action: 'assert_prolog', content: k});
-            if (!result.success) console.warn("List assertion failed:", result.error);
+            await narTool.execute({action: 'assert_prolog', content: k});
         }
 
         const query = 'append([1], [2], X)?';

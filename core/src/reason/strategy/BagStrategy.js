@@ -39,7 +39,7 @@ export class BagStrategy extends Strategy {
                 }
             } catch (error) {
                 console.error('Error processing primary premise in BagStrategy:', error);
-                continue;
+
             }
         }
     }

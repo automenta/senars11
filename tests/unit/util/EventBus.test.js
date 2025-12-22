@@ -81,9 +81,11 @@ describe('EventBus', () => {
         expect(bus.listenerCount('test')).toBe(0);
     });
 
-    test('memory leak warning', () => {
-        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+    test('memory leak warning', async () => {
+        const {Logger} = await import('../../../core/src/util/Logger.js');
+        const warn = jest.spyOn(Logger, 'warn').mockImplementation(() => {
         });
+
         bus.setMaxListeners(2);
         bus.on('t', () => {
         });
@@ -91,6 +93,7 @@ describe('EventBus', () => {
         });
         bus.on('t', () => {
         });
+
         expect(warn).toHaveBeenCalledWith(expect.stringMatching(/Possible memory leak/));
         warn.mockRestore();
     });

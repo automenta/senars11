@@ -7,6 +7,7 @@ import os from 'os';
 import {FileSystemDemoSource} from './FileSystemDemoSource.js';
 import {BuiltinDemoSource} from './BuiltinDemoSource.js';
 import {ProcessDemoRunner} from './ProcessDemoRunner.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 export class DemosManager {
     constructor() {
@@ -32,7 +33,7 @@ export class DemosManager {
                     });
                 }
             } catch (error) {
-                console.error(`Error loading demos from source ${source.constructor.name}:`, error);
+                Logger.error(`Error loading demos from source ${source.constructor.name}:`, error);
             }
         }
     }
@@ -125,13 +126,13 @@ export class DemosManager {
                 if (typeof nar.executeCommand === 'function') {
                     await nar.executeCommand(cmd, ...args);
                 } else {
-                    console.warn(`Command execution not supported by this NAR instance: ${cmd}`);
+                    Logger.warn(`Command execution not supported by this NAR instance: ${cmd}`);
                 }
             } else {
                 await nar.input(input);
             }
         } catch (error) {
-            console.error(`Step ${step} error:`, error);
+            Logger.error(`Step ${step} error:`, error);
             sendDemoStep?.(demoId, step, `Error: ${error.message}`);
         }
     }

@@ -21,24 +21,24 @@ const TYPE_TO_PUNCTUATION = Object.freeze({
 const DEFAULT_BUDGET = Object.freeze({priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10});
 
 export class Task {
-    constructor({
-                    term,
-                    punctuation = '.',
-                    truth = null,
-                    budget = DEFAULT_BUDGET,
-                    stamp = null,
-                    metadata = null
-                }) {
+    constructor({term, punctuation = '.', truth = null, budget = DEFAULT_BUDGET, stamp = null, metadata = null}) {
         if (!(term instanceof Term)) throw new Error('Task must be initialized with a valid Term object.');
 
-        this.term = term;
+        let finalTerm = term;
+        let finalTruth = truth;
+
+        if (finalTerm.operator === '--' && finalTerm.components?.length === 1) {
+            finalTerm = finalTerm.components[0];
+            if (finalTruth) {
+                const truth = this._createTruth(finalTruth);
+                finalTruth = truth ? new Truth(1.0 - truth.f, truth.c) : null;
+            }
+        }
+
+        this.term = finalTerm;
         this.type = PUNCTUATION_TO_TYPE[punctuation] ?? 'BELIEF';
 
-        // Validate truth value based on task type
-        const hasValidTruthForType = this.type === 'QUESTION'
-            ? (truth === null)
-            : (truth !== null);
-
+        const hasValidTruthForType = this.type === 'QUESTION' ? (finalTruth === null) : (finalTruth !== null);
         if (!hasValidTruthForType) {
             const errorMsg = this.type === 'QUESTION'
                 ? 'Questions cannot have truth values'
@@ -46,7 +46,7 @@ export class Task {
             throw new Error(errorMsg);
         }
 
-        this.truth = this._createTruth(truth);
+        this.truth = this._createTruth(finalTruth);
         this.budget = Object.freeze({...budget});
         this.stamp = stamp ?? ArrayStamp.createInput();
         this.metadata = metadata;
@@ -79,13 +79,9 @@ export class Task {
     _createTruth(truth) {
         if (truth instanceof Truth) return truth;
         if (!truth) return null;
-
-        // Handle format: {frequency, confidence}
-        if (truth.frequency !== undefined && truth.confidence !== undefined) {
-            return new Truth(truth.frequency, truth.confidence);
-        }
-
-        return null;
+        return truth?.frequency != null && truth?.confidence != null
+            ? new Truth(truth.frequency, truth.confidence)
+            : null;
     }
 
     clone(overrides = {}) {
@@ -93,31 +89,34 @@ export class Task {
             term: this.term,
             punctuation: this.punctuation,
             truth: this.truth,
-            budget: {...this.budget}, // Shallow copy budget to avoid reference issues
+            budget: {...this.budget},
             stamp: this.stamp,
             ...overrides,
         });
     }
 
-    isBelief = () => this.type === 'BELIEF';
+    isBelief() {
+        return this.type === 'BELIEF';
+    }
 
-    isGoal = () => this.type === 'GOAL';
+    isGoal() {
+        return this.type === 'GOAL';
+    }
 
-    isQuestion = () => this.type === 'QUESTION';
+    isQuestion() {
+        return this.type === 'QUESTION';
+    }
 
     equals(other) {
         if (!(other instanceof Task) || this.type !== other.type) return false;
 
-        // Check term equality first (early exit if terms don't match)
         if (this.term !== other.term && !this.term.equals(other.term)) return false;
 
         const thisHasTruth = this.truth !== null;
         const otherHasTruth = other.truth !== null;
 
-        // Check truth existence first (early exit if truth existence differs)
         if (thisHasTruth !== otherHasTruth) return false;
 
-        // If both have truth, check truth equality
         if (thisHasTruth && otherHasTruth && !this.truth.equals(other.truth)) return false;
 
         return true;

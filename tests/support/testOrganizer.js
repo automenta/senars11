@@ -16,9 +16,7 @@ import * as flexibleUtils from './flexibleTestUtils.js';
 import * as templateFactory from './TestTemplateFactory.js';
 import * as categorizationUtils from './testCategorization.js';
 import * as errorHandlingUtils from './testErrorHandling.js';
-import * as commonUtils from './commonTestSuites.js';
-import * as generalUtils from './generalTestSuites.js';
-import * as enhancedUtils from './enhancedTestSuites.js';
+import * as agileUtils from './agileRobustnessUtils.js';
 
 /**
  * Consolidated test utilities organized by functionality
@@ -62,11 +60,9 @@ const TestOrganizer = {
 
     // Comprehensive test suites
     suites: {
-        ...commonUtils,
-        ...generalUtils,
-        ...consolidatedSuites, // Include the new consolidated test suites
-        ...enhancedUtils,     // Include the enhanced test suites
-        factory: testSuiteFactory, // Include the test suite factory
+        ...consolidatedSuites,
+        ...agileUtils,
+        factory: testSuiteFactory,
         comprehensive: baseUtils.comprehensiveTestSuites
     },
 
@@ -139,10 +135,7 @@ export {TestOrganizer};
 export * from './baseTestUtils.js';
 export * from './narTestSetup.js';
 export * from './factories.js';
-export * from './commonTestSuites.js';
-export * from './generalTestSuites.js';
 export * from './consolidatedTestSuites.js';
-export * from './enhancedTestSuites.js';
 export * from './agileRobustnessUtils.js';
 export * from './testSuiteFactory.js';
 

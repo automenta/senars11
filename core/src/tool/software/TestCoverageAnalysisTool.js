@@ -3,8 +3,8 @@
  * @description Tool for analyzing test coverage and source code relationships
  */
 
-import { SoftwareAnalysisTool } from './SoftwareAnalysisTool.js';
-import { Logger } from '../../util/Logger.js';
+import {SoftwareAnalysisTool} from './SoftwareAnalysisTool.js';
+import {Logger} from '../../util/Logger.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -65,7 +65,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
      * @returns {Promise<any>} - Analysis result
      */
     async performAnalysis(params, context) {
-        const { verbose = false, topN = 10, includeFailing = true, includePassing = true } = params;
+        const {verbose = false, topN = 10, includeFailing = true, includePassing = true} = params;
 
         // Collect test file relationships and coverage data
         const testResults = await this._collectTestResults();
@@ -151,7 +151,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             }
 
             // If no existing test report, try to run tests to get results
-            const { spawnSync } = await import('child_process');
+            const {spawnSync} = await import('child_process');
             // Try different possible config file names
             const possibleConfigs = ['jest.config.cjs', 'jest.config.js', 'jest.config.json', 'package.json'];
 
@@ -185,7 +185,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                             return this._parseTestReport(testOutput);
                         } catch (parseError) {
                             // If parsing fails, try other config files
-                            continue;
+
                         }
                     }
                 }
@@ -230,7 +230,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
                 passedTestDetails: []
             };
         } catch (error) {
-            Logger.error('❌ Error collecting test results:', { message: error.message, stack: error.stack });
+            Logger.error('❌ Error collecting test results:', {message: error.message, stack: error.stack});
             return {
                 totalTests: 0,
                 passedTests: 0,
@@ -308,7 +308,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             }
             return null;
         } catch (error) {
-            Logger.error('❌ Error collecting coverage data:', { message: error.message });
+            Logger.error('❌ Error collecting coverage data:', {message: error.message});
             return null;
         }
     }
@@ -465,7 +465,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
      * @private
      */
     _scanDirectory(dir, callback) {
-        const items = fs.readdirSync(dir, { withFileTypes: true });
+        const items = fs.readdirSync(dir, {withFileTypes: true});
 
         for (const item of items) {
             const fullPath = path.join(dir, item.name);
@@ -588,12 +588,12 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
 
         analysis.highCausalFiles = sortedFiles
             .slice(0, topN)
-            .map(([sourceFile, count]) => ({ sourceFile, testCount: count }));
+            .map(([sourceFile, count]) => ({sourceFile, testCount: count}));
 
         analysis.lowCausalFiles = sortedFiles
             .slice(Math.max(0, sortedFiles.length - topN))
             .reverse()
-            .map(([sourceFile, count]) => ({ sourceFile, testCount: count }));
+            .map(([sourceFile, count]) => ({sourceFile, testCount: count}));
 
         return analysis;
     }
@@ -632,7 +632,7 @@ export class TestCoverageAnalysisTool extends SoftwareAnalysisTool {
             return;
         }
 
-        const items = fs.readdirSync(dir, { withFileTypes: true });
+        const items = fs.readdirSync(dir, {withFileTypes: true});
 
         for (const item of items) {
             const fullPath = path.join(dir, item.name);

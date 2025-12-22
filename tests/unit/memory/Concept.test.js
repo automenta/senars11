@@ -67,4 +67,58 @@ describe('Concept', () => {
             expect(concept.averagePriority).toBeCloseTo(0.8); // Second task suppressed
         });
     });
+
+    describe('Serialization', () => {
+        test('serializes concept data', () => {
+            const task = createTask({term, punctuation: '.', truth: {frequency: 1.0, confidence: 0.9}});
+            concept.addTask(task);
+            concept.boostActivation(0.5);
+
+            const serialized = concept.serialize();
+            expect(serialized).toBeDefined();
+            expect(serialized).toHaveProperty('term');
+            expect(serialized).toHaveProperty('activation');
+        });
+
+        test('handles invalid deserialization data', async () => {
+            const success = await concept.deserialize(null);
+            expect(success).toBe(false);
+        });
+    });
+
+    describe('Edge Cases', () => {
+        test('enforceCapacity', () => {
+            for (let i = 0; i < 15; i++) {
+                concept.addTask(createTask({term, punctuation: '.'}));
+            }
+            concept.enforceCapacity(5);
+            expect(concept.totalTasks).toBeLessThanOrEqual(5);
+        });
+
+        test('containsTask', () => {
+            const task = createTask({term});
+            expect(concept.containsTask(task)).toBe(false);
+            concept.addTask(task);
+            expect(concept.containsTask(task)).toBe(true);
+        });
+
+        test('replaceTask', () => {
+            const oldTask = createTask({term, punctuation: '.'});
+            const newTask = createTask({term, punctuation: '.', truth: {frequency: 0.9, confidence: 0.95}});
+
+            concept.addTask(oldTask);
+            const replaced = concept.replaceTask(oldTask, newTask);
+            expect(replaced).toBe(true);
+        });
+
+        test('getStats returns comprehensive data', () => {
+            concept.addTask(createTask({term}));
+            const stats = concept.getStats();
+
+            expect(stats).toHaveProperty('term');
+            expect(stats).toHaveProperty('totalTasks');
+            expect(stats).toHaveProperty('activation');
+            expect(stats.totalTasks).toBe(1);
+        });
+    });
 });

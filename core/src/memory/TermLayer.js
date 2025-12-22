@@ -142,17 +142,8 @@ export class TermLayer extends Layer {
     }
 
     _updatePriorityInBag(linkEntry) {
-        // This remove/add might trigger callback.
-        // remove -> callback -> deletes from map
-        // add -> adds back to bag -> we MUST add back to map!
-
-        // Wait, update logic is tricky now.
-        // If I remove from bag, it triggers callback which removes from map.
-        // Then I add to bag.
-        // But I don't add to map in _updatePriorityInBag!
-
-        // So I need to fix _updatePriorityInBag.
-
+        // Removing from bag triggers the callback which removes from the map.
+        // We must re-add the entry to the map after adding it back to the bag.
         this.linkBag.remove(linkEntry); // triggers map removal
         this.linkBag.add(linkEntry);
 

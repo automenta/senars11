@@ -1,5 +1,6 @@
 import fs from 'fs';
 import inquirer from 'inquirer';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 class PreferenceCollector {
     constructor() {
@@ -12,16 +13,16 @@ class PreferenceCollector {
             trajectoryA = await this.loadTrajectory(pathA);
             trajectoryB = await this.loadTrajectory(pathB);
         } catch (e) {
-            console.error("Error loading trajectories:", e.message);
+            Logger.error("Error loading trajectories:", e.message);
             return null;
         }
 
-        console.log('\n==========================================');
-        console.log('=== Trajectory A ===');
-        console.log(this._formatTrajectory(trajectoryA));
-        console.log('\n=== Trajectory B ===');
-        console.log(this._formatTrajectory(trajectoryB));
-        console.log('==========================================\n');
+        Logger.info('\n==========================================');
+        Logger.info('=== Trajectory A ===');
+        Logger.info(this._formatTrajectory(trajectoryA));
+        Logger.info('\n=== Trajectory B ===');
+        Logger.info(this._formatTrajectory(trajectoryB));
+        Logger.info('==========================================\n');
 
         const {preference} = await inquirer.prompt([{
             type: 'list',

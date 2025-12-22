@@ -2,6 +2,7 @@ import {Bag} from './Bag.js';
 import {clamp} from '../util/common.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {Task} from '../task/Task.js';
+import {Logger} from '../util/Logger.js';
 
 const TASK_TYPES = Object.freeze({BELIEF: 'BELIEF', GOAL: 'GOAL', QUESTION: 'QUESTION'});
 const CAPACITY_DISTRIBUTION = Object.freeze({BELIEF: 0.6, GOAL: 0.3, QUESTION: 0.1});
@@ -261,7 +262,7 @@ export class Concept extends BaseComponent {
 
             return true;
         } catch (error) {
-            console.error('Error during concept deserialization:', error);
+            Logger.error('Error during concept deserialization', error);
             return false;
         }
     }

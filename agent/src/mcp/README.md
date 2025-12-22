@@ -1,52 +1,66 @@
-# SeNARS MCP (Model Context Protocol) System
+# MCP Server
 
-Implementation of the Model Context Protocol for SeNARS using the official `@modelcontextprotocol/sdk`.
+Model Context Protocol server that exposes SeNARS reasoning as tools for AI assistants.
 
-## Overview
-
-This module implements an MCP Server that exposes SeNARS reasoning capabilities as tools.
-It uses `stdio` transport, making it compatible with MCP clients like Claude Desktop or other LLM integrations.
-
-## Architecture
-
-- **Server**: Exposes SeNARS tools (`reason`, `memory-query`, `execute-tool`) via Stdio transport.
-- **Client**: Connects to the Server (e.g. via subprocess).
-- **Demo**: `examples/mcp-demo.js` demonstrates an LLM (Ollama or Transformer.js) connecting to SeNARS MCP Server.
-
-## Usage
-
-### Running the Demo
-
-```bash
-npm run demo:mcp --workspace=@senars/agent
-```
-
-### Running the Server
-
-To start the server (e.g. for use with Claude Desktop config):
+## Quick Start
 
 ```bash
 node agent/src/mcp/start-server.js
 ```
 
-Add this to your Claude Desktop config:
+## Tools Exposed
+
+| Tool           | Description               | Parameters               |
+|----------------|---------------------------|--------------------------|
+| `ping`         | Health check              | None                     |
+| `reason`       | Run reasoning on premises | `premises[]`, `goal?`    |
+| `memory-query` | Query concept memory      | `query`, `limit`         |
+| `execute-tool` | Execute a registered tool | `toolName`, `parameters` |
+| `evaluate_js`  | Run sandboxed JavaScript  | `code`                   |
+| `get-focus`    | Get current focus buffer  | `limit`                  |
+
+## Usage with Claude Desktop
+
+Add to `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "senars": {
       "command": "node",
-      "args": ["/absolute/path/to/senars-monorepo/agent/src/mcp/start-server.js"]
+      "args": ["path/to/agent/src/mcp/start-server.js"]
     }
   }
 }
 ```
 
-### Tools
+## Programmatic Usage
 
-- `reason`: Performs logical inference using SeNARS.
-    - Inputs: `premises` (array of strings), `goal` (optional string)
-- `memory-query`: Queries SeNARS memory.
-    - Inputs: `query` (string)
-- `execute-tool`: Executes internal SeNARS tools.
-    - Inputs: `toolName` (string), `parameters` (object)
+```javascript
+import { Server } from './Server.js';
+import { NAR } from '@senars/core';
+
+const nar = new NAR();
+await nar.initialize();
+
+const server = new Server({ nar });
+await server.start();
+```
+
+## Safety
+
+The `Safety.js` module provides:
+
+- PII scrubbing from inputs
+- Input validation
+- Sandboxed code execution (1s timeout)
+
+## Files
+
+| File              | Purpose                                |
+|-------------------|----------------------------------------|
+| `Server.js`       | Main MCP server with tool registration |
+| `Client.js`       | Client for connecting to MCP servers   |
+| `Safety.js`       | Input validation and PII protection    |
+| `start-server.js` | CLI entry point                        |
+| `index.js`        | Module exports                         |

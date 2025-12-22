@@ -53,18 +53,18 @@ export const DEFAULT_CONFIG = {
 /**
  * Configuration validator
  */
-import {validateConfigWithDefaults} from './ConfigValidator.js';
+import { validateConfigWithDefaults } from './ConfigValidator.js';
 
 export const DEFAULT_CONFIG_CORE = Object.freeze({
     nar: {
-        tools: {enabled: true},
-        lm: {enabled: false},
-        reasoningAboutReasoning: {enabled: true},
-        debug: {pipeline: false}
+        tools: { enabled: true },
+        lm: { enabled: false },
+        reasoningAboutReasoning: { enabled: true },
+        debug: { pipeline: false }
     },
     lm: {
         provider: 'ollama',
-        modelName: "hf.co/unsloth/granite-4.0-micro-GGUF:Q4_K_M",
+        modelName: "Xenova/LaMini-Flan-T5-248M",
         baseUrl: "http://localhost:11434",
         temperature: 0,
         enabled: false
@@ -215,8 +215,37 @@ export class ConfigValidator {
             return validateConfigWithDefaults(userConfig || {});
         } catch (error) {
             // If validation fails, return defaults merged with user config
-            return {...DEFAULT_CONFIG, ...userConfig};
+            return { ...DEFAULT_CONFIG, ...userConfig };
         }
+    }
+
+    /**
+     * Deep merges two configuration objects
+     * @param {Object} target - Target object
+     * @param {Object} source - Source object
+     * @returns {Object} - Merged object
+     */
+    static deepMerge(target, source) {
+        const isObject = (item) => {
+            return (item && typeof item === 'object' && !Array.isArray(item));
+        };
+
+        if (!source) return target;
+        const output = { ...target };
+
+        if (isObject(target) && isObject(source)) {
+            Object.keys(source).forEach(key => {
+                if (isObject(source[key])) {
+                    if (!(key in target))
+                        Object.assign(output, { [key]: source[key] });
+                    else
+                        output[key] = ConfigValidator.deepMerge(target[key], source[key]);
+                } else {
+                    Object.assign(output, { [key]: source[key] });
+                }
+            });
+        }
+        return output;
     }
 }
 

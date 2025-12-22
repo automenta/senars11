@@ -1,8 +1,4 @@
-import {jest} from '@jest/globals';
 import {NAR} from '../../../core/src/nar/NAR.js';
-
-// Set a longer timeout for this integration test
-jest.setTimeout(10000);
 
 describe('Metacognition Integration', () => {
     let nar;

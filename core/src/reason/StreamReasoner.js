@@ -34,7 +34,7 @@ export class StreamReasoner extends BaseComponent {
 
         // 2. Select beliefs (premises)
         const beliefs = concept.getTasksByType('BELIEF');
-        // console.log(`[StreamReasoner] Found ${beliefs.length || 0} beliefs`);
+
 
         // 3. Feed to RuleProcessor
         for (const belief of beliefs) {

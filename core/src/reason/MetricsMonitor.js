@@ -2,6 +2,7 @@
  * MetricsMonitor for the new reason system
  * Provides comprehensive monitoring and metrics collection for the reasoning process
  */
+import {Logger} from '../util/Logger.js';
 import {logError} from './utils/error.js';
 import {getMemoryUsage} from '../util/common.js';
 
@@ -353,7 +354,7 @@ export class MetricsMonitor {
         }
 
         // Log anomaly
-        //console.warn(`Metric anomaly detected: ${type} = ${value}`);
+        //Logger.warn(`Metric anomaly detected: ${type} = ${value}`);
     }
 
     /**
@@ -373,7 +374,7 @@ export class MetricsMonitor {
         }
 
         // Log alert
-        console.warn(`Threshold alert: ${alertName} - ${config.metric} = ${value}, threshold = ${config.threshold}`);
+        Logger.warn(`Threshold alert: ${alertName} - ${config.metric} = ${value}, threshold = ${config.threshold}`);
     }
 
     /**

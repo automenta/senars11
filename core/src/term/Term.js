@@ -23,7 +23,7 @@ export class Term {
         this._components = freeze(type === TermType.ATOM && !components.length ? [name] : components);
 
         this._complexity = this._calculateComplexity();
-        this._id = type === TermType.ATOM ? name : `${operator}_${name}`;
+        this._id = name;
         this._hash = Term.hash(this._id);
         this._semanticType = this._determineSemanticType();
 
@@ -44,6 +44,30 @@ export class Term {
 
     get components() {
         return this._components;
+    }
+
+    get subject() {
+        return this._components[0];
+    }
+
+    get predicate() {
+        return this._components[1];
+    }
+
+    get isInheritance() {
+        return this._operator === '-->';
+    }
+
+    get isImplication() {
+        return this._operator === '==>';
+    }
+
+    get isSimilarity() {
+        return this._operator === '<->';
+    }
+
+    get isEquivalence() {
+        return this._operator === '<=>';
     }
 
     get complexity() {
@@ -94,6 +118,31 @@ export class Term {
         if (!data) throw new Error('Term.fromJSON requires valid data object');
         const {type, name, components = [], operator} = data;
         return new Term(type, name, components, operator);
+    }
+
+    comp(index) {
+        return this._components[index];
+    }
+
+    compName(index) {
+        return this._components[index]?.name;
+    }
+
+    compEquals(index, term) {
+        const c = this._components[index];
+        return !!(c && c.equals && c.equals(term));
+    }
+
+    isOp(op) {
+        return this._operator === op;
+    }
+
+    subjectEquals(term) {
+        return this.compEquals(0, term);
+    }
+
+    predicateEquals(term) {
+        return this.compEquals(1, term);
     }
 
     _determineSemanticType() {

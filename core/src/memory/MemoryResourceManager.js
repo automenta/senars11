@@ -72,7 +72,7 @@ export class MemoryResourceManager {
         );
 
         // Trigger forgetting multiple times using modern iteration
-        Array.from({ length: conceptsToForget }).forEach(() => {
+        Array.from({length: conceptsToForget}).forEach(() => {
             memory._applyConceptForgetting();
         });
     }
@@ -154,7 +154,7 @@ export class MemoryResourceManager {
      * @returns {Object} Resource manager statistics
      */
     getStats() {
-        return { ...this._stats };
+        return {...this._stats};
     }
 
     /**

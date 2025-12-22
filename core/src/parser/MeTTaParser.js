@@ -10,10 +10,10 @@ export class MeTTaParser {
 
     /**
      * Parse MeTTa syntax and convert to SeNARS tasks (beliefs/goals)
-     * 
+     *
      * @param {string} mettaInput - MeTTa syntax input
      * @returns {Array} - Array of parsed tasks (currently empty - stub implementation)
-     * 
+     *
      * LIMITATION: MeTTa parsing is not yet implemented.
      * Future implementation should:
      * - Parse MeTTa expressions into AST

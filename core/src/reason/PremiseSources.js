@@ -1,4 +1,5 @@
 import {PremiseSource} from './PremiseSource.js';
+import {Logger} from '../util/Logger.js';
 
 /**
  * A Bag of PremiseSources that samples from the sources based on configurable objectives.
@@ -84,7 +85,7 @@ export class PremiseSources extends PremiseSource {
             // Fallback (shouldn't happen due to floating point precision issues)
             return this.sources[this.sources.length - 1].source;
         } catch (error) {
-            console.error('Error in _selectSourceByPriority:', error);
+            Logger.error('Error in _selectSourceByPriority:', error);
             // Fallback to first source if selection fails
             return this.sources.length > 0 ? this.sources[0].source : null;
         }
@@ -113,10 +114,10 @@ export class PremiseSources extends PremiseSource {
                     break;
                 }
             } catch (error) {
-                console.error('Error in PremiseSources stream:', error);
+                Logger.error('Error in PremiseSources stream:', error);
                 // Wait before continuing to avoid tight error loop
                 await new Promise(resolve => setTimeout(resolve, 10));
-                continue;
+
             }
         }
     }

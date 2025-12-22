@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {CYCLE, MEMORY, PERFORMANCE, SYSTEM} from './constants.js';
 
-const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG = {
     system: {
         port: SYSTEM.DEFAULT_PORT,
         host: SYSTEM.DEFAULT_HOST,
@@ -95,16 +95,16 @@ export class SystemConfig {
         return new SystemConfig(userConfig);
     }
 
+    static _isObject(obj) {
+        return obj && typeof obj === 'object' && !Array.isArray(obj);
+    }
+
     _deepMerge(target, source) {
         const result = {...target};
         for (const [key, value] of Object.entries(source)) {
-            const isObject = (obj) => obj && typeof obj === 'object' && !Array.isArray(obj);
-
-            if (isObject(value) && isObject(result[key])) {
-                result[key] = this._deepMerge(result[key], value);
-            } else {
-                result[key] = value;
-            }
+            result[key] = SystemConfig._isObject(value) && SystemConfig._isObject(result[key])
+                ? this._deepMerge(result[key], value)
+                : value;
         }
         return result;
     }
@@ -121,7 +121,7 @@ export class SystemConfig {
     }
 
     set(path, value) {
-        if (this._frozen) throw new Error('Configuration is frozen and cannot be modified');
+        if (this._frozen) throw new Error('Config is frozen and cannot be modified');
 
         const pathParts = path?.split('.') ?? [];
         if (pathParts.length === 0) return this;
@@ -136,15 +136,12 @@ export class SystemConfig {
 
         current[lastKey] = value;
 
-        // Validate the entire config after setting a value
         const validationResult = CONFIG_SCHEMA.safeParse(this._config);
-
         if (!validationResult.success) {
-            throw new Error(`Configuration validation failed after setting value: ${validationResult.error.message}`);
+            throw new Error(`Config validation failed: ${validationResult.error.message}`);
         }
 
         this._config = validationResult.data;
-
         return this;
     }
 
@@ -153,7 +150,7 @@ export class SystemConfig {
         const validationResult = CONFIG_SCHEMA.safeParse(merged);
 
         if (!validationResult.success) {
-            throw new Error(`Configuration validation failed after update: ${validationResult.error.message}`);
+            throw new Error(`Config validation failed: ${validationResult.error.message}`);
         }
 
         this._config = validationResult.data;

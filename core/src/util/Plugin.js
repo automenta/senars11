@@ -1,3 +1,5 @@
+import {Logger} from './Logger.js';
+
 export class Plugin {
     constructor(id, config = {}) {
         if (new.target === Plugin) {
@@ -13,7 +15,7 @@ export class Plugin {
 
     async initialize(context) {
         if (this.initialized) {
-            console.warn(`Plugin ${this.id} already initialized`);
+            Logger.warn(`Plugin ${this.id} already initialized`);
             return true;
         }
 
@@ -23,7 +25,7 @@ export class Plugin {
             this.initialized = true;
             return true;
         } catch (error) {
-            console.error(`Failed to initialize plugin ${this.id}:`, error);
+            Logger.error(`Failed to initialize plugin ${this.id}:`, error);
             return false;
         }
     }
@@ -34,7 +36,7 @@ export class Plugin {
         }
 
         if (this.started) {
-            console.warn(`Plugin ${this.id} already started`);
+            Logger.warn(`Plugin ${this.id} already started`);
             return true;
         }
 
@@ -43,14 +45,14 @@ export class Plugin {
             this.started = true;
             return true;
         } catch (error) {
-            console.error(`Failed to start plugin ${this.id}:`, error);
+            Logger.error(`Failed to start plugin ${this.id}:`, error);
             return false;
         }
     }
 
     async stop() {
         if (!this.started) {
-            console.warn(`Plugin ${this.id} is not running`);
+            Logger.warn(`Plugin ${this.id} is not running`);
             return true;
         }
 
@@ -59,14 +61,14 @@ export class Plugin {
             this.started = false;
             return true;
         } catch (error) {
-            console.error(`Failed to stop plugin ${this.id}:`, error);
+            Logger.error(`Failed to stop plugin ${this.id}:`, error);
             return false;
         }
     }
 
     async dispose() {
         if (this.disposed) {
-            console.warn(`Plugin ${this.id} already disposed`);
+            Logger.warn(`Plugin ${this.id} already disposed`);
             return true;
         }
 
@@ -76,7 +78,7 @@ export class Plugin {
             this.disposed = true;
             return true;
         } catch (error) {
-            console.error(`Failed to dispose plugin ${this.id}:`, error);
+            Logger.error(`Failed to dispose plugin ${this.id}:`, error);
             return false;
         }
     }
@@ -136,12 +138,12 @@ export class PluginManager {
 
     registerPlugin(plugin) {
         if (!(plugin instanceof Plugin)) {
-            console.error('Plugin must be an instance of Plugin class');
+            Logger.error('Plugin must be an instance of Plugin class');
             return false;
         }
 
         if (this.plugins.has(plugin.id)) {
-            console.warn(`Plugin with id ${plugin.id} already registered`);
+            Logger.warn(`Plugin with id ${plugin.id} already registered`);
             return false;
         }
 
@@ -151,7 +153,7 @@ export class PluginManager {
 
     unregisterPlugin(pluginId) {
         if (!this.plugins.has(pluginId)) {
-            console.warn(`No plugin found with id ${pluginId}`);
+            Logger.warn(`No plugin found with id ${pluginId}`);
             return false;
         }
 
@@ -176,7 +178,7 @@ export class PluginManager {
                     pluginManager: this
                 })
                     .catch(error => {
-                        console.error(`Failed to initialize plugin ${id}:`, error);
+                        Logger.error(`Failed to initialize plugin ${id}:`, error);
                         allSuccessful = false;
                     })
             );
@@ -189,7 +191,7 @@ export class PluginManager {
 
     async startAll() {
         if (!this.initialized) {
-            console.warn('Plugins should be initialized before starting');
+            Logger.warn('Plugins should be initialized before starting');
             await this.initializeAll();
         }
 
@@ -203,7 +205,7 @@ export class PluginManager {
                         success || (allSuccessful = false);
                     })
                     .catch(error => {
-                        console.error(`Failed to start plugin ${id}:`, error);
+                        Logger.error(`Failed to start plugin ${id}:`, error);
                         allSuccessful = false;
                     })
             );
@@ -224,7 +226,7 @@ export class PluginManager {
                         success || (allSuccessful = false);
                     })
                     .catch(error => {
-                        console.error(`Failed to stop plugin ${id}:`, error);
+                        Logger.error(`Failed to stop plugin ${id}:`, error);
                         allSuccessful = false;
                     })
             );
@@ -245,7 +247,7 @@ export class PluginManager {
                         success || (allSuccessful = false);
                     })
                     .catch(error => {
-                        console.error(`Failed to dispose plugin ${id}:`, error);
+                        Logger.error(`Failed to dispose plugin ${id}:`, error);
                         allSuccessful = false;
                     })
             );

@@ -96,7 +96,6 @@ describe('Property-Based Testing for Edge Cases', () => {
                 }
             } catch (error) {
                 // If an error occurs, it should be handled gracefully
-                console.warn('Strategy processing error (expected in property testing):', error.message);
             }
 
             // Should have processed at least some pairs without crashing

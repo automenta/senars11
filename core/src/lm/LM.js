@@ -1,11 +1,12 @@
-import {BaseComponent} from '../util/BaseComponent.js';
-import {Metrics} from '../util/Metrics.js';
-import {ProviderRegistry} from './ProviderRegistry.js';
-import {ModelSelector} from './ModelSelector.js';
-import {NarseseTranslator} from './NarseseTranslator.js';
-import {CircuitBreaker} from '../util/CircuitBreaker.js';
-import {LMStats} from './LMStats.js';
-import {ProviderUtils} from './ProviderUtils.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { Metrics } from '../util/Metrics.js';
+import { ProviderRegistry } from './ProviderRegistry.js';
+import { ModelSelector } from './ModelSelector.js';
+import { NarseseTranslator } from './NarseseTranslator.js';
+import { CircuitBreaker } from '../util/CircuitBreaker.js';
+import { LMStats } from './LMStats.js';
+import { ProviderUtils } from './ProviderUtils.js';
+import { EmptyOutputError } from './EmptyOutputError.js';
 
 export class LM extends BaseComponent {
     constructor(config = {}, eventBus = null) {
@@ -21,7 +22,7 @@ export class LM extends BaseComponent {
     }
 
     get config() {
-        return {...this._config};
+        return { ...this._config };
     }
 
     get metrics() {
@@ -54,6 +55,12 @@ export class LM extends BaseComponent {
             providerId: id,
             default: id === this.providers.defaultProviderId
         });
+        // Forward custom events from provider
+        if (typeof provider.on === 'function') {
+            provider.on('lm:model-dl-progress', (data) => {
+                this.eventBus?.emit('lm:model-dl-progress', { ...data, providerId: id });
+            });
+        }
         return this;
     }
 
@@ -86,11 +93,51 @@ export class LM extends BaseComponent {
 
         const startTime = Date.now();
         const result = await this._executeWithCircuitBreaker(ProviderUtils.standardGenerate, provider, prompt, options);
+
+        this._validateOutput(result, providerId);
+
         this.lmStats.update(prompt, result, providerId, startTime);
         this.updateMetric('totalCalls', this.lmStats.totalCalls);
         this.updateMetric('totalTokens', this.lmStats.totalTokens);
         this.updateMetric('avgResponseTime', this.lmStats.avgResponseTime);
         return result;
+    }
+
+    _validateOutput(result, providerId) {
+        const validationConfig = this.config?.validation ?? {};
+        const emptyOutputMode = validationConfig.emptyOutput ?? 'warn';
+        const narseseValidation = validationConfig.narsese ?? false;
+
+        if (typeof result === 'string' && result.trim().length === 0) {
+            const error = new EmptyOutputError('LM returned empty output', providerId);
+            if (emptyOutputMode === 'error') throw error;
+            if (emptyOutputMode === 'warn') {
+                this.logWarn('Empty output detected', { providerId });
+                this.eventBus?.emit('lm:empty-output', { providerId, timestamp: Date.now() });
+            }
+        }
+
+        if (narseseValidation && typeof result === 'string' && this._looksLikeNarsese(result)) {
+            try {
+                this.narseseTranslator.toNarsese(result);
+            } catch (error) {
+                this.logWarn('Narsese-like output failed validation', {
+                    providerId,
+                    output: result.substring(0, 100),
+                    error: error.message
+                });
+                this.eventBus?.emit('lm:invalid-narsese', {
+                    providerId,
+                    output: result,
+                    error: error.message,
+                    timestamp: Date.now()
+                });
+            }
+        }
+    }
+
+    _looksLikeNarsese(text) {
+        return /[<>]|-->|<->|==>|<=>|%/.test(text);
     }
 
     async streamText(prompt, options = {}, providerId = null) {
@@ -156,5 +203,18 @@ export class LM extends BaseComponent {
 
     translateFromNarsese(narsese) {
         return this.narseseTranslator.fromNarsese(narsese);
+    }
+    async _stop() {
+        this.logInfo('Stopping LM component...');
+        const providers = this.providers.getAll();
+        for (const [id, provider] of providers) {
+            try {
+                if (typeof provider.destroy === 'function') await provider.destroy();
+                else if (typeof provider.shutdown === 'function') await provider.shutdown();
+                else if (typeof provider.stop === 'function') await provider.stop();
+            } catch (error) {
+                this.logError(`Error stopping provider ${id}:`, error);
+            }
+        }
     }
 }

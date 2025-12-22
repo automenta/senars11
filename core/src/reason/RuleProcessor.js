@@ -1,15 +1,22 @@
 import {mergeConfig, processDerivation, sleep} from './utils/common.js';
+import {Logger} from '../util/Logger.js';
 import {logError, ReasonerError} from './utils/error.js';
 import {Queue} from '../util/Queue.js';
 import {ArrayStamp} from '../Stamp.js';
 import {isSynchronousRule} from './RuleHelpers.js';
+import {RuleCompiler} from './rules/compiler/RuleCompiler.js';
+import {RuleExecutor as PatternRuleExecutor} from './rules/executor/RuleExecutor.js';
+import {Unifier} from '../term/Unifier.js';
+import {StandardDiscriminators} from './rules/Discriminators.js';
+import {NAL4} from './rules/nal/definitions/NAL4.js';
+import {NAL5} from './rules/nal/definitions/NAL5.js';
 
 /**
  * RuleProcessor consumes premise pairs and processes them through rules.
  */
 export class RuleProcessor {
     constructor(ruleExecutor, config = {}) {
-        this.ruleExecutor = ruleExecutor;
+        this.ruleExecutor = ruleExecutor; // Legacy imperative executor
 
         this.config = mergeConfig({
             maxDerivationDepth: 10,
@@ -26,6 +33,18 @@ export class RuleProcessor {
         this.asyncRuleExecutions = 0;
 
         this.maxQueueSize = 0;
+
+        // Initialize Pattern-based Rule Engine
+        const termFactory = this.config.termFactory;
+        if (termFactory) {
+            this.unifier = new Unifier(termFactory);
+            this.ruleCompiler = new RuleCompiler(termFactory, StandardDiscriminators);
+
+            // Compile NAL-4 and NAL-5 rules
+            const rules = [...NAL4, ...NAL5];
+            const decisionTree = this.ruleCompiler.compile(rules);
+            this.patternExecutor = new PatternRuleExecutor(decisionTree, this.unifier, StandardDiscriminators);
+        }
     }
 
     async* process(premisePairStream, timeoutMs = 0, signal = null) {
@@ -35,19 +54,20 @@ export class RuleProcessor {
                 if (signal?.aborted) break;
 
                 if (this._isTimeoutExceeded(startTime, timeoutMs)) {
-                    console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
+                    Logger.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
                     break;
                 }
 
                 await this._checkAndApplyBackpressure();
 
+                // 1. Execute Legacy Rules
                 const candidateRules = this.ruleExecutor.getCandidateRules(primaryPremise, secondaryPremise);
 
                 for (const rule of candidateRules) {
                     if (signal?.aborted) break;
 
                     if (this._isTimeoutExceeded(startTime, timeoutMs)) {
-                        console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
+                        Logger.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms`);
                         break;
                     }
 
@@ -65,6 +85,23 @@ export class RuleProcessor {
                     }
                 }
 
+                // 2. Execute Pattern Rules (NAL-4+)
+                if (this.patternExecutor) {
+                    try {
+                        const context = this._createRuleContext();
+                        const results = this.patternExecutor.execute(primaryPremise, secondaryPremise, context);
+
+                        for (const result of results) {
+                            const derivedTask = this._createDerivedTask(result, primaryPremise, secondaryPremise, 'PatternRule');
+                            if (derivedTask) {
+                                yield this._processDerivation(derivedTask);
+                            }
+                        }
+                    } catch (error) {
+                        logError(error, {context: 'pattern_rule_processing'}, 'warn');
+                    }
+                }
+
                 yield* this._yieldAsyncResults();
             }
 
@@ -73,6 +110,30 @@ export class RuleProcessor {
             logError(error, {context: 'rule_processor_stream'});
             throw new ReasonerError(`Error in RuleProcessor process: ${error.message}`, 'STREAM_ERROR', {originalError: error});
         }
+    }
+
+    _createDerivedTask(result, p1, p2, ruleName) {
+        if (!result || !result.term) return null;
+
+        // We need to construct a Task object.
+        // Since we are in RuleProcessor, we might not have Task class imported directly?
+        // It's usually passed in premises.
+        const TaskClass = p1.constructor;
+
+        // Create new stamp
+        const newStamp = new ArrayStamp({
+            source: `DERIVED:${ruleName}`,
+            derivations: [p1.stamp, p2.stamp],
+            depth: Math.max(p1.stamp.depth, p2.stamp.depth) + 1
+        });
+
+        return new TaskClass({
+            term: result.term,
+            truth: result.truth,
+            punctuation: result.punctuation,
+            stamp: newStamp,
+            budget: p1.budget // Simplify budget for now
+        });
     }
 
     _isTimeoutExceeded(startTime, timeoutMs) {
@@ -134,6 +195,7 @@ export class RuleProcessor {
     _createRuleContext() {
         return {
             termFactory: this.config.termFactory ?? this.config.context?.termFactory ?? null,
+            unifier: this.unifier,
             ...(this.config.context ?? {})
         };
     }
@@ -189,7 +251,7 @@ export class RuleProcessor {
             if (signal?.aborted) break;
 
             if (this._isTimeoutExceeded(startTime, timeoutMs)) {
-                console.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
+                Logger.debug(`RuleProcessor: timeout reached after ${timeoutMs}ms (in async results loop)`);
                 break;
             }
 

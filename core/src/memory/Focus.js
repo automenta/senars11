@@ -1,5 +1,6 @@
 import {clamp} from '../util/common.js';
 import {BaseComponent} from '../util/BaseComponent.js';
+import {Logger} from '../util/Logger.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     maxFocusSets: 5,
@@ -158,7 +159,7 @@ export class Focus extends BaseComponent {
 
             return true;
         } catch (error) {
-            console.error('Error during focus deserialization:', error);
+            Logger.error('Error during focus deserialization', error);
             return false;
         }
     }
@@ -395,7 +396,7 @@ class FocusSet {
 
             return true;
         } catch (error) {
-            console.error('Error during focus set deserialization:', error);
+            Logger.error('Error during focus set deserialization', error);
             return false;
         }
     }

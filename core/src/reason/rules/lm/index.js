@@ -17,3 +17,9 @@ export {createUncertaintyCalibrationRule} from './LMUncertaintyCalibrationRule.j
 export {createVariableGroundingRule} from './LMVariableGroundingRule.js';
 export {createConceptElaborationRule} from './LMConceptElaborationRule.js';
 export {createNarseseTranslationRule} from './LMNarseseTranslationRule.js';
+
+// NARS-GPT style rules
+export {createNarsGPTQARule} from './LMNarsGPTQARule.js';
+export {createNarsGPTBeliefRule} from './LMNarsGPTBeliefRule.js';
+export {createNarsGPTGoalRule} from './LMNarsGPTGoalRule.js';
+export {NarsGPTPrompts} from './NarsGPTPrompts.js';

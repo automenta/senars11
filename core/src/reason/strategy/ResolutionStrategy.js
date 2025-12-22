@@ -6,23 +6,29 @@
  * This strategy focuses on goal-driven reasoning, attempting to prove a Question
  * by finding rules and beliefs that satisfy it using backward chaining.
  *
- * Future Enhancement: Achieve functional parity with Datalog, Prolog, ProbLog, etc.
- * Planned improvements include: unification algorithms, backward chaining, query optimization.
+ * NAL-6 Enhancement: Integrated Unifier for variable unification in query matching.
  */
-import { Strategy } from '../Strategy.js';
+import {Strategy} from '../Strategy.js';
+import {Unifier} from '../../term/Unifier.js';
 
 export class ResolutionStrategy extends Strategy {
     /**
      * @param {object} config - Configuration options
      * @param {Function} config.goalMatcher - Function to match goals with beliefs
      * @param {number} config.maxResolutionDepth - Maximum resolution depth to prevent infinite loops
+     * @param {TermFactory} config.termFactory - Term factory for creating terms in substitutions
      */
     constructor(config = {}) {
         super({
-            goalMatcher: config.goalMatcher || null,
-            maxResolutionDepth: config.maxResolutionDepth || 5,
+            goalMatcher: config.goalMatcher ?? null,
+            maxResolutionDepth: config.maxResolutionDepth ?? 5,
+            termFactory: config.termFactory ?? null,
             ...config
         });
+
+        if (this.config.termFactory) {
+            this.unifier = new Unifier(this.config.termFactory);
+        }
     }
 
     /**
@@ -50,7 +56,7 @@ export class ResolutionStrategy extends Strategy {
                 }
             } catch (error) {
                 console.error('Error processing primary premise in ResolutionStrategy:', error);
-                continue;
+
             }
         }
     }
@@ -125,7 +131,20 @@ export class ResolutionStrategy extends Strategy {
             );
         }
 
-        // Default goal matching: look for tasks that could lead to achieving the goal
+        // Use Unifier for pattern matching when available (NAL-6)
+        if (this.unifier) {
+            return tasks.filter(task => {
+                if (!task || task === goalPremise || !task.term || !goalPremise.term) {
+                    return false;
+                }
+
+                // Try to match the goal pattern against the task
+                const matchResult = this.unifier.match(goalPremise.term, task.term);
+                return matchResult.success;
+            });
+        }
+
+        // Fallback: Default goal matching for non-NAL-6 systems
         return tasks.filter(task => {
             if (!task || task === goalPremise || !task.term || !goalPremise.term) {
                 return false;

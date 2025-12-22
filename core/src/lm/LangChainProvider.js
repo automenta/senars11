@@ -1,12 +1,12 @@
 // Third-party imports
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { DynamicTool } from '@langchain/core/tools';
-import { END, START, StateGraph } from '@langchain/langgraph';
-import { ToolNode } from '@langchain/langgraph/prebuilt';
-import { z } from 'zod';
+import {AIMessage, HumanMessage} from '@langchain/core/messages';
+import {DynamicTool} from '@langchain/core/tools';
+import {END, START, StateGraph} from '@langchain/langgraph';
+import {ToolNode} from '@langchain/langgraph/prebuilt';
+import {z} from 'zod';
 
 // Local imports
-import { BaseProvider } from './BaseProvider.js';
+import {BaseProvider} from './BaseProvider.js';
 import {
     ConfigurationError,
     ConnectionError as ProviderConnectionError,
@@ -17,7 +17,7 @@ import {
 
 export class LangChainProvider extends BaseProvider {
     constructor(config = {}) {
-        super({ ...config, maxTokens: config.maxTokens ?? 1000 });
+        super({...config, maxTokens: config.maxTokens ?? 1000});
         this._validateConfig(config);
         this.providerType = config.provider ?? 'ollama';
         if (!config.modelName) {
@@ -60,7 +60,7 @@ export class LangChainProvider extends BaseProvider {
             name: tool.name || tool.constructor.name,
             description: tool.description || 'A tool for the language model',
             func: async (input) => this._executeConvertedTool(tool, input),
-            schema: tool.schema || { type: 'object', properties: {}, required: [] }
+            schema: tool.schema || {type: 'object', properties: {}, required: []}
         });
     }
 
@@ -72,16 +72,16 @@ export class LangChainProvider extends BaseProvider {
                 try {
                     args = JSON.parse(input);
                 } catch (error) {
-                    Logger.debug('Failed to parse tool input as JSON, using as plain string', { input });
-                    args = { content: input };
+                    Logger.debug('Failed to parse tool input as JSON, using as plain string', {input});
+                    args = {content: input};
                 }
             }
             const result = await (typeof tool.execute === 'function'
                 ? tool.execute(args)
-                : { error: 'Tool has no execute method' });
+                : {error: 'Tool has no execute method'});
             return JSON.stringify(result);
         } catch (error) {
-            return JSON.stringify({ error: error.message });
+            return JSON.stringify({error: error.message});
         }
     }
 
@@ -128,14 +128,14 @@ export class LangChainProvider extends BaseProvider {
             throw initError;
         }
 
-        return { modelWithTools, tools, hasTools };
+        return {modelWithTools, tools, hasTools};
     }
 
     _createAgentNode(modelWithTools) {
         return async (state) => {
             try {
                 const messages = await modelWithTools.invoke(state.messages);
-                return { messages: [messages] };
+                return {messages: [messages]};
             } catch (invokeError) {
                 console.error(`Error during model invocation:`, invokeError.message);
                 return {
@@ -148,7 +148,7 @@ export class LangChainProvider extends BaseProvider {
     }
 
     _initAgent() {
-        const { modelWithTools, tools, hasTools } = this._initModelAndTools();
+        const {modelWithTools, tools, hasTools} = this._initModelAndTools();
         const agentNode = this._createAgentNode(modelWithTools);
         const toolNode = hasTools ? new ToolNode(tools) : null;
 
@@ -221,13 +221,13 @@ export class LangChainProvider extends BaseProvider {
         const timeout = options.timeout || 60000;
 
         return {
-            async*[Symbol.asyncIterator]() {
+            async* [Symbol.asyncIterator]() {
                 const timeoutController = new TimeoutController(timeout);
 
                 try {
                     const stream = this.agent.stream(
-                        { messages: [new HumanMessage(prompt)] },
-                        { streamMode: 'values' }
+                        {messages: [new HumanMessage(prompt)]},
+                        {streamMode: 'values'}
                     );
 
                     for await (const chunk of stream) {

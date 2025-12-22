@@ -35,6 +35,32 @@ export class NarseseParser {
         try {
             const result = parse(input, {termFactory: this.termFactory});
 
+            // Post-processing for Negation Simplification
+            // If term is --(A), replace with A and invert truth
+            if (result.term && result.term.operator === '--' && result.term.components.length === 1) {
+                const innerTerm = result.term.components[0];
+
+                // Only apply if truth is present (otherwise it's just a term structure)
+                if (result.truthValue) {
+                    // Import Truth dynamically to avoid circular deps if any, or assume global/imported
+                    // Since Truth is not imported in this file, we need to import it or pass it.
+                    // However, Truth is a value object. We can do the math directly or import Truth.
+                    // Let's import Truth at the top of the file.
+
+                    // Actually, let's just do the math here to be safe and simple, 
+                    // or better, add Truth import.
+                    // I will add Truth import in a separate step if needed, but for now let's assume I can add it.
+                    // Wait, I can't add import easily with replace_file_content if I'm only replacing this block.
+                    // I'll use the math directly: f' = 1 - f
+
+                    result.term = innerTerm;
+                    result.truthValue = {
+                        frequency: 1 - result.truthValue.frequency,
+                        confidence: result.truthValue.confidence
+                    };
+                }
+            }
+
             // Add to cache if cache size is under limit
             if (this._parseCache.size < this._maxCacheSize) {
                 this._parseCache.set(input, result);

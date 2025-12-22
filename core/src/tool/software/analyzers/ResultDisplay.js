@@ -1,5 +1,5 @@
-import { Logger } from '../../../util/Logger.js';
-import { DisplayUtils } from '../../../util/DisplayUtils.js';
+import {Logger} from '../../../util/Logger.js';
+import {DisplayUtils} from '../../../util/DisplayUtils.js';
 import path from 'path';
 
 export class ResultDisplay {
@@ -204,7 +204,7 @@ export class ResultDisplay {
             }
 
             if (tc.causalAnalysis) {
-                const { highCausalFiles, lowCausalFiles } = tc.causalAnalysis;
+                const {highCausalFiles, lowCausalFiles} = tc.causalAnalysis;
                 if (highCausalFiles?.length > 0) {
                     const topCausalFile = highCausalFiles[0];
                     insights.push(`Most tested file: ${path.basename(topCausalFile.sourceFile)} (${topCausalFile.testCount} tests)`);
@@ -475,7 +475,7 @@ export class ResultDisplay {
 
             // Causal analysis
             if (testCoverage.causalAnalysis) {
-                const { highCausalFiles, lowCausalFiles } = testCoverage.causalAnalysis;
+                const {highCausalFiles, lowCausalFiles} = testCoverage.causalAnalysis;
 
                 if (highCausalFiles && highCausalFiles.length > 0) {
                     console.log(`  Most Tested Files:`);
@@ -524,7 +524,7 @@ export class ResultDisplay {
                 if (dirCoverage) {
                     console.log(`  Coverage by directory:`);
                     const sortedDirs = Object.entries(dirCoverage)
-                        .map(([dir, stats]) => ({ directory: dir, ...stats }))
+                        .map(([dir, stats]) => ({directory: dir, ...stats}))
                         .sort((a, b) => a.coveragePercent - b.coveragePercent);
 
                     sortedDirs.slice(0, 5).forEach(dir => {
@@ -557,7 +557,7 @@ export class ResultDisplay {
             // Show directory statistics if available
             if (results.static.directoryStats) {
                 console.log(`  Directory Statistics:`);
-                const dirs = Object.entries(results.static.directoryStats).map(([path, stats]) => ({ path, ...stats }));
+                const dirs = Object.entries(results.static.directoryStats).map(([path, stats]) => ({path, ...stats}));
 
                 // Show largest directories by lines
                 if (results.static.largestDirectories && results.static.largestDirectories.length > 0) {

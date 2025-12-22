@@ -1,5 +1,6 @@
 import {jest} from '@jest/globals';
 import {Reasoner} from '../../../core/src/reason/Reasoner.js';
+import {Logger} from '../../../core/src/util/Logger.js';
 import {Focus} from '../../../core/src/memory/Focus.js';
 import {createTestMemory, createTestReasoner} from '../../support/baseTestUtils.js';
 
@@ -33,7 +34,7 @@ describe('Reasoner', () => {
             reasoner.start();
             expect(reasoner.isRunning).toBe(true);
 
-            const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+            const warn = jest.spyOn(Logger, 'warn').mockImplementation(() => {
             });
             reasoner.start();
             expect(warn).toHaveBeenCalledWith('Reasoner is already running');
@@ -47,7 +48,6 @@ describe('Reasoner', () => {
             reasoner.start();
             await reasoner.cleanup();
             expect(reasoner.isRunning).toBe(false);
-            // Check metrics via getter
             expect(reasoner.getMetrics().totalDerivations).toBe(0);
         });
     });

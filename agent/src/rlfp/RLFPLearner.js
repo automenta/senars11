@@ -1,4 +1,5 @@
 import fs from 'fs';
+import {Logger} from '../../../core/src/util/Logger.js';
 
 class RLFPLearner {
     constructor(agent) {
@@ -12,7 +13,7 @@ class RLFPLearner {
 
         if (!validPrefs.length) return;
 
-        console.log(`RLFPLearner: Processing ${validPrefs.length} preference(s)...`);
+        Logger.info(`RLFPLearner: Processing ${validPrefs.length} preference(s)...`);
 
         let count = 0;
         for (const pref of validPrefs) {
@@ -23,7 +24,7 @@ class RLFPLearner {
             }
         }
 
-        console.log(`RLFPLearner: Appended ${count} examples to ${this.outputFile}`);
+        Logger.info(`RLFPLearner: Appended ${count} examples to ${this.outputFile}`);
     }
 
     _prepareTrainingEntry(pref) {
@@ -59,7 +60,7 @@ class RLFPLearner {
         try {
             fs.appendFileSync(this.outputFile, JSON.stringify(entry) + '\n');
         } catch (error) {
-            console.error(`RLFPLearner write error: ${error.message}`);
+            Logger.error(`RLFPLearner write error: ${error.message}`);
         }
     }
 }

@@ -34,7 +34,7 @@ export class ExhaustiveStrategy extends Strategy {
                 }
             } catch (error) {
                 console.error('Error processing primary premise in ExhaustiveStrategy:', error);
-                continue;
+
             }
         }
     }

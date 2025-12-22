@@ -89,3 +89,42 @@ export const createTestNAR = async (config = {}) => {
     const {NAR} = await import('../../core/src/nar/NAR.js');
     return new NAR(config);
 };
+
+export const createTestApp = async (config = {}) => {
+    const {App} = await import('../../agent/src/app/App.js');
+    const defaultConfig = {
+        lm: {provider: 'transformers', modelName: 'mock-model', enabled: true},
+        subsystems: {lm: true},
+        ...config
+    };
+    return new App(defaultConfig);
+};
+
+export const createTestAgent = async (config = {}) => {
+    const app = await createTestApp(config);
+    const agent = await app.start({startAgent: true});
+    return {app, agent, cleanup: async () => app.shutdown()};
+};
+
+export const createMockedLMAgent = async (responses = {}, config = {}) => {
+    const {app, agent, cleanup} = await createTestAgent(config);
+    const jest = await import('@jest/globals').then(m => m.jest);
+
+    jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {
+        for (const [pattern, response] of Object.entries(responses)) {
+            if (prompt.includes(pattern)) return response;
+        }
+        return '';
+    });
+
+    return {app, agent, cleanup};
+};
+
+export const createStreamReasonerNAR = async (config = {}) => {
+    const {NAR} = await import('../../core/src/nar/NAR.js');
+    return new NAR({
+        reasoning: {useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5},
+        cycle: {delay: 1},
+        ...config
+    });
+};

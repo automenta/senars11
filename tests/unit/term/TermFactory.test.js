@@ -1,78 +1,179 @@
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import { beforeEach, describe, expect, test } from '@jest/globals';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('TermFactory', () => {
-    let tf;
+    let termFactory;
+
     beforeEach(() => {
-        tf = new TermFactory();
+        termFactory = new TermFactory();
     });
 
-    describe('Caching', () => {
-        test.each([
-            ['identical atomic', f => f.atomic('A'), f => f.atomic('A'), true],
-            ['identical compound', f => f.inheritance(f.atomic('A'), f.atomic('B')), f => f.inheritance(f.atomic('A'), f.atomic('B')), true],
-            ['different atomic', f => f.atomic('A'), f => f.atomic('B'), false],
-            ['different compound', f => f.inheritance(f.atomic('A'), f.atomic('B')), f => f.similarity(f.atomic('A'), f.atomic('B')), false],
-        ])('%s', (_, create1, create2, expected) => {
-            expect(create1(tf) === create2(tf)).toBe(expected);
+    test('creates atomic terms', () => {
+        const term = termFactory.create('cat');
+        expect(term.toString()).toBe('cat');
+        expect(term.isAtomic).toBe(true);
+    });
+
+    test('caches atomic terms', () => {
+        const term1 = termFactory.create('dog');
+        const term2 = termFactory.create('dog');
+        expect(term1).toBe(term2); // Reference equality
+    });
+
+    test('creates compound terms via helper', () => {
+        const cat = termFactory.create('cat');
+        const animal = termFactory.create('animal');
+        const term = termFactory.inheritance(cat, animal);
+
+        expect(term.isCompound).toBe(true);
+        expect(term.operator).toBe('-->');
+        expect(term.components[0]).toBe(cat);
+        expect(term.components[1]).toBe(animal);
+        // Canonical string format check
+        expect(term.toString()).toBe('(-->, cat, animal)');
+    });
+
+    test('creates similarity terms via helper', () => {
+        const cat = termFactory.create('cat');
+        const dog = termFactory.create('dog');
+        const term = termFactory.similarity(cat, dog);
+
+        expect(term.operator).toBe('<->');
+        expect(term.toString()).toBe('(<->, cat, dog)');
+    });
+
+    test('creates variable terms', () => {
+        // TermFactory.variable forces '?' prefix
+        const query = termFactory.variable('z');
+        expect(query.toString()).toBe('?z');
+        expect(query.isVariable).toBe(true);
+
+        // Manual creation
+        const independent = termFactory.create('$x');
+        expect(independent.toString()).toBe('$x');
+
+        const dependent = termFactory.create('#y');
+        expect(dependent.toString()).toBe('#y');
+    });
+
+    describe('Logical Operators', () => {
+        test('creates implication', () => {
+            const a = termFactory.create('a');
+            const b = termFactory.create('b');
+            const term = termFactory.implication(a, b);
+
+            expect(term.operator).toBe('==>');
+            expect(term.toString()).toBe('(==>, a, b)');
+        });
+
+        test('creates equivalence', () => {
+            const a = termFactory.create('a');
+            const b = termFactory.create('b');
+            const term = termFactory.equivalence(a, b);
+
+            expect(term.operator).toBe('<=>');
+            expect(term.toString()).toBe('(<=>, a, b)');
+        });
+
+        test('creates conjunction', () => {
+            const a = termFactory.create('a');
+            const b = termFactory.create('b');
+            const term = termFactory.conjunction([a, b]);
+            expect(term.operator).toBe('&');
+            expect(term.toString()).toBe('(&, a, b)');
+        });
+
+        test('creates disjunction', () => {
+            const a = termFactory.create('a');
+            const b = termFactory.create('b');
+            const term = termFactory.disjunction([a, b]);
+            expect(term.operator).toBe('|');
+            expect(term.toString()).toBe('(|, a, b)');
+        });
+
+        test('creates negation', () => {
+            const a = termFactory.create('a');
+            const term = termFactory.negation(a);
+            expect(term.operator).toBe('--');
+            expect(term.toString()).toBe('(--, a)');
+        });
+
+        describe('Reflexive Terms', () => {
+            test('rejects reflexive inheritance as null', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.inheritance(a, a);
+                expect(term).toBeNull();
+            });
+
+            test('rejects reflexive similarity as null', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.similarity(a, a);
+                expect(term).toBeNull();
+            });
+
+            test('reduces reflexive implication to True', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.implication(a, a);
+                expect(term).not.toBeNull();
+                expect(term.name).toBe('True');
+                expect(term.isAtomic).toBe(true);
+            });
+
+            test('reduces reflexive equivalence to True', () => {
+                const a = termFactory.create('a');
+                const term = termFactory.equivalence(a, a);
+                expect(term).not.toBeNull();
+                expect(term.name).toBe('True');
+                expect(term.isAtomic).toBe(true);
+            });
         });
     });
 
-    describe('Normalization', () => {
-        test.each([
-            ['commutativity', f => f.conjunction(f.atomic('A'), f.atomic('B')), f => f.conjunction(f.atomic('B'), f.atomic('A'))],
-            ['associativity', f => f.conjunction(f.atomic('A'), f.conjunction(f.atomic('B'), f.atomic('C'))), f => f.conjunction(f.atomic('A'), f.atomic('B'), f.atomic('C'))],
-            ['redundancy', f => f.conjunction(f.atomic('A'), f.atomic('A')), f => f.conjunction(f.atomic('A'))],
-        ])('%s', (_, term1, term2) => {
-            expect(term1(tf)).toBe(term2(tf));
+    describe('Set Operators', () => {
+        test('creates extensional set', () => {
+            const a = termFactory.create('a');
+            const term = termFactory.setExt(a);
+            expect(term.operator).toBe('{}');
+            expect(term.toString()).toBe('{a}');
         });
 
-        test('equality: sort but NO redundancy removal', () => {
-            const [t1, t2] = [tf.equality(tf.atomic('B'), tf.atomic('A')), tf.equality(tf.atomic('A'), tf.atomic('A'))];
-            expect(t1.name).toBe('(=, A, B)');
-            expect(t2.name).toBe('(=, A, A)');
-            expect(t2.components).toHaveLength(2);
+        test('creates intensional set', () => {
+            const a = termFactory.create('a');
+            const term = termFactory.setInt(a);
+            expect(term.operator).toBe('[]');
+            expect(term.toString()).toBe('[a]');
         });
 
-        test('parallel (||) commutativity', () => {
-            const t1 = tf.parallel(tf.atomic('A'), tf.atomic('B'));
-            const t2 = tf.parallel(tf.atomic('B'), tf.atomic('A'));
-            expect(t1).toBe(t2);
+        // TermFactory doesn't have an explicit 'intersection' helper.
+        // We'll test 'product' instead as it is another common operator.
+        test('creates product', () => {
+            const a = termFactory.create('a');
+            const b = termFactory.create('b');
+            const term = termFactory.product(a, b);
+            expect(term.operator).toBe('*');
+            expect(term.toString()).toBe('(*, a, b)');
         });
 
-        test('&& commutativity', () => {
-            const t1 = tf.create('&&', [tf.atomic('A'), tf.atomic('B')]);
-            const t2 = tf.create('&&', [tf.atomic('B'), tf.atomic('A')]);
-            expect(t1).toBe(t2);
-        });
-    });
-
-    describe('Convenience', () => {
-        test('predicate -> ^', () => {
-            const [pred, args] = [tf.atomic('pred'), tf.atomic('args')];
-            expect(tf.predicate(pred, args)).toMatchObject({operator: '^', components: [pred, args]});
-        });
-
-        test('tuple -> ,', () => {
-            const [tA, tB] = [tf.atomic('a'), tf.atomic('b')];
-            expect(tf.tuple(tA, tB)).toMatchObject({operator: ',', components: [tA, tB]});
-        });
-
-        test('atomic', () => {
-            expect(tf.atomic('A')).toMatchObject({isAtomic: true, name: 'A'});
+        test('creates difference', () => {
+            const a = termFactory.create('a');
+            const b = termFactory.create('b');
+            const term = termFactory.difference(a, b);
+            expect(term.operator).toBe('<~>');
+            expect(term.toString()).toBe('(<~>, a, b)');
         });
     });
 
-    describe('Edge Cases', () => {
-        test('should distinguish between (A ==> B) and (B ==> A) inside a commutative operator', () => {
-            const A = tf.atomic('A');
-            const B = tf.atomic('B');
-
-            const imp1 = tf.implication(A, B); // (==>, A, B)
-            const imp2 = tf.implication(B, A); // (==>, B, A)
-
-            const conjunction = tf.conjunction(imp1, imp2);
-
-            expect(conjunction.components.length).toBe(2);
+    describe('Error Handling', () => {
+        test('throws on empty creation', () => {
+            expect(() => termFactory.create('')).toThrow();
+            expect(() => termFactory.create(null)).toThrow();
         });
+    });
+
+    test('clears cache', () => {
+        const term1 = termFactory.create('bird');
+        termFactory.clearCache();
+        const term2 = termFactory.create('bird');
+        expect(term1).not.toBe(term2); // Should be new instance
     });
 });

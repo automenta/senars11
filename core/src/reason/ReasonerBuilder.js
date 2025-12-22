@@ -3,6 +3,9 @@ import {Strategy} from './Strategy.js';
 import {RuleExecutor} from './RuleExecutor.js';
 import {RuleProcessor} from './RuleProcessor.js';
 import {Reasoner as StreamReasoner} from './Reasoner.js';
+import {DecompositionStrategy} from './strategy/DecompositionStrategy.js';
+import {TermLinkStrategy} from './strategy/TermLinkStrategy.js';
+import {TaskMatchStrategy} from './strategy/TaskMatchStrategy.js';
 
 export class ReasonerBuilder {
     constructor(context = {}) {
@@ -28,7 +31,8 @@ export class ReasonerBuilder {
             streamRuleExecutor: reasoningConfig.streamRuleExecutor,
             strategies: reasoningConfig.strategies,
             executionMode: reasoningConfig.executionMode,
-            executionInterval: reasoningConfig.executionInterval
+            executionInterval: reasoningConfig.executionInterval,
+            useFormationStrategies: reasoningConfig.useFormationStrategies ?? true
         };
 
         return new ReasonerBuilder(context)
@@ -46,10 +50,16 @@ export class ReasonerBuilder {
         } = await import('./rules/nal/SyllogisticRule.js');
         const {ModusPonensRule} = await import('./rules/nal/ModusPonensRule.js');
         const {MetacognitionRules} = await import('./rules/nal/MetacognitionRules.js');
+        const {InductionRule, AbductionRule} = await import('./rules/nal/InductionAbductionRule.js');
+        const {ConversionRule, ContrapositionRule} = await import('./rules/nal/ConversionRule.js');
 
         ruleExecutor.register(new InheritanceSyllogisticRule());
         ruleExecutor.register(new ImplicationSyllogisticRule());
         ruleExecutor.register(new ModusPonensRule());
+        ruleExecutor.register(new InductionRule());
+        ruleExecutor.register(new AbductionRule());
+        ruleExecutor.register(new ConversionRule());
+        ruleExecutor.register(new ContrapositionRule());
 
         // Register metacognition rules if enabled
         if (config.metacognition?.selfOptimization?.enabled) {
@@ -157,24 +167,75 @@ export class ReasonerBuilder {
     }
 
     useDefaultStrategy(options = {}) {
-        const {focus, memory} = this.context;
+        const {focus, memory, termFactory} = this.context;
         const config = {...this.config, ...options};
 
         this.components.strategy = new Strategy({
             ...config.streamStrategy,
             focus: focus,
-            memory: memory
+            memory: memory,
+            termFactory: termFactory
         });
 
-        // Add strategies from config
+        // Add legacy strategies from config
         if (config.strategies) {
             for (const s of config.strategies) {
                 this.components.strategy.addStrategy(s);
             }
         }
 
+        // Add default formation strategies unless disabled
+        if (config.useFormationStrategies !== false) {
+            this.useDefaultFormationStrategies();
+        }
+
         return this;
     }
+
+    /**
+     * Add default premise formation strategies to the current strategy.
+     *
+     * Default strategies:
+     * - TaskMatchStrategy (1.0): Pairs with existing tasks from focus
+     * - DecompositionStrategy (0.8): Extracts subterms from compounds
+     * - TermLinkStrategy (0.6): Uses TermLayer associations
+     */
+    useDefaultFormationStrategies(options = {}) {
+        if (!this.components.strategy) {
+            throw new Error('Strategy must be set before adding formation strategies');
+        }
+
+        const strategy = this.components.strategy;
+
+        // TaskMatchStrategy: pairs with existing tasks (core NARS behavior)
+        strategy.addFormationStrategy(new TaskMatchStrategy({
+            priority: options.taskMatchPriority ?? 1.0,
+            maxTasks: options.maxTasks ?? 100
+        }));
+
+        // DecompositionStrategy: extracts subterms for premise pairing (Java NARS style)
+        strategy.addFormationStrategy(new DecompositionStrategy({
+            priority: options.decompositionPriority ?? 0.8
+        }));
+
+        // TermLinkStrategy: uses conceptual associations
+        strategy.addFormationStrategy(new TermLinkStrategy({
+            priority: options.termLinkPriority ?? 0.6,
+            maxLinks: options.maxLinks ?? 20
+        }));
+
+        // SemanticStrategy: uses embeddings for fuzzy matching
+        if (this.context.embeddingLayer) {
+            import('./strategy/SemanticStrategy.js').then(({SemanticStrategy}) => {
+                strategy.addFormationStrategy(new SemanticStrategy(this.context.embeddingLayer, {
+                    priority: options.semanticPriority ?? 0.7
+                }));
+            });
+        }
+
+        return this;
+    }
+
 
     useDefaultRuleExecutor(options = {}) {
         const config = {...this.config, ...options};

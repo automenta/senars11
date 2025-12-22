@@ -1,17 +1,18 @@
-import {FormattingUtils, Input, NAR} from '@senars/core';
-import {PersistenceManager} from '../io/PersistenceManager.js';
+import { FormattingUtils, Input, NAR } from '@senars/core';
+import { PersistenceManager } from '../io/PersistenceManager.js';
 import * as Commands from '../commands/Commands.js';
-import {AGENT_EVENTS} from './constants.js';
-import {InputProcessor} from './InputProcessor.js';
-import {AgentStreamer} from './AgentStreamer.js';
+import { AGENT_EVENTS } from './constants.js';
+import { InputProcessor } from './InputProcessor.js';
+import { AgentStreamer } from './AgentStreamer.js';
+import { AIClient } from '../ai/AIClient.js';
 
 export class Agent extends NAR {
     constructor(config = {}) {
         super(config);
 
-        this.id = config.id || `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.id = config.id || `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)} `;
         this.inputQueue = new Input();
-        this.sessionState = {history: [], lastResult: null, startTime: Date.now()};
+        this.sessionState = { history: [], lastResult: null, startTime: Date.now() };
 
         this.runState = {
             isRunning: false,
@@ -45,6 +46,9 @@ export class Agent extends NAR {
         // Initialize helper components
         this.inputProcessor = new InputProcessor(this);
         this.agentStreamer = new AgentStreamer(this);
+
+        // Initialize Vercel AI SDK Client
+        this.ai = new AIClient(config.lm || {});
     }
 
     get agentLM() {
@@ -58,7 +62,7 @@ export class Agent extends NAR {
     async initialize() {
         await super.initialize();
         this._registerEventHandlers();
-        this.emit(AGENT_EVENTS.ENGINE_READY, {success: true, message: 'Agent initialized successfully'});
+        this.emit(AGENT_EVENTS.ENGINE_READY, { success: true, message: 'Agent initialized successfully' });
         return true;
     }
 
@@ -72,7 +76,7 @@ export class Agent extends NAR {
                 try {
                     registry.register(new CmdClass());
                 } catch (e) {
-                    console.warn(`Failed to register command ${CmdClass.name}: ${e.message}`);
+                    console.warn(`Failed to register command ${CmdClass.name}: ${e.message} `);
                 }
             }
         });
@@ -112,11 +116,11 @@ export class Agent extends NAR {
 
         if (this.commandRegistry.get(command)) {
             const result = await this.commandRegistry.execute(command, this, ...args);
-            this.emit(`command.${command}`, {command, args, result});
+            this.emit(`command.${command} `, { command, args, result });
             return result;
         }
 
-        return `❌ Unknown command: ${command}`;
+        return `❌ Unknown command: ${command} `;
     }
 
     // Delegate methods for backward compatibility and API
@@ -135,11 +139,11 @@ export class Agent extends NAR {
     async _next() {
         try {
             await this.step();
-            this.emit(AGENT_EVENTS.NAR_CYCLE_STEP, {cycle: this.cycleCount});
-            return `⏭️  Single cycle executed. Cycle: ${this.cycleCount}`;
+            this.emit(AGENT_EVENTS.NAR_CYCLE_STEP, { cycle: this.cycleCount });
+            return `⏭️  Single cycle executed.Cycle: ${this.cycleCount} `;
         } catch (error) {
-            this.emit(AGENT_EVENTS.NAR_ERROR, {error: error.message});
-            return `❌ Error executing single cycle: ${error.message}`;
+            this.emit(AGENT_EVENTS.NAR_ERROR, { error: error.message });
+            return `❌ Error executing single cycle: ${error.message} `;
         }
     }
 
@@ -153,11 +157,11 @@ export class Agent extends NAR {
         }
 
         this.runState.isRunning = true;
-        this.emit(AGENT_EVENTS.NAR_CYCLE_START, {reason: 'auto-step'});
+        this.emit(AGENT_EVENTS.NAR_CYCLE_START, { reason: 'auto-step' });
 
         if (!this.displaySettings.quiet && !this.traceEnabled) {
             this.traceEnabled = true;
-            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, {reason: 'auto-step session'});
+            this.emit(AGENT_EVENTS.NAR_TRACE_ENABLE, { reason: 'auto-step session' });
         }
 
         const runLoop = async () => {
@@ -166,7 +170,7 @@ export class Agent extends NAR {
             try {
                 await this.step();
             } catch (error) {
-                console.error(`❌ Error during run: ${error.message}`);
+                console.error(`❌ Error during run: ${error.message} `);
                 this._stopRun();
                 return;
             }
@@ -179,8 +183,8 @@ export class Agent extends NAR {
         // Start the loop
         runLoop();
 
-        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, {interval});
-        return `🏃 Auto-stepping every ${interval}ms... Use "/stop" or input to stop.`;
+        this.emit(AGENT_EVENTS.NAR_CYCLE_RUNNING, { interval });
+        return `🏃 Auto - stepping every ${interval}ms... Use "/stop" or input to stop.`;
     }
 
     _stop() {

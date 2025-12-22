@@ -1,11 +1,11 @@
+import {beforeEach, describe, expect, test} from '@jest/globals';
 import {ProviderRegistry} from '../../../core/src/lm/ProviderRegistry.js';
 import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
 
 describe('ProviderRegistry', () => {
     let registry;
-    beforeEach(() => {
-        registry = new ProviderRegistry();
-    });
+
+    beforeEach(() => registry = new ProviderRegistry());
 
     test('initialization', () => {
         expect(registry.size).toBe(0);
@@ -16,7 +16,7 @@ describe('ProviderRegistry', () => {
         const p1 = new DummyProvider({id: 'p1'});
         registry.register('p1', p1);
         expect(registry.get('p1')).toBe(p1);
-        expect(registry.defaultProviderId).toBe('p1'); // First one becomes default
+        expect(registry.defaultProviderId).toBe('p1');
 
         const p2 = new DummyProvider({id: 'p2'});
         registry.register('p2', p2);

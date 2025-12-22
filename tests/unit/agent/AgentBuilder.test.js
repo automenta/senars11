@@ -3,17 +3,20 @@ import {Agent} from '../../../agent/src/agent/Agent.js';
 import {NAR} from '../../../core/src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
-    let agent;
+    const agents = [];
 
     afterEach(async () => {
-        if (agent?.dispose) await agent.dispose();
-        else if (agent?.stop) agent.stop();
-        agent = null;
+        for (const a of agents) {
+            if (a?.dispose) await a.dispose();
+            else if (a?.stop) a.stop();
+        }
+        agents.length = 0;
     });
 
     const build = async (builder = new AgentBuilder()) => {
-        agent = await builder.build();
-        return agent;
+        const a = await builder.build();
+        agents.push(a);
+        return a;
     };
 
     test('default configuration', async () => {
@@ -30,7 +33,7 @@ describe('AgentBuilder', () => {
             enabled: true,
             model: 'test'
         }))).embeddingLayer).toBeDefined();
-        expect((await build(new AgentBuilder().withLM(true))).lm).toBeDefined();
+        expect((await build(new AgentBuilder().withLM(true).withConfig({lm: {modelName: 'test-model'}}))).lm).toBeDefined();
         expect((await build(new AgentBuilder().withTools(true))).tools).toBeDefined();
     });
 
@@ -47,7 +50,8 @@ describe('AgentBuilder', () => {
                 metrics: true, embeddingLayer: {enabled: true},
                 functors: ['core-arithmetic'], rules: ['syllogistic-core'],
                 tools: false, lm: true
-            }
+            },
+            lm: {modelName: 'test-model'}
         };
         const a = await build(new AgentBuilder().withConfig(config));
 

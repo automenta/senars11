@@ -3,8 +3,8 @@
  * @description Shared helper functions for reasoning rules, enhanced for stream-based architecture.
  */
 
-import { Logger } from '../util/Logger.js';
-import { Punctuation } from '../task/Task.js';
+import {Logger} from '../util/Logger.js';
+import {Punctuation} from '../task/Task.js';
 
 export function extractPrimaryTask(primaryPremise, secondaryPremise, context) {
     return primaryPremise ?? null;
@@ -27,7 +27,7 @@ export function isAsyncRule(rule) {
 }
 
 export function parseListFromResponse(lmResponse, options = {}) {
-    const { removeEmpty = true } = options;
+    const {removeEmpty = true} = options;
     if (!lmResponse) return [];
 
     const lines = lmResponse
@@ -40,29 +40,27 @@ export function parseListFromResponse(lmResponse, options = {}) {
 }
 
 // Alias for backward compatibility - use parseListFromResponse instead
-export const parseSubGoals = (lmResponse) => parseListFromResponse(lmResponse, { removeEmpty: false });
+export const parseSubGoals = (lmResponse) => parseListFromResponse(lmResponse, {removeEmpty: false});
 
-export function isValidSubGoal(goal, minLength, maxLength) {
-    if (!goal || goal.length < minLength || goal.length > maxLength) {
-        return false;
-    }
-    const lowerGoal = goal.toLowerCase();
-    return !['sorry', 'cannot', 'unable'].some(pattern => lowerGoal.includes(pattern));
-}
+const INVALID_PATTERNS = ['sorry', 'cannot', 'unable'];
+const INVALID_TEXT_PATTERNS = [...INVALID_PATTERNS, 'no information'];
+
+const isValidLength = (text, min, max) =>
+    text && text.length >= min && text.length <= max;
+
+const hasInvalidPattern = (text, patterns) =>
+    patterns.some(pattern => text.toLowerCase().includes(pattern));
+
+export const isValidSubGoal = (goal, minLength, maxLength) =>
+    isValidLength(goal, minLength, maxLength) && !hasInvalidPattern(goal, INVALID_PATTERNS);
 
 export function cleanText(text) {
     if (!text) return '';
     return text.replace(/^["']|["']$/g, '').replace(/[.,;!?]+$/, '').trim();
 }
 
-export function isValidText(text, minLength = 1, maxLength = 1000) {
-    if (!text || text.length < minLength || text.length > maxLength) {
-        return false;
-    }
-
-    const lowerText = text.toLowerCase();
-    return !['sorry', 'cannot', 'unable', 'no information'].some(pattern => lowerText.includes(pattern));
-}
+export const isValidText = (text, minLength = 1, maxLength = 1000) =>
+    isValidLength(text, minLength, maxLength) && !hasInvalidPattern(text, INVALID_TEXT_PATTERNS);
 
 export function processDerivation(result, maxDerivationDepth) {
     if (!result?.stamp) return result;
@@ -71,13 +69,13 @@ export function processDerivation(result, maxDerivationDepth) {
         const derivationDepth = result.stamp.depth ?? 0;
 
         if (derivationDepth > maxDerivationDepth) {
-            console.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${maxDerivationDepth})`);
+            Logger.debug(`Discarding derivation - exceeds max depth (${derivationDepth} > ${maxDerivationDepth})`);
             return null;
         }
 
         return result;
     } catch (error) {
-        console.debug('Error processing derivation:', error.message);
+        Logger.debug('Error processing derivation:', error.message);
         return null;
     }
 }
@@ -92,7 +90,7 @@ export function createDerivedTask(originalTask, newProps) {
 
 export function deriveTruthValue(originalTruth, confidenceMultiplier = 0.9) {
     if (!originalTruth) {
-        return { frequency: 0.5, confidence: 0.9 };
+        return {frequency: 0.5, confidence: 0.9};
     }
 
     return {
@@ -143,7 +141,7 @@ export function tryParseNarsese(text, parser) {
     try {
         return parser.parse(toParse);
     } catch (error) {
-        Logger.debug('Failed to parse Narsese text', { text: toParse, error: error.message });
+        Logger.debug('Failed to parse Narsese text', {text: toParse, error: error.message});
         return null;
     }
 }
@@ -162,7 +160,7 @@ export function createFallbackTerm(text, termFactory) {
         }
         return termStr;
     } catch (error) {
-        Logger.debug('Failed to create atomic term', { termStr, error: error.message });
+        Logger.debug('Failed to create atomic term', {termStr, error: error.message});
         return termStr;
     }
 }

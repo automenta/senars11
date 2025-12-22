@@ -122,6 +122,46 @@ through dynamic sampling strategies and configurable reasoning approaches:
 
 ---
 
+## Quick Reference
+
+### I want to...
+
+| Goal | Command / Location |
+|------|-------------------|
+| Run reasoning | `const nar = new NAR(); nar.input('(a --> b).');` |
+| Start REPL | `node repl/src/Repl.js` |
+| Run demos | `node agent/src/demo/demoRunner.js` |
+| Start MCP server | `node agent/src/mcp/start-server.js` |
+| Run all tests | `npm test` |
+| Start WebSocket monitor | `node agent/src/server/WebSocketMonitor.js` |
+
+### Subsystems
+
+| System | Location | Purpose |
+|--------|----------|---------|
+| **Core NAR** | `core/src/nar/NAR.js` | Main reasoning API |
+| **Strategies** | `core/src/reason/strategy/` | Premise selection algorithms |
+| **Rules** | `core/src/reason/rules/nal/` | NAL inference rules |
+| **Tensor Logic** | `core/src/functor/` | Neural-symbolic AI with differentiable tensors |
+| **LM Integration** | `core/src/lm/` | Language model providers, embeddings |
+| **MCP Server** | `agent/src/mcp/` | AI assistant integration |
+| **Demo System** | `agent/src/demo/` | Remote-controlled demos |
+| **RLFP** | `agent/src/rlfp/` | Learn from preferences |
+| **Knowledge** | `agent/src/know/` | KB connectors, templates |
+| **REPL** | `repl/src/` | Ink-based TUI |
+| **Web UI** | `ui/src/` | React-based interface |
+
+### Verification
+
+```bash
+npm test                    # All tests (99.8% pass rate)
+npm run test:unit           # Unit tests only
+npm run test:integration    # Integration tests
+node examples/phase10-final-demo.js  # Full system demo
+```
+
+---
+
 ## Directory Structure
 
 ```
@@ -273,7 +313,40 @@ premises using various selection algorithms. Different strategy implementations 
 - **BagStrategy**: NARS-style priority-sampled bag approach for anytime reasoning
 - **ExhaustiveStrategy**: Comprehensive search for all related beliefs for a given task
 - **PrologStrategy**: Goal-driven backward chaining with Prolog-style unification and resolution
-- **ResolutionStrategy**: Goal-driven backward chaining for Prolog-like resolution, e.g., question answering
+- **ResolutionStrategy**: NAL-6 query matching with variable unification for question answering
+- **GoalDrivenStrategy**: NAL-8 goal achievement through backward chaining and plan synthesis
+- **AnalogicalStrategy**: NAL-6 cross-domain knowledge transfer via structure mapping
+
+#### Premise Formation Strategies
+
+The system uses a **composable, modular premise formation architecture** that can be extended for any reasoning paradigm:
+
+| Strategy | Pattern | Priority |
+|----------|---------|----------|
+| `TaskMatchStrategy` | Syllogistic patterns (shared subject/predicate/middle) | 1.0 |
+| `DecompositionStrategy` | Extract subterms from compound statements | 0.8 |
+| `TermLinkStrategy` | Associative links via TermLayer | 0.6 |
+
+Custom strategies can be added by extending `PremiseFormationStrategy` and implementing `async* generateCandidates()`.
+
+#### NAL Inference Rules
+
+The rule executor applies NAL inference patterns with corresponding truth functions:
+
+| Rule | Pattern | Truth Function |
+|------|---------|----------------|
+| `SyllogisticRule` | (A→M), (M→B) ⇒ (A→B) | `Truth.deduction` |
+| `ModusPonensRule` | (A⇒B), A ⇒ B | detachment |
+| `InductionRule` | (M→P), (M→S) ⇒ (S→P) | `Truth.induction` |
+| `AbductionRule` | (P→M), (S→M) ⇒ (S→P) | `Truth.abduction` |
+| `ConversionRule` | (P→S) ⇒ (S→P) | `Truth.conversion` |
+| `ContrapositionRule` | (S⇒P) ⇒ (¬P⇒¬S) | `Truth.structuralReduction` |
+
+**Advanced Reasoning Capabilities**:
+
+- **Variable Unification**: Queries with variables like `(bird --> ?X)?` resolve to specific bindings, enabling pattern-based question answering
+- **Goal-Driven Reasoning**: Tasks with `!` punctuation represent goals to achieve, e.g., `(self --> happy)!`, with backward chaining to synthesize plans
+- **Analogical Transfer**: Knowledge transfers across domains via similarity relations, e.g., `(bird <-> airplane)` enables inferring `(airplane --> flyer)` from `(bird --> flyer)` with confidence adjustment
 
 #### RuleExecutor
 
@@ -501,6 +574,40 @@ The RLFP system operates through three functional layers:
 
 The RLFP framework enables SeNARS to develop increasingly effective and trustworthy reasoning patterns through
 continuous learning from human preferences.
+
+---
+
+## Tensor Logic: Neural-Symbolic AI Foundation
+
+SeNARS integrates **Tensor Logic** (Domingos, 2024) - a unified mathematical framework that treats neural operations and logical reasoning as the same fundamental process using tensor mathematics. This enables true neural-symbolic integration with differentiable reasoning.
+
+**Core Capabilities:**
+
+- **Differentiable Tensors**: N-dimensional arrays with automatic differentiation (autograd)
+- **Neural Networks in Prolog**: Express deep learning architectures as logical predicates
+- **Truth-Tensor Bridge**: Seamless conversion between symbolic truth values and continuous representations
+- **End-to-End Learning**: Gradient descent with MSE, cross-entropy, SGD, Adam, RMSprop
+- **Hybrid Reasoning**: Symbolic logic and neural computation in the same framework
+
+**Quick Example:**
+
+```prolog
+% Define a neural network in Prolog
+network(Input, Output) :-
+    H is relu(add(matmul(w1, Input), b1)),
+    Output is sigmoid(add(matmul(w2, H), b2)).
+
+% Train with gradient descent
+train(Input, Target) :-
+    network(Input, Pred),
+    Loss is mse(Pred, Target),
+    backward(Loss),
+    W1_new is adam_step(w1, 0.01).
+```
+
+**Implementation Status**: ✅ Complete (910 lines, 690+ tests passing)
+
+See [`core/src/functor/README.md`](core/src/functor/README.md) for full documentation and examples.
 
 ---
 

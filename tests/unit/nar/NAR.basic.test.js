@@ -8,6 +8,10 @@ describe('NAR - Basic Functionality', () => {
         await nar.initialize();
     });
 
+    afterEach(async () => {
+        await nar.dispose();
+    });
+
     test.each([
         ['atomic', 'cat.', t => t.includes('cat')],
         ['spaced compound', '(cat --> dog).', t => t.includes('-->')],
@@ -17,5 +21,9 @@ describe('NAR - Basic Functionality', () => {
         const beliefs = nar.getBeliefs();
         expect(beliefs.length).toBeGreaterThan(0);
         expect(check(beliefs[0].term.toString())).toBe(true);
+    });
+
+    test('handle invalid input', async () => {
+        await expect(nar.input('invalid input')).rejects.toThrow(/Input processing failed/);
     });
 });
