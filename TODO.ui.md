@@ -52,10 +52,10 @@ graph TD
 ```
 
 ### Key Integration Points
-1.  **Event Ontology**: `core/src/util/IntrospectionEvents.js` is the single source of truth.
+1.  **Event Ontology**: [`core/src/util/IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) is the single source of truth.
     *   *Rule*: A feature exists only if an event exists for it.
-2.  **Visual Language**: `core/src/util/DesignTokens.js` defines shared colors, timings, and semantic meanings.
-3.  **Control Plane**: `core/src/util/CommandRegistry.js` unifies input handling (`run`, `step`, `input`) across TUI and Web.
+2.  **Visual Language**: [`core/src/util/DesignTokens.js`](file:///home/me/senars10/core/src/util/DesignTokens.js) defines shared colors, timings, and semantic meanings.
+3.  **Control Plane**: `core/src/util/CommandRegistry.js` (refactored from `ui/`) unifies input handling (`run`, `step`, `input`) across TUI and Web.
 
 ---
 
@@ -84,20 +84,24 @@ We utilize an **incremental, agent-driven workflow**.
 *Goal: Ensure the plumbing exists before building the tapping.*
 
 1.  **Command Infrastructure**:
-    *   Create `core/src/util/CommandRegistry.js`.
-    *   Pattern: `registry.register(name, handler, meta)`.
-    *   *Tasks*: Refactor `TUI.js` and `ReplMessageHandler.js` to use this.
+    *   **Action**: Move & Refactor [`ui/src/command/CommandRegistry.js`](file:///home/me/senars10/ui/src/command/CommandRegistry.js) -> `core/src/util/CommandRegistry.js`.
+    *   **Refactor**: Decouple from UI-specific `context` object; use dependency injection or event-based execution to support both CLI and Web.
+    *   *Pattern*: `registry.register(name, handler, meta)`
 2.  **Event Ontology Expansion**:
-    *   Update `IntrospectionEvents.js` with missing events:
+    *   Update [`core/src/util/IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) with missing events:
         *   `memory:focus:promote`, `memory:focus:demote`
         *   `lm:prompt:start`, `lm:prompt:complete`, `lm:error`
         *   `reasoning:goal:achieved`, `reasoning:derivation:chain`
+3.  **Event Standardization**:
+    *   **Refactor**: Update `NAR.js` to use `IntrospectionEvents` constants instead of hardcoded strings (e.g., replace `'task.input'` with `IntrospectionEvents.TASK_INPUT`).
+    *   **Verify**: Ensure `WebSocketMonitor` listens to the correct standardized events.
 
 ### Track A: Core Infrastructure
 *Goal: Unified logic and shared assets.*
 
 3.  **Design Token Injection**: 
-    *   Create `ui/src/utils/ThemeGenerator.js` to map `DesignTokens` to CSS variables.
+    *   Create `ui/src/utils/ThemeGenerator.js` to map `DesignTokens` to **CSS Variables** (e.g., `--color-concept`).
+    *   *Note*: [`ui/src/config/GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js) already imports tokens directly; this is for HTML overlays (Web REPL).
 4.  **Log Unification**:
     *   Create `agent/src/cli/hooks/useAgentLogs.js` (if missing) to standardize CLI output.
 
@@ -105,7 +109,7 @@ We utilize an **incremental, agent-driven workflow**.
 *Goal: Beautiful, organic, readable graph.*
 
 5.  **Static Nodes (Elements)**: 
-    *   Render nodes using `GraphConfig` styles mapping to Narsese terms (Concept=Teal, Goal=Amber).
+    *   Render nodes using [`ui/src/config/GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js) styles mapping to Narsese terms (Concept=Teal, Goal=Amber).
 6.  **Organic Layout (Structure)**: 
     *   Implement `fcose` (or `cola`/`elk` if bundle size is high).
     *   *Optimization*: Use Web Worker for layout calculation.
@@ -159,8 +163,8 @@ We utilize an **incremental, agent-driven workflow**.
 
 | Track | Key Files Modified | New Files Created |
 | :--- | :--- | :--- |
-| **0. Infra** | `TUI.js`, `ReplMessageHandler.js`, `IntrospectionEvents.js` | `CommandRegistry.js` |
-| **A. Core** | `GraphConfig.js` | `ThemeGenerator.js`, `useAgentLogs.js` |
+| **0. Infra** | `TUI.js`, `IntrospectionEvents.js` | `CommandRegistry.js` (Moved/Refactored) |
+| **A. Core** | `GraphConfig.js` (Cleanup) | `ThemeGenerator.js`, `useAgentLogs.js` |
 | **B. Visuals** | `GraphManager.js`, `GraphStyles.js` | — |
 | **C. Observe** | `WebSocketMonitor.js`, `NodeRenderer.js` | — |
 | **D. Interact** | `ReplKeyHandler.js` | `TimeTravelManager.js`, `WebRepl.js` |
