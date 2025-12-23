@@ -1,4 +1,4 @@
-import {BaseProvider} from './BaseProvider.js';
+import { BaseProvider } from './BaseProvider.js';
 
 export class DummyProvider extends BaseProvider {
     constructor(options = {}) {
@@ -32,8 +32,6 @@ export class DummyProvider extends BaseProvider {
         if (this.latency > 0) {
             await new Promise(resolve => setTimeout(resolve, this.latency));
         }
-
-        // Generate deterministic embedding based on text
-        return Array.from({length: 16}, (_, i) => Math.sin(text.charCodeAt(i % text.length) + i));
+        return Array.from({ length: 16 }, (_, i) => Math.sin(text.charCodeAt(i % text.length) + i));
     }
 }
