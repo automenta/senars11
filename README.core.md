@@ -64,9 +64,27 @@ The system uses a composable architecture:
 | `ConversionRule` | (P→S) ⇒ (S→P) | `Truth.conversion` |
 | `ContrapositionRule` | (S⇒P) ⇒ (¬P⇒¬S) | `Truth.structuralReduction` |
 
-**RuleExecutor:** Indexes rules for fast retrieval and performs symbolic guard analysis (deduplication, subsumption detection).
+**RuleExecutor:** Indexes rules for fast retrieval and performs symbolic guard analysis:
+- Deduplication and ordering of common checks
+- Subsumption detection
+- Constant folding
 
 **RuleProcessor:** Consumes premise pairs and executes rules in a non-blocking fashion, merging sync NAL and async LM results.
+
+**Custom Strategy Extension:**
+
+Custom strategies can be added by extending `PremiseFormationStrategy` and implementing the async generator:
+
+```javascript
+class MyCustomStrategy extends PremiseFormationStrategy {
+    async* generateCandidates(primaryPremise, memory) {
+        // Yield candidate secondary premises
+        for (const concept of memory.getRelatedConcepts(primaryPremise.term)) {
+            yield { secondary: concept.getBestBelief(), priority: 0.7 };
+        }
+    }
+}
+```
 
 ## Core Data Structures
 
@@ -270,6 +288,23 @@ Connects the system to external language models for enhanced reasoning:
 - **Circuit Breakers**: Prevents system failures if language model services become unavailable
 - **Narsese Translation**: Converts between natural language and the system's formal language
 - **Fallbacks**: Continues operating with pure logical reasoning if language models fail
+
+### Server Components
+
+Network services for remote access and monitoring:
+
+- **WebSocket Monitoring**: Real-time system monitoring through web connections at `agent/src/server/WebSocketMonitor.js`
+- **Event Streaming**: Continuous updates of system events to connected clients
+- **JSON Protocol**: Structured event format for easy client integration
+
+### Integration Components
+
+Connectivity with external systems:
+
+- **Knowledge Base Connector**: Links to external knowledge sources at `agent/src/integration/KnowledgeBaseConnector.js`
+- **API Integration**: Standardized interfaces for external service connections
+- **MCP Server**: Model Context Protocol server for AI assistant integration at `agent/src/mcp/`
+
 
 ## Algorithms and Implementation
 

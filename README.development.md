@@ -26,6 +26,50 @@ All system components inheriting from `BaseComponent` follow this lifecycle:
 - **Metrics**: Automatic tracking of component performance.
 - **Events**: Standardized `emit(event, data)` system.
 - **Logging**: Scoped logging accessible via `this.log`.
+- **Error Handling**: Standardized error management with recovery.
+- **Status Tracking**: Component health and operational state.
+
+**Lifecycle Example:**
+
+```javascript
+class MyComponent extends BaseComponent {
+    constructor(config) {
+        super(config);
+        // Initialize immutable configuration
+    }
+
+    async initialize() {
+        await super.initialize();
+        // Setup database connections, load models
+    }
+
+    async start() {
+        await super.start();
+        // Begin event listeners, start processing loops
+    }
+
+    async stop() {
+        // Gracefully halt - finish current work
+        await super.stop();
+    }
+
+    async dispose() {
+        // Release all resources
+        await super.dispose();
+    }
+}
+```
+
+### Utilities (`util/`)
+
+Helper functions for common operations:
+
+- **Collections:** Specialized data structures like priority queues, bags
+- **Constants:** Shared system-wide values and configuration defaults
+- **Validation:** Input validation functions for terms, tasks, truth values
+- **Logging:** System-wide structured logging utility
+- **EventBus:** Central event communication system
+
 
 
 ### Code Quality and Maintainability

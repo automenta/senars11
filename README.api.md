@@ -17,3 +17,68 @@ The `NAR` class serves as the central orchestrator and public API for the entire
 - `getBeliefs(queryTerm?: Term)`: Returns a collection of current beliefs from memory, optionally filtered by a query term.
 - `query(questionTerm: Term)`: Submits a question to the system and returns a promise that resolves with the answer.
 - `reset()`: Clears memory and resets the system to its initial state.
+
+## Stream Reasoner Usage Examples
+
+### Basic Construction
+
+```javascript
+import { Reasoner, TaskBagPremiseSource, BagStrategy, RuleExecutor, RuleProcessor, Memory } from './src';
+
+const memory = new Memory();
+const premiseSource = new TaskBagPremiseSource(memory, { priority: true });
+const strategy = new BagStrategy();
+const ruleExecutor = new RuleExecutor();
+const ruleProcessor = new RuleProcessor(ruleExecutor);
+
+const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
+    cpuThrottleInterval: 1,
+    maxDerivationDepth: 10
+});
+
+reasoner.start();
+```
+
+### Event Handling
+
+```javascript
+// Listen for derivations
+reasoner.on('derivation', (task) => {
+    console.log(`Derived: ${task.toString()}`);
+});
+
+// Listen for questions answered
+reasoner.on('answer', (question, answer) => {
+    console.log(`Q: ${question.toString()}`);
+    console.log(`A: ${answer.toString()}`);
+});
+
+// Listen for system metrics
+reasoner.on('metrics', ({ derivationsPerSecond, memoryUsage }) => {
+    console.log(`Rate: ${derivationsPerSecond}/s, Memory: ${memoryUsage}MB`);
+});
+```
+
+### Step-by-Step Execution
+
+```javascript
+// For debugging and controlled execution
+reasoner.stop();
+
+// Execute single reasoning steps
+for (let i = 0; i < 10; i++) {
+    const results = await reasoner.step();
+    console.log(`Step ${i}: ${results.length} derivations`);
+}
+```
+
+## Technical Definitions
+
+- **NAR (NARS Reasoner Engine)**: The main system orchestrator that manages all components and provides the public API
+- **Reasoning Cycle**: The iterative process by which the system processes tasks and generates new knowledge
+- **Narsese**: The formal language used to represent knowledge and tasks in the system (e.g., `(bird --> animal).`)
+- **Task**: A unit of work containing a term, punctuation, truth value, and stamp
+- **Derivation**: A new task produced by applying inference rules to existing tasks
+
+See [README.core.md](README.core.md) for detailed component documentation.
+

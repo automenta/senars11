@@ -53,6 +53,58 @@ The SeNARS architecture is built around several fundamental patterns that enable
 
 ---
 
+## Async/Sync Hybridization
+
+- **Synchronous Processing**: NAL (Non-Axiomatic Logic) rules execute synchronously for rapid inference
+- **Asynchronous Processing**: LM (Language Model) rules execute asynchronously to prevent blocking the main event loop
+- **Non-Blocking Pipeline**: Asynchronous LM rules are dispatched without blocking and results are emitted when available
+- **Unified Output Stream**: Results from both sync and async rules are merged into a unified output stream
+
+This hybrid approach allows the system to:
+- Maintain low latency for core logical inference
+- Leverage powerful but slow language model capabilities
+- Scale to high-throughput reasoning workloads
+- Operate in real-time applications with bounded response times
+
+---
+
+## Truth & Logic Systems
+
+SeNARS supports multiple reasoning strategies with distinct truth value semantics:
+
+**NAL (Non-Axiomatic Logic) Strategy**:
+- Uses probabilistic truth values `{frequency, confidence}` for beliefs
+- Implements inheritance, similarity, conjunction, and other NAL operators
+- Provides default reasoning with frequency-confidence semantics for uncertainty management
+
+**Prolog Strategy**:
+- Implements backward-chaining resolution for goal-driven queries
+- Uses unification with variable binding for logical inference
+- Bridges formal logical unification with the system's knowledge base for goal-oriented problem solving
+
+---
+
+## Advanced Reasoning Capabilities
+
+Beyond basic syllogistic inference, SeNARS supports advanced reasoning patterns:
+
+**Variable Unification**: 
+- Queries with variables like `(bird --> ?X)?` resolve to specific bindings
+- Enables pattern-based question answering across the knowledge base
+- Supports both query variables (`?X`) and independent variables (`$X`)
+
+**Goal-Driven Reasoning**: 
+- Tasks with `!` punctuation represent goals to achieve, e.g., `(self --> happy)!`
+- Backward chaining synthesizes plans to achieve goals
+- Goals drive exploration while beliefs guide exploitation
+
+**Analogical Transfer**: 
+- Knowledge transfers across domains via similarity relations
+- E.g., `(bird <-> airplane)` enables inferring `(airplane --> flyer)` from `(bird --> flyer)`
+- Confidence adjustment based on similarity strength
+
+---
+
 ## Stream Reasoner Architecture
 
 ### Architecture Overview

@@ -45,3 +45,83 @@ Centralized system configuration with validation and default values:
 1. **Rule Plugins:** Support dynamic loading of custom NAL and LM rules.
 2. **Adapter Plugins:** Allow custom IO adapters and LM adapters.
 3. **Event Hooks:** Provide hooks for custom processing during reasoning cycles.
+
+## Configuration Examples
+
+### Basic Stream Reasoner Configuration
+
+```javascript
+const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
+    cpuThrottleInterval: 1,
+    maxDerivationDepth: 10
+});
+```
+
+### Advanced Sampling Strategy Configuration
+
+```javascript
+const advancedPremiseSource = new TaskBagPremiseSource(memory, {
+    priority: true,
+    recency: true,
+    punctuation: true,
+    novelty: true,
+    dynamic: true,
+    weights: {
+        priority: 1.0,
+        recency: 0.5,
+        punctuation: 0.8,
+        novelty: 0.3
+    }
+});
+```
+
+### Full System Configuration
+
+```javascript
+const config = {
+    memory: {
+        capacity: 1000,
+        consolidationThreshold: 0.1,
+        indexTypes: ['inheritance', 'implication', 'similarity']
+    },
+    focus: {
+        size: 100,
+        diversityFactor: 0.3,
+        promotionThreshold: 0.7
+    },
+    cycle: {
+        delay: 50,
+        maxTasksPerCycle: 10,
+        maxRulesPerPremise: 5
+    },
+    lm: {
+        enabled: true,
+        defaultProvider: 'ollama',
+        fallbackProvider: 'dummy',
+        timeout: 5000
+    },
+    performance: {
+        maxExecutionTime: 100,
+        memoryLimit: 512,
+        enableMetrics: true
+    }
+};
+
+const nar = new NAR(config);
+```
+
+## Parameter Tuning
+
+The `SystemConfig` exposes parameters for fine-tuning system behavior:
+
+| Category | Parameters |
+|----------|------------|
+| **Memory** | Capacity, forgetting thresholds, index types |
+| **Focus** | Size, diversity factor, promotion threshold |
+| **Truth** | Acceptance thresholds, revision parameters |
+| **Rules** | Application priority, frequency limits |
+| **Cycles** | Timing, processing limits, batch sizes |
+| **Activation** | Propagation parameters, decay rates |
+
+See [README.resources.md](README.resources.md) for resource management configuration.
+
