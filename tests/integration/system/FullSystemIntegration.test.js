@@ -35,7 +35,7 @@ describe('Full System Integration', () => {
     });
 
     afterAll(async () => {
-        if (app) await app.shutdown();
+        await app?.shutdown();
     });
 
     test('Cross-subsystem workflow: NL → NAL → Prolog reasoning', async () => {
