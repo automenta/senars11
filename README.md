@@ -35,25 +35,7 @@ architecture for processing streams of premises into conclusions.
 
 ---
 
-## Foundation Status
-
-| System | Status | Notes |
-|--------|--------|-------|
-| **Core NAR** | ✅ Complete | Main reasoning API |
-| **Unifier** | ✅ Complete | Logic unification engine |
-| **RuleCompiler** | ✅ Complete | Pattern matching optimization |
-| **Strategies** | ✅ Complete | All 10 strategies implemented |
-| **LM Integration** | ✅ Complete | 16 rules, NARS-GPT, Embeddings |
-| **MCP Server** | ✅ Complete | AI assistant integration |
-| **Demo System** | ✅ Complete | Remote-controlled demos |
-| **RLFP** | 🚧 Skeleton | Phase 7: Learning from preferences |
-| **Web Playground** | ❌ Planned | Phase 8: Debugger UI |
-| **TensorFunctor** | ❌ Planned | Phase 5: Differentiable Logic |
-
----
-
 ## The Vision: A Cognitive IDE
-
 *Transform complex reasoning into an observable, debuggable, steerable experience.*
 
 We are not just building an AI; we are building a **Debugger for Thought**. SeNARS is designed to make the invisible reasoning process visible, allowing researchers and developers to step through thoughts just as they step through code.
@@ -162,84 +144,7 @@ The SeNARS Stream Reasoner is a continuous, stream-based dataflow architecture t
 
 
 
-## Directory Structure
 
-```
-/
-├── src/
-│   ├── Agent.js                # Agent framework for autonomous operations
-│   ├── Stamp.js                # Evidence tracking for tasks and beliefs
-│   ├── Truth.js                # Truth value representation and operations
-│   ├── config/                 # Configuration management
-│   │   ├── ConfigManager.js    # Centralized configuration management
-│   │   └── ...
-│   ├── demo/                   # Demonstration and example implementations
-│   │   └── ...
-│   ├── integration/            # External system integration components
-│   │   └── KnowledgeBaseConnector.js # Connector for external knowledge bases
-│   ├── io/                     # Input/Output adapters and management
-│   │   └── ...
-│   ├── lm/                     # Language model integration components
-│   │   ├── AdvancedNarseseTranslator.js # Advanced translation between Narsese and natural language
-│   │   ├── DummyProvider.js    # Dummy provider for testing
-│   │   ├── EmbeddingLayer.js   # Vector embeddings for semantic reasoning
-│   │   ├── HuggingFaceProvider.js # Hugging Face provider integration
-│   │   ├── LM.js               # Main language model component
-│   │   ├── LMRuleFactory.js    # Factory for language model rules
-│   │   ├── LangChainProvider.js # LangChain provider integration
-│   │   ├── ModelSelector.js    # Model selection logic
-│   │   ├── NarseseTranslator.js # Basic Narsese translation
-│   │   └── ProviderRegistry.js # Registry for language model providers
-│   ├── memory/                 # Memory management and knowledge representation
-│   │   ├── Bag.js              # Priority-based collection for tasks
-│   │   ├── Concept.js          # Represents a concept in memory
-│   │   ├── Focus.js            # Attention focus management
-│   │   ├── FocusSetSelector.js # Advanced task selection from focus sets
-│   │   ├── ForgettingPolicy.js # Policy for forgetting old concepts
-│   │   ├── Layer.js            # Abstract layer interface for associative links
-│   │   ├── Memory.js           # Central memory component
-│   │   ├── MemoryConsolidation.js # Memory consolidation mechanisms
-│   │   ├── MemoryIndex.js      # Index management for different term types
-│   │   ├── TaskPromotionManager.js # Management of task promotion between memory types
-│   │   ├── TermLayer.js        # Term-specific layer implementation
-│   │   └── ...
-│   ├── module.js               # Module system for dynamic loading
-│   ├── nar/                    # NAR system entry point and control
-│   │   ├── Cycle.js            # Manages the reasoning cycle execution
-│   │   ├── NAR.js              # Main API for system control, input, and output
-│   │   ├── OptimizedCycle.js   # Optimized reasoning cycle implementation
-│   │   └── SystemConfig.js     # Configuration for NAR instance
-│   ├── parser/                 # Narsese parsing and generation
-│   │   └── ...
-│   ├── reasoning/              # Rule application and inference
-│   │   └── ...
-│   ├── server/                 # Server-side components
-│   │   └── WebSocketMonitor.js # WebSocket-based monitoring and visualization
-│   ├── task/                   # Task representation and management
-│   │   └── ...
-│   ├── term/                   # Robust Term handling
-│   │   └── ...
-│   ├── testing/                # Testing utilities and frameworks
-│   │   └── ...
-│   ├── tools/                  # Development and utility tools
-│   │   └── ...
-│   ├── tui/                    # Text-based user interface
-│   │   └── TUIRepl.js          # Main blessed TUI interface REPL
-│   └── util/                   # Utility functions and helper classes
-│       ├── BaseComponent.js    # Base class for all system components
-│       └── ...
-├── tests/                      # Unit, integration, and property-based tests
-│   ├── ...
-├── examples/                   # Demonstrations of system usage
-│   └── ...
-├── ui/                         # Web UI built with React and Vite
-├── scripts/                    # Organized scripts for operations
-├── benchmarks/                 # Performance benchmarking tools
-├── demo-results/               # Results from demonstrations
-├── docs/                       # Documentation files
-├── package.json
-└── README.md
-```
 
 ---
 
@@ -318,6 +223,10 @@ execution through:
 - Deduplication & ordering of common checks
 - Subsumption detection
 - Constant folding
+
+**Key Components:**
+- **Unifier**: Prolog-style logic unification engine for variable binding.
+- **RuleCompiler**: Optimizes pattern matching for high-performance rule dispatch.
 
 #### RuleProcessor
 
@@ -541,18 +450,14 @@ reasoner.start();
 
 ---
 
-
-
-
-
 ### Memory & Attention System
 
 The `Memory` component orchestrates both long-term storage and short-term attention (`Focus`), managing the system's "Stream of Consciousness".
 
 - **Dual Memory Architecture**:
-    - **Focus Sets (Short-term)**: Priority-based working memory. Selects tasks based on urgency, importance, and diversity to prevent tunnel vision.
+    - **Focus Sets (Short-term)**: Priority-based working memory using `FocusSetSelector` for advanced task selection.
     - **Long-term Memory**: Persistent storage for Concepts and Terms.
-    - **Consolidation**: Automatic movement of items between Focus and Long-term memory based on activation levels.
+    - **Consolidation**: Automatic movement of items between Focus and Long-term memory managed by `MemoryConsolidation` and `TaskPromotionManager`.
 - **Concept Structure**: Each `Concept` acts as a container for all Beliefs and Questions related to a specific `Term`.
 - **Associative Layers**:
     - **TermLayer**: Explicit structural links between terms.
@@ -594,7 +499,7 @@ const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
 
 ### Configuration Management
 
-Centralized system configuration with validation and default values:
+Centralized system configuration handled by `ConfigManager` with validation and default values:
 
 **Key Features:**
 
