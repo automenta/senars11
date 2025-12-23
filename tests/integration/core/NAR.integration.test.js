@@ -64,7 +64,17 @@ describe('NAR Integration', () => {
         });
     });
 
-    describe('System Lifecycle', () => {
+    describe.each([
+        ['Fast', 1],
+        ['Standard', 10],
+        ['Slow', 50]
+    ])('System Lifecycle (%s)', (speed, delay) => {
+        beforeEach(() => {
+            if (nar) {
+                nar.config.cycle.delay = delay;
+            }
+        });
+
         test('should execute multiple cycles', async () => {
             await inputAll(nar, ['cat.', 'dog.']);
             const results = await nar.runCycles(3);

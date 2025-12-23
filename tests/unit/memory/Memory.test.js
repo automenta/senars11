@@ -56,9 +56,10 @@ describe('Memory', () => {
     });
 
     describe.each([
+        ['priority', 5],
         ['priority', 10],
-        ['priority', 50],
-        ['priority', 100]
+        ['fifo', 5],
+        ['fifo', 10]
     ])('Capacity with %s policy (limit: %d)', (forgetPolicy, maxConcepts) => {
         let memory, termFactory;
 

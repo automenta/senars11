@@ -1,7 +1,6 @@
 import { Bag } from '../../../core/src/memory/Bag.js';
 import { createAtom, createTask } from './testUtils.js';
 
-
 describe('Bag', () => {
     describe('Basic Operations', () => {
         let bag;

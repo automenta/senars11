@@ -17,7 +17,7 @@ describe('TermFactory', () => {
     test('caches atomic terms', () => {
         const term1 = termFactory.create('dog');
         const term2 = termFactory.create('dog');
-        expect(term1).toBe(term2); // Reference equality
+        expect(term1).toBe(term2);
     });
 
     test('creates compound terms via helper', () => {
@@ -29,7 +29,6 @@ describe('TermFactory', () => {
         expect(term.operator).toBe('-->');
         expect(term.components[0]).toBe(cat);
         expect(term.components[1]).toBe(animal);
-        // Canonical string format check
         expect(term.toString()).toBe('(-->, cat, animal)');
     });
 
@@ -43,12 +42,10 @@ describe('TermFactory', () => {
     });
 
     test('creates variable terms', () => {
-        // TermFactory.variable forces '?' prefix
         const query = termFactory.variable('z');
         expect(query.toString()).toBe('?z');
         expect(query.isVariable).toBe(true);
 
-        // Manual creation
         const independent = termFactory.create('$x');
         expect(independent.toString()).toBe('$x');
 
@@ -140,6 +137,6 @@ describe('TermFactory', () => {
         const term1 = termFactory.create('bird');
         termFactory.clearCache();
         const term2 = termFactory.create('bird');
-        expect(term1).not.toBe(term2); // Should be new instance
+        expect(term1).not.toBe(term2);
     });
 });
