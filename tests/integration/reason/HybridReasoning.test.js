@@ -21,7 +21,7 @@ describe('Hybrid LM-NAL Reasoning', () => {
                     modelName: 'Xenova/flan-t5-small',
                     enabled: true,
                     temperature: 0.1,
-                    circuitBreaker: { failureThreshold: 5, resetTimeout: 10000 }
+                    circuitBreaker: { failureThreshold: 5, resetTimeout: 1000 }
                 },
                 subsystems: { lm: true }
             }));
@@ -31,7 +31,7 @@ describe('Hybrid LM-NAL Reasoning', () => {
                 lm: {
                     modelName: 'Xenova/flan-t5-small',
                     temperature: 0.1,
-                    circuitBreaker: { failureThreshold: 5, resetTimeout: 10000 }
+                    circuitBreaker: { failureThreshold: 5, resetTimeout: 1000 }
                 }
             }));
         }

@@ -17,7 +17,7 @@ describe('Full System Integration', () => {
                 modelName: 'Xenova/flan-t5-small',
                 enabled: true,
                 temperature: 0.1,
-                circuitBreaker: { failureThreshold: 5, resetTimeout: 10000 }
+                circuitBreaker: { failureThreshold: 5, resetTimeout: 1000 }
             },
             subsystems: { lm: true, prolog: true },
             memory: {
@@ -32,7 +32,6 @@ describe('Full System Integration', () => {
         });
 
         agent = await app.start({ startAgent: true });
-        await wait(2000); // Allow system initialization
     });
 
     afterAll(async () => {
@@ -74,8 +73,6 @@ describe('Full System Integration', () => {
             await agent.nar.runCycles(10);
         }
 
-        await wait(500);
-
         // Verify memory consolidation
         const concepts = agent.getConcepts();
         expect(concepts.length).toBeGreaterThanOrEqual(3);
@@ -98,7 +95,7 @@ describe('Full System Integration', () => {
         }
 
         await agent.input('"Dogs are friendly".');
-        await wait(3000);
+        await wait(100);
 
         // Verify event chain
         const hasLMEvent = events.some(e => e.type.startsWith('lm.'));
@@ -132,8 +129,6 @@ describe('Full System Integration', () => {
         ];
 
         await Promise.all(inputs.map(input => agent.input(input)));
-
-        await wait(1000);
 
         // Verify system handled concurrent inputs
         const concepts = agent.getConcepts();

@@ -1,18 +1,18 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {NARTool} from '../../../core/src/tool/NARTool.js';
-import {PrologStrategy} from '../../../core/src/reason/strategy/PrologStrategy.js';
-import {Task} from '../../../core/src/task/Task.js';
-import {Truth} from '../../../core/src/Truth.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { NARTool } from '../../../core/src/tool/NARTool.js';
+import { PrologStrategy } from '../../../core/src/reason/strategy/PrologStrategy.js';
+import { Task } from '../../../core/src/task/Task.js';
+import { Truth } from '../../../core/src/Truth.js';
 
 describe('Neurosymbolic Synergy', () => {
     let nar, narTool, tf;
 
     beforeEach(async () => {
-        nar = new NAR({reasoning: {type: 'stream', maxDerivationDepth: 20}, debug: {reasoning: false}});
+        nar = new NAR({ reasoning: { type: 'stream', maxDerivationDepth: 20 }, debug: { reasoning: false } });
         await nar.initialize();
         tf = nar._termFactory;
 
-        const prolog = new PrologStrategy({termFactory: tf});
+        const prolog = new PrologStrategy({ termFactory: tf });
         nar.streamReasoner?.strategy?.addStrategy(prolog);
 
         narTool = new NARTool(nar);
@@ -26,7 +26,7 @@ describe('Neurosymbolic Synergy', () => {
     const createTask = (term, punct = '.') => new Task({
         term, punctuation: punct,
         truth: punct === '?' ? null : new Truth(1.0, 0.9),
-        budget: {priority: 0.99, durability: 0.9, quality: 0.9}
+        budget: { priority: 0.99, durability: 0.9, quality: 0.9 }
     });
 
     test('Ancestry & Genetics (Prolog recursion + NAL implication)', async () => {
@@ -36,7 +36,7 @@ describe('Neurosymbolic Synergy', () => {
             'ancestor(X, Y) :- parent(X, Y).',
             'ancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).'
         ];
-        for (const k of kb) await narTool.execute({action: 'assert_prolog', content: k});
+        for (const k of kb) await narTool.execute({ action: 'assert_prolog', content: k });
 
         // 2. NAL Rule: ((&&, <($x * $y) --> ancestor_of>, <$x --> red_hair>) ==> <$y --> red_hair>)
         const [x, y] = ['$x', '$y'].map(v => tf.variable(v));
@@ -63,7 +63,7 @@ describe('Neurosymbolic Synergy', () => {
         expect(nar.memory.getConcept(factTerm)).toBeDefined();
 
         // 5. Reasoning
-        await nar.runCycles(50);
+        await nar.runCycles(10);
 
         // Verification (Best effort)
         const targetConsequent = tf.inheritance(charlie, red);

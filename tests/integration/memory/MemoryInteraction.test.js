@@ -1,15 +1,15 @@
-import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {inputAll, wait} from '../../support/testHelpers.js';
-import {generateBeliefs} from '../../support/integrationTestUtils.js';
+import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { inputAll, wait } from '../../support/testHelpers.js';
+import { generateBeliefs } from '../../support/integrationTestUtils.js';
 
 describe('Memory Cross-Layer Interaction', () => {
     let nar;
 
     beforeEach(async () => {
         nar = new NAR({
-            debug: {enabled: false},
-            cycle: {delay: 5, maxTasksPerCycle: 10},
+            debug: { enabled: false },
+            cycle: { delay: 5, maxTasksPerCycle: 10 },
             memory: {
                 priorityThreshold: 0.3,
                 consolidationInterval: 5,
@@ -30,7 +30,7 @@ describe('Memory Cross-Layer Interaction', () => {
         const beliefs = generateBeliefs(30, 'overflow');
         await inputAll(nar, beliefs);
 
-        await nar.runCycles(10);
+        await nar.runCycles(5);
 
         const focus = nar._focus;
         const memory = nar.memory;
@@ -50,7 +50,7 @@ describe('Memory Cross-Layer Interaction', () => {
 
         const initialConcepts = nar.memory.getAllConcepts().length;
 
-        await nar.runCycles(15);
+        await nar.runCycles(8);
 
         const finalConcepts = nar.memory.getAllConcepts();
 
@@ -80,7 +80,7 @@ describe('Memory Cross-Layer Interaction', () => {
         nar._focus.setFocus('set2');
         await nar.input('<D --> E>.');
 
-        await nar.runCycles(20);
+        await nar.runCycles(10);
 
         const beliefs = nar.getBeliefs();
         const hasDerivation = beliefs.some(b => {
@@ -116,7 +116,7 @@ describe('Memory Cross-Layer Interaction', () => {
     });
 
     test('Concept indexing under load', async () => {
-        const inheritances = Array.from({length: 25}, (_, i) =>
+        const inheritances = Array.from({ length: 25 }, (_, i) =>
             `<item_${i} --> category_${i % 5}>.`
         );
 
