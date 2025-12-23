@@ -92,7 +92,7 @@ export class TestNAR {
                 maxCombinations: 10, // Minimal for tests - reduced from 25
                 maxRuleApplications: 20, // Minimal for tests - reduced from 50  
                 maxTasksPerBatch: 3, // Smaller batches - reduced from 5
-                useStreamReasoner: true,
+
                 cpuThrottleInterval: 0,
                 maxDerivationDepth: 3 // Reduced from 5
             },
