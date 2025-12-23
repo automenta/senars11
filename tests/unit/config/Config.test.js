@@ -1,5 +1,21 @@
-import {beforeEach, describe, expect, test} from '@jest/globals';
-import {Component, Config, DEFAULT_CONFIG_CORE} from '../../../core/src/config/Config.js';
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { Component, Config, DEFAULT_CONFIG_CORE } from '../../../core/src/config/Config.js';
+
+jest.unstable_mockModule('fs', () => ({
+    default: {
+        existsSync: jest.fn(),
+        readFileSync: jest.fn(),
+        writeFileSync: jest.fn(),
+        mkdirSync: jest.fn(),
+    },
+    existsSync: jest.fn(),
+    readFileSync: jest.fn(),
+    writeFileSync: jest.fn(),
+    mkdirSync: jest.fn(),
+}));
+
+const { ConfigManager, DEFAULT_CONFIG } = await import('../../../core/src/config/ConfigManager.js');
+
 
 describe('Config', () => {
     describe('parse', () => {
@@ -45,7 +61,7 @@ describe('Config', () => {
             }
         ];
 
-        test.each(parseTests)('parses $name', ({args, expect: expectFn}) =>
+        test.each(parseTests)('parses $name', ({ args, expect: expectFn }) =>
             expectFn(Config.parse(args))
         );
     });
@@ -113,8 +129,8 @@ describe('Component', () => {
     });
 
     test('updateConfig merges values', () => {
-        const comp = new TestComponent({a: 1, b: {c: 2}});
-        comp.updateConfig({b: {d: 3}});
+        const comp = new TestComponent({ a: 1, b: { c: 2 } });
+        comp.updateConfig({ b: { d: 3 } });
         expect(comp.config.a).toBe(1);
         expect(comp.config.b.c).toBe(2);
     });
@@ -136,5 +152,29 @@ describe('Config Validation', () => {
     test('handles invalid port numbers', () => {
         const config = Config.parse(['--port', 'invalid']);
         expect(config).toBeDefined();
+    });
+});
+
+describe('ConfigManager', () => {
+    let configManager;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        configManager = new ConfigManager();
+    });
+
+    test('initializes with default config', () => {
+        expect(configManager._config).toMatchObject(DEFAULT_CONFIG);
+        expect(configManager._config.memory.focusSetSize).toBe(100);
+    });
+
+    test('updates config values', () => {
+        configManager.update({ lm: { enabled: true } });
+        expect(configManager._config.lm.enabled).toBe(true);
+    });
+
+    test('validates config on update', () => {
+        const result = configManager.update({ webSocket: { port: 1234 } });
+        expect(result).toBe(configManager);
     });
 });

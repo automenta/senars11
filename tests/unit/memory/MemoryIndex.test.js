@@ -1,17 +1,15 @@
-import {MemoryIndex} from '../../../core/src/memory/MemoryIndex.js';
-import {Concept} from '../../../core/src/memory/Concept.js';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import { MemoryIndex } from '../../../core/src/memory/MemoryIndex.js';
+import { Concept } from '../../../core/src/memory/Concept.js';
+import { tf, createConcept } from './testUtils.js';
 
 describe('MemoryIndex', () => {
-    let index, tf;
+    let index;
     const config = Concept.DEFAULT_CONFIG;
 
     beforeEach(() => {
         index = new MemoryIndex();
-        tf = new TermFactory();
     });
 
-    const createConcept = (term) => new Concept(term, config);
 
     test('initialization', () => {
         expect(index.getStats()).toMatchObject({
@@ -34,7 +32,7 @@ describe('MemoryIndex', () => {
             const concept = createConcept(tf.inheritance(sub, pred));
             index.addConcept(concept);
 
-            expect(index.getStats()).toMatchObject({totalConcepts: 1, inheritanceEntries: 1});
+            expect(index.getStats()).toMatchObject({ totalConcepts: 1, inheritanceEntries: 1 });
             expect(index.findInheritanceConcepts(pred)).toContain(concept);
             expect(index.findConceptsByOperator('-->')).toHaveLength(1);
         });
@@ -44,7 +42,7 @@ describe('MemoryIndex', () => {
             const concept = createConcept(tf.implication(pre, post));
             index.addConcept(concept);
 
-            expect(index.getStats()).toMatchObject({totalConcepts: 1, implicationEntries: 1});
+            expect(index.getStats()).toMatchObject({ totalConcepts: 1, implicationEntries: 1 });
             expect(index.findImplicationConcepts(pre)).toContain(concept);
         });
 
@@ -53,7 +51,7 @@ describe('MemoryIndex', () => {
             const concept = createConcept(tf.similarity(t1, t2));
             index.addConcept(concept);
 
-            expect(index.getStats()).toMatchObject({totalConcepts: 1, similarityEntries: 2}); // Bidirectional
+            expect(index.getStats()).toMatchObject({ totalConcepts: 1, similarityEntries: 2 }); // Bidirectional
             expect(index.findSimilarityConcepts(t1)).toContain(concept);
             expect(index.findSimilarityConcepts(t2)).toContain(concept);
         });

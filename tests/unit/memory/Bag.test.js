@@ -1,14 +1,6 @@
-import {Bag} from '../../../core/src/memory/Bag.js';
-import {Task} from '../../../core/src/task/Task.js';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import { Bag } from '../../../core/src/memory/Bag.js';
+import { createAtom, createTask } from './testUtils.js';
 
-const tf = new TermFactory();
-const createAtom = name => tf.atomic(name);
-const createTask = (term, priority = 0.5) => new Task({
-    term,
-    budget: {priority},
-    truth: {frequency: 0.9, confidence: 0.8}
-});
 
 describe('Bag', () => {
     let bag;
@@ -18,7 +10,7 @@ describe('Bag', () => {
 
     describe('Basic Operations', () => {
         test('defaults', () => {
-            expect(bag).toMatchObject({size: 0, maxSize: 10});
+            expect(bag).toMatchObject({ size: 0, maxSize: 10 });
         });
 
         test('add/duplicate/remove', () => {
