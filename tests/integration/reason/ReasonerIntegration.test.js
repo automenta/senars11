@@ -20,7 +20,7 @@ describe('Reasoner Integration', () => {
         });
 
         afterEach(async () => {
-            if (nar) await nar.dispose();
+            await nar?.dispose();
         });
 
         test('should process syllogistic reasoning', async () => {

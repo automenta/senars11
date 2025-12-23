@@ -25,14 +25,12 @@ describe('Memory Subsystem Integration', () => {
                 cycle: { delay: 5, maxTasksPerCycle: 10 },
                 memory: memConfig
             });
-            if (nar.initialize) await nar.initialize();
+            await nar.initialize?.();
         });
 
         afterEach(async () => {
-            if (nar) {
-                await nar.dispose();
-                nar = null;
-            }
+            await nar?.dispose();
+            nar = null;
         });
 
         test('Activation propagation through concept network', async () => {
@@ -44,11 +42,8 @@ describe('Memory Subsystem Integration', () => {
             ]);
 
             await nar.runCycles(5);
-
-            // Activate one node repeatedly
             await nar.input('<node1 --> central>.');
             await nar.input('<node1 --> central>.');
-
             await nar.runCycles(10);
 
             const concepts = nar.memory.getAllConcepts();
@@ -202,14 +197,12 @@ describe('Memory Subsystem Integration', () => {
                 cycle: { delay: 5, maxTasksPerCycle: 10 },
                 memory: { priorityThreshold: 0.3, consolidationInterval: 5, maxConcepts: 50 }
             });
-            if (nar.initialize) await nar.initialize();
+            await nar.initialize?.();
         });
 
         afterEach(async () => {
-            if (nar) {
-                await nar.dispose();
-                nar = null;
-            }
+            await nar?.dispose();
+            nar = null;
         });
 
         test('Focus overflow to long-term consolidation', async () => {
@@ -217,23 +210,18 @@ describe('Memory Subsystem Integration', () => {
             await inputAll(nar, beliefs);
             await nar.runCycles(5);
 
-            const focus = nar._focus;
-            const memory = nar.memory;
+            const { _focus: focus, memory } = nar;
+            if (!focus || !memory) return;
 
-            if (focus && memory) {
-                const focusTasks = focus.getTasks(100);
-                const memConcepts = memory.getAllConcepts();
+            const focusTasks = focus.getTasks(100);
+            const memConcepts = memory.getAllConcepts();
 
-                expect(focusTasks.length).toBeLessThanOrEqual(50);
-                expect(memConcepts.length).toBeGreaterThanOrEqual(10);
-            }
+            expect(focusTasks.length).toBeLessThanOrEqual(50);
+            expect(memConcepts.length).toBeGreaterThanOrEqual(10);
         });
 
         test('Cross-focus-set reasoning', async () => {
-            if (!nar._focus) {
-                expect(true).toBe(true);
-                return;
-            }
+            if (!nar._focus) return;
 
             await nar.input('<A --> B>.');
             await nar.input('<B --> C>.');
@@ -321,12 +309,12 @@ describe('Memory Subsystem Integration', () => {
             focus.createFocusSet('stress', 10);
             focus.setFocus('stress');
 
-            for (let i = 0; i < 50; i++) {
+            Array.from({ length: 50 }, (_, i) => {
                 const task = createTask({ term: createTerm(`stress_${i}`), budget: { priority: Math.random() } });
                 focus.addTaskToFocus(task);
                 memory.addTask(task);
                 index.addConcept(memory.getConcept(task.term));
-            }
+            });
 
             expect(Date.now() - start).toBeLessThan(2000);
             expect(focus.getTasks(100)).toHaveLength(10);

@@ -34,7 +34,7 @@ describe('NAL-Prolog Synergy', () => {
         });
 
         afterEach(async () => {
-            if (nar) await nar.dispose();
+            await nar?.dispose();
         });
 
         test('Prolog feedback loop → NAL stream', async () => {
@@ -70,7 +70,7 @@ describe('NAL-Prolog Synergy', () => {
         });
 
         afterEach(async () => {
-            if (nar) await nar.dispose();
+            await nar?.dispose();
         });
 
         test('Ancestry & Genetics (Prolog recursion + NAL implication)', async () => {
@@ -115,7 +115,7 @@ describe('NAL-Prolog Synergy', () => {
                 ...(nar._focus ? nar._focus.getTasks(1000) : [])
             ];
 
-            const derived = allTasks.some(t => t.term.equals(targetConsequent) && t.punctuation === '.');
+
             // Setup verification
             expect(true).toBe(true);
         });

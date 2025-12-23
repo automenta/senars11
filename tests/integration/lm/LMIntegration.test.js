@@ -8,9 +8,7 @@ describe('LM Integration Tests', () => {
     let nar;
 
     afterEach(async () => {
-        if (nar && typeof nar.dispose === 'function') {
-            await nar.dispose();
-        }
+        await nar?.dispose();
         nar = null;
     });
 
