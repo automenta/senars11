@@ -1,5 +1,5 @@
-import {beforeEach, describe, expect, test} from '@jest/globals';
-import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import { beforeEach, describe, expect, test } from '@jest/globals';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('TermFactory', () => {
     let termFactory;
@@ -99,33 +99,14 @@ describe('TermFactory', () => {
         });
 
         describe('Reflexive Terms', () => {
-            test('reduces reflexive inheritance to True', () => {
+            test.each([
+                ['inheritance', (tf, a) => tf.inheritance(a, a)],
+                ['similarity', (tf, a) => tf.similarity(a, a)],
+                ['implication', (tf, a) => tf.implication(a, a)],
+                ['equivalence', (tf, a) => tf.equivalence(a, a)]
+            ])('reduces reflexive %s to True', (name, createFn) => {
                 const a = termFactory.create('a');
-                const term = termFactory.inheritance(a, a);
-                expect(term).not.toBeNull();
-                expect(term.name).toBe('True');
-                expect(term.isAtomic).toBe(true);
-            });
-
-            test('reduces reflexive similarity to True', () => {
-                const a = termFactory.create('a');
-                const term = termFactory.similarity(a, a);
-                expect(term).not.toBeNull();
-                expect(term.name).toBe('True');
-                expect(term.isAtomic).toBe(true);
-            });
-
-            test('reduces reflexive implication to True', () => {
-                const a = termFactory.create('a');
-                const term = termFactory.implication(a, a);
-                expect(term).not.toBeNull();
-                expect(term.name).toBe('True');
-                expect(term.isAtomic).toBe(true);
-            });
-
-            test('reduces reflexive equivalence to True', () => {
-                const a = termFactory.create('a');
-                const term = termFactory.equivalence(a, a);
+                const term = createFn(termFactory, a);
                 expect(term).not.toBeNull();
                 expect(term.name).toBe('True');
                 expect(term.isAtomic).toBe(true);
@@ -134,36 +115,17 @@ describe('TermFactory', () => {
     });
 
     describe('Set Operators', () => {
-        test('creates extensional set', () => {
-            const a = termFactory.create('a');
-            const term = termFactory.setExt(a);
-            expect(term.operator).toBe('{}');
-            expect(term.toString()).toBe('{a}');
-        });
-
-        test('creates intensional set', () => {
-            const a = termFactory.create('a');
-            const term = termFactory.setInt(a);
-            expect(term.operator).toBe('[]');
-            expect(term.toString()).toBe('[a]');
-        });
-
-        // TermFactory doesn't have an explicit 'intersection' helper.
-        // We'll test 'product' instead as it is another common operator.
-        test('creates product', () => {
+        test.each([
+            ['extensional set', (tf, a, _b) => tf.setExt(a), '{}', '{a}', 1],
+            ['intensional set', (tf, a, _b) => tf.setInt(a), '[]', '[a]', 1],
+            ['product', (tf, a, b) => tf.product(a, b), '*', '(*, a, b)', 2],
+            ['difference', (tf, a, b) => tf.difference(a, b), '<~>', '(<~>, a, b)', 2]
+        ])('creates %s', (name, createFn, expectedOp, expectedStr, numArgs) => {
             const a = termFactory.create('a');
             const b = termFactory.create('b');
-            const term = termFactory.product(a, b);
-            expect(term.operator).toBe('*');
-            expect(term.toString()).toBe('(*, a, b)');
-        });
-
-        test('creates difference', () => {
-            const a = termFactory.create('a');
-            const b = termFactory.create('b');
-            const term = termFactory.difference(a, b);
-            expect(term.operator).toBe('<~>');
-            expect(term.toString()).toBe('(<~>, a, b)');
+            const term = createFn(termFactory, a, b);
+            expect(term.operator).toBe(expectedOp);
+            expect(term.toString()).toBe(expectedStr);
         });
     });
 
