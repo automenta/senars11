@@ -3,8 +3,65 @@
 > **Vision**: Transform SeNARS into an **observable "neural galaxy"** where the graph is the primary interface for exploring hybrid NAL-LM reasoning.
 > **Philosophy**: "The Graph *IS* the Logic."
 
-**Status**: Planning / Pre-Alpha
+**Status**: Pre-Alpha (Phase 0 ~80% Complete, Blocking Issues Identified)
 **Goal**: Unified Observability Platform (CLI + Web)
+
+---
+
+## 0. Known Issues & Fixes ✅ RESOLVED
+
+> [!NOTE]
+> Both blocking issues have been fixed.
+
+### ✅ Issue 1: fcose Layout - FIXED
+- **Solution:** Updated `ui/index.html` to load CDN dependencies in correct order: `layout-base` → `cose-base` → `cytoscape-fcose`
+
+### ✅ Issue 2: LM Default Provider - FIXED  
+- **Solution:** Changed `agent/src/app/Config.js` default from `'ollama'` to `'transformers'`
+
+---
+
+## 0.1 Automated Development Commands
+
+> [!IMPORTANT]
+> These commands enable fully automated UI development without manual testing.
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `npm run test:e2e` | Playwright E2E tests (7 specs) | After any UI change |
+| `npm run test:all` | Full unit + integration + e2e | Before committing |
+| `npm run dev:workflow --all` | Visual inspection + regression + tuning | Full validation |
+| `npm run ai:develop` | Evolutionary parameter tuning | Optimize heuristics |
+| `npm run capture` | Generate screenshots/movies | Visual documentation |
+
+### The Self-Improvement Loop
+
+```mermaid
+graph LR
+    A[Define Micro-Goal] --> B[Implement Change]
+    B --> C[npm run test:e2e]
+    C -->|Pass| D[npm run capture]
+    C -->|Fail| E[Auto-Fix or Report]
+    D --> F[Review Observability]
+    F --> A
+    E --> B
+```
+
+### Test Infrastructure
+
+| Component | Path | Coverage |
+|-----------|------|----------|
+| **Page Object** | `ui/tests/e2e/utils/NarPage.js` | All UI selectors |
+| **E2E Specs** | `ui/tests/e2e/*.spec.js` | golden_path, demos, graph, config, debug, advanced, production |
+| **Fixtures** | `ui/tests/e2e/fixtures/` | Mock backend, production backend |
+| **Playwright Config** | `ui/playwright.config.js` | Chromium, auto-start server |
+
+### Verification Contract Per Phase
+
+Each phase in this roadmap must define:
+1. **Test Script:** Exact `npm run` command
+2. **Pass Criteria:** Expected test outcomes  
+3. **Observable Metrics:** Screenshots, logs, performance data
 
 ---
 
@@ -31,6 +88,7 @@ graph TD
     subgraph Interfaces ["Interfaces"]
         CLI[CLI REPL (Ink)]
         Web[Web UI (Vanilla JS + Cytoscape)]
+        WebREPL[Web REPL Overlay]
     end
 
     NAR -->|IntrospectionEvents| EB
@@ -38,143 +96,390 @@ graph TD
     EB -->|Stream| Hooks
     
     WSM --> Web
+    WSM --> WebREPL
     Hooks --> CLI
     
     Web -.->|Commands| CMD
+    WebREPL -.->|Commands| CMD
     CLI -.->|Commands| CMD
     
-    DT -.->|Styles| Web
-    DT -.->|Styles| CLI
+    DT -.->|Direct Import| Web
+    DT -.->|Direct Import| WebREPL
+    DT -.->|Direct Import| CLI
 ```
 
 ### Key Integration Points
-1.  **Event Ontology**: `core/src/util/IntrospectionEvents.js` is the single source of truth.
+1.  **Event Ontology**: [`core/src/util/IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) is the single source of truth.
     *   *Rule*: A feature exists only if an event exists for it.
-2.  **Visual Language**: `core/src/util/DesignTokens.js` defines shared colors, timings, and semantic meanings.
-3.  **Control Plane**: `core/src/util/CommandRegistry.js` unifies input handling (`run`, `step`, `input`) across TUI and Web.
+2.  **Visual Language**: [`core/src/util/DesignTokens.js`](file:///home/me/senars10/core/src/util/DesignTokens.js) defines shared colors, timings, and semantic meanings.
+    *   *Usage*: Direct imports (`import { DESIGN_TOKENS } from '@senars/core'`) - no CSS variables needed.
+3.  **Control Plane**: [`core/src/util/CommandRegistry.js`](file:///home/me/senars10/core/src/util/CommandRegistry.js) unifies input handling across TUI and Web.
 
 ---
 
 ## 2. Development Methodology: Agentic & Incremental
 
-We utilize an **incremental, agent-driven workflow**.
+We utilize an **incremental, agent-driven workflow** focused on **quick wins** and **iterative improvement**.
 
 ### The Automated Loop
-1.  **Define**: Micro-goal (e.g., "Visualize goal derivation").
-2.  **Act**: Execute changes using "Shortcuts" (existing code) and "Power Moves" (high-leverage libs).
+1.  **Define**: Micro-goal (e.g., "Add pulse animation on derivation").
+2.  **Act**: Use Playwright Agents (Planner → Generator → Healer) via MCP tools.
 3.  **Verify**:
-    *   **Functional**: Use PLaywright E2E.
-    *   **Visual**: Regression checks.
+    *   **Functional**: Use Playwright E2E (gestures, updates).
+    *   **Visual**: Regression screenshots with masks for dynamics.
+    *   **Perceptual (Future)**: LAION Aesthetics Predictor V2 (Target >7.0).
     *   **Performance**: Maintain >30fps.
 
 ### Verification Standards
 *   **Performance**: >30fps at 500 nodes.
-    *   *Strategy*: Level-of-Detail (LOD) culling, viewport filtering.
-*   **Aesthetics**: No overlapping nodes, clear edge routing.
+    *   *Strategy*: Viewport filtering, layout debouncing (already implemented).
+*   **Aesthetics**: Clear node labels, semantic edge colors, smooth animations.
+    *   *Target*: Saliency on key elements >70%, low clutter.
 
 ---
 
-## 3. Implementation Plan: The 10-Step Progression
+## 3. Implementation Plan: Revised Progression
 
-### Phase 0: Foundations & Prerequisites
-*Goal: Ensure the plumbing exists before building the tapping.*
+### ✅ Phase 0: Foundations (80% Complete)
 
-1.  **Command Infrastructure**:
-    *   Create `core/src/util/CommandRegistry.js`.
-    *   Pattern: `registry.register(name, handler, meta)`.
-    *   *Tasks*: Refactor `TUI.js` and `ReplMessageHandler.js` to use this.
-2.  **Event Ontology Expansion**:
-    *   Update `IntrospectionEvents.js` with missing events:
-        *   `memory:focus:promote`, `memory:focus:demote`
-        *   `lm:prompt:start`, `lm:prompt:complete`, `lm:error`
-        *   `reasoning:goal:achieved`, `reasoning:derivation:chain`
+**Already Done:**
+1.  ✅ **Command Infrastructure**: [`CommandRegistry.js`](file:///home/me/senars10/core/src/util/CommandRegistry.js) already in core.
+2.  ✅ **Event Ontology**: [`IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) has all needed events (`memory:focus:*`, `lm:*`, `reasoning:*`).
+3.  ✅ **Design Tokens**: [`DesignTokens.js`](file:///home/me/senars10/core/src/util/DesignTokens.js) exists and used by [`GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js).
+4.  ✅ **CLI Logging**: [`useAgentLogs.js`](file:///home/me/senars10/agent/src/cli/hooks/useAgentLogs.js) already exists.
 
-### Track A: Core Infrastructure
-*Goal: Unified logic and shared assets.*
-
-3.  **Design Token Injection**: 
-    *   Create `ui/src/utils/ThemeGenerator.js` to map `DesignTokens` to CSS variables.
-4.  **Log Unification**:
-    *   Create `agent/src/cli/hooks/useAgentLogs.js` (if missing) to standardize CLI output.
-
-### Track B: The "Neural Galaxy" (Visuals)
-*Goal: Beautiful, organic, readable graph.*
-
-5.  **Static Nodes (Elements)**: 
-    *   Render nodes using `GraphConfig` styles mapping to Narsese terms (Concept=Teal, Goal=Amber).
-6.  **Organic Layout (Structure)**: 
-    *   Implement `fcose` (or `cola`/`elk` if bundle size is high).
-    *   *Optimization*: Use Web Worker for layout calculation.
-7.  **Smart Edges (Connections)**: 
-    *   Full semantic coloring (Inheritance vs Similarity) via `DesignTokens`.
-
-### Track C: Deep Observability
-*Goal: Seeing the machine think in real-time.*
-
-8.  **Live Deltas**:
-    *   Animate updates from `EventStream`.
-    *   *Shortcut*: `reasoning:derivation` -> Pulse animation.
-9.  **Vital Signs & Focus**:
-    *   Visual saliency: Glow effect for `memory:focus:promote`.
-    *   Spinners for `lm:prompt:start`.
-    *   Gauges for CPU/Cycle rate.
-
-### Track D: Interactive Control
-*Goal: User agency and feedback.*
-
-10. **Timeline Scrubber** (Time-Travel):
-    *   Snapshot `GraphManager` state every N cycles into a RingBuffer.
-    *   UI slider to rewind/replay.
-11. **RLFP Interface** (Teacher Mode):
-    *   *Backend*: Implement feedback ingestion.
-    *   *UI*: Drag-to-rank derivation paths -> Emit `reasoning:feedback` events.
-
-### Track E: Developer Experience (New)
-*Goal: Tools for the builders.*
-
-12. **Debug Panel**:
-    *   Live Event Inspector (filter/pause stream).
-    *   Raw Memory View (JSON tree).
-    *   Performance Overlay (FPS, Latency).
-
-### Track F: Accessibility (New)
-*Goal: Observability for all.*
-
-13. **A11y Core**:
-    *   ARIA labels for graph nodes.
-    *   Keyboard navigation (Tab-index through focus concepts).
-    *   High-contrast mode toggled via `DesignTokens`.
+**Remaining (Optional):**
+- [ ] **Event Standardization Polish**: Update remaining NAR.js string literals to use IntrospectionEvents constants (30 min, low priority).
 
 ---
 
-## 4. File Impact Analysis
+## 4. Quick Wins: High-Impact, Low-Effort (2-4 hours total)
 
-| Track | Key Files Modified | New Files Created |
-| :--- | :--- | :--- |
-| **0. Infra** | `TUI.js`, `ReplMessageHandler.js`, `IntrospectionEvents.js` | `CommandRegistry.js` |
-| **A. Core** | `GraphConfig.js` | `ThemeGenerator.js`, `useAgentLogs.js` |
-| **B. Visuals** | `GraphManager.js`, `GraphStyles.js` | — |
-| **C. Observe** | `WebSocketMonitor.js`, `NodeRenderer.js` | — |
-| **D. Interact** | `ReplKeyHandler.js` | `TimeTravelManager.js`, `RLFPOverlay.js` |
-| **E. Dev** | `App.js` | `DebugPanel.js`, `EventInspector.js` |
-| **F. A11y** | `CanvasWrapper.js` | `A11yController.js` |
+These provide immediate observable improvements and should be done first:
+
+| Task | Effort | Files Modified | Benefit |
+|:-----|:-------|:---------------|:--------|
+| **Semantic Edge Coloring** | 15 min | `GraphConfig.js` | Instant visual clarity |
+| **Pulse Animation on Derivation** | 1 hour | `GraphManager.js`, `WebSocketManager.js` | See reasoning in real-time |
+| **Glow Effect on Focus** | 1 hour | `GraphManager.js`, CSS | Highlight active concepts |
+| **ARIA Labels for Nodes** | 30 min | `GraphManager.js` | Basic accessibility |
+| **High-Contrast Mode** | 45 min | `DesignTokens.js`, CSS toggle | Better visibility |
+| **High-Contrast Mode** | 45 min | `DesignTokens.js`, CSS toggle | Better visibility |
+| **Suppress Noisy Metrics** | 15 min | `SeNARSUI.js` | Cleaner logs (inputs/outputs only) |
+| **Empty State / Help Overlay** | 30 min | `index.html`, CSS | Orient user when graph is empty |
+| **Visual Heartbeat** | 30 min | `SystemMetricsPanel.js` | Visual activity indicator (replaces log noise) |
+| **Connection Visuals** | 15 min | `SeNARSUI.js`, CSS | Gray out UI on disconnect |
 
 ---
 
-## 5. Risk Register
+## 5. Phase 1: Visual Foundation (Track B) - 4-6 hours
+
+**Goal**: Beautiful, organic, readable graph (Phases 1-4 of Incremental Sequence).
+
+1.  **Base Canvas** (Phase 1):
+    *   Empty full-screen canvas with theme toggle.
+    *   Establish aesthetics baseline.
+
+2.  **Styles & Nodes** (Phase 2):
+    *   Verify [`GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js) styles (Concept, Task, Question).
+    *   Single static node: Clickable; legible at zooms; priority sizing.
+
+3.  **Organic Layout** (Phase 3):
+    *   Replace `cose` with `fcose` (force-directed with constraints).
+    *   **BLOCKING**: Fix fcose loading error (see Issue 1 above):
+        - `cytoscape-fcose` requires `cose-base` and `layout-base` as peer dependencies
+        - Current vendored version uses UMD with external requires that fail in browser
+        - Solution: Either bundle all dependencies into single file or load them in correct order
+    *   Fallback: Random layout works but provides poor visualization quality.
+    *   Benefit: No node overlap; harmonious spread of existing concepts.
+
+4.  **Smart Edges** (Phase 4):
+    *   Already partially done - enhance with full semantic coloring:
+        *   Inheritance → Teal (`#4ec9b0`)
+        *   Similarity → Purple (`#9d68f0`)
+        *   Implication → Blue
+        *   Other relations → Gray
+
+5.  **Keyboard Navigation Basics** (Phase 1+):
+    *   Tab-index through graph nodes.
+    *   Arrow keys to navigate between connected nodes.
+    *   Enter to select/focus node.
+
+---
+
+## 6. Phase 2: Observability (Tracks C + E) - 8-10 hours
+
+**Goal**: See the machine think in real-time (Phases 6 & 8 of Incremental Sequence).
+
+### Track C: Live Deltas & Vital Signs
+
+1.  **Live Deltas** (Phase 6):
+    *   Pulse animation on `reasoning:derivation` events.
+    *   Fade-in for newly created nodes.
+    *   Real-time; eye drawn to changes.
+
+2.  **Focus Effects** (Phase 8):
+    *   Glow effect for `memory:focus:promote` events.
+    *   Dim nodes on `memory:focus:demote`.
+    *   Node size based on priority/activation.
+
+3.  **LM Activity Indicators** (1 hour):
+    *   Spinner overlay on graph during `lm:prompt:start`.
+    *   Clear spinner on `lm:prompt:complete` or `lm:error`.
+    *   Optional: Show LM thinking as particle effects.
+
+### Track E: Enhanced Observability Panels
+
+4.  **Extend SystemMetricsPanel** (2-3 hours):
+    *   Add CPU/Cycle rate gauges (leverage existing [`SystemMetricsPanel.js`](file:///home/me/senars10/ui/src/components/SystemMetricsPanel.js)).
+    *   Performance overlay: FPS, Latency, Event Queue depth.
+    *   Memory usage visualization.
+
+5.  **Extend ActivityLogPanel** (2 hours):
+    *   Add event filtering by type (leverage existing [`ActivityLogPanel.js`](file:///home/me/senars10/ui/src/components/ActivityLogPanel.js)).
+    *   Pause/resume event stream.
+    *   Search/highlight functionality.
+
+---
+
+## 7. Phase 3: Interaction (Track D) - 8-12 hours ✅
+
+**Status**: COMPLETE
+
+**Goal**: User agency and feedback (Phases 5 & 7 of Incremental Sequence).
+
+1.  ✅ **Enhanced Command Input** (4-6 hours):
+    *   Backtick (`` ` ``) keyboard shortcut to focus input
+    *   Command history navigation (⬆️/⬇️ arrows)
+    *   Command autocomplete with Tab completion
+    *   New commands: `/goals`, `/beliefs`, `/step`, `/run`, `/stop`
+
+2.  ✅ **Graph Context Menu** (2-4 hours):
+    *   Right-click on nodes → Context menu (focus, inspect, expand, copy)
+    *   Right-click on edges → Context menu (inspect, remove)
+    *   Double-click → Center and zoom to node
+    *   ESC to close, click-outside to close
+
+3.  ✅ **Pan/Zoom Controls** (Phase 5):
+    *   Zoom in/out buttons (+/-)
+    *   Fit-to-screen button
+    *   Smooth zoom with limits (0.3x-3x)
+    *   Labels remain readable at all zoom levels
+
+---
+
+## 8. Post-MVP: Advanced Features
+
+**Deferred for user feedback and iterative development:**
+
+### Timeline Scrubber (Phase 9) - 8-12 hours
+*   Snapshot GraphManager state every N cycles into RingBuffer.
+*   UI slider to rewind/replay system state.
+*   Export/import timeline data for offline analysis.
+
+### RLFP Teacher Mode (Phase 10) - 12-16 hours
+*   Backend: Implement feedback ingestion API.
+*   UI: Drag-to-rank derivation paths; Adaptive styling.
+*   Emit `reasoning:feedback` events to training pipeline.
+
+### Advanced Optimizations - 4-8 hours
+*   Web Worker for layout calculations (if performance needed).
+*   LOD culling for massive graphs (>1000 nodes).
+*   Virtual scrolling for log panels.
+
+### Additional A11y Features - 2-4 hours
+*   Screen reader announcements for graph updates.
+*   Multiple high-contrast themes.
+*   Reduced motion mode (disable animations).
+
+---
+
+## 8b. Future Vision (Long-Term)
+
+*Moved from original plan - these represent long-term vision items:*
+
+*   **Perceptual Scoring**: Use CLIP/SigLIP to automate "beauty" scores for layout optimization.
+*   **3D Visualization**: Three.js renderer for massive graphs (>10k nodes).
+*   **Plugin System**: Allow community custom renderers and visualizations.
+*   **Offline Mode**: Load/Save event streams for offline analysis and replay.
+
+---
+
+## 9. File Impact Analysis (Revised)
+
+| Phase | Key Files Modified | New Files Created | Existing Files Leveraged |
+| :--- | :--- | :--- | :--- |
+| **Quick Wins** | `GraphConfig.js`, CSS | — | `DesignTokens.js` |
+| **Phase 1 (Visuals)** | `GraphManager.js` | — | `GraphConfig.js` |
+| **Phase 2 (Observe)** | `WebSocketManager.js` | CSS animations | `SystemMetricsPanel.js`, `ActivityLogPanel.js` |
+| **Phase 3 (Interact)** | — | `WebRepl.js` | `CommandRegistry.js` |
+| **Post-MVP** | `GraphManager.js` | `TimeTravelManager.js`, RLFP components | — |
+
+---
+
+## 10. Risk Register (Updated)
 
 | Risk | Likelihood | Impact | Mitigation |
 | :--- | :--- | :--- | :--- |
-| **Cytoscape Performance** | High | High | LOD culling, viewport filtering, max node limits. |
-| **Event Storms** | Medium | High | Batching in `WebSocketMonitor` (already exists). |
-| **Layout Instability** | Medium | Medium | Use deterministic seeds, run layout in Web Worker. |
-| **Command Divergence** | High | Medium | Strict adherence to `CommandRegistry` as sole source. |
+| **Cytoscape Performance** | Medium | High | Already mitigated: layout debouncing, viewport filtering. Monitor >500 nodes. |
+| **Event Storms** | Low | Medium | Already mitigated: batching in WebSocketMonitor, time-sliced processing. |
+| **Layout Instability** | Low | Low | Use deterministic seeds, incremental layouts. |
+| **Scope Creep** | High | Medium | Strict adherence to Quick Wins → Phases → Post-MVP sequence. Defer Timeline/RLFP. |
+| **Over-Engineering** | Medium | Low | Use direct imports, extend existing components, avoid unnecessary abstractions. |
+
+**Removed Risks:**
+- ~~Command Divergence~~ (CommandRegistry already centralized)
+- ~~Missing Event Ontology~~ (IntrospectionEvents complete)
 
 ---
 
-## 6. Future Enhancements (Post-MVP)
+## 11. Success Metrics
 
-*   **Perceptual Scoring**: Use CLIP/SigLIP to automate "beauty" scores (Moved from core path).
-*   **3D Visualization**: Three.js renderer for massive graphs (>10k nodes).
-*   **Plugin System**: Allow community custom renderers.
-*   **Offline Mode**: Load/Save event streams for offline analysis.
+### Phase 1 Complete:
+- [ ] Graph renders 100+ nodes without lag
+- [ ] Semantic edge colors distinguish relation types
+- [ ] Keyboard navigation works (tab through nodes)
+- [ ] Basic ARIA labels present
+
+### Phase 2 Complete:
+- [ ] Derivations show pulse animation in real-time
+- [ ] LM activity is visually indicated
+- [ ] SystemMetricsPanel shows FPS + latency
+- [ ] ActivityLogPanel has filtering
+
+### Phase 3 Complete:
+- [ ] WebRepl accepts commands and updates graph
+- [ ] Users can interact with nodes (click, right-click)
+- [ ] Pan/zoom controls work smoothly
+
+### Overall Success:
+- [ ] >30fps with 500 nodes
+- [ ] All IntrospectionEvents are visually observable
+- [ ] CLI and Web UI feel unified
+- [ ] Developers can debug system state via UI panels
+
+---
+
+## 12. Next Steps
+
+1. **Mark Phase 0 complete** - Update status to "Complete" after final polish.
+2. **Execute Quick Wins** - 2-4 hours of high-impact work.
+3. **Begin Phase 1** - Get graph visuals working beautifully.
+4. **Iterate based on feedback** - User testing drives Phase 2 & 3 priorities.
+5. **Document patterns** - Create UI component guide for contributors.
+
+---
+
+## Appendix A: Development Reference
+
+### Key Files Quick Reference
+
+| Purpose | File Path | Notes |
+|:--------|:----------|:------|
+| **Event Types** | [`core/src/util/IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) | All event constants |
+| **Design System** | [`core/src/util/DesignTokens.js`](file:///home/me/senars10/core/src/util/DesignTokens.js) | Colors, timing, spacing |
+| **Commands** | [`core/src/util/CommandRegistry.js`](file:///home/me/senars10/core/src/util/CommandRegistry.js) | Unified command handling |
+| **Graph Config** | [`ui/src/config/GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js) | Cytoscape styles |
+| **Graph Manager** | [`ui/src/visualization/GraphManager.js`](file:///home/me/senars10/ui/src/visualization/GraphManager.js) | Graph operations |
+| **WebSocket** | [`ui/src/connection/WebSocketManager.js`](file:///home/me/senars10/ui/src/connection/WebSocketManager.js) | Event streaming |
+| **Metrics Panel** | [`ui/src/components/SystemMetricsPanel.js`](file:///home/me/senars10/ui/src/components/SystemMetricsPanel.js) | Extend for observability |
+| **Activity Log** | [`ui/src/components/ActivityLogPanel.js`](file:///home/me/senars10/ui/src/components/ActivityLogPanel.js) | Extend for filtering |
+| **CLI TUI** | [`agent/src/cli/components/TUI.js`](file:///home/me/senars10/agent/src/cli/components/TUI.js) | CLI interface |
+| **CLI Hooks** | [`agent/src/cli/hooks/useAgentLogs.js`](file:///home/me/senars10/agent/src/cli/hooks/useAgentLogs.js) | CLI logging |
+
+### Development Commands
+
+```bash
+# Start CLI REPL
+npm run repl
+
+# Start Web UI (dev server)
+npm run web
+
+# Run unit tests
+npm run test:unit
+
+# Run E2E tests
+npm run test:e2e
+
+# Build for production
+npm run build
+```
+
+### Code Patterns
+
+**Using DesignTokens:**
+```javascript
+import { DESIGN_TOKENS } from '@senars/core';
+
+// Apply colors directly
+element.style.color = DESIGN_TOKENS.colors.concept;  // Teal
+element.style.backgroundColor = DESIGN_TOKENS.colors.task;  // Orange
+```
+
+**Listening to Events (Web UI):**
+```javascript
+// In WebSocketManager or component
+this.webSocketManager.subscribe('reasoning:derivation', (payload) => {
+    // Trigger pulse animation
+    this.graphManager.animateNode(payload.nodeId, 'pulse');
+});
+```
+
+**Adding Graph Animations (Cytoscape):**
+```javascript
+// In GraphManager.js
+animateNode(nodeId, effect = 'pulse') {
+    const node = this.cy.getElementById(nodeId);
+    if (!node.length) return;
+    
+    node.animate({
+        style: { 'border-width': 8, 'border-color': DESIGN_TOKENS.colors.highlight },
+        duration: 300
+    }).animate({
+        style: { 'border-width': 2, 'border-color': DESIGN_TOKENS.colors.concept },
+        duration: 300
+    });
+}
+```
+
+**Adding ARIA Labels:**
+```javascript
+// In GraphManager.js addNode()
+this.cy.add({
+    data: { id: nodeId, label: displayLabel },
+    // ARIA support
+    ariaLabel: `${nodeType} node: ${displayLabel}`
+});
+```
+
+### Key Events Reference
+
+| Event | Trigger | UI Response |
+|:------|:--------|:------------|
+| `reasoning:derivation` | New derivation created | Pulse animation on involved nodes |
+| `memory:focus:promote` | Concept gains focus | Glow effect, increase size |
+| `memory:focus:demote` | Concept loses focus | Dim effect, decrease size |
+| `lm:prompt:start` | LM inference begins | Show spinner overlay |
+| `lm:prompt:complete` | LM inference ends | Hide spinner, show result |
+| `lm:error` | LM error occurred | Show error indicator |
+| `task.input` | New task added | Add node with task styling |
+| `concept.created` | New concept created | Add node with fade-in |
+
+### External Dependencies
+
+| Library | Version | Purpose | Docs |
+|:--------|:--------|:--------|:-----|
+| **Cytoscape.js** | 3.x | Graph visualization | [cytoscape.org](https://js.cytoscape.org/) |
+| **cytoscape-fcose** | 2.x | Force-directed layout | [npm](https://www.npmjs.com/package/cytoscape-fcose) |
+| **Ink** | 4.x | CLI React framework | [npm](https://www.npmjs.com/package/ink) |
+
+### Testing Checklist
+
+Before merging UI changes:
+- [ ] `npm run test:unit` passes
+- [ ] `npm run test:e2e` passes (if Playwright tests exist)
+- [ ] Manual test: `npm run repl` works
+- [ ] Manual test: `npm run web` works
+- [ ] Graph renders without console errors
+- [ ] No visible performance degradation

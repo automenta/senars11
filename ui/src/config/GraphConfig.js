@@ -1,9 +1,5 @@
 import { DESIGN_TOKENS } from '@senars/core';
 
-/**
- * Graph configuration constants and styles
- * Uses shared DESIGN_TOKENS from core for consistency with CLI
- */
 export const GraphConfig = {
     DEFAULT_NODE_WEIGHT: 50,
     TASK_NODE_WEIGHT: 30,
@@ -19,13 +15,22 @@ export const GraphConfig = {
     },
 
     getGraphStyle() {
-        const { CONCEPT_COLOR, TASK_COLOR, QUESTION_COLOR, EDGE_COLOR, NODE_COLOR } = this.GRAPH_COLORS;
-
+        const {
+            concept,
+            task,
+            question,
+            edge,
+            inheritance,
+            similarity,
+            implication,
+            relation,
+            highlight
+        } = DESIGN_TOKENS.colors;
         return [
             {
                 selector: 'node',
                 style: {
-                    'background-color': NODE_COLOR,
+                    'background-color': concept,
                     'label': 'data(label)',
                     'color': '#ffffff',
                     'text-valign': 'bottom',
@@ -37,41 +42,73 @@ export const GraphConfig = {
                     'text-background-opacity': 0.7,
                     'text-background-padding': 4,
                     'width': 'mapData(weight, 0, 100, 20, 80)',
-                    'height': 'mapData(weight, 0, 100, 20, 80)'
+                    'height': 'mapData(weight, 0, 100, 20, 80)',
+                    'border-width': 2,
+                    'border-color': concept
                 }
             },
             {
                 selector: 'edge',
                 style: {
                     'width': 2,
-                    'line-color': EDGE_COLOR,
-                    'target-arrow-color': EDGE_COLOR,
+                    'line-color': relation,
+                    'target-arrow-color': relation,
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'bezier'
                 }
             },
+            { selector: 'node[type = "concept"]', style: { 'background-color': concept } },
+            { selector: 'node[type = "task"]', style: { 'background-color': task } },
+            { selector: 'node[type = "question"]', style: { 'background-color': question } },
             {
-                selector: 'node[type = "concept"]',
-                style: {
-                    'background-color': CONCEPT_COLOR
-                }
+                selector: 'edge[type = "inheritance"]',
+                style: { 'line-color': inheritance, 'target-arrow-color': inheritance }
             },
             {
-                selector: 'node[type = "task"]',
-                style: {
-                    'background-color': TASK_COLOR
-                }
+                selector: 'edge[type = "similarity"]',
+                style: { 'line-color': similarity, 'target-arrow-color': similarity }
             },
             {
-                selector: 'node[type = "question"]',
+                selector: 'edge[type = "implication"]',
+                style: { 'line-color': implication, 'target-arrow-color': implication }
+            },
+            // Keyboard navigation highlight
+            {
+                selector: '.keyboard-selected',
                 style: {
-                    'background-color': QUESTION_COLOR
+                    'border-width': 6,
+                    'border-color': highlight,
+                    'border-style': 'solid',
+                    'z-index': 9999
                 }
             }
         ];
     },
 
-    getGraphLayout() {
-        return { name: 'cose' };
-    }
+    getGraphLayout: () => ({
+        name: 'fcose',
+        quality: 'default',
+        randomize: false,
+        animate: false,
+        fit: true,
+        padding: 30,
+        nodeSeparation: 75,
+        idealEdgeLength: 50,
+        edgeElasticity: 0.45,
+        nestingFactor: 0.1,
+        gravity: 0.25,
+        numIter: 2500,
+        initialTemp: 200,
+        coolingFactor: 0.95,
+        minTemp: 1.0,
+        nodeRepulsion: 4500,
+        tile: true,
+        tilingPaddingVertical: 10,
+        tilingPaddingHorizontal: 10,
+        gravityRangeCompound: 1.5,
+        gravityCompound: 1.0,
+        gravityRange: 3.8,
+        stop: function () {
+        }
+    })
 };

@@ -16,6 +16,7 @@ import {ExplanationService} from '../tool/ExplanationService.js';
 import {ToolIntegration} from '../tool/ToolIntegration.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {ComponentManager} from '../util/ComponentManager.js';
+import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
 
 export class NAR extends BaseComponent {
     constructor(config = {}) {
@@ -178,7 +179,7 @@ export class NAR extends BaseComponent {
             const added = await this._inputTask(derivation, {traceId: 'stream'});
 
             if (added && this.traceEnabled) {
-                this._eventBus.emit('reasoning.derivation', {
+                this._eventBus.emit(IntrospectionEvents.REASONING_DERIVATION, {
                     derivedTask: derivation,
                     source: 'streamReasoner.stream',
                     timestamp: Date.now()
@@ -267,7 +268,7 @@ export class NAR extends BaseComponent {
             inputError.cause = error;
             inputError.input = typeof input === 'string' ? input : 'Task Object';
 
-            this._eventBus.emit('input.error', {
+            this._eventBus.emit(IntrospectionEvents.TASK_ERROR, {
                 error: inputError.message,
                 input: inputError.input,
                 originalError: error
@@ -291,7 +292,7 @@ export class NAR extends BaseComponent {
 
         if (wasAdded) {
             try {
-                this._eventBus.emit('task.input', {
+                this._eventBus.emit(IntrospectionEvents.TASK_INPUT, {
                     task,
                     source,
                     originalInput,
@@ -299,12 +300,12 @@ export class NAR extends BaseComponent {
                 }, {traceId: options.traceId});
 
                 // Now emit task.added since we confirmed it's in memory
-                this._eventBus.emit('task.added', {task}, {traceId: options.traceId});
+                this._eventBus.emit(IntrospectionEvents.TASK_ADDED, {task}, {traceId: options.traceId});
 
                 if (this._focus) {
                     const addedToFocus = this._focus.addTaskToFocus(task);
                     if (addedToFocus) {
-                        this._eventBus.emit('task.focus', task, {traceId: options.traceId});
+                        this._eventBus.emit(IntrospectionEvents.TASK_FOCUS, task, {traceId: options.traceId});
                     }
                 }
             } catch (error) {
@@ -329,7 +330,7 @@ export class NAR extends BaseComponent {
         const processed = this._processPendingTasks(options.traceId);
         if (processed) {
             for (const task of processed) {
-                this._eventBus.emit('task.added', {task}, {traceId: options.traceId});
+                this._eventBus.emit(IntrospectionEvents.TASK_ADDED, {task}, {traceId: options.traceId});
             }
         }
 
@@ -339,8 +340,8 @@ export class NAR extends BaseComponent {
         // Set up monitoring process for stream reasoner metrics
         this._setupStreamMonitoring(options);
 
-        this._eventBus.emit('system.started', {timestamp: Date.now()}, {traceId: options.traceId});
-        this._emitIntrospectionEvent('system:start', {timestamp: Date.now()});
+        this._eventBus.emit(IntrospectionEvents.SYSTEM_START, {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_START, {timestamp: Date.now()});
         this.logInfo(`NAR started successfully with stream-based reasoning`);
         return true;
     }
@@ -385,8 +386,8 @@ export class NAR extends BaseComponent {
 
         this._stopComponentsAsync();
 
-        this._eventBus.emit('system.stopped', {timestamp: Date.now()}, {traceId: options.traceId});
-        this._emitIntrospectionEvent('system:stop', {timestamp: Date.now()});
+        this._eventBus.emit(IntrospectionEvents.SYSTEM_STOP, {timestamp: Date.now()}, {traceId: options.traceId});
+        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_STOP, {timestamp: Date.now()});
         this.logInfo(`NAR stopped successfully (stream-based reasoning)`);
         return true;
     }
@@ -465,7 +466,7 @@ export class NAR extends BaseComponent {
             // Only emit if the task was actually added (not a duplicate)
             for (const {result, added} of addedResults) {
                 if (added && this.traceEnabled) {
-                    this._eventBus.emit('reasoning.derivation', {
+                    this._eventBus.emit(IntrospectionEvents.REASONING_DERIVATION, {
                         derivedTask: result,
                         source: 'streamReasoner.step.method',
                         timestamp: Date.now()
@@ -596,7 +597,7 @@ export class NAR extends BaseComponent {
             await this._componentManager.initializeAll();
             await this._setupDefaultRules();
 
-            this._eventBus.emit('system.loaded', {
+            this._eventBus.emit(IntrospectionEvents.SYSTEM_LOADED, {
                 timestamp: Date.now(),
                 stateVersion: state.version,
                 fromFile: state.sourceFile || 'serialized'
@@ -641,7 +642,7 @@ export class NAR extends BaseComponent {
         this.stop();
         this._memory.clear();
         this._taskManager.clearPendingTasks();
-        this._eventBus.emit('system.reset', {timestamp: Date.now()}, {traceId: options.traceId});
+        this._eventBus.emit(IntrospectionEvents.SYSTEM_RESET, {timestamp: Date.now()}, {traceId: options.traceId});
         this.logInfo('NAR reset completed');
     }
 

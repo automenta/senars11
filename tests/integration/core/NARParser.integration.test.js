@@ -1,6 +1,7 @@
 import {Truth} from '../../../core/src/Truth.js';
 import {createNARIntegrationTestSuite} from '../../support/narTestSetup.js';
 import {flexibleAssertions, runPerformanceTest} from '../../support/baseTestUtils.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('NAR Parser Integration', () => {
     // Using the new NAR test setup utilities
@@ -94,7 +95,7 @@ describe('NAR Parser Integration', () => {
 
         test('emits correct events during input processing', async () => {
             const events = [];
-            nar().on('task.input', (data) => events.push(data));
+            nar().on(IntrospectionEvents.TASK_INPUT, (data) => events.push(data));
 
             await nar().input('test.');
 
@@ -106,7 +107,7 @@ describe('NAR Parser Integration', () => {
 
         test('handles input errors gracefully', async () => {
             const events = [];
-            nar().on('input.error', (data) => events.push(data));
+            nar().on(IntrospectionEvents.TASK_ERROR, (data) => events.push(data));
 
             await expect(nar().input('')).rejects.toThrow();
             expect(events.length).toBe(1);

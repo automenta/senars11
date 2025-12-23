@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 import React from 'react';
-import { render } from 'ink';
-import { Config, Logger } from '@senars/core';
-import { App } from '../app/App.js';
-import { TUI } from '../cli/components/TUI.js';
-import { Command } from 'commander';
-import { config as dotenvConfig } from 'dotenv';
-import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import {render} from 'ink';
+import {Config, Logger} from '@senars/core';
+import {App} from '../app/App.js';
+import {TUI} from '../cli/components/TUI.js';
+import {Command} from 'commander';
+import {config as dotenvConfig} from 'dotenv';
+import {dirname} from 'path';
+import {fileURLToPath} from 'url';
 
 // Load .env
 dotenvConfig();
@@ -45,7 +45,7 @@ program
             config.lm = config.lm || {};
             config.lm.provider = options.provider;
             if (options.apiKey) {
-                config.lm[options.provider] = { apiKey: options.apiKey };
+                config.lm[options.provider] = {apiKey: options.apiKey};
             }
         }
         if (options.model) {
@@ -60,10 +60,10 @@ program
 
         try {
             log.info('🚀 Starting Agent...');
-            const agent = await app.start({ startAgent: false });
+            const agent = await app.start({startAgent: false});
             log.info('✅ Agent ready. Launching TUI...');
 
-            const { waitUntilExit } = render(React.createElement(TUI, { engine: agent, app: app }));
+            const {waitUntilExit} = render(React.createElement(TUI, {engine: agent, app: app}));
             await waitUntilExit();
 
             await app.shutdown();

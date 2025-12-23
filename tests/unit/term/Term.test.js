@@ -81,7 +81,7 @@ describe('Term', () => {
         });
 
         test('redundancy', () => {
-            expect(tf.conjunction(atomA, atomA).name).toBe('(&, A)');
+            expect(tf.conjunction(atomA, atomA).name).toBe('A');
         });
     });
 
@@ -157,9 +157,12 @@ describe('Term', () => {
 
         test('normalization idempotent', () => {
             fc.assert(fc.property(compoundTermArb, (term) => {
+                // Skip atomic terms (e.g., True from reflexive relations)
                 if (!term.operator) return;
 
                 const normalized = createCompoundTerm(term.operator, term.components);
+                // Skip reflexive relations that normalize to atomic True (e.g., (-->, a, a))
+                if (!normalized?.operator) return;
                 expect(normalized.equals(createCompoundTerm(normalized.operator, normalized.components))).toBe(true);
 
                 if (['&', '|', '<->'].includes(term.operator)) {

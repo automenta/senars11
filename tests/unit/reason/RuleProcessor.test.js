@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import {RuleProcessor} from '../../../core/src/reason/RuleProcessor.js';
-import {RuleExecutor} from '../../../core/src/reason/RuleExecutor.js';
+import {SimpleRuleExecutor} from '@senars/core/src/reason/exec/SimpleRuleExecutor.js';
 import {Rule} from '../../../core/src/reason/Rule.js';
 import {createTestTask} from '../../support/baseTestUtils.js';
 
@@ -17,7 +17,7 @@ class TestRule extends Rule {
 describe('RuleProcessor', () => {
     let rp, re;
     beforeEach(() => {
-        re = new RuleExecutor();
+        re = new SimpleRuleExecutor();
         rp = new RuleProcessor(re);
     });
 

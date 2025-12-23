@@ -30,21 +30,21 @@ node examples/narsgpt/production-lm.js
 
 ### 🧠 Core Reasoning (`reasoning/`)
 
-| Example                                                                | Description                   |
-|------------------------------------------------------------------------|-------------------------------|
-| [syllogism-demo.js](reasoning/syllogism-demo.js)                       | Classic syllogistic inference                        |
-| [syllogism-comparison-demo.js](reasoning/syllogism-comparison-demo.js) | Stream vs cycle comparison                           |
-| [causal-reasoning-demo.js](reasoning/causal-reasoning-demo.js)         | Causal relationships                                 |
-| [inductive-reasoning-demo.js](reasoning/inductive-reasoning-demo.js)   | Inductive generalization                             |
-| [temporal-reasoning-demo.js](reasoning/temporal-reasoning-demo.js)     | Temporal logic                                       |
-| [advanced-reasoning-demo.js](reasoning/advanced-reasoning-demo.js)     | Advanced reasoning features                          |
-| [truth-class-demo.js](reasoning/truth-class-demo.js)                   | Truth value operations                               |
-| [truth-value-reasoning.js](reasoning/truth-value-reasoning.js)         | Reasoning with truth values                          |
-| [operator-examples.js](reasoning/operator-examples.js)                 | Narsese operator usage                               |
-| [eventbus-patterns-demo.js](reasoning/eventbus-patterns-demo.js)       | EventBus for observability                           |
-| [memory-operations-demo.js](reasoning/memory-operations-demo.js)       | Memory API: concepts, beliefs, queries               |
-| [focus-management-demo.js](reasoning/focus-management-demo.js)         | Focus system: attention direction                    |
-| [goal-driven-demo.js](reasoning/goal-driven-demo.js)                   | Goal-driven reasoning and planning                   |
+| Example                                                                | Description                            |
+|------------------------------------------------------------------------|----------------------------------------|
+| [syllogism-demo.js](reasoning/syllogism-demo.js)                       | Classic syllogistic inference          |
+| [syllogism-comparison-demo.js](reasoning/syllogism-comparison-demo.js) | Stream vs cycle comparison             |
+| [causal-reasoning-demo.js](reasoning/causal-reasoning-demo.js)         | Causal relationships                   |
+| [inductive-reasoning-demo.js](reasoning/inductive-reasoning-demo.js)   | Inductive generalization               |
+| [temporal-reasoning-demo.js](reasoning/temporal-reasoning-demo.js)     | Temporal logic                         |
+| [advanced-reasoning-demo.js](reasoning/advanced-reasoning-demo.js)     | Advanced reasoning features            |
+| [truth-class-demo.js](reasoning/truth-class-demo.js)                   | Truth value operations                 |
+| [truth-value-reasoning.js](reasoning/truth-value-reasoning.js)         | Reasoning with truth values            |
+| [operator-examples.js](reasoning/operator-examples.js)                 | Narsese operator usage                 |
+| [eventbus-patterns-demo.js](reasoning/eventbus-patterns-demo.js)       | EventBus for observability             |
+| [memory-operations-demo.js](reasoning/memory-operations-demo.js)       | Memory API: concepts, beliefs, queries |
+| [focus-management-demo.js](reasoning/focus-management-demo.js)         | Focus system: attention direction      |
+| [goal-driven-demo.js](reasoning/goal-driven-demo.js)                   | Goal-driven reasoning and planning     |
 
 ---
 
@@ -65,19 +65,19 @@ Production-ready LLM integration with NARS reasoning.
 
 ### 🔄 Advanced Features (`advanced/`)
 
-| Example                                                                           | Description                               |
-|-----------------------------------------------------------------------------------|-------------------------------------------|
-| [stream-reasoning.js](advanced/stream-reasoning.js)                               | Stream vs cycle reasoner                  |
-| [prolog-strategy-demo.js](advanced/prolog-strategy-demo.js)                       | Prolog-style backward chaining            |
-| [agent-builder-demo.js](advanced/agent-builder-demo.js)                           | Agent configuration patterns              |
-| [components-integration-demo.js](advanced/components-integration-demo.js)         | Stream reasoner components                |
-| [transformers-integration-demo.js](advanced/transformers-integration-demo.js)     | Transformers.js + NAR + MCP               |
-| [tool-usage-demo.js](advanced/tool-usage-demo.js)                                 | FileOperations, CommandExecutor tools     |
-| [custom-tool-demo.js](advanced/custom-tool-demo.js)                               | Creating custom tools                     |
-| [config-patterns-demo.js](advanced/config-patterns-demo.js)                       | NAR configuration best practices          |
-| [error-handling-demo.js](advanced/error-handling-demo.js)                         | Error handling and recovery               |
-| [performance-benchmark.js](advanced/performance-benchmark.js)                     | Performance metrics                       |
-| [mcp-demo.js](advanced/mcp-demo.js)                                               | Model Context Protocol                    |
+| Example                                                                       | Description                           |
+|-------------------------------------------------------------------------------|---------------------------------------|
+| [stream-reasoning.js](advanced/stream-reasoning.js)                           | Stream vs cycle reasoner              |
+| [prolog-strategy-demo.js](advanced/prolog-strategy-demo.js)                   | Prolog-style backward chaining        |
+| [agent-builder-demo.js](advanced/agent-builder-demo.js)                       | Agent configuration patterns          |
+| [components-integration-demo.js](advanced/components-integration-demo.js)     | Stream reasoner components            |
+| [transformers-integration-demo.js](advanced/transformers-integration-demo.js) | Transformers.js + NAR + MCP           |
+| [tool-usage-demo.js](advanced/tool-usage-demo.js)                             | FileOperations, CommandExecutor tools |
+| [custom-tool-demo.js](advanced/custom-tool-demo.js)                           | Creating custom tools                 |
+| [config-patterns-demo.js](advanced/config-patterns-demo.js)                   | NAR configuration best practices      |
+| [error-handling-demo.js](advanced/error-handling-demo.js)                     | Error handling and recovery           |
+| [performance-benchmark.js](advanced/performance-benchmark.js)                 | Performance metrics                   |
+| [mcp-demo.js](advanced/mcp-demo.js)                                           | Model Context Protocol                |
 
 ---
 
@@ -85,14 +85,14 @@ Production-ready LLM integration with NARS reasoning.
 
 Neural-symbolic computation with PyTorch-like API.
 
-| Example                                                         | Description           |
-|-----------------------------------------------------------------|-----------------------|
-| [tensor-basics.mjs](tensor-logic/tensor-basics.mjs)             | Tensor primitives     |
-| [mlp-training.mjs](tensor-logic/mlp-training.mjs)               | Train XOR MLP         |
-| [attention-mechanism.mjs](tensor-logic/attention-mechanism.mjs) | Self-attention        |
-| [batch-training.mjs](tensor-logic/batch-training.mjs)           | Vectorized training   |
-| [embedding-demo.mjs](tensor-logic/embedding-demo.mjs)           | Word embeddings       |
-| [verify_tensor_logic.mjs](tensor-logic/verify_tensor_logic.mjs) | Phase 6 verification  |
+| Example                                                         | Description          |
+|-----------------------------------------------------------------|----------------------|
+| [tensor-basics.mjs](tensor-logic/tensor-basics.mjs)             | Tensor primitives    |
+| [mlp-training.mjs](tensor-logic/mlp-training.mjs)               | Train XOR MLP        |
+| [attention-mechanism.mjs](tensor-logic/attention-mechanism.mjs) | Self-attention       |
+| [batch-training.mjs](tensor-logic/batch-training.mjs)           | Vectorized training  |
+| [embedding-demo.mjs](tensor-logic/embedding-demo.mjs)           | Word embeddings      |
+| [verify_tensor_logic.mjs](tensor-logic/verify_tensor_logic.mjs) | Phase 6 verification |
 
 [→ Full Tensor Logic Guide](tensor-logic/README.md) (20 examples)
 
@@ -100,11 +100,11 @@ Neural-symbolic computation with PyTorch-like API.
 
 ### 🔧 LM Integration (`lm/`)
 
-| Example                                               | Description                 |
-|-------------------------------------------------------|-----------------------------|
-| [lm-providers.js](lm/lm-providers.js)                 | LM provider configuration   |
-| [minimal-inference.js](lm/minimal-inference.js)       | Minimal Transformers.js     |
-| [demo-system-verification.js](demos/demo-system-verification.js) | Full System Verification |
+| Example                                                          | Description               |
+|------------------------------------------------------------------|---------------------------|
+| [lm-providers.js](lm/lm-providers.js)                            | LM provider configuration |
+| [minimal-inference.js](lm/minimal-inference.js)                  | Minimal Transformers.js   |
+| [demo-system-verification.js](demos/demo-system-verification.js) | Full System Verification  |
 
 ---
 

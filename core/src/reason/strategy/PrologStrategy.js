@@ -11,7 +11,6 @@ import {Truth} from '../../Truth.js';
 import {TermFactory} from '../../term/TermFactory.js';
 import {Unifier} from '../../term/Unifier.js';
 import {FunctorRegistry} from '../FunctorRegistry.js';
-import {TensorFunctor} from '../../functor/TensorFunctor.js';
 import {Tensor} from '../../functor/Tensor.js';
 import {isQuestion} from '../RuleHelpers.js';
 import {getComponents, getVariableName, isCompound, isVariable} from '../../term/TermUtils.js';

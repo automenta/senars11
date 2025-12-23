@@ -19,7 +19,6 @@ export class Term {
         this._type = type;
         this._name = name;
         this._operator = operator;
-        // Optimization: Handle atomic terms with empty components efficiently
         this._components = freeze(type === TermType.ATOM && !components.length ? [name] : components);
 
         this._complexity = this._calculateComplexity();
@@ -129,8 +128,7 @@ export class Term {
     }
 
     compEquals(index, term) {
-        const c = this._components[index];
-        return !!(c && c.equals && c.equals(term));
+        return !!(this._components[index]?.equals?.(term));
     }
 
     isOp(op) {
@@ -147,18 +145,14 @@ export class Term {
 
     _determineSemanticType() {
         if (this._type !== TermType.ATOM) return SemanticType.NAL_CONCEPT;
-
-        const name = this._name;
-        if (['True', 'False', 'Null'].includes(name)) return SemanticType.BOOLEAN;
-        if (name?.startsWith('?')) return SemanticType.VARIABLE;
-        if (!isNaN(Number(name))) return SemanticType.NUMERIC;
-
+        if (['True', 'False', 'Null'].includes(this._name)) return SemanticType.BOOLEAN;
+        if (this._name?.startsWith('?')) return SemanticType.VARIABLE;
+        if (!isNaN(Number(this._name))) return SemanticType.NUMERIC;
         return SemanticType.NAL_CONCEPT;
     }
 
     _calculateComplexity() {
-        return this._type === TermType.ATOM
-            ? 1
+        return this._type === TermType.ATOM ? 1
             : 1 + this._components.reduce((sum, c) => sum + (c?.complexity ?? 0), 0);
     }
 

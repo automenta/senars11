@@ -5,11 +5,11 @@
  */
 
 import {beforeEach, describe, expect, it} from '@jest/globals';
-import {RuleCompiler} from '../../core/src/reason/rules/compiler/RuleCompiler.js';
-import {RuleExecutor} from '../../core/src/reason/rules/executor/RuleExecutor.js';
+import {RuleCompiler} from '@senars/core/src/reason/exec/RuleCompiler.js';
+import {RuleExecutor} from '@senars/core/src/reason/exec/RuleExecutor.js';
 import {Unifier} from '../../core/src/term/Unifier.js';
 import {TermFactory} from '../../core/src/term/TermFactory.js';
-import {StandardDiscriminators} from '../../core/src/reason/rules/Discriminators.js';
+import {StandardDiscriminators} from '@senars/core/src/reason/exec/Discriminators.js';
 
 describe('Rule Engine Abstraction', () => {
     let termFactory;

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test } from '@jest/globals';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('TermFactory', () => {
     let termFactory;
@@ -99,16 +99,20 @@ describe('TermFactory', () => {
         });
 
         describe('Reflexive Terms', () => {
-            test('rejects reflexive inheritance as null', () => {
+            test('reduces reflexive inheritance to True', () => {
                 const a = termFactory.create('a');
                 const term = termFactory.inheritance(a, a);
-                expect(term).toBeNull();
+                expect(term).not.toBeNull();
+                expect(term.name).toBe('True');
+                expect(term.isAtomic).toBe(true);
             });
 
-            test('rejects reflexive similarity as null', () => {
+            test('reduces reflexive similarity to True', () => {
                 const a = termFactory.create('a');
                 const term = termFactory.similarity(a, a);
-                expect(term).toBeNull();
+                expect(term).not.toBeNull();
+                expect(term.name).toBe('True');
+                expect(term.isAtomic).toBe(true);
             });
 
             test('reduces reflexive implication to True', () => {

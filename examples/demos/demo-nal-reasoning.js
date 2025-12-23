@@ -1,5 +1,4 @@
-
-import { App } from '@senars/agent';
+import {App} from '@senars/agent';
 
 const log = (msg) => console.error(`[${new Date().toISOString().slice(11, 23)}] ${msg}`);
 
@@ -12,10 +11,10 @@ async function main() {
             modelName: 'Xenova/LaMini-Flan-T5-248M',
             loadTimeout: 60000
         },
-        subsystems: { lm: true, rules: ['syllogistic-core'] }
+        subsystems: {lm: true, rules: ['syllogistic-core']}
     });
 
-    const agent = await app.start({ startAgent: true });
+    const agent = await app.start({startAgent: true});
 
     // Warmup
     log('2. Warmup...');

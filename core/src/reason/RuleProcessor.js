@@ -4,10 +4,10 @@ import {logError, ReasonerError} from './utils/error.js';
 import {Queue} from '../util/Queue.js';
 import {ArrayStamp} from '../Stamp.js';
 import {isSynchronousRule} from './RuleHelpers.js';
-import {RuleCompiler} from './rules/compiler/RuleCompiler.js';
-import {RuleExecutor as PatternRuleExecutor} from './rules/executor/RuleExecutor.js';
+import {RuleCompiler} from './exec/RuleCompiler.js';
+import {RuleExecutor as PatternRuleExecutor} from './exec/RuleExecutor.js';
 import {Unifier} from '../term/Unifier.js';
-import {StandardDiscriminators} from './rules/Discriminators.js';
+import {StandardDiscriminators} from './exec/Discriminators.js';
 import {NAL4} from './rules/nal/definitions/NAL4.js';
 import {NAL5} from './rules/nal/definitions/NAL5.js';
 

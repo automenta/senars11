@@ -1,18 +1,17 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React, {useMemo, useRef, useState} from 'react';
+import {Box, Text, useInput} from 'ink';
 import TextInput from 'ink-text-input';
-import { v4 as uuidv4 } from 'uuid';
-import { handleError } from '@senars/core';
-import { ReplMessageHandler } from '../ReplMessageHandler.js';
-import { useCommandHistory } from '../hooks/useCommandHistory.js';
-import { useAgentLogs } from '../hooks/useAgentLogs.js';
-import { useAgentMetrics } from '../hooks/useAgentMetrics.js';
-import { LogEntry } from './LogEntry.js';
-import { ActionRegistry } from '../../app/model/ActionRegistry.js';
+import {v4 as uuidv4} from 'uuid';
+import {handleError} from '@senars/core';
+import {ReplMessageHandler} from '../ReplMessageHandler.js';
+import {useCommandHistory} from '../hooks/useCommandHistory.js';
+import {useAgentLogs} from '../hooks/useAgentLogs.js';
+import {useAgentMetrics} from '../hooks/useAgentMetrics.js';
+import {LogEntry} from './LogEntry.js';
+import {ActionRegistry} from '../../app/model/ActionRegistry.js';
 
-// TUI component
-export const TUI = ({ engine, app }) => {
-    const { logs, status, addLog, setLogs, updateLog } = useAgentLogs(engine, app);
+export const TUI = ({engine, app}) => {
+    const {logs, status, addLog, setLogs, updateLog} = useAgentLogs(engine, app);
     const metrics = useAgentMetrics(engine);
     const [inputValue, setInputValue] = useState('');
     const [mode, setMode] = useState('agent'); // 'agent' or 'narsese'
@@ -20,14 +19,12 @@ export const TUI = ({ engine, app }) => {
     const streamingResponseRef = useRef(null);
     const streamControllerRef = useRef(null);
 
-    const { navigateHistory, addToHistory } = useCommandHistory();
+    const {navigateHistory, addToHistory} = useCommandHistory();
 
-    // Initialize Message Handler
     const messageHandler = useMemo(() => new ReplMessageHandler(engine), [engine]);
 
-    // Reasoner control functions using Message Handler
     const handleControlCommand = async (type) => {
-        const res = await messageHandler.processMessage({ type: `control/${type}` });
+        const res = await messageHandler.processMessage({type: `control/${type}`});
         if (res.payload?.result) {
             const result = res.payload.result;
             if (typeof result === 'string') {
@@ -51,11 +48,10 @@ export const TUI = ({ engine, app }) => {
     };
 
     const handleHelpCommand = async () => {
-        const res = await messageHandler.processMessage({ type: '/help' });
+        const res = await messageHandler.processMessage({type: '/help'});
         if (typeof res === 'string') {
             res.split('\n').forEach(line => addLog(line, 'info'));
         } else {
-            // Fallback help text with mode commands included
             const helpText = [
                 '🤖 Available commands:',
                 '  /help            - Show this help message',
@@ -80,7 +76,6 @@ export const TUI = ({ engine, app }) => {
         }
     };
 
-    // Toggle Mode
     const toggleMode = () => {
         const newMode = mode === 'agent' ? 'narsese' : 'agent';
         setMode(newMode);
@@ -101,19 +96,16 @@ export const TUI = ({ engine, app }) => {
         }
     };
 
-    // Handle keyboard shortcuts
     useInput((input, key) => {
-        // Escape key to interrupt LM streaming
         if (key.escape) {
             if (streamControllerRef.current) {
-                streamControllerRef.current.abort(); // Abort the current stream
+                streamControllerRef.current.abort();
                 streamControllerRef.current = null;
                 addLog('🛑 LM streaming interrupted', 'info');
             }
             return;
         }
 
-        // Reasoner control shortcuts
         if (key.ctrl) {
             switch (input) {
                 case 'r':
@@ -138,34 +130,30 @@ export const TUI = ({ engine, app }) => {
             }
         }
 
-        // Command history navigation
+
         if (key.upArrow) navigateHistory('up', setInputValue);
         if (key.downArrow) navigateHistory('down', setInputValue);
     });
 
-    // Handle command execution
     const handleSubmit = async () => {
         const command = inputValue.trim();
         if (!command) {
-            // Empty input -> single step
             await handleStepCommand();
             setInputValue('');
             return;
         }
 
         addToHistory(command);
-        setInputValue(''); // Clear input immediately
+        setInputValue('');
 
-        // Log input
         addLog(`> ${command}`, 'info');
 
-        // Process command
         (async () => {
             try {
                 if (command.startsWith('/')) {
                     const [cmdName, ...args] = command.slice(1).split(' ');
 
-                    // Special handling for mode-related commands since they affect UI state
+
                     if (cmdName === 'mode') {
                         handleModeCommand(args);
                         return;
@@ -181,7 +169,6 @@ export const TUI = ({ engine, app }) => {
                         handleClearCommand();
                         return;
                     } else if (cmdName === 'act') {
-                        // Demo: execute first action on last log
                         const lastLog = logs[logs.length - 1];
                         if (!lastLog || !lastLog.raw) {
                             addLog('❌ No active log with raw data', 'error');
@@ -193,7 +180,7 @@ export const TUI = ({ engine, app }) => {
                             return;
                         }
 
-                        // Execute first action for demo (or specific if arg provided)
+
                         const actionDef = actions[0];
                         addLog(`▶️ Executing action: ${actionDef.label}`, 'info');
 
@@ -201,7 +188,7 @@ export const TUI = ({ engine, app }) => {
                             await app.actionDispatcher.dispatch({
                                 type: actionDef.type,
                                 payload: actionDef.payload,
-                                context: { activityId: lastLog.raw.id, rawActivity: lastLog.raw }
+                                context: {activityId: lastLog.raw.id, rawActivity: lastLog.raw}
                             });
                         } else {
                             addLog('❌ ActionDispatcher not available', 'error');
@@ -209,8 +196,7 @@ export const TUI = ({ engine, app }) => {
                         return;
                     }
 
-                    const res = await messageHandler.processMessage({ type: command });
-                    // Handle result
+                    const res = await messageHandler.processMessage({type: command});
                     const output = res.payload?.result ?? res;
                     if (output) {
                         if (typeof output === 'string') {
@@ -230,9 +216,8 @@ export const TUI = ({ engine, app }) => {
                         addLog(`❌ ${res.error}`, 'error');
                     }
                 } else {
-                    // Route based on mode
                     if (mode === 'narsese') {
-                        const res = await messageHandler.processMessage({ type: 'narseseInput', payload: command });
+                        const res = await messageHandler.processMessage({type: 'narseseInput', payload: command});
                         if (res.payload?.result) {
                             const result = res.payload.result;
                             if (typeof result === 'string') {
@@ -251,7 +236,6 @@ export const TUI = ({ engine, app }) => {
                         }
                         if (res.error) addLog(res.error, 'error');
                     } else {
-                        // Agent Mode: Use streaming LM execution
                         const responseLogId = uuidv4();
                         streamingResponseRef.current = responseLogId;
                         addLog('🔄 LM thinking...', 'agent');
@@ -266,7 +250,7 @@ export const TUI = ({ engine, app }) => {
                         const streamPromise = (async () => {
                             let fullResponse = '';
 
-                            // Add streaming placeholder log
+
                             setLogs(prevLogs => [
                                 ...prevLogs,
                                 {
@@ -313,11 +297,9 @@ export const TUI = ({ engine, app }) => {
         })();
     };
 
-    // UI Layout
     return React.createElement(
         Box,
-        { flexDirection: 'column', width: '100%', height: '100%' },
-        // Header / Mode Indicator
+        {flexDirection: 'column', width: '100%', height: '100%'},
         React.createElement(
             Box,
             {
@@ -325,29 +307,27 @@ export const TUI = ({ engine, app }) => {
                 backgroundColor: mode === 'agent' ? 'blue' : 'green',
                 width: '100%',
             },
-            React.createElement(Text, { color: 'white', bold: true },
+            React.createElement(Text, {color: 'white', bold: true},
                 `SeNARS REPL [${mode.toUpperCase()}]`
             )
         ),
-        // Log Viewer
         React.createElement(
             Box,
-            { flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%' },
-            React.createElement(Text, { bold: true, color: 'cyan' }, `Logs (${logs.length})`),
+            {flexDirection: 'column', flexGrow: 1, padding: 1, maxHeight: '100%'},
+            React.createElement(Text, {bold: true, color: 'cyan'}, `Logs (${logs.length})`),
             React.createElement(
                 Box,
-                { flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1 },
-                ...logs.slice(-50).map(log => React.createElement(LogEntry, { key: log.id, log }))
+                {flexDirection: 'column', flexGrow: 1, marginTop: 1, marginBottom: 1},
+                ...logs.slice(-50).map(log => React.createElement(LogEntry, {key: log.id, log}))
             )
         ),
-        // Input Box
         React.createElement(
             Box,
-            { borderStyle: 'round', width: '100%', borderColor: mode === 'agent' ? 'blue' : 'green' },
+            {borderStyle: 'round', width: '100%', borderColor: mode === 'agent' ? 'blue' : 'green'},
             React.createElement(
                 Box,
-                { flexDirection: 'row', alignItems: 'center' },
-                React.createElement(Text, { color: mode === 'agent' ? 'blue' : 'green', bold: true }, `${mode}> `),
+                {flexDirection: 'row', alignItems: 'center'},
+                React.createElement(Text, {color: mode === 'agent' ? 'blue' : 'green', bold: true}, `${mode}> `),
                 React.createElement(
                     TextInput,
                     {
@@ -359,7 +339,6 @@ export const TUI = ({ engine, app }) => {
                 )
             )
         ),
-        // Status Bar
         React.createElement(
             Box,
             {
@@ -371,20 +350,20 @@ export const TUI = ({ engine, app }) => {
             },
             React.createElement(
                 Box,
-                { flexDirection: 'row' },
+                {flexDirection: 'row'},
                 React.createElement(Text, {
                     color: 'white',
                     bold: true
                 }, `${status.isRunning ? '🚀 RUNNING' : '⏸️ PAUSED'} `),
-                React.createElement(Text, { color: 'white' }, `| Cycle: ${status.cycle} `),
-                metrics.uptime > 0 && React.createElement(Text, { color: 'green' }, `| TP: ${metrics.throughput.toFixed(1)}/s `),
-                metrics.uptime > 0 && React.createElement(Text, { color: 'yellow' }, `| Mem: ${metrics.memory}MB `),
-                React.createElement(Text, { color: 'cyan' }, `| Agent: ${app?.activeAgentId ?? engine.id ?? 'default'} `)
+                React.createElement(Text, {color: 'white'}, `| Cycle: ${status.cycle} `),
+                metrics.uptime > 0 && React.createElement(Text, {color: 'green'}, `| TP: ${metrics.throughput.toFixed(1)}/s `),
+                metrics.uptime > 0 && React.createElement(Text, {color: 'yellow'}, `| Mem: ${metrics.memory}MB `),
+                React.createElement(Text, {color: 'cyan'}, `| Agent: ${app?.activeAgentId ?? engine.id ?? 'default'} `)
             ),
             React.createElement(
                 Box,
-                { flexDirection: 'row' },
-                React.createElement(Text, { color: 'yellow' }, 'Ctrl+M: Mode | Ctrl+C: Exit')
+                {flexDirection: 'row'},
+                React.createElement(Text, {color: 'yellow'}, 'Ctrl+M: Mode | Ctrl+C: Exit')
             )
         )
     );

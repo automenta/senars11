@@ -12,37 +12,6 @@ class peg$SyntaxError extends SyntaxError {
         this.name = "SyntaxError";
     }
 
-    format(sources) {
-        let str = "Error: " + this.message;
-        if (this.location) {
-            let src = null;
-            const st = sources.find(s => s.source === this.location.source);
-            if (st) {
-                src = st.text.split(/\r\n|\n|\r/g);
-            }
-            const s = this.location.start;
-            const offset_s = (this.location.source && (typeof this.location.source.offset === "function"))
-                ? this.location.source.offset(s)
-                : s;
-            const loc = this.location.source + ":" + offset_s.line + ":" + offset_s.column;
-            if (src) {
-                const e = this.location.end;
-                const filler = "".padEnd(offset_s.line.toString().length, " ");
-                const line = src[s.line - 1];
-                const last = s.line === e.line ? e.column : line.length + 1;
-                const hatLen = (last - s.column) || 1;
-                str += "\n --> " + loc + "\n"
-                    + filler + " |\n"
-                    + offset_s.line + " | " + line + "\n"
-                    + filler + " | " + "".padEnd(s.column - 1, " ")
-                    + "".padEnd(hatLen, "^");
-            } else {
-                str += "\n at " + loc;
-            }
-        }
-        return str;
-    }
-
     static buildMessage(expected, found) {
         function hex(ch) {
             return ch.codePointAt(0).toString(16).toUpperCase();
@@ -151,6 +120,37 @@ class peg$SyntaxError extends SyntaxError {
         }
 
         return "Expected " + describeExpected(expected) + " but " + describeFound(found) + " found.";
+    }
+
+    format(sources) {
+        let str = "Error: " + this.message;
+        if (this.location) {
+            let src = null;
+            const st = sources.find(s => s.source === this.location.source);
+            if (st) {
+                src = st.text.split(/\r\n|\n|\r/g);
+            }
+            const s = this.location.start;
+            const offset_s = (this.location.source && (typeof this.location.source.offset === "function"))
+                ? this.location.source.offset(s)
+                : s;
+            const loc = this.location.source + ":" + offset_s.line + ":" + offset_s.column;
+            if (src) {
+                const e = this.location.end;
+                const filler = "".padEnd(offset_s.line.toString().length, " ");
+                const line = src[s.line - 1];
+                const last = s.line === e.line ? e.column : line.length + 1;
+                const hatLen = (last - s.column) || 1;
+                str += "\n --> " + loc + "\n"
+                    + filler + " |\n"
+                    + offset_s.line + " | " + line + "\n"
+                    + filler + " | " + "".padEnd(s.column - 1, " ")
+                    + "".padEnd(hatLen, "^");
+            } else {
+                str += "\n at " + loc;
+            }
+        }
+        return str;
     }
 }
 

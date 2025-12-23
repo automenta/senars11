@@ -1,9 +1,6 @@
-import {Config} from '../config/Config.js';
-import {CommandRegistry} from './CommandRegistry.js';
+import { Config } from '../config/Config.js';
+import { CommandRegistry } from '@senars/core';
 
-/**
- * CommandProcessor handles command sending and history management
- */
 export class CommandProcessor {
     constructor(webSocketManager, logger, graphManager = null) {
         this.webSocketManager = webSocketManager;
@@ -11,56 +8,107 @@ export class CommandProcessor {
         this.graphManager = graphManager;
         this.history = [];
         this.maxHistorySize = Config.getConstants().MAX_HISTORY_SIZE;
-
-        // Initialize command registry for extensible command processing
-        this.commandRegistry = new CommandRegistry();
+        this.commandRegistry = new CommandRegistry({ logger: this.logger });
+        this._registerUICommands();
     }
 
-    /**
-     * Process and send a command to the backend
-     * @param {string} command - The command string to process
-     * @param {boolean} [isDebug=false] - Whether this is a debug command (currently unused)
-     * @param {string} [mode='narsese'] - Input mode ('narsese' or 'agent')
-     * @returns {boolean} - True if command was processed successfully, false otherwise
-     */
+    _registerUICommands() {
+        const commands = [
+            ['/nodes', ctx => this._listNodes(ctx), 'List all nodes in graph'],
+            ['/tasks', ctx => this._listTasks(ctx), 'Show task nodes'],
+            ['/concepts', ctx => this._listConcepts(ctx), 'Show concept nodes'],
+            ['/refresh', ctx => this.executeRefresh(ctx), 'Request graph refresh'],
+            ['/goals', ctx => this._listGoals(ctx), 'Show current goals'],
+            ['/beliefs', ctx => this._listBeliefs(ctx), 'Show current beliefs'],
+            ['/step', ctx => this._executeStep(ctx), 'Execute single reasoning step'],
+            ['/run', ctx => this._executeRun(ctx), 'Start continuous execution'],
+            ['/stop', ctx => this._executeStop(ctx), 'Stop continuous execution']
+        ];
+        commands.forEach(([cmd, handler, desc]) =>
+            this.commandRegistry.registerCommand(cmd, handler, { description: desc })
+        );
+    }
+
+    getAvailableCommands() {
+        return this.commandRegistry.getCommandList();
+    }
+
+    _listNodes(ctx) {
+        if (!this._validateGraphManager()) return;
+        const count = this.graphManager.getNodeCount();
+        this.logger.log(`Total nodes in graph: ${count}`, 'info', '📊');
+        return true;
+    }
+
+    _listTasks(ctx) {
+        if (!this._validateGraphManager()) return;
+        const tasks = this.graphManager.getTaskNodes();
+        this.logger.log(`Task nodes: ${tasks.length}`, 'info', '📋');
+        return true;
+    }
+
+    _listConcepts(ctx) {
+        if (!this._validateGraphManager()) return;
+        const concepts = this.graphManager.getConceptNodes();
+        this.logger.log(`Concept nodes: ${concepts.length}`, 'info', '💡');
+        return true;
+    }
+
+    _listGoals(ctx) {
+        this.webSocketManager.sendMessage('command.execute', { command: 'goals', args: [] });
+        return true;
+    }
+
+    _listBeliefs(ctx) {
+        this.webSocketManager.sendMessage('command.execute', { command: 'beliefs', args: [] });
+        return true;
+    }
+
+    _executeStep(ctx) {
+        this.executeControlCommand('control/step', {});
+        this.logger.log('Single step executed', 'info', '⏯');
+        return true;
+    }
+
+    _executeRun(ctx) {
+        this.executeControlCommand('control/run', {});
+        this.logger.log('Continuous execution started', 'info', '▶️');
+        return true;
+    }
+
+    _executeStop(ctx) {
+        this.executeControlCommand('control/stop', {});
+        this.logger.log('Execution stopped', 'info', '⏸');
+        return true;
+    }
+
     processCommand(command, isDebug = false, mode = 'narsese') {
         const trimmedCommand = command?.trim();
         if (!trimmedCommand) return false;
 
-        // Add to history
         this._addToHistory(trimmedCommand);
-
-        // Log the command
         this.logger.log(`> ${trimmedCommand}`, 'input', '⌨️');
 
-        // Handle debug commands locally if they start with /
         if (trimmedCommand.startsWith('/')) {
             this._processDebugCommand(trimmedCommand);
             return true;
         }
 
-        // Send via WebSocket
-        if (this.webSocketManager.isConnected()) {
-            // Use consistent message format
-            const messageData = {input: trimmedCommand};
-            const messageType = mode === 'agent' ? 'agent/input' : 'narseseInput';
-
-            this.webSocketManager.sendMessage(messageType, messageData);
-            return true;
-        } else {
-            this.logger.log(`Cannot send: Not connected`, 'error', '❌');
+        if (!this.webSocketManager.isConnected()) {
+            this.logger.log('Cannot send: Not connected', 'error', '❌');
             return false;
         }
+
+        this.webSocketManager.sendMessage(
+            mode === 'agent' ? 'agent/input' : 'narseseInput',
+            { input: trimmedCommand }
+        );
+        return true;
     }
 
-    /**
-     * Process a debug command using the command registry
-     */
     _processDebugCommand(command) {
         const parts = command.split(' ');
         const cmd = parts[0].toLowerCase();
-
-        // Create context object for command handlers
         const context = {
             webSocketManager: this.webSocketManager,
             logger: this.logger,
@@ -68,24 +116,15 @@ export class CommandProcessor {
             commandProcessor: this
         };
 
-        // Check if it's a local command
         if (this.commandRegistry.commands.has(cmd)) {
-            // Execute the command through the registry
-            this.commandRegistry.executeCommand(cmd, context);
+            this.commandRegistry.executeCommand(command, context);
+        } else if (this.webSocketManager.isConnected()) {
+            this.webSocketManager.sendMessage('command.execute', {
+                command: cmd.substring(1),
+                args: parts.slice(1)
+            });
         } else {
-            // Forward to backend if not local
-            const commandName = cmd.substring(1);
-            const args = parts.slice(1);
-
-            if (this.webSocketManager.isConnected()) {
-                this.webSocketManager.sendMessage('command.execute', {
-                    command: commandName,
-                    args: args
-                });
-                // Don't log here, wait for server response
-            } else {
-                this.logger.log(`Cannot forward command: Not connected`, 'error', '❌');
-            }
+            this.logger.log('Cannot forward command: Not connected', 'error', '❌');
         }
     }
 
@@ -104,22 +143,9 @@ export class CommandProcessor {
         return this.commandRegistry.unregisterCommand(command);
     }
 
-    /**
-     * Add command to history
-     */
     _addToHistory(command) {
-        const entry = {
-            command: command,
-            timestamp: new Date(),
-            status: 'sent'
-        };
-
-        this.history.push(entry);
-
-        // Maintain max history size
-        if (this.history.length > this.maxHistorySize) {
-            this.history = this.history.slice(-this.maxHistorySize);
-        }
+        this.history.push({ command, timestamp: new Date(), status: 'sent' });
+        this.history.length > this.maxHistorySize && (this.history = this.history.slice(-this.maxHistorySize));
     }
 
     /**
@@ -151,9 +177,6 @@ export class CommandProcessor {
         this.executeControlCommand('control/toggleLive', {});
     }
 
-    /**
-     * Validate that GraphManager is available
-     */
     _validateGraphManager() {
         if (!this.graphManager) {
             this.logger.log('Graph manager not initialized', 'error', '❌');

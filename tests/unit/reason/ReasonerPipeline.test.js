@@ -1,4 +1,5 @@
 import {NAR} from '../../../core/src/nar/NAR.js';
+import {IntrospectionEvents} from '../../../core/src/util/IntrospectionEvents.js';
 
 describe('Reasoner Pipeline Tests', () => {
     let nar;
@@ -70,11 +71,11 @@ describe('Reasoner Pipeline Tests', () => {
         const derivationEvents = [];
         const inputEvents = [];
 
-        nar.on('reasoning.derivation', (data) => {
+        nar.on(IntrospectionEvents.REASONING_DERIVATION, (data) => {
             derivationEvents.push(data);
         });
 
-        nar.on('task.input', (data) => {
+        nar.on(IntrospectionEvents.TASK_INPUT, (data) => {
             inputEvents.push(data);
         });
 

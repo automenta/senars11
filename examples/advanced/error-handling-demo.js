@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { NAR } from '../../core/src/nar/NAR.js';
-import { App } from '@senars/agent';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {App} from '@senars/agent';
 
 const section = (title) => console.log(`\n${'═'.repeat(60)}\n${title}\n${'═'.repeat(60)}`);
 const log = (...args) => console.log('  ', ...args);
@@ -11,7 +11,7 @@ async function demonstrateErrorHandling() {
 
     // 1. Try-Catch with Specific Error Types
     section('1️⃣  Basic Try-Catch Pattern');
-    const nar = new NAR({ lm: { enabled: false } });
+    const nar = new NAR({lm: {enabled: false}});
 
     try {
         await nar.initialize();
@@ -47,7 +47,7 @@ async function demonstrateErrorHandling() {
         log('Falling back to NAR-only mode...');
 
         // Fallback: reinitialize without LM
-        const fallbackApp = new App({ lm: { enabled: false } });
+        const fallbackApp = new App({lm: {enabled: false}});
         await fallbackApp.initialize();
         log('✅ Fallback successful - running without LM');
         await fallbackApp.shutdown();
@@ -55,6 +55,7 @@ async function demonstrateErrorHandling() {
 
     // 3. Timeout Handling
     section('3️⃣  Timeout Handling Pattern');
+
     async function withTimeout(promise, ms, errorMsg) {
         const timeout = new Promise((_, reject) =>
             setTimeout(() => reject(new Error(errorMsg)), ms)
@@ -79,7 +80,7 @@ async function demonstrateErrorHandling() {
     section('4️⃣  Resource Cleanup Pattern');
     let tempNAR = null;
     try {
-        tempNAR = new NAR({ lm: { enabled: false } });
+        tempNAR = new NAR({lm: {enabled: false}});
         await tempNAR.initialize();
         await tempNAR.input('<test --> data>.');
         log('✅ Operations completed');
@@ -94,7 +95,7 @@ async function demonstrateErrorHandling() {
 
     // 5. Event-Based Error Monitoring
     section('5️⃣  Event-Based Error Monitoring');
-    const { EventBus } = await import('../../core/src/util/EventBus.js');
+    const {EventBus} = await import('../../core/src/util/EventBus.js');
     const eventBus = new EventBus();
 
     const errors = [];
@@ -103,13 +104,13 @@ async function demonstrateErrorHandling() {
         log(`Error event: ${data.message}`);
     });
 
-    const monitored = new NAR({ lm: { enabled: false }, eventBus });
+    const monitored = new NAR({lm: {enabled: false}, eventBus});
     await monitored.initialize();
 
     try {
         await monitored.input('<<invalid>>');
     } catch (e) {
-        eventBus.emit('error', { message: e.message, type: 'parse-error' });
+        eventBus.emit('error', {message: e.message, type: 'parse-error'});
     }
 
     log(`Total errors logged: ${errors.length}`);
@@ -117,6 +118,7 @@ async function demonstrateErrorHandling() {
 
     // 6. Retry Pattern with Exponential Backoff
     section('6️⃣  Retry with Exponential Backoff');
+
     async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
         for (let i = 0; i < maxRetries; i++) {
             try {

@@ -1,6 +1,5 @@
-import { HumanMessage, ToolMessage } from "@langchain/core/messages";
-import { handleError } from '@senars/core';
-import { AGENT_EVENTS } from './constants.js';
+import {handleError} from '@senars/core';
+import {AGENT_EVENTS} from './constants.js';
 
 export class AgentStreamer {
     constructor(agent) {
@@ -22,20 +21,20 @@ export class AgentStreamer {
         }
 
         try {
-            const { fullStream } = await this.agent.ai.stream(input, {
+            const {fullStream} = await this.agent.ai.stream(input, {
                 temperature: this.agent.inputProcessingConfig.lmTemperature
             });
 
             for await (const chunk of fullStream) {
                 if (chunk.type === 'text-delta') {
-                    yield { type: "agent_response", content: chunk.textDelta };
+                    yield {type: "agent_response", content: chunk.textDelta};
                 } else if (chunk.type === 'tool-call') {
-                    yield { type: "tool_call", name: chunk.toolName, args: chunk.args };
-                    this._emit(AGENT_EVENTS.TOOL_CALL, { name: chunk.toolName, args: chunk.args, id: chunk.toolCallId });
+                    yield {type: "tool_call", name: chunk.toolName, args: chunk.args};
+                    this._emit(AGENT_EVENTS.TOOL_CALL, {name: chunk.toolName, args: chunk.args, id: chunk.toolCallId});
                 } else if (chunk.type === 'tool-result') {
-                    yield { type: "tool_result", content: JSON.stringify(chunk.result) };
+                    yield {type: "tool_result", content: JSON.stringify(chunk.result)};
                 } else if (chunk.type === 'error') {
-                    yield { type: "error", content: chunk.error };
+                    yield {type: "error", content: chunk.error};
                 }
             }
         } catch (error) {
@@ -52,23 +51,22 @@ export class AgentStreamer {
         if (this.agent.inputProcessingConfig.enableNarseseFallback && this.agent.inputProcessor._isPotentialNarsese(input)) {
             try {
                 const result = await this.agent.inputProcessor.processNarsese(input);
-                yield { type: "agent_response", content: result || "Input processed" };
+                yield {type: "agent_response", content: result || "Input processed"};
                 return;
             } catch (error) {
-                yield { type: "agent_response", content: "❌ Agent initialized but Narsese processing failed." };
+                yield {type: "agent_response", content: "❌ Agent initialized but Narsese processing failed."};
                 return;
             }
         }
-        yield { type: "agent_response", content: "❌ No LM provider available and input not recognized as Narsese." };
+        yield {type: "agent_response", content: "❌ No LM provider available and input not recognized as Narsese."};
     }
-
 
 
     async* _handleStreamingError(error, input) {
         if (!this.agent.inputProcessingConfig.enableNarseseFallback || !this.agent.inputProcessor._isPotentialNarsese(input)) {
-            console.error('Streaming execution error:', { error, input });
+            console.error('Streaming execution error:', {error, input});
         }
-        yield { type: "error", content: `❌ Streaming error: ${error.message}` };
+        yield {type: "error", content: `❌ Streaming error: ${error.message}`};
     }
 
     _emit(event, payload) {

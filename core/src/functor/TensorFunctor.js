@@ -2,7 +2,7 @@ import {Tensor} from './Tensor.js';
 import {NativeBackend} from './backends/NativeBackend.js';
 import {TruthTensorBridge} from './TruthTensorBridge.js';
 import {LossFunctor} from './LossFunctor.js';
-import {SGDOptimizer, AdamOptimizer} from './Optimizer.js';
+import {AdamOptimizer, SGDOptimizer} from './Optimizer.js';
 
 export class TensorFunctor {
     static _TENSOR_OPS = new Set([

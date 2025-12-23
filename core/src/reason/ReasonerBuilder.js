@@ -1,6 +1,6 @@
 import {TaskBagPremiseSource} from './TaskBagPremiseSource.js';
 import {Strategy} from './Strategy.js';
-import {RuleExecutor} from './RuleExecutor.js';
+import {SimpleRuleExecutor} from './exec/SimpleRuleExecutor.js';
 import {RuleProcessor} from './RuleProcessor.js';
 import {Reasoner as StreamReasoner} from './Reasoner.js';
 import {DecompositionStrategy} from './strategy/DecompositionStrategy.js';
@@ -239,7 +239,7 @@ export class ReasonerBuilder {
 
     useDefaultRuleExecutor(options = {}) {
         const config = {...this.config, ...options};
-        this.components.ruleExecutor = new RuleExecutor(config.streamRuleExecutor || {});
+        this.components.ruleExecutor = new SimpleRuleExecutor(config.streamRuleExecutor || {});
         return this;
     }
 

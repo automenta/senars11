@@ -1,36 +1,36 @@
-import {UIElements} from './ui/UIElements.js';
-import {WebSocketManager} from './connection/WebSocketManager.js';
-import {GraphManager} from './visualization/GraphManager.js';
-import {Logger} from './logging/Logger.js';
-import {CommandProcessor} from './command/CommandProcessor.js';
-import {DemoManager} from './demo/DemoManager.js';
-import {UIEventHandlers} from './ui/UIEventHandlers.js';
-import {MessageHandler} from '@senars/agent';
-import {capitalizeFirst} from './utils/Helpers.js';
-import {ControlPanel} from './ui/ControlPanel.js';
-import {SystemMetricsPanel} from './components/SystemMetricsPanel.js';
-import {ActivityLogPanel} from './components/ActivityLogPanel.js';
+import { UIElements } from './ui/UIElements.js';
+import { WebSocketManager } from './connection/WebSocketManager.js';
+import { GraphManager } from './visualization/GraphManager.js';
+import { Logger } from './logging/Logger.js';
+import { CommandProcessor } from './command/CommandProcessor.js';
+import { DemoManager } from './demo/DemoManager.js';
+import { UIEventHandlers } from './ui/UIEventHandlers.js';
+import { MessageHandler } from '@senars/agent';
+import { capitalizeFirst } from './utils/Helpers.js';
+import { ControlPanel } from './ui/ControlPanel.js';
+import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
+import { ActivityLogPanel } from './components/ActivityLogPanel.js';
+import { LMActivityIndicator } from './components/LMActivityIndicator.js';
 
-/**
- * Main SeNARS UI Application class - orchestrator that combines all modules
- */
 export class SeNARSUI {
     constructor() {
         this.uiElements = new UIElements();
-
-        // Initialize core modules
         this.logger = new Logger();
         this.webSocketManager = new WebSocketManager();
+        this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger);
+
         this.graphManager = new GraphManager(this.uiElements.getAll(), {
-            onNodeAction: (action, data) => this._handleNodeAction(action, data)
+            onNodeAction: (action, data) => this._handleNodeAction(action, data),
+            commandProcessor: null
         });
-        this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger, this.graphManager);
+        this.graphManager.callbacks.commandProcessor = this.commandProcessor;
+        this.commandProcessor.graphManager = this.graphManager;
+
         this.controlPanel = new ControlPanel(this.uiElements, this.commandProcessor, this.logger);
         this.demoManager = new DemoManager(this.uiElements, this.commandProcessor, this.logger);
-
-        // Observability Panels
         this.metricsPanel = new SystemMetricsPanel(this.uiElements.get('metricsPanel'));
         this.activityLogPanel = new ActivityLogPanel(this.uiElements.get('tracePanel'));
+        this.lmActivityIndicator = new LMActivityIndicator(this.uiElements.get('graphContainer'));
 
         this.uiEventHandlers = new UIEventHandlers(
             this.uiElements,
@@ -41,205 +41,139 @@ export class SeNARSUI {
             this.controlPanel
         );
 
-        // Initialize message handler
         this.messageHandler = new MessageHandler(this.graphManager);
-
-        // Set logger UI elements
         this.logger.setUIElements(this.uiElements.getAll());
-
-        // Initialize the application
         this.initialize();
     }
 
-    /**
-     * Initialize the application
-     */
     initialize() {
-        // Initialize graph
         this.graphManager.initialize();
-
-        // Setup UI event listeners
         this.uiEventHandlers.setupEventListeners();
-
-        // Setup WebSocket message handlers
         this._setupWebSocketHandlers();
 
-        // Setup global action handler
         document.addEventListener('senars:action', (e) => {
-            const {type, payload, context} = e.detail;
-            this.webSocketManager.sendMessage('activity.action', {
-                type, payload, context, id: Date.now()
-            });
+            const { type, payload, context } = e.detail;
+            this.webSocketManager.sendMessage('activity.action', { type, payload, context, id: Date.now() });
             this.logger.addLogEntry(`Action dispatched: ${type}`, 'info', '⚡');
         });
 
-        // Connect to WebSocket
         this.webSocketManager.connect();
-
-        // Initialize Demo Manager (fetches demos)
         this.webSocketManager.subscribe('connection.status', (status) => {
-            if (status === 'connected') {
-                this.demoManager.initialize();
-            }
+            status === 'connected' && this.demoManager.initialize();
         });
 
-        // Add initial log entry
         this.logger.addLogEntry('SeNARS UI2 - Ready', 'info', '🚀');
     }
 
-    /**
-     * Setup WebSocket message handlers
-     */
     _setupWebSocketHandlers() {
-        // Subscribe to general messages
-        this.webSocketManager.subscribe('*', (message) => {
-            this._handleMessage(message);
-        });
+        this.webSocketManager.subscribe('*', (message) => this._handleMessage(message));
+        this.webSocketManager.subscribe('connection.status', (status) => this._updateStatus(status));
 
-        // Subscribe to connection status changes
-        this.webSocketManager.subscribe('connection.status', (status) => {
-            this._updateStatus(status);
-        });
+        const animationHandlers = {
+            'reasoning:derivation': (msg) => {
+                const nodeId = msg.payload?.nodeId ?? msg.payload?.conceptId;
+                nodeId && this.graphManager.animateNode(nodeId, 'pulse');
+            },
+            'memory:focus:promote': (msg) => {
+                const nodeId = msg.payload?.nodeId ?? msg.payload?.conceptId;
+                nodeId && this.graphManager.animateGlow(nodeId, 1.0);
+            },
+            'memory:focus:demote': (msg) => {
+                const nodeId = msg.payload?.nodeId ?? msg.payload?.conceptId;
+                nodeId && this.graphManager.animateGlow(nodeId, 0.3);
+            },
+            'concept.created': (msg) => {
+                const nodeId = msg.payload?.id;
+                nodeId && setTimeout(() => this.graphManager.animateFadeIn(nodeId), 50);
+            },
+            'lm:prompt:start': () => this.lmActivityIndicator.show(),
+            'lm:prompt:complete': () => this.lmActivityIndicator.hide(),
+            'lm:error': (msg) => this.lmActivityIndicator.showError(msg.payload?.error ?? 'LM Error')
+        };
+
+        Object.entries(animationHandlers).forEach(([type, handler]) =>
+            this.webSocketManager.subscribe(type, handler)
+        );
     }
 
-    /**
-     * Handle incoming messages
-     */
     _handleMessage(message) {
+        if (!message) return;
+
         try {
-            // Early return if message is null/undefined
-            if (!message) return;
-
-            // Update message count display
             this._updateMessageCount();
-
-            // Update system state (cycle count, etc.)
             this._updateSystemState(message);
 
-            // Handle specialized messages that shouldn't go through the generic logger
-            if (this._handleSpecializedMessages(message)) {
+            if (this._handleSpecializedMessages(message)) return;
+
+            const { content, type, icon } = this.messageHandler.processMessage(message);
+
+            if (message.type === 'metrics.updated') {
+                this.metricsPanel.update(message.payload);
                 return;
             }
 
-            // Process message with appropriate handler
-            const {content, type, icon} = this.messageHandler.processMessage(message);
+            if (message.type === 'metrics.anomaly') return;
 
-            // Update Observability Panels
-            if (message.type === 'metrics.updated') {
-                this.metricsPanel.update(message.payload);
-            } else if (message.type === 'activity.new') {
+            if (message.type === 'activity.new') {
                 this.activityLogPanel.addActivity(message.payload);
             }
 
-            // Add log entry and update graph simultaneously
             this.logger.addLogEntry(content, type, icon);
             this.graphManager.updateFromMessage(message);
         } catch (error) {
-            const errorMsg = `Error handling message of type ${message?.type ?? 'unknown'}: ${error.message}`;
-            this.logger.log(errorMsg, 'error', '❌');
-
-            // Only log to console in development mode to avoid spam
-            if (process?.env?.NODE_ENV !== 'production') {
-                console.error('Full error details:', error, message);
-            }
+            this.logger.log(`Error handling message of type ${message?.type ?? 'unknown'}: ${error.message}`, 'error', '❌');
+            process?.env?.NODE_ENV !== 'production' && console.error('Full error details:', error, message);
         }
     }
 
-    /**
-     * Handle specialized messages (demos, agent results)
-     * Returns true if message was handled and should stop processing
-     */
     _handleSpecializedMessages(message) {
-        // Map of message types to handler functions for DRY principle
-        const specializedMessageHandlers = {
-            'demoList': (payload) => this.demoManager.handleDemoList(payload),
-            'demoStep': (payload) => this.demoManager.handleDemoStep(payload),
-            'demoState': (payload) => this.demoManager.handleDemoState(payload),
-            'demoMetrics': (payload) => {
-                // Update cycle count from metrics
-                const metrics = payload?.metrics;
-                if (metrics && metrics.cyclesCompleted !== undefined) {
-                    this.controlPanel.updateCycleCount(metrics.cyclesCompleted);
-                }
-                // Suppress from logs (return true to stop processing)
+        const handlers = {
+            'demoList': (p) => this.demoManager.handleDemoList(p),
+            'demoStep': (p) => this.demoManager.handleDemoStep(p),
+            'demoState': (p) => this.demoManager.handleDemoState(p),
+            'demoMetrics': (p) => {
+                p?.metrics?.cyclesCompleted !== undefined && this.controlPanel.updateCycleCount(p.metrics.cyclesCompleted);
                 return true;
             },
-            'agent/result': (payload) => {
-                // Log agent result specifically
-                const result = typeof payload.result === 'string' ? payload.result : JSON.stringify(payload.result);
-                this.logger.addLogEntry(result, 'info', '🤖');
+            'agent/result': (p) => {
+                this.logger.addLogEntry(
+                    typeof p.result === 'string' ? p.result : JSON.stringify(p.result),
+                    'info',
+                    '🤖'
+                );
             }
         };
 
-        const handler = specializedMessageHandlers[message.type];
-        if (handler) {
-            handler(message.payload);
-            // demoMetrics should suppress from logs (return true to stop processing)
-            if (message.type === 'demoMetrics') return true;
-            // agent/result doesn't need special suppression handling, let it continue
-        }
-
-        return false;
+        const handler = handlers[message.type];
+        return handler ? handler(message.payload) || message.type === 'demoMetrics' : false;
     }
 
-    /**
-     * Update system state based on message
-     */
     _updateSystemState(message) {
-        // Map of message types to cycle update functions
-        const cycleUpdateMap = {
-            'nar.cycle.step': (payload) => payload?.cycle,
-            'narInstance': (payload) => payload?.cycleCount
+        const cycleExtractors = {
+            'nar.cycle.step': (p) => p?.cycle,
+            'narInstance': (p) => p?.cycleCount
         };
 
-        const getCycleValue = cycleUpdateMap[message.type];
-        if (getCycleValue) {
-            const cycleValue = getCycleValue(message.payload);
-            if (cycleValue !== undefined) {
-                this.controlPanel.updateCycleCount(cycleValue);
-            }
-        }
+        const extractor = cycleExtractors[message.type];
+        const cycleValue = extractor?.(message.payload);
+        cycleValue !== undefined && this.controlPanel.updateCycleCount(cycleValue);
     }
 
-    /**
-     * Update the message count display
-     */
     _updateMessageCount() {
-        const messageCountElement = this.uiElements.get('messageCount');
-        if (messageCountElement) {
-            const currentCount = parseInt(messageCountElement.textContent) ?? 0;
-            messageCountElement.textContent = currentCount + 1;
-        }
+        const el = this.uiElements.get('messageCount');
+        el && (el.textContent = (parseInt(el.textContent) || 0) + 1);
     }
 
     _handleNodeAction(action, data) {
         this.logger.log(`Graph Action: ${action} on ${data.term}`, 'info', '🖱️');
-
-        if (action === 'focus') {
-            // Re-inject term to boost priority/focus
-            // TODO: Implement proper focus command
-            // this.commandProcessor.processCommand(data.term + '.');
-        }
     }
 
-    /**
-     * Update connection status display
-     */
     _updateStatus(status) {
-        const {connectionStatus, statusIndicator} = this.uiElements.getAll();
-
-        if (connectionStatus) {
-            connectionStatus.textContent = capitalizeFirst(status);
-        }
-
-        // Update indicator class
-        if (statusIndicator) {
-            statusIndicator.className = `status-indicator status-${status}`;
-        }
+        const { connectionStatus, statusIndicator } = this.uiElements.getAll();
+        connectionStatus && (connectionStatus.textContent = capitalizeFirst(status));
+        statusIndicator && (statusIndicator.className = `status-indicator status-${status}`);
     }
 }
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new SeNARSUI();
-});
+
+document.addEventListener('DOMContentLoaded', () => new SeNARSUI());

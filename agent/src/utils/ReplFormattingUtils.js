@@ -1,7 +1,7 @@
 /**
  * Formatting utilities for enhanced REPL output
  */
-import { ANSI_COLORS } from '@senars/core';
+import {ANSI_COLORS} from '@senars/core';
 
 // Alias for backward compatibility
 const COLORS = {
@@ -47,7 +47,7 @@ export class ReplFormattingUtils {
         return rows.join('\n');
     }
 
-    static formatBanner(text, { width, bgColor } = {}) {
+    static formatBanner(text, {width, bgColor} = {}) {
         width = width || Math.max(text.length + 4, 50);
         const line = '═'.repeat(width);
         const padding = ' '.repeat(Math.floor((width - text.length) / 2));

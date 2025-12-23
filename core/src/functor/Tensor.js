@@ -9,6 +9,18 @@ export class Tensor {
         this._parents = [];
     }
 
+    get ndim() {
+        return this.shape.length;
+    }
+
+    get size() {
+        return this.shape.reduce((a, b) => a * b, 1);
+    }
+
+    static fromJSON(json) {
+        return new Tensor(json.data, {requiresGrad: json.requiresGrad ?? false});
+    }
+
     _inferShape(data) {
         if (!Array.isArray(data)) return [1];
         const shape = [];
@@ -26,14 +38,6 @@ export class Tensor {
         const stride = shape.slice(1).reduce((a, b) => a * b, 1);
         return Array.from({length: shape[0]}, (_, i) =>
             this._unflatten(flat.slice(i * stride, (i + 1) * stride), shape.slice(1)));
-    }
-
-    get ndim() {
-        return this.shape.length;
-    }
-
-    get size() {
-        return this.shape.reduce((a, b) => a * b, 1);
     }
 
     reshape(newShape) {
@@ -91,10 +95,6 @@ export class Tensor {
 
     toJSON() {
         return {data: this.toArray(), shape: this.shape, requiresGrad: this.requiresGrad};
-    }
-
-    static fromJSON(json) {
-        return new Tensor(json.data, {requiresGrad: json.requiresGrad ?? false});
     }
 
     toArray() {

@@ -1,10 +1,10 @@
-import {mergeConfig} from './utils/common.js';
-import {logError} from './utils/error.js';
+import {mergeConfig} from '../utils/common.js';
+import {logError} from '../utils/error.js';
 
 /**
  * RuleExecutor indexes all registered rules for fast retrieval.
  */
-export class RuleExecutor {
+export class SimpleRuleExecutor {
     constructor(config = {}) {
         this.config = mergeConfig({}, config);
         this.rules = [];
