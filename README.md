@@ -601,8 +601,6 @@ train(Input, Target) :-
     W1_new is adam_step(w1, 0.01).
 ```
 
-**Implementation Status**: ✅ Complete (910 lines, 690+ tests passing)
-
 See [`core/src/functor/README.md`](core/src/functor/README.md) for full documentation and examples.
 
 ---
