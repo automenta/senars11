@@ -184,7 +184,24 @@ describe('Memory Subsystem Integration', () => {
                 expect(focus.getTasks(10)).toContain(tasks[i]);
             });
 
+
             expect(focus.getStats().totalFocusSets).toBeGreaterThanOrEqual(3);
+        });
+
+        test('Attention decay in focus sets', () => {
+            focus.createFocusSet('decay-test', 5);
+            focus.setFocus('decay-test');
+
+            const task = createTask({ term: createTerm('decaying'), budget: { priority: 0.8 } });
+            focus.addTaskToFocus(task);
+
+            const initialStats = focus.getStats();
+            const initialAttention = initialStats.focusSets['decay-test'].attentionScore;
+
+            focus.applyDecay();
+
+            const decayedStats = focus.getStats();
+            expect(decayedStats.focusSets['decay-test'].attentionScore).toBeLessThan(initialAttention);
         });
     });
 

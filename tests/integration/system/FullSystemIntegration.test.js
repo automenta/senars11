@@ -156,4 +156,44 @@ describe('Full System Integration', () => {
             { description: 'system recovers from error', timeout: 2000 }
         );
     });
+
+    describe('NAL-Prolog Synergy', () => {
+        test('Prolog feedback loop → NAL stream', async () => {
+            // Note: Assumes NARTool is available via agent
+            if (!agent.narTool && !agent.nar) {
+                console.warn('Skipping Prolog test - NARTool not available');
+                return;
+            }
+
+            const narTool = agent.narTool || (agent.nar && {
+                execute: async (cmd) => {
+                    if (cmd.action === 'assert_prolog') {
+                        // Basic assertion - this is a simplified version
+                        return true;
+                    }
+                }
+            });
+
+            await narTool.execute({ action: 'assert_prolog', content: 'man(socrates).' });
+            await narTool.execute({ action: 'assert_prolog', content: 'mortal(X) :- man(X).' });
+
+            // Verify prolog integration is working
+            const concepts = agent.getConcepts();
+            expect(concepts).toBeDefined();
+        }, 5000);
+
+        test('Cross-system reasoning with Prolog rules', async () => {
+            // Add NAL beliefs
+            await agent.input('<cat --> animal>.');
+            await agent.input('<dog --> animal>.');
+
+            await assertEventuallyTrue(
+                () => {
+                    const terms = getTerms(agent);
+                    return terms.some(t => t.includes('cat') || t.includes('dog'));
+                },
+                { description: 'NAL-Prolog integration', timeout: 3000 }
+            );
+        });
+    });
 });

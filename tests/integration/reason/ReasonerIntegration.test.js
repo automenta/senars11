@@ -99,4 +99,87 @@ describe('Reasoner Integration', () => {
             expect(nar._focus.getTasks(50).length).toBeGreaterThanOrEqual(2);
         });
     });
+
+    describe('Hybrid LM-NAL Reasoning', () => {
+        let testAgent, testApp, useRealLM;
+
+        beforeAll(async () => {
+            useRealLM = process.env.TEST_REAL_LM === 'true';
+
+            const { createLMNALTestAgent } = await import('../../support/lmTestHelpers.js');
+
+            if (useRealLM) {
+                ({ app: testApp, agent: testAgent } = await createLMNALTestAgent({}, {
+                    lm: {
+                        provider: 'transformers',
+                        modelName: 'Xenova/flan-t5-small',
+                        enabled: true,
+                        temperature: 0.1,
+                        circuitBreaker: { failureThreshold: 5, resetTimeout: 1000 }
+                    },
+                    subsystems: { lm: true }
+                }));
+            } else {
+                const mockResponses = {
+                    '"Dogs are animals"': '<dog --> animal>.',
+                    '"Fish live in water"': '<fish --> [live_in_water]>.',
+                    'Concept property elaboration': '<bird --> [fly]>.'
+                };
+                ({ app: testApp, agent: testAgent } = await createLMNALTestAgent(mockResponses, {
+                    lm: {
+                        modelName: 'Xenova/flan-t5-small',
+                        temperature: 0.1,
+                        circuitBreaker: { failureThreshold: 5, resetTimeout: 1000 }
+                    }
+                }));
+            }
+        });
+
+        afterAll(async () => {
+            if (testApp) await testApp.shutdown();
+        });
+
+        test('NL to Narsese translation', async () => {
+            const { assertEventuallyTrue } = await import('../../support/testHelpers.js');
+
+            await testAgent.input('"Dogs are animals".');
+
+            await assertEventuallyTrue(
+                () => {
+                    const concepts = testAgent.getConcepts();
+                    return concepts.some(c => c.term.toString().includes('dog --> animal') || c.term.toString().includes('<dog --> animal>'));
+                },
+                { description: 'NL translation to Narsese' }
+            );
+        });
+
+        test('Concept elaboration using LM', async () => {
+            const { assertEventuallyTrue, getTerms, hasTermMatch } = await import('../../support/testHelpers.js');
+
+            await testAgent.input('bird.');
+
+            await assertEventuallyTrue(
+                () => hasTermMatch(getTerms(testAgent), 'fly'),
+                { description: 'concept elaboration' }
+            );
+        });
+
+        test('Bidirectional LM-NAL synergy', async () => {
+            const { assertEventuallyTrue, getTerms } = await import('../../support/testHelpers.js');
+
+            await testAgent.input('"Fish live in water".');
+
+            await assertEventuallyTrue(
+                () => {
+                    const terms = getTerms(testAgent);
+                    return terms.some(t => t.includes('fish') || t.includes('water'));
+                },
+                { description: 'LM creates knowledge', timeout: 5000 }
+            );
+
+            await testAgent.input('<fish --> ?x>?');
+            const questions = testAgent.getQuestions();
+            expect(questions.length).toBeGreaterThanOrEqual(1);
+        }, 12000);
+    });
 });
