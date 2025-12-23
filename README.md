@@ -2,6 +2,24 @@
 
 A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL) with Language Models (LM).
 
+## How to Use This Documentation
+
+This documentation is organized into three main categories:
+
+- **Getting Started**: For newcomers to understand and use SeNARS quickly
+- **System Design**: For understanding the architecture and internal workings
+- **Reference**: For detailed API, configuration, and development information
+
+Start with [Quick Reference](README.quickref.md) for immediate usage, or [Introduction](README.intro.md) for a comprehensive overview.
+
+## Installation
+
+```bash
+npm install
+npm run build
+npm test  # Verify installation (99.8% pass rate)
+```
+
 ## Documentation
 
 This README has been decomposed into detailed sections:

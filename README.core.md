@@ -1,5 +1,20 @@
 # SeNARS Core Components and Data Structures
 
+This document provides detailed technical specifications for SeNARS core components and data structures. For architectural patterns and high-level design, see [README.architecture.md](README.architecture.md). For API usage, see [README.api.md](README.api.md).
+
+## Technical Definitions
+
+Throughout this document, these terms have specific meanings:
+
+- **Term**: The fundamental unit of knowledge representation (atomic or compound)
+- **Task**: A unit of work containing knowledge and processing instructions
+- **Truth Value**: A `{frequency, confidence}` pair measuring certainty
+- **Stamp**: Records the task's origin and derivation history
+- **Memory**: The system component storing all knowledge representations
+- **Concept**: A collection of tasks related to the same term
+- **Focus Sets**: High-priority, short-term memory for immediate attention
+- **Consolidation**: Moving tasks between memory systems based on priority
+
 ## System Architecture: Core Components Overview
 
 The system consists of several interconnected components:
@@ -117,12 +132,6 @@ The `Term` class represents knowledge in the system and is designed to be immuta
     - `visit(visitorFunction)`: Traverse the term structure applying functions to each part.
     - `reduce(reducerFunction, initialValue)`: Aggregate information across the term structure.
 
-**Technical Definitions:**
-- **Term**: The fundamental unit of knowledge representation in the system
-- **Atomic Term**: A simple, indivisible term (like "bird" or "red")
-- **Compound Term**: A term built from multiple sub-terms using logical operators
-- **Term Normalization**: Converting equivalent terms to the same canonical form
-
 ### `Task` Class
 
 The `Task` class represents a unit of work in the system, containing information to be processed along with metadata.
@@ -139,12 +148,6 @@ The `Task` class represents a unit of work in the system, containing information
     - `budget`: Resources allocated for processing this task.
 - **Methods:**
     - `derive(newTruth, newStamp)`: Creates an updated version of the task with new truth values or metadata.
-
-**Technical Definitions:**
-- **Task**: A unit of work containing knowledge and processing instructions
-- **Truth Value**: Measures certainty or confidence in the task's information
-- **Stamp**: Records the task's origin and derivation history
-- **Priority**: Determines processing order among tasks
 
 ### `Truth` Value Representation
 
@@ -215,11 +218,7 @@ The `Memory` component manages both long-term memory and short-term attention fo
     - `consolidate(currentTime)`: Moves tasks between focus and long-term memory based on priority.
 
 **Technical Definitions:**
-- **Memory**: The system component that stores and manages all knowledge representations (Terms, Tasks, Concepts)
-- **Concept**: A collection of tasks related to the same term, organized by priority and metadata
-- **Dual Memory Architecture**: A system design that separates short-term (focus) and long-term memory for efficient processing
-- **Focus Sets**: High-priority, short-term memory stores for tasks requiring immediate attention
-- **Consolidation**: The process of moving tasks between memory systems based on priority and time factors
+See the Technical Definitions section at the top of this document for term explanations.
 
 ### Layer System
 
@@ -337,3 +336,10 @@ Implement NAL-specific truth value calculations:
 3. **Induction/Abstraction:** Implement induction and abduction truth value calculations.
 4. **Negation:** Properly calculate negated truth values.
 5. **Expectation:** Calculate expectation values for decision making.
+
+## See Also
+
+- [Architecture](README.architecture.md) - High-level patterns and design principles
+- [API Documentation](README.api.md) - Public API reference and usage examples
+- [Configuration](README.config.md) - Component configuration options
+- [Development Guide](README.development.md) - Component development patterns

@@ -66,19 +66,4 @@ reasoner.on('metrics', ({ derivationsPerSecond, memoryUsage }) => {
 reasoner.stop();
 
 // Execute single reasoning steps
-for (let i = 0; i < 10; i++) {
-    const results = await reasoner.step();
-    console.log(`Step ${i}: ${results.length} derivations`);
-}
-```
-
-## Technical Definitions
-
-- **NAR (NARS Reasoner Engine)**: The main system orchestrator that manages all components and provides the public API
-- **Reasoning Cycle**: The iterative process by which the system processes tasks and generates new knowledge
-- **Narsese**: The formal language used to represent knowledge and tasks in the system (e.g., `(bird --> animal).`)
-- **Task**: A unit of work containing a term, punctuation, truth value, and stamp
-- **Derivation**: A new task produced by applying inference rules to existing tasks
-
-See [README.core.md](README.core.md) for detailed component documentation.
-
+See [README.usage.md](README.usage.md) for complete usage examples and [README.core.md](README.core.md) for detailed component documentation.

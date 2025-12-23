@@ -2,8 +2,6 @@
 
 ## Core Technical Challenges
 
-### Core Technical Challenges
-
 **Performance Optimization:**
 
 - Performance targets (<1ms operations) require optimization in the full NARS reasoning cycle

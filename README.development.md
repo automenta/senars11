@@ -1,5 +1,40 @@
 # SeNARS Development Guide
 
+## Getting Started with Development
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd senars11
+
+# Install dependencies
+npm install
+
+# Run tests to verify setup
+npm test
+
+# Start development
+npm run watch  # Auto-rebuild on changes
+```
+
+### Contributing Guidelines
+
+- **Code Style**: Follow existing patterns in the codebase
+- **Testing**: Add tests for all new features and bug fixes
+- **Documentation**: Update README files for significant changes
+- **Commits**: Use clear, descriptive commit messages
+- **Pull Requests**: Include tests and documentation updates
+
+### Development Workflow
+
+1. Create a feature branch: `git checkout -b feature/my-feature`
+2. Make changes and add tests
+3. Run tests: `npm test`
+4. Commit changes: `git commit -m "Add feature X"`
+5. Push and create pull request
+
 ## API Conventions and Code Quality
 
 ### API Design Conventions

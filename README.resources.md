@@ -4,13 +4,7 @@ The SeNARS Stream Reasoner implements comprehensive resource management to opera
 
 ## CPU Throttling
 
-Configurable CPU throttle interval prevents blocking the event loop:
-
-```javascript
-const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
-    cpuThrottleInterval: 1  // Milliseconds between reasoning steps (default: 1ms)
-});
-```
+Configurable CPU throttle interval prevents blocking the event loop. Set via `cpuThrottleInterval` in reasoner configuration (see [README.config.md](README.config.md) for detailed configuration).
 
 **Behavior:**
 - After each reasoning step, the system yields control to allow other async operations
@@ -33,13 +27,7 @@ reasoner.on('backpressure', ({ queueDepth, recommendedDelay }) => {
 
 ## Derivation Depth Limits
 
-Configurable maximum derivation depth keeps the derivation graph finite:
-
-```javascript
-const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
-    maxDerivationDepth: 10  // Maximum derivation chain length (default: 10)
-});
-```
+Configurable maximum derivation depth keeps the derivation graph finite. Set via `maxDerivationDepth` in reasoner configuration (see [README.config.md](README.config.md)).
 
 **AIKR Compliance:**
 - Tasks exceeding the derivation depth limit are discarded
@@ -49,32 +37,15 @@ const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
 
 ## Memory Limits
 
-Resource constraints for memory management:
+Resource constraints for memory management (see [README.config.md](README.config.md) for configuration details):
 
 - **Memory Capacity**: Maximum number of concepts in long-term memory (default: 1000)
 - **Focus Size**: Maximum tasks in short-term focus memory (default: 100)
 - **Forgetting Policy**: Automatic eviction of low-priority concepts when limits are reached
 
-```javascript
-const config = {
-    memory: {
-        capacity: 1000,
-        consolidationThreshold: 0.1
-    },
-    focus: {
-        size: 100,
-        diversityFactor: 0.3
-    },
-    performance: {
-        maxExecutionTime: 100,  // ms per cycle
-        memoryLimit: 512        // MB total
-    }
-};
-```
-
 ## Execution Time Limits
 
-Per-cycle execution time constraints:
+Per-cycle execution time constraints (configurable via `SystemConfig`):
 
 - **maxExecutionTime**: Maximum milliseconds per reasoning cycle (default: 100ms)
 - Tasks or rules exceeding time limits are suspended and resumed later
@@ -82,13 +53,7 @@ Per-cycle execution time constraints:
 
 ## Resource Monitoring
 
-Built-in metrics for resource utilization:
-
-```javascript
-nar.on('metrics', ({ memoryUsage, cycleTime, queueDepth, derivationsPerSecond }) => {
-    console.log(`Memory: ${memoryUsage}MB, Cycle: ${cycleTime}ms, Rate: ${derivationsPerSecond}/s`);
-});
-```
+Built-in metrics for resource utilization are available through the event system (see [README.api.md](README.api.md) for event handling examples).
 
 ## AIKR Principle
 

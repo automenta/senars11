@@ -146,13 +146,6 @@ Beyond basic syllogistic inference, SeNARS supports advanced reasoning patterns:
 
 The SeNARS Stream Reasoner is a continuous, stream-based dataflow architecture that transforms streams of premises into streams of conclusions. This architecture enables hybrid neuro-symbolic reasoning with NAL (Non-Axiomatic Logic) and Language Models (LM) in a resource-aware, continuous processing pipeline.
 
-### Async/Sync Hybridization
-
-- **Synchronous Processing**: NAL (Non-Axiomatic Logic) rules execute synchronously for rapid inference
-- **Asynchronous Processing**: LM (Language Model) rules execute asynchronously to prevent blocking the main event loop
-- **Non-Blocking Pipeline**: Asynchronous LM rules are dispatched without blocking and results are emitted when available
-- **Unified Output Stream**: Results from both sync and async rules are merged into a unified output stream
-
 ### Core Components
 
 The Stream Reasoner is composed of specialized components that form a processing pipeline.
@@ -163,39 +156,33 @@ For configuration of these components, see **[README.config.md](README.config.md
 
 ---
 
-## Component Architecture and Utilities
+## Component Architecture
 
-### Component Architecture
+All system components follow a standardized architecture based on `BaseComponent`:
 
-All system components follow a standardized architecture.
+- **Lifecycle Management**: Initialize → Start → Stop → Dispose
+- **Event Communication**: Components use `EventBus` for loose coupling
+- **Built-in Metrics**: Automatic performance tracking
+- **Standardized Logging**: Scoped logging for each component
 
-For technical details on Lifecycle Management and Code Quality, see **[README.development.md](README.development.md)**.
-
-### Event System (`EventBus`)
-
-Components communicate through a central event system:
-
-- `emit(eventName, data)`: Send an event with data
-- `on(eventName, handler)`: Listen for specific events
-- `off(eventName, handler)`: Stop listening to events
+For detailed lifecycle and development patterns, see **[README.development.md](README.development.md)**.
 
 ---
 
-## Technical Architecture Details
+## Structural Intelligence Foundation
 
-### Structural Intelligence Foundation
+SeNARS builds intelligence on immutable data structures with powerful properties:
 
-- **Term Analysis**: Terms enable automatic analysis and optimization through immutability, canonical normalization, visitor/reducer patterns, and hash consistency
-- **Task Optimization**: Tasks carry information for resource and process optimization using punctuation awareness, Truth-Stamp-Budget properties, and immutable processing
-- **Truth Validation**: Truth values enable quality assessment and improvement through revision, expectation, and confidence mechanisms
-- **Stamp Evidence Tracking**: Stamps contain derivation information for validation and learning through complete evidence tracking
+- **Term Analysis**: Immutability, canonical normalization, visitor/reducer patterns, and hash consistency
+- **Task Optimization**: Punctuation awareness, Truth-Stamp-Budget properties, and immutable processing
+- **Truth Validation**: Revision, expectation, and confidence mechanisms for quality assessment
+- **Stamp Evidence Tracking**: Complete derivation information for validation and learning
 
-### Technical Implementation Details
+For detailed data structure implementations, see **[README.core.md](README.core.md)**.
 
-- **Self-monitoring** of reasoning performance and compound intelligence growth
-- **Pattern recognition** identifying improvement opportunities and optimization paths
-- **Automatic optimization** based on performance data and outcome feedback
-- **Reasoning State Analysis**: Comprehensive analysis of system reasoning state with insights generation
-- **Performance Metrics**: Detailed metrics collection across all system components
-- **Component Architecture**: Sophisticated component management with lifecycle control, dependency resolution, and standardized interfaces
-- **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance tracking
+## See Also
+
+- [Core Components](README.core.md) - Detailed component implementations
+- [Configuration](README.config.md) - System configuration options
+- [Development Guide](README.development.md) - Component lifecycle and patterns
+- [Resources](README.resources.md) - Resource management and AIKR principle

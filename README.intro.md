@@ -2,6 +2,32 @@
 
 A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL) with Language Models (LM) to create an observable platform for exploring advanced AI concepts. The system implements a continuous, stream-based dataflow architecture for processing streams of premises into conclusions.
 
+## Who Should Read This
+
+- **Researchers**: Exploring hybrid neuro-symbolic AI and non-axiomatic reasoning
+- **Developers**: Building AI systems that combine logic and language models
+- **Educators**: Teaching AI reasoning concepts with observable examples
+- **Learners**: Understanding how formal reasoning and neural networks can work together
+
+## How to Navigate the Documentation
+
+Start your journey based on your goal:
+
+1. **"I want to try it out"** → [Quick Reference](README.quickref.md) + [Usage Guide](README.usage.md)
+2. **"I want to understand how it works"** → [Architecture](README.architecture.md) + [Core Components](README.core.md)
+3. **"I want to extend or customize it"** → [Configuration](README.config.md) + [Development Guide](README.development.md)
+4. **"I want to understand the vision"** → [Vision & Philosophy](README.vision.md) + [Roadmap](README.roadmap.md)
+
+## Key Terminology
+
+- **NAL (Non-Axiomatic Logic)**: A formal logic system designed for reasoning with insufficient knowledge and resources
+- **Stream Reasoner**: A continuous dataflow architecture that transforms streams of premises into streams of conclusions
+- **Narsese**: The formal language for expressing knowledge in NARS (e.g., `(bird --> animal).`)
+- **Truth Value**: A `{frequency, confidence}` pair representing certainty of beliefs
+- **Task**: A unit of work containing a term, truth value, and processing metadata
+- **Premise**: Input knowledge used for inference
+- **Derivation**: New knowledge inferred from existing premises
+
 ## System Definition
 
 SeNARS is a **Stream Reasoner**: A continuous, stream-based dataflow architecture that transforms streams of premises into streams of conclusions. It utilizes a non-blocking pipeline to handle synchronous NAL logic and asynchronous Language Model calls simultaneously.

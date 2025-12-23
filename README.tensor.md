@@ -70,11 +70,75 @@ const outputTensor = network.forward(inputTensor);
 const outputTruth = outputTensor.toTruth();  // { frequency: 0.75, confidence: 0.85 }
 ```
 
+## When to Use Tensor Logic
+
+Use Tensor Logic when you need:
+
+- **Differentiable Reasoning**: Learning logical rules from data via gradient descent
+- **Hybrid Models**: Combining symbolic logic with neural network capabilities
+- **End-to-End Learning**: Training entire reasoning pipelines with backprop
+- **Neural-Symbolic Integration**: Seamless conversion between symbolic and continuous representations
+
+Use traditional NAL when:
+- Pure symbolic reasoning is sufficient
+- Interpretability is critical
+- Training data is unavailable
+- Fast, deterministic inference is required
+
+## Integration with NAL
+
+Tensor Logic bridges symbolic NAL reasoning with neural learning:
+
+```javascript
+// Convert NAL truth values to tensors for learning
+const belief = { frequency: 0.8, confidence: 0.9 };
+const truthTensor = Tensor.fromTruth(belief);
+
+// Train on reasoning patterns
+const loss = model.forward(truthTensor).mse(targetTensor);
+backward(loss);
+adamStep(model.parameters(), learningRate);
+
+// Convert back to NAL truth values
+const learnedTruth = output.toTruth();
+const updatedBelief = Task.fromTruth(learnedTruth);
+```
+
 ## Implementation Status
 
 ✅ **Complete** (910 lines, 690+ tests passing)
 
+**Available Features:**
+- Full tensor operations (math, activation, reduction, shape)
+- Automatic differentiation (autograd)
+- Optimizers (SGD, Adam, RMSprop)
+- Loss functions (MSE, cross-entropy)
+- Truth-tensor bridge
+
+**Future Enhancements:**
+- GPU acceleration via WebGPU
+- More advanced optimizers (AdamW, Lion)
+- Attention mechanisms
+- Pre-trained embeddings integration
+
 See [`core/src/functor/README.md`](core/src/functor/README.md) for full documentation and examples.
+
+## Troubleshooting
+
+**Gradients not flowing**: Ensure `requiresGrad: true` when creating tensors:
+```javascript
+const w = Tensor.randn([10, 5], { requiresGrad: true });
+```
+
+**Out of memory**: Reduce batch size or model complexity
+
+**Slow training**: Use smaller learning rates or reduce model size
+
+## See Also
+
+- [Core Components](README.core.md) - NAL truth value system
+- [Architecture](README.architecture.md) - Hybrid reasoning patterns
+- [Vision](README.vision.md) - Neural-symbolic AI philosophy
 
 ## References
 
