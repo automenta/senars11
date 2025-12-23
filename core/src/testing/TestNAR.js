@@ -3,11 +3,11 @@
  * @description Simple test framework for NAR functionality
  */
 
-import {TaskMatch} from './TaskMatch.js';
+import { TaskMatch } from './TaskMatch.js';
 
 // Re-export TaskMatch as before to maintain backward compatibility
 //export { SharedTaskMatch as TaskMatch };
-export {TaskMatch as TaskMatch};
+export { TaskMatch as TaskMatch };
 
 /**
  * Simplified test framework for NAR
@@ -31,12 +31,12 @@ export class TestNAR {
     }
 
     input(termStr, freq = 0.9, conf = 0.9) {
-        this.operations.push({type: 'input', termStr, freq, conf});
+        this.operations.push({ type: 'input', termStr, freq, conf });
         return this;
     }
 
     run(cycles = 1) {
-        this.operations.push({type: 'run', cycles});
+        this.operations.push({ type: 'run', cycles });
         return this;
     }
 
@@ -44,7 +44,7 @@ export class TestNAR {
         // If termStr is already a TaskMatch instance, use it directly
         // Otherwise, create a new TaskMatch with the provided term string
         const matcher = termStr instanceof TaskMatch ? termStr : new TaskMatch(termStr);
-        this.operations.push({type: 'expect', matcher, shouldExist: true});
+        this.operations.push({ type: 'expect', matcher, shouldExist: true });
         return this;
     }
 
@@ -52,12 +52,12 @@ export class TestNAR {
         // If termStr is already a TaskMatch instance, use it directly
         // Otherwise, create a new TaskMatch with the provided term string
         const matcher = termStr instanceof TaskMatch ? termStr : new TaskMatch(termStr);
-        this.operations.push({type: 'expect', matcher, shouldExist: false});
+        this.operations.push({ type: 'expect', matcher, shouldExist: false });
         return this;
     }
 
     inspect(callback) {
-        this.operations.push({type: 'inspect', callback});
+        this.operations.push({ type: 'inspect', callback });
         return this;
     }
 
@@ -76,7 +76,7 @@ export class TestNAR {
 
     async execute() {
         // Dynamically import NAR to avoid circular dependencies
-        const {NAR} = await import('../nar/NAR.js');
+        const { NAR } = await import('../nar/NAR.js');
 
         // Use optimized config for tests to improve performance
         const config = {
@@ -89,12 +89,12 @@ export class TestNAR {
                 }
             },
             reasoning: {
-                maxCombinations: 25, // Smaller limit for tests (was 100, now 50)
-                maxRuleApplications: 50, // Smaller limit for tests (was 1000, now 100)
-                maxTasksPerBatch: 5, // Smaller batches for tests (was 50, now 10)
-                useStreamReasoner: true, // Enable stream-based reasoning for tests
-                cpuThrottleInterval: 0, // No CPU throttling in tests to improve performance
-                maxDerivationDepth: 5 // Limit derivation depth for tests
+                maxCombinations: 10, // Minimal for tests - reduced from 25
+                maxRuleApplications: 20, // Minimal for tests - reduced from 50  
+                maxTasksPerBatch: 3, // Smaller batches - reduced from 5
+                useStreamReasoner: true,
+                cpuThrottleInterval: 0,
+                maxDerivationDepth: 3 // Reduced from 5
             },
             cycle: {
                 delay: 1 // Minimum delay to pass validation but still optimized for tests
@@ -212,7 +212,7 @@ export class TestNAR {
 
             // Validate expectations
             for (const exp of expectations) {
-                const {matcher, shouldExist} = exp;
+                const { matcher, shouldExist } = exp;
 
                 let found = false;
                 for (const task of allTasks) {
