@@ -1,12 +1,12 @@
-import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
-import {createTestAgent} from '../../support/factories.js';
-import {assertEventuallyTrue, getTerms, wait} from '../../support/testHelpers.js';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { createTestAgent } from '../../support/factories.js';
+import { assertEventuallyTrue, getTerms, wait } from '../../support/testHelpers.js';
 
 describe('LM Error Handling', () => {
     let app, agent, cleanup;
 
     beforeEach(async () => {
-        ({app, agent, cleanup} = await createTestAgent());
+        ({ app, agent, cleanup } = await createTestAgent());
     });
 
     afterEach(async () => {
@@ -16,37 +16,27 @@ describe('LM Error Handling', () => {
         if (cleanup) await cleanup();
     });
 
-    test('LM timeout → graceful degradation', async () => {
+    describe.each([
+        ['timeout', async () => { await wait(10000); return 'response'; }, 'system continues despite LM timeout', 3000, (agent) => agent.getConcepts().length > 0],
+        ['rejection', async () => { throw new Error('LM service unavailable'); }, 'system processes input despite LM error', 2000, (agent) => getTerms(agent).some(t => t.includes('Test'))],
+        ['empty response', async () => '', 'system handles empty LM response', 1000, (agent) => getTerms(agent).length >= 0],
+        ['malformed output', async (prompt) => prompt.includes('valid') ? '<valid --> term>.' : 'this is not valid Narsese ###', 'system recovers from malformed output', 2000, (agent) => getTerms(agent).some(t => t.includes('valid'))]
+    ])('LM error: %s → graceful handling', (scenario, mockImpl, description, timeout, verifyFn) => {
+        test('should continue operating', async () => {
+            jest.spyOn(agent.lm, 'generateText').mockImplementation(mockImpl);
 
-        jest.spyOn(agent.lm, 'generateText').mockImplementation(async () => {
-            await wait(10000);
-            return 'response';
+            if (scenario === 'malformed output') {
+                await agent.input('"invalid".');
+                await agent.input('"valid".');
+            } else {
+                await agent.input('"Test input".');
+            }
+
+            await assertEventuallyTrue(
+                () => verifyFn(agent),
+                { description, timeout }
+            );
         });
-
-        await agent.input('"Test input".');
-
-        await assertEventuallyTrue(
-            () => {
-                const concepts = agent.getConcepts();
-                return concepts.length > 0;
-            },
-            {description: 'system continues despite LM timeout', timeout: 3000}
-        );
-    });
-
-    test('LM error response → fallback behavior', async () => {
-
-        jest.spyOn(agent.lm, 'generateText').mockRejectedValue(new Error('LM service unavailable'));
-
-        await agent.input('"Test input".');
-
-        await assertEventuallyTrue(
-            () => {
-                const terms = getTerms(agent);
-                return terms.some(t => t.includes('Test'));
-            },
-            {description: 'system processes input despite LM error', timeout: 2000}
-        );
     });
 
     test('Circuit breaker activation → system continues', async () => {
@@ -68,41 +58,7 @@ describe('LM Error Handling', () => {
         expect(callCount).toBeGreaterThan(0);
     });
 
-    test('Malformed LM output → recovery', async () => {
 
-        jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {
-            if (prompt.includes('valid')) return '<valid --> term>.';
-            return 'this is not valid Narsese ###';
-        });
-
-        await agent.input('"invalid".');
-        await agent.input('"valid".');
-
-        await assertEventuallyTrue(
-            () => {
-                const terms = getTerms(agent);
-                return terms.some(t => t.includes('valid'));
-            },
-            {description: 'system recovers from malformed output', timeout: 2000}
-        );
-    });
-
-    test('LM returns empty response → system continues', async () => {
-
-        jest.spyOn(agent.lm, 'generateText').mockResolvedValue('');
-
-        await agent.input('"empty test".');
-
-        await assertEventuallyTrue(
-            () => {
-                const terms = getTerms(agent);
-                return terms.length >= 0;
-            },
-            {description: 'system handles empty LM response', timeout: 1000}
-        );
-
-        expect(agent.getBeliefs().length).toBeGreaterThanOrEqual(0);
-    });
 
     test('Concurrent LM requests → proper handling', async () => {
 

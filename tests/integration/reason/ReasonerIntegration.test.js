@@ -1,96 +1,102 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
 
 const createReasonerConfig = (overrides = {}) => ({
-    reasoning: {useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5},
-    cycle: {delay: 1},
+    reasoning: { useStreamReasoner: true, cpuThrottleInterval: 0, maxDerivationDepth: 5 },
+    cycle: { delay: 1 },
     ...overrides
 });
 
 describe('Reasoner Integration', () => {
-    let nar;
+    describe.each([
+        ['shallow depth', { maxDerivationDepth: 1 }],
+        ['standard depth', { maxDerivationDepth: 5 }],
+        ['deep depth', { maxDerivationDepth: 10 }]
+    ])('Reasoning with %s', (depthName, reasoningConfig) => {
+        let nar;
 
-    beforeEach(async () => {
-        nar = new NAR(createReasonerConfig());
-        await nar.initialize();
-    });
-
-    afterEach(async () => {
-        if (nar) await nar.dispose();
-    });
-
-    test('should process syllogistic reasoning', async () => {
-        await nar.input('(a ==> b). %0.9;0.9%');
-        await nar.input('(b ==> c). %0.8;0.8%');
-
-        for (let i = 0; i < 10; i++) await nar.step();
-
-        const derived = nar._focus.getTasks(30).some(t => {
-            const s = t.term?.toString?.();
-            return s && (s.includes('(==>, a, c)') || s.includes('a ==> c'));
+        beforeEach(async () => {
+            nar = new NAR(createReasonerConfig({ reasoning: { ...createReasonerConfig().reasoning, ...reasoningConfig } }));
+            await nar.initialize();
         });
 
-        expect(derived).toBe(true);
-    });
+        afterEach(async () => {
+            if (nar) await nar.dispose();
+        });
 
-    test('should handle rule registration and execution', async () => {
-        expect(nar.streamReasoner).toBeDefined();
-        expect(nar.streamReasoner.constructor.name).toBe('Reasoner');
-        expect(nar.streamReasoner.ruleProcessor.ruleExecutor.getRuleCount()).toBeGreaterThan(0);
-    });
+        test('should process syllogistic reasoning', async () => {
+            await nar.input('(a ==> b). %0.9;0.9%');
+            await nar.input('(b ==> c). %0.8;0.8%');
 
-    test('should maintain event flow during reasoning', async () => {
-        const events = [];
-        nar.on('reasoning.derivation', (data) => events.push(data));
+            for (let i = 0; i < 10; i++) await nar.step();
 
-        await nar.input('(x --> y). %0.9;0.9%');
-        await nar.input('(y --> z). %0.8;0.8%');
+            const derived = nar._focus.getTasks(30).some(t => {
+                const s = t.term?.toString?.();
+                return s && (s.includes('(==>, a, c)') || s.includes('a ==> c'));
+            });
 
-        for (let i = 0; i < 5; i++) await nar.step();
+            expect(derived).toBe(true);
+        });
 
-        expect(events.length).toBeGreaterThanOrEqual(0);
-    });
+        test('should handle rule registration and execution', async () => {
+            expect(nar.streamReasoner).toBeDefined();
+            expect(nar.streamReasoner.constructor.name).toBe('Reasoner');
+            expect(nar.streamReasoner.ruleProcessor.ruleExecutor.getRuleCount()).toBeGreaterThan(0);
+        });
 
-    test('should respect derivation depth limits', async () => {
-        const narLimited = new NAR(createReasonerConfig({
-            reasoning: {useStreamReasoner: true, maxDerivationDepth: 1}
-        }));
+        test('should maintain event flow during reasoning', async () => {
+            const events = [];
+            nar.on('reasoning.derivation', (data) => events.push(data));
 
-        await narLimited.initialize();
+            await nar.input('(x --> y). %0.9;0.9%');
+            await nar.input('(y --> z). %0.8;0.8%');
 
-        try {
-            await narLimited.input('(m --> n). %0.9;0.9%');
-            await narLimited.input('(n --> o). %0.8;0.8%');
+            for (let i = 0; i < 5; i++) await nar.step();
 
-            for (let i = 0; i < 3; i++) await narLimited.step();
+            expect(events.length).toBeGreaterThanOrEqual(0);
+        });
 
-            expect(narLimited._focus.getTasks(20).length).toBeGreaterThanOrEqual(2);
-        } finally {
-            await narLimited.dispose();
-        }
-    });
+        test('should respect derivation depth limits', async () => {
+            const narLimited = new NAR(createReasonerConfig({
+                reasoning: { useStreamReasoner: true, maxDerivationDepth: 1 }
+            }));
 
-    test('should synchronize memory and focus', async () => {
-        await nar.input('(d --> e). %0.9;0.9%');
-        await nar.input('(e --> f). %0.8;0.8%');
+            await narLimited.initialize();
 
-        const initialFocus = nar._focus.getTasks(10).length;
-        const initialConcepts = nar.memory.getAllConcepts().length;
+            try {
+                await narLimited.input('(m --> n). %0.9;0.9%');
+                await narLimited.input('(n --> o). %0.8;0.8%');
 
-        expect(initialFocus).toBeGreaterThanOrEqual(2);
-        expect(initialConcepts).toBeGreaterThanOrEqual(2);
+                for (let i = 0; i < 3; i++) await narLimited.step();
 
-        for (let i = 0; i < 3; i++) await nar.step();
+                expect(narLimited._focus.getTasks(20).length).toBeGreaterThanOrEqual(2);
+            } finally {
+                await narLimited.dispose();
+            }
+        });
 
-        expect(nar._focus.getTasks(20).length).toBeGreaterThanOrEqual(initialFocus);
-        expect(nar.memory.getAllConcepts().length).toBeGreaterThanOrEqual(initialConcepts);
-    });
+        test('should synchronize memory and focus', async () => {
+            await nar.input('(d --> e). %0.9;0.9%');
+            await nar.input('(e --> f). %0.8;0.8%');
 
-    test('should process tasks through complete pipeline', async () => {
-        await nar.input('<robin --> [flying]>. %0.9;0.9%');
-        await nar.input('<robin --> bird>. %0.8;0.9%');
+            const initialFocus = nar._focus.getTasks(10).length;
+            const initialConcepts = nar.memory.getAllConcepts().length;
 
-        for (let i = 0; i < 10; i++) await nar.step();
+            expect(initialFocus).toBeGreaterThanOrEqual(2);
+            expect(initialConcepts).toBeGreaterThanOrEqual(2);
 
-        expect(nar._focus.getTasks(50).length).toBeGreaterThanOrEqual(2);
+            for (let i = 0; i < 3; i++) await nar.step();
+
+            expect(nar._focus.getTasks(20).length).toBeGreaterThanOrEqual(initialFocus);
+            expect(nar.memory.getAllConcepts().length).toBeGreaterThanOrEqual(initialConcepts);
+        });
+
+        test('should process tasks through complete pipeline', async () => {
+            await nar.input('<robin --> [flying]>. %0.9;0.9%');
+            await nar.input('<robin --> bird>. %0.8;0.9%');
+
+            for (let i = 0; i < 10; i++) await nar.step();
+
+            expect(nar._focus.getTasks(50).length).toBeGreaterThanOrEqual(2);
+        });
     });
 });

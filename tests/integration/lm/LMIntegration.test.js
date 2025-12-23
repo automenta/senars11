@@ -1,8 +1,8 @@
-import {NAR} from '../../../core/src/nar/NAR.js';
-import {DummyProvider} from '../../../core/src/lm/DummyProvider.js';
-import {LangChainProvider} from '../../../core/src/lm/LangChainProvider.js';
-import {HuggingFaceProvider} from '../../../core/src/lm/HuggingFaceProvider.js';
-import {AdvancedNarseseTranslator} from '../../../core/src/lm/AdvancedNarseseTranslator.js';
+import { NAR } from '../../../core/src/nar/NAR.js';
+import { DummyProvider } from '../../../core/src/lm/DummyProvider.js';
+import { LangChainProvider } from '../../../core/src/lm/LangChainProvider.js';
+import { HuggingFaceProvider } from '../../../core/src/lm/HuggingFaceProvider.js';
+import { AdvancedNarseseTranslator } from '../../../core/src/lm/AdvancedNarseseTranslator.js';
 
 describe('LM Integration Tests', () => {
     let nar;
@@ -14,41 +14,35 @@ describe('LM Integration Tests', () => {
         nar = null;
     });
 
-    test('should register and use DummyProvider', () => {
-        nar = new NAR({lm: {enabled: true}});
-        const provider = new DummyProvider({id: 'test-dummy', latency: 0});
+    describe.each([
+        ['DummyProvider', DummyProvider, { id: 'test-dummy', latency: 0 }, 'dummy', null],
+        ['LangChainProvider', LangChainProvider, { provider: 'ollama', modelName: 'llama2', baseURL: 'http://localhost:11434' }, null, { providerType: 'ollama', modelName: 'llama2' }],
+        ['HuggingFaceProvider', HuggingFaceProvider, { modelName: 'sshleifer/distilbart-cnn-12-6', temperature: 0.7, maxTokens: 100 }, null, { modelName: 'sshleifer/distilbart-cnn-12-6', temperature: 0.7 }]
+    ])('%s registration and configuration', (name, ProviderClass, config, registryKey, expectedProps) => {
+        test('should initialize with correct config', () => {
+            const provider = new ProviderClass(config);
 
-        expect(() => {
-            nar.registerLMProvider('dummy', provider);
-        }).not.toThrow();
+            if (expectedProps) {
+                Object.entries(expectedProps).forEach(([key, value]) => {
+                    expect(provider[key]).toBe(value);
+                });
+            }
 
-        expect(nar.lm.providers.get('dummy')).toBeDefined();
-    });
+            expect(provider).toBeDefined();
+        });
 
-    test('should register and use LangChainProvider for Ollama', () => {
-        const config = {
-            provider: 'ollama',
-            modelName: 'llama2',
-            baseURL: 'http://localhost:11434'
-        };
+        if (registryKey) {
+            test('should register with NAR', () => {
+                nar = new NAR({ lm: { enabled: true } });
+                const provider = new ProviderClass(config);
 
-        const provider = new LangChainProvider(config);
+                expect(() => {
+                    nar.registerLMProvider(registryKey, provider);
+                }).not.toThrow();
 
-        expect(provider.providerType).toBe('ollama');
-        expect(provider.modelName).toBe('llama2');
-    });
-
-    test('should register and use HuggingFaceProvider', () => {
-        const config = {
-            modelName: 'sshleifer/distilbart-cnn-12-6',
-            temperature: 0.7,
-            maxTokens: 100
-        };
-
-        const provider = new HuggingFaceProvider(config);
-
-        expect(provider.modelName).toBe('sshleifer/distilbart-cnn-12-6');
-        expect(provider.temperature).toBe(0.7);
+                expect(nar.lm.providers.get(registryKey)).toBeDefined();
+            });
+        }
     });
 
     test('should use AdvancedNarseseTranslator for quality improvements', () => {
@@ -97,7 +91,7 @@ describe('LM Integration Tests', () => {
     });
 
     test('should work with NAR system for symbolic-mode only with DummyLM', () => {
-        nar = new NAR({lm: {enabled: true}});
+        nar = new NAR({ lm: { enabled: true } });
         const dummyProvider = new DummyProvider();
         nar.registerLMProvider('dummy', dummyProvider);
 
