@@ -9,19 +9,7 @@
 
 ### Installation
 
-```bash
-# Clone or navigate to the repository
-cd senars11
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Verify installation
-npm test  # Should show 99.8% pass rate
-```
+Please refer to the [main README](README.md#installation) for installation instructions.
 
 ### Basic Usage
 
@@ -241,8 +229,6 @@ const config = {
     }
 };
 ```
-
-## See Also
 
 - [Quick Reference](README.quickref.md) - Command and pattern reference
 - [Configuration](README.config.md) - Detailed configuration options

@@ -179,8 +179,6 @@ The system provides a fluent API for easy test creation.
 
 
 
-## See Also
-
 - [Architecture](README.architecture.md) - System design and patterns
 - [Core Components](README.core.md) - Deep dive into component implementations
 - [Quick Reference](README.quickref.md) - Common tasks and commands

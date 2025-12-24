@@ -190,8 +190,6 @@ For detailed data structure implementations, see **[README.core.md](README.core.
 - **Component Architecture**: Sophisticated component management with lifecycle control, dependency resolution, and standardized interfaces
 - **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance tracking
 
-## See Also
-
 - [Core Components](README.core.md) - Deep dive into Memory, Focus, Strategie, and Rules
 - [Configuration](README.config.md) - System customization and parameters
 - [Development Guide](README.development.md) - Patterns for extending the system

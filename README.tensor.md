@@ -134,8 +134,6 @@ const w = Tensor.randn([10, 5], { requiresGrad: true });
 
 **Slow training**: Use smaller learning rates or reduce model size
 
-## See Also
-
 - [Core Components](README.core.md) - NAL truth value system
 - [Architecture](README.architecture.md) - Hybrid reasoning patterns
 - [Vision](README.vision.md) - Neural-symbolic AI philosophy

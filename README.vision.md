@@ -156,8 +156,6 @@ Current capabilities and future development are tracked in the roadmap document,
 -   **Future Development**: Planned enhancements and extensions
 -   **Success Metrics**: Measures of system growth and capability
 
-## See Also
-
 -   [Roadmap](README.roadmap.md) - Implementation timeline and features
 -   [Architecture](README.architecture.md) - Current system design
 -   [RLFP](agent/src/rlfp/README.md) - Reinforcement learning implementation
