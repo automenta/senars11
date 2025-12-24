@@ -19,6 +19,7 @@ The Stream Reasoner system exposes several key parameters for fine-tuning system
 - `punctuation`: Focus on Goals (`!`) or Questions (`?`) (default: false)
 - `novelty`: Favor tasks with fewer reasoning steps (lower derivation depth) (default: false)
 - `dynamic`: Enable performance-based strategy adaptation (default: false)
+- `weights`: Object defining relative importance of sampling objectives (e.g., `{ priority: 1.0, recency: 0.5 }`)
 
 ## Configuration and Extensibility
 

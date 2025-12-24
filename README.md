@@ -45,15 +45,16 @@ This README has been decomposed into detailed sections:
 ## Quick Start
 
 ```javascript
-/* Standard stream reasoner construction with explicit components */
-const reasoner = new Reasoner(premiseSource, strategy, ruleProcessor, {
-    cpuThrottleInterval: 1,
-    maxDerivationDepth: 10
-});
-reasoner.start();
+import { NAR } from './core/src/nar/NAR.js';
+
+const nar = new NAR();
+nar.start();
 
 /* Input a belief */
 nar.input("(bird --> animal).");
+
+/* Ask a question */
+nar.input("(bird --> ?what)?");
 ```
 
 See [README.quickref.md](README.quickref.md) for command reference and [README.usage.md](README.usage.md) for more details.

@@ -5,7 +5,7 @@
 | Goal | Command / Location |
 |------|-------------------|
 | Run reasoning | `const nar = new NAR(); nar.input('(a --> b).');` |
-| Start REPL | `node repl/src/Repl.js` |
+| Start REPL | `npm run repl` |
 | Run demos | `node agent/src/demo/demoRunner.js` |
 | Start MCP server | `node agent/src/mcp/start-server.js` |
 | Run all tests | `npm test` |
@@ -24,7 +24,7 @@
 | **Demo System** | `agent/src/demo/` | Remote-controlled demos |
 | **RLFP** | `agent/src/rlfp/` | Learn from preferences |
 | **Knowledge** | `agent/src/know/` | KB connectors, templates |
-| **REPL** | `repl/src/` | Ink-based TUI |
+| **REPL** | `agent/src/bin/cli.js` | Ink-based TUI |
 | **Web UI** | `ui/src/` | React-based interface |
 
 ## Narsese Syntax

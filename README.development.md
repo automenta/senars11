@@ -174,77 +174,36 @@ The system provides a fluent API for easy test creation.
 
 ```
 /
-├── src/
-│   ├── Agent.js                # Agent framework for autonomous operations
-│   ├── Stamp.js                # Evidence tracking for tasks and beliefs
-│   ├── Truth.js                # Truth value representation and operations
-│   ├── config/                 # Configuration management
-│   │   ├── ConfigManager.js    # Centralized configuration management
-│   │   └── ...
-│   ├── demo/                   # Demonstration and example implementations
-│   │   └── ...
-│   ├── integration/            # External system integration components
-│   │   └── KnowledgeBaseConnector.js # Connector for external knowledge bases
-│   ├── io/                     # Input/Output adapters and management
-│   │   └── ...
-│   ├── lm/                     # Language model integration components
-│   │   ├── AdvancedNarseseTranslator.js # Advanced translation between Narsese and natural language
-│   │   ├── DummyProvider.js    # Dummy provider for testing
-│   │   ├── EmbeddingLayer.js   # Vector embeddings for semantic reasoning
-│   │   ├── HuggingFaceProvider.js # Hugging Face provider integration
-│   │   ├── LM.js               # Main language model component
-│   │   ├── LMRuleFactory.js    # Factory for language model rules
-│   │   ├── LangChainProvider.js # LangChain provider integration
-│   │   ├── ModelSelector.js    # Model selection logic
-│   │   ├── NarseseTranslator.js # Basic Narsese translation
-│   │   └── ProviderRegistry.js # Registry for language model providers
-│   ├── memory/                 # Memory management and knowledge representation
-│   │   ├── Bag.js              # Priority-based collection for tasks
-│   │   ├── Concept.js          # Represents a concept in memory
-│   │   ├── Focus.js            # Attention focus management
-│   │   ├── FocusSetSelector.js # Advanced task selection from focus sets
-│   │   ├── ForgettingPolicy.js # Policy for forgetting old concepts
-│   │   ├── Layer.js            # Abstract layer interface for associative links
-│   │   ├── Memory.js           # Central memory component
-│   │   ├── MemoryConsolidation.js # Memory consolidation mechanisms
-│   │   ├── MemoryIndex.js      # Index management for different term types
-│   │   ├── TaskPromotionManager.js # Management of task promotion between memory types
-│   │   ├── TermLayer.js        # Term-specific layer implementation
-│   │   └── ...
-│   ├── module.js               # Module system for dynamic loading
-│   ├── nar/                    # NAR system entry point and control
-│   │   ├── Cycle.js            # Manages the reasoning cycle execution
-│   │   ├── NAR.js              # Main API for system control, input, and output
-│   │   ├── OptimizedCycle.js   # Optimized reasoning cycle implementation
-│   │   └── SystemConfig.js     # Configuration for NAR instance
-│   ├── parser/                 # Narsese parsing and generation
-│   │   └── ...
-│   ├── reasoning/              # Rule application and inference
-│   │   └── ...
-│   ├── server/                 # Server-side components
-│   │   └── WebSocketMonitor.js # WebSocket-based monitoring and visualization
-│   ├── task/                   # Task representation and management
-│   │   └── ...
-│   ├── term/                   # Robust Term handling
-│   │   └── ...
-│   ├── testing/                # Testing utilities and frameworks
-│   │   └── ...
-│   ├── tools/                  # Development and utility tools
-│   │   └── ...
-│   ├── tui/                    # Text-based user interface
-│   │   └── TUIRepl.js          # Main blessed TUI interface REPL
-│   └── util/                   # Utility functions and helper classes
-│       ├── BaseComponent.js    # Base class for all system components
-│       └── ...
-├── tests/                      # Unit, integration, and property-based tests
-│   ├── ...
-├── examples/                   # Demonstrations of system usage
-│   └── ...
-├── ui/                         # Web UI built with React and Vite
-├── scripts/                    # Organized scripts for operations
-├── benchmarks/                 # Performance benchmarking tools
-├── demo-results/               # Results from demonstrations
+├── agent/                      # Agent framework and specialized modules
+│   ├── src/
+│   │   ├── demo/               # Demonstration and example implementations
+│   │   ├── know/               # Knowledge connectors and templates
+│   │   ├── mcp/                # Model Context Protocol server
+│   │   ├── rlfp/               # Reinforcement Learning from Preferences
+│   │   └── server/             # WebSocket monitor server
+│   └── README.md
+├── core/                       # Core reasoning engine and data structures
+│   ├── src/
+│   │   ├── config/             # Configuration management
+│   │   ├── functor/            # Tensor Logic and neural integration
+│   │   ├── io/                 # Input/Output adapters
+│   │   ├── lm/                 # Language Model integration
+│   │   ├── memory/             # Memory, Concept, Task, Term structures
+│   │   ├── nar/                # NAR system entry point
+│   │   ├── parser/             # Narsese parser
+│   │   ├── reason/             # Rule engine and strategies
+│   │   │   ├── rules/          # NAL and LM rules
+│   │   │   └── strategy/       # Sampling strategies
+│   │   └── util/               # Utilities (BaseComponent, etc.)
+│   └── README.md
 ├── docs/                       # Documentation files
+├── examples/                   # Usage examples
+├── exp/                        # Experiments
+├── repl/                       # Interactive REPL
+│   └── src/                    # REPL source
+├── scripts/                    # Build and utility scripts
+├── tests/                      # Unit and integration tests
+├── ui/                         # Web UI (React/Vite)
 ├── package.json
 └── README.md
 ```

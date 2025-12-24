@@ -26,7 +26,7 @@ npm test  # Should show 99.8% pass rate
 ### Basic Usage
 
 ```javascript
-import { Reasoner, TaskBagPremiseSource, BagStrategy, RuleExecutor, RuleProcessor, Memory } from './core/src';
+import { Reasoner, TaskBagPremiseSource, BagStrategy, RuleExecutor, RuleProcessor, Memory } from './core/src/index.js';
 
 // Initialize components
 const memory = new Memory();
@@ -63,7 +63,7 @@ For detailed configuration options, see [README.config.md](README.config.md).
 Interactive command-line interface for direct system interaction:
 
 ```bash
-node repl/src/Repl.js
+npm run repl
 ```
 
 Once in the REPL, you can:
@@ -138,6 +138,8 @@ The REPL provides an interactive command-line interface built with Ink (React fo
 | `concepts()` | Show all concepts |
 | `help()` | Show help |
 | `exit()` | Exit REPL |
+`
+Note: The REPL provides tab completion for commmands and history navigation with arrow keys.
 
 ### Example REPL Session
 

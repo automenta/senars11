@@ -1,10 +1,17 @@
 # SeNARS API Documentation
 
-## `NAR` (NARS Reasoner Engine)
+**Overview:**
+
+SeNARS provides two levels of API interaction:
+
+1.  **High-Level API (`NAR`)**: A unified facade for standard usage, abstracting away component orchestration. Recommended for most applications.
+2.  **Low-Level API (`Stream Reasoner`)**: Direct access to individual components (`Reasoner`, `Memory`, `Strategies`) for advanced customization and research.
+
+## `NAR` (High-Level API)
 
 The `NAR` class serves as the central orchestrator and public API for the entire reasoning system.
 
-**API:**
+**API Methods:**
 
 - `constructor(config: SystemConfig)`:
     - Initializes the `Memory`, `Focus`, `RuleEngine`, `TaskManager`, and `Cycle` with the provided configuration.
@@ -53,7 +60,7 @@ reasoner.on('answer', (question, answer) => {
     console.log(`A: ${answer.toString()}`);
 });
 
-// Listen for system metrics
+// Listen for metrics
 reasoner.on('metrics', ({ derivationsPerSecond, memoryUsage }) => {
     console.log(`Rate: ${derivationsPerSecond}/s, Memory: ${memoryUsage}MB`);
 });
@@ -63,7 +70,14 @@ reasoner.on('metrics', ({ derivationsPerSecond, memoryUsage }) => {
 
 ```javascript
 // For debugging and controlled execution
-reasoner.stop();
+const nar = new NAR({ 
+    cycle: { cpuThrottleInterval: 0 } // Disable auto-running if needed
+});
 
-// Execute single reasoning steps
+nar.input('(a --> b).');
+
+// Execute single reasoning steps manually
+nar.step(); 
+nar.step(5); // Execute 5 steps
+```
 See [README.usage.md](README.usage.md) for complete usage examples and [README.core.md](README.core.md) for detailed component documentation.

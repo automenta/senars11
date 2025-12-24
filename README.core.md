@@ -29,7 +29,6 @@ The system consists of several interconnected components:
 - **Focus Manager**: Handles attention focus sets (short-term memory) that prioritize tasks for immediate processing based on attention mechanisms
 - **Term**: Core immutable data structure for representing knowledge elements with structural properties that support reasoning
 - **Task**: Represents units of work or information processed by the system; encapsulates a Term with associated truth values, stamps, and processing priorities
-- **Reasoning Engine**: Applies NAL and LM rules to generate inferences, conclusions, and new knowledge from existing information
 - **Parser**: Handles Narsese syntax parsing and generation; converts between human-readable Narsese notation and internal Term representations
 - **LM (Language Model Integration)**: Provides language model capabilities that complement formal symbolic reasoning with neural pattern recognition
 

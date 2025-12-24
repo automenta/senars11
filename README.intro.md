@@ -30,7 +30,7 @@ Start your journey based on your goal:
 
 ## System Definition
 
-SeNARS is a **Stream Reasoner**: A continuous, stream-based dataflow architecture that transforms streams of premises into streams of conclusions. It utilizes a non-blocking pipeline to handle synchronous NAL logic and asynchronous Language Model calls simultaneously.
+SeNARS operates as a **Stream Reasoner**, utilizing a non-blocking pipeline to handle synchronous NAL logic and asynchronous Language Model calls simultaneously. This architecture ensures responsiveness and scalability even when processing complex reasoning chains or integrating with external AI services.
 
 For detailed architecture, see [README.architecture.md](README.architecture.md).
 
