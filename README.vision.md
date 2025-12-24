@@ -1,18 +1,18 @@
 # SeNARS Vision and Philosophy
 
-## About
+## Manifesto: The Kernel of Cognition
 
-This is not being built to be a finished application.
+**SeNARS is a substrate, not a product.**
 
-It is being built to be substrate — the common seed for a future industrial ecosystem of cognitive architectures.
+It is built to be the common seed for a future industrial ecosystem of cognitive architectures. We are not building a chatbot; we are building a **mind**.
 
-The less complete it is right now, the more possibilities it can grow into.
+The core reasoning stream, the observation contract, and the hybrid NAL–LM integration are the "kernel space". Everything else is user space—deliberately left flexible so you can fork it into:
+*   **Minimal Edge Reasoners** for IoT
+*   **High-Agency Planners** for robotics
+*   **Lifelong Personal Memories** for assistants
+*   **Distributed Multi-Agent Societies** for simulations
 
-What matters is that the core reasoning stream, the observation contract, and the hybrid NAL–LM integration remain stable and extensible. Everything else is deliberately left rough, partial, or missing so that different groups can fork and mutate it toward radically different goals: minimal edge reasoners, high-agency planners, educational sandboxes, lifelong personal memory layers, distributed multi-agent societies, or entirely new logics.
-
-If something you need is not here yet, that is by design.
-
-Fork it, strip it, break it, and grow it into the species you need.
+If something you need is not here yet, that is by design. **Fork it, strip it, break it, and grow it into the species you need.**
 
 ## Practical Use Cases
 
@@ -99,11 +99,18 @@ The long-term vision for SeNARS is a self-evolving intelligence ecosystem that a
 
 ### Visualization and Analysis
 
--   **Reasoning Traces**: Step-by-step visualization with annotation capabilities
--   **Task Flow Diagrams**: Interactive exploration of task processing and dependencies
--   **Concept Evolution**: Real-time monitoring of knowledge organization improvements
--   **Intelligence Metrics**: Dashboards showing system growth and performance
--   **Pattern Discovery**: Automated identification of optimization opportunities
+SeNARS provides a self-improving visualization interface with specific panels for analysis:
+
+-   **Reasoning Trace Panel**: Detailed visualization of reasoning steps with comprehensive logging and annotation tools
+-   **Task Flow Diagram**: Visual representation of task processing chains and dependencies with interactive exploration
+-   **Concept Panel**: Real-time monitoring of concept activation and priority changes with detailed metrics
+-   **Priority Histogram**: Distribution visualization of task and concept priorities with dynamic updates
+-   **System Status Panel**: Real-time metrics for reasoning performance and system health with resource utilization
+-   **Meta-Cognition Panel**: Visualization of self-analysis and optimization processes with automated insight generation
+-   **Time Series Panel**: Temporal analysis of reasoning activities and performance metrics with trend analysis
+-   **Interactive Exploration Mode**: Allowing users to understand compound improvement processes with detailed drill-down capabilities
+-   **Pattern Analysis Tools**: For discovering compound intelligence patterns and optimization opportunities with visual insights
+-   **Compound Insight Generation**: With automatic discovery and visualization of improvements and system behaviors
 
 ### User Experience Goals
 

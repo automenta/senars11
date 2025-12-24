@@ -139,6 +139,7 @@ const w = Tensor.randn([10, 5], { requiresGrad: true });
 - [Core Components](README.core.md) - NAL truth value system
 - [Architecture](README.architecture.md) - Hybrid reasoning patterns
 - [Vision](README.vision.md) - Neural-symbolic AI philosophy
+- [Resources](README.resources.md) - Resource management in reasoning
 
 ## References
 

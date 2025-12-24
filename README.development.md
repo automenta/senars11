@@ -157,6 +157,13 @@ Helper functions for common operations:
 - **System Invariants:** Verify that core properties remain consistent across transformations
 - **Term Properties:** Test immutability and equality invariants
 - **Truth Calculations:** Verify truth value operations
+- **Command:** `npm run test:property`
+
+### End-to-End (E2E) Tests
+
+- **UI Testing:** Validates the Web UI using Playwright
+- **Screenshots:** Automated visual regression testing
+- **Command:** `npm run test:e2e`
 
 ### Testing API
 
@@ -170,40 +177,10 @@ The system provides a fluent API for easy test creation.
 - **Scalable**: Can distribute across multiple nodes
 - **Resource Management**: Configurable limits prevent resource exhaustion (default: 512MB memory, 100ms per cycle)
 
-## Directory Structure
 
-```
-/
-├── agent/                      # Agent framework and specialized modules
-│   ├── src/
-│   │   ├── demo/               # Demonstration and example implementations
-│   │   ├── know/               # Knowledge connectors and templates
-│   │   ├── mcp/                # Model Context Protocol server
-│   │   ├── rlfp/               # Reinforcement Learning from Preferences
-│   │   └── server/             # WebSocket monitor server
-│   └── README.md
-├── core/                       # Core reasoning engine and data structures
-│   ├── src/
-│   │   ├── config/             # Configuration management
-│   │   ├── functor/            # Tensor Logic and neural integration
-│   │   ├── io/                 # Input/Output adapters
-│   │   ├── lm/                 # Language Model integration
-│   │   ├── memory/             # Memory, Concept, Task, Term structures
-│   │   ├── nar/                # NAR system entry point
-│   │   ├── parser/             # Narsese parser
-│   │   ├── reason/             # Rule engine and strategies
-│   │   │   ├── rules/          # NAL and LM rules
-│   │   │   └── strategy/       # Sampling strategies
-│   │   └── util/               # Utilities (BaseComponent, etc.)
-│   └── README.md
-├── docs/                       # Documentation files
-├── examples/                   # Usage examples
-├── exp/                        # Experiments
-├── repl/                       # Interactive REPL
-│   └── src/                    # REPL source
-├── scripts/                    # Build and utility scripts
-├── tests/                      # Unit and integration tests
-├── ui/                         # Web UI (React/Vite)
-├── package.json
-└── README.md
-```
+
+## See Also
+
+- [Architecture](README.architecture.md) - System design and patterns
+- [Core Components](README.core.md) - Deep dive into component implementations
+- [Quick Reference](README.quickref.md) - Common tasks and commands

@@ -1,6 +1,10 @@
 # SeNARS (Semantic Non-axiomatic Reasoning System)
 
-A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL) with Language Models (LM) to create an observable platform for exploring advanced AI concepts. The system implements a continuous, stream-based dataflow architecture for processing streams of premises into conclusions.
+**SeNARS** is the kernel for a new generation of cognitive architectures. It fuses the **fluid creativity** of Large Language Models (LLMs) with the **rigorous logic** of Non-Axiomatic Reasoning Systems (NARS).
+
+It turns the "black box" of AI into an **observable, trustworthy, and self-improving stream of thought**.
+
+The system implements a continuous, stream-based dataflow architecture that processes streams of *premises* into streams of *conclusions*, bridging the gap between neural pattern matching and symbolic reasoning.
 
 ## Who Should Read This
 
@@ -8,6 +12,18 @@ A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL)
 - **Developers**: Building AI systems that combine logic and language models
 - **Educators**: Teaching AI reasoning concepts with observable examples
 - **Learners**: Understanding how formal reasoning and neural networks can work together
+- **Visionaries**: Looking for the next step beyond "Chatbots"
+
+## The Problem: Why Hybrid?
+
+We are currently facing a dichotomy in AI:
+
+1.  **Large Language Models (LLMs)** are creative, fluent, and vast, but they are prone to **hallucination**, lack **epistemic state**, and struggle with **long-term consistency**. They are "Dreamers".
+2.  **Symbolic Logic (GOFAI)** is rigorous, explainable, and trustworthy, but it is often **brittle**, can't handle **ambiguity**, and lacks **common sense**. It is a "Calculator".
+
+**SeNARS is the Bridge.**
+
+It uses the LLM as a "subconscious" substrate for pattern matching and text generation, while the NARS architecture provides the "conscious" executive function—maintaining beliefs, pursuing goals, and enforcing logical consistency.
 
 ## How to Navigate the Documentation
 

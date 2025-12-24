@@ -124,5 +124,9 @@ The `SystemConfig` exposes parameters for fine-tuning system behavior:
 | **Cycles** | Timing, processing limits, batch sizes |
 | **Activation** | Propagation parameters, decay rates |
 
-See [README.resources.md](README.resources.md) for resource management configuration.
+## See Also
+
+- [Usage Guide](README.usage.md) - How to use the configured system
+- [Resources](README.resources.md) - Resource management configuration
+- [Development Guide](README.development.md) - Extending configuration options
 

@@ -80,4 +80,10 @@ nar.input('(a --> b).');
 nar.step(); 
 nar.step(5); // Execute 5 steps
 ```
-See [README.usage.md](README.usage.md) for complete usage examples and [README.core.md](README.core.md) for detailed component documentation.
+
+## See Also
+
+- [Usage Guide](README.usage.md) - Complete usage examples
+- [Core Components](README.core.md) - Detailed component documentation
+- [Configuration](README.config.md) - System customization options
+

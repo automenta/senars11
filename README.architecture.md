@@ -148,7 +148,7 @@ The SeNARS Stream Reasoner is a continuous, stream-based dataflow architecture t
 
 ### Core Components
 
-The Stream Reasoner is composed of specialized components that form a processing pipeline.
+The Stream Reasoner is composed of specialized components that form a processing pipeline. It separates the **Premise Source** (where tasks come from) from the **Strategy** (how they are paired) and **Rule Processing** (how they are reasoned upon), allowing for a highly modular and extensible system.
 
 For detailed API definitions and internal implementations of these components (`PremiseSource`, `Strategy`, `RuleProcessor`), see **[README.core.md](README.core.md)**.
 
@@ -180,9 +180,19 @@ SeNARS builds intelligence on immutable data structures with powerful properties
 
 For detailed data structure implementations, see **[README.core.md](README.core.md)**.
 
+## Technical Implementation Details
+
+- **Self-monitoring** of reasoning performance and compound intelligence growth
+- **Pattern recognition** identifying improvement opportunities and optimization paths
+- **Automatic optimization** based on performance data and outcome feedback
+- **Reasoning State Analysis**: Comprehensive analysis of system reasoning state with insights generation
+- **Performance Metrics**: Detailed metrics collection across all system components
+- **Component Architecture**: Sophisticated component management with lifecycle control, dependency resolution, and standardized interfaces
+- **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance tracking
+
 ## See Also
 
-- [Core Components](README.core.md) - Detailed component implementations
-- [Configuration](README.config.md) - System configuration options
-- [Development Guide](README.development.md) - Component lifecycle and patterns
-- [Resources](README.resources.md) - Resource management and AIKR principle
+- [Core Components](README.core.md) - Deep dive into Memory, Focus, Strategie, and Rules
+- [Configuration](README.config.md) - System customization and parameters
+- [Development Guide](README.development.md) - Patterns for extending the system
+- [Resources](README.resources.md) - AIKR principle and resource management implementation
