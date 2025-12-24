@@ -1,6 +1,6 @@
 # SeNARS (Semantic Non-axiomatic Reasoning System)
 
-A hybrid neuro-symbolic reasoning system that combines Non-Axiomatic Logic (NAL) with Language Models (LM).
+**SeNARS** is the kernel for a new generation of cognitive architectures. It fuses the **fluid creativity** of Large Language Models (LLMs) with the **rigorous logic** of Non-Axiomatic Reasoning Systems (NARS).
 
 ## How to Use This Documentation
 

@@ -62,6 +62,12 @@ SeNARS is a sophisticated hybrid neuro-symbolic reasoning system that combines t
 
 The system's architecture enables compound intelligence where each addition enhances overall capabilities, making it suitable for research, education, and production applications requiring transparent and adaptable AI reasoning.
 
+## Where to Go Next
+
+- **Ready to run it?** Jump to the **[Quick Reference](README.quickref.md)**.
+- **Want to understand the "Why"?** Read the **[Vision & Philosophy](README.vision.md)**.
+- **Want to understand the "How"?** Explore the **[Architecture](README.architecture.md)**.
+
 ## References
 
 - Wang, P. (2013). _Non-Axiomatic Logic: A Model of Intelligent Reasoning_. World Scientific.
