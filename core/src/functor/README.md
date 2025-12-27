@@ -1,6 +1,6 @@
 # Tensor Logic Module
 
-A complete implementation of **Tensor Logic** (Domingos, 2024) - a unified framework for neuro-symbolic AI that treats
+A complete implementation of **Tensor Logic** (Domingos, 2025) - a unified framework for neuro-symbolic AI that treats
 logical reasoning and neural operations as fundamentally the same using tensor mathematics.
 
 ## Overview
@@ -236,6 +236,6 @@ npm test -- tests/unit/functor/
 
 ## References
 
-- [Tensor Logic: The Language of AI](https://arxiv.org/abs/2510.12269) (Domingos, 2024)
+- [Tensor Logic: The Language of AI](https://arxiv.org/abs/2510.12269) (Domingos, 2025)
 - [TODO.md Phase 6 & 6.5](../../TODO.md) - Full specification
 

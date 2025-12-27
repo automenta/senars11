@@ -1,6 +1,6 @@
 # SeNARS Tensor Logic: Neural-Symbolic AI Foundation
 
-SeNARS integrates **Tensor Logic** (Domingos, 2024) - a unified mathematical framework that treats neural operations and logical reasoning as the same fundamental process using tensor mathematics. This enables true neural-symbolic integration with differentiable reasoning.
+SeNARS integrates **Tensor Logic** (Domingos, 2025) - a unified mathematical framework that treats neural operations and logical reasoning as the same fundamental process using tensor mathematics. This enables true neural-symbolic integration with differentiable reasoning.
 
 ## Core Capabilities
 
@@ -141,4 +141,4 @@ const w = Tensor.randn([10, 5], { requiresGrad: true });
 
 ## References
 
-- Domingos, P. (2024). "Tensor Logic: A Unified Framework for Neural-Symbolic AI."
+- Domingos, P. (2025). "Tensor Logic: A Unified Framework for Neural-Symbolic AI."

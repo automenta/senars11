@@ -99,7 +99,7 @@ brain.input('(penguin --> bird).');          // Known fact
 
 **Research Question**: When does differentiable reasoning outperform symbolic NAL?
 
-SeNARS implements Tensor Logic (Domingos, 2024) enabling gradient-based learning of logical rules.
+SeNARS implements Tensor Logic (Domingos, 2025) enabling gradient-based learning of logical rules.
 
 **Methodology**:
 1. Create benchmark suite of reasoning tasks

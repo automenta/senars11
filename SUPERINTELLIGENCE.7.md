@@ -443,5 +443,5 @@ The Stream Reasoner provides the structure. The Tensor Logic provides the gradie
 ## References
 
 - Wang, P. (2013). _Non-Axiomatic Logic: A Model of Intelligent Reasoning_. World Scientific.
-- Domingos, P. (2024). "Tensor Logic: A Unified Framework for Neural-Symbolic AI."
+- Domingos, P. (2025). "Tensor Logic: A Unified Framework for Neural-Symbolic AI."
 - SeNARS Documentation: README.*.md (December 2024)
