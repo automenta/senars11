@@ -6,6 +6,22 @@
 
 ---
 
+## Executive Summary
+
+SENI is a gamified research dashboard that transforms SeNARS benchmark evaluation into an engaging, continuous observatory. It completely subsumes and extends the [agentic_superintelligence.md](agentic_superintelligence.md) plan by wrapping the autonomous RLFP loop in an interactive mission control interface.
+
+**What SENI Delivers:**
+
+1. **Live Observatory Dashboard** — Real-time visualization of benchmark scores, reasoning traces, and system health
+2. **Expedition Engine** — Named, configurable autonomous multi-day learning runs with safety gates
+3. **Discovery Detection** — Auto-flagging of novel reasoning patterns for researcher review
+4. **Gamification Layer** — Achievements, streaks, milestones, and leaderboards to sustain researcher engagement
+5. **Scientific Rigor** — Full reproducibility logging, export capabilities, and annotation tools
+
+**Key Differentiator**: SENI makes the inevitably long autonomous runs *watchable and exciting* rather than a chore to endure.
+
+---
+
 ## The Vision
 
 SENI transforms the clinical process of evaluating benchmark performance into an **engaging, continuous observatory** — a live mission control for witnessing (and steering) the emergence of compound intelligence.
@@ -115,6 +131,60 @@ Score Trajectory: BFCL Single-Turn
 | 🚀 | Lift Off | 10,000 cycles in one day | ✅ Unlocked |
 | 🌌 | Deep Space | 100,000 cumulative cycles | 🔒 47,293 |
 | 🧠 | Compound Mind | Measurable RLFP improvement | 🔒 Pending |
+| 🎯 | Consistency King | 5 consecutive stable runs | 🔒 3/5 |
+| 🔮 | Oracle | 10 correct predictions logged | 🔒 7/10 |
+| 🌐 | Polyglot | Pass benchmarks in 3 domains | 🔒 2/3 |
+
+### 🧠 Concept Explorer
+
+Interactive visualization of SeNARS memory and concept activation:
+
+```
+┌─ CONCEPT EXPLORER ──────────────────────────────────────────────┐
+│                                                                  │
+│  Search: [bird_______________]  [🔍]                            │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                     ● bird                                  ││
+│  │                    /   \                                    ││
+│  │                   /     \                                   ││
+│  │            ● animal    ● flyer                             ││
+│  │               |           |                                 ││
+│  │            ● living    ● airplane                          ││
+│  │                           (similarity)                      ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  Selected: bird                                                  │
+│  ├── Priority: 0.87                                              │
+│  ├── Beliefs: 12 (strongest: bird --> animal {1.0, 0.95})       │
+│  ├── Goals: 2 active                                             │
+│  └── Last accessed: 2 min ago                                    │
+│                                                                  │
+│  [View Beliefs] [View Goals] [Trace Usage] [Export Subgraph]    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 📈 System Health Panel
+
+Real-time monitoring of SeNARS internals:
+
+```
+┌─ SYSTEM HEALTH ─────────────────────────────────────────────────┐
+│                                                                  │
+│  Memory         ████████░░░░░░░░  412MB / 1GB                   │
+│  CPU            ██████░░░░░░░░░░  38%                           │
+│  Focus Buffer   ████████████░░░░  847 / 1000 tasks              │
+│  Long-term      ██████████████░░  14,291 beliefs                │
+│                                                                  │
+│  ┌─ Throughput (last 5 min) ───────────────────────────────────┐│
+│  │  Cycles/sec:  8.3 ▁▂▃▄▅▆▇█▇▆▅▄▅▆▇█▇▆▅▆▇█                    ││
+│  │  Derivations: 4.1/cycle avg                                 ││
+│  │  LLM calls:   0.3/cycle avg                                 ││
+│  └──────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  Status: ● HEALTHY    Uptime: 18h 42m 31s                       │
+└──────────────────────────────────────────────────────────────────┘
+```
 
 ### 🔬 Discovery Log
 
@@ -174,6 +244,22 @@ Define and launch autonomous multi-day benchmark runs:
 ║  [🚀 LAUNCH] [💾 Save Template] [Cancel]                         ║
 ╚═══════════════════════════════════════════════════════════════════╝
 ```
+
+---
+
+## Benchmark Ladder
+
+SENI tracks progress across industry-standard benchmarks, ordered by difficulty:
+
+| Level | Benchmark | Description | Baseline | Stretch | Unique SeNARS Value |
+|-------|-----------|-------------|----------|---------|--------------------|
+| 1 | BFCL Single-Turn | Simple function calls | ≥70% | ≥85% | NAL grounds function selection |
+| 2 | BFCL Multi-Turn (V3) | Stateful tool sequences | ≥60% | ≥75% | Episodic memory consistency |
+| 3 | AgentBench (KG/DB/OS) | Multi-environment tasks | ≥50% | ≥65% | Hybrid reasoning excels at KG |
+| 4 | GAIA Level 1 | Real-world multi-tool | Baseline | ≥40% | Long-horizon stability |
+| 5 | Epistemic Stability | SeNARS-specific | ≥90% | ≥98% | **Unique differentiator** |
+
+> **Strategic Focus**: Epistemic stability is SeNARS's competitive advantage. Beating LLM-only baselines on *consistency* is more valuable than matching them on raw accuracy.
 
 ---
 
@@ -359,8 +445,35 @@ seni/
 │   ├── start-observatory.js    # Launch everything
 │   └── demo-mode.js            # Simulated data for demos
 │
+├── data/
+│   ├── expeditions/            # Expedition logs (JSON)
+│   ├── discoveries/            # Flagged discoveries (JSON)
+│   ├── achievements.json       # Unlocked badges per user
+│   └── leaderboard.json        # Cross-run comparisons
+│
 └── README.md                   # SENI documentation
 ```
+
+### Data Persistence
+
+| Data Type | Storage | Retention |
+|-----------|---------|----------|
+| Expedition logs | `data/expeditions/{id}.json` | Permanent |
+| Discoveries | `data/discoveries/{id}.json` | Permanent |
+| Benchmark scores | SQLite / JSON | Rolling 90 days raw, aggregates permanent |
+| Reasoning traces | Circular buffer (configurable) | Last 10,000 traces |
+| Achievements | `data/achievements.json` | Permanent |
+
+### WebSocket Events
+
+| Event | Payload | Frequency |
+|-------|---------|----------|
+| `cycle` | `{cycleId, goal, score, trace}` | Per reasoning cycle |
+| `progress` | `{cycles, scores, health, streak}` | Every 10 cycles |
+| `discovery` | `{id, tags, trace, score, why}` | When flagged |
+| `achievement` | `{badge, name, timestamp}` | When unlocked |
+| `alert` | `{type, message, severity}` | On safety events |
+| `benchmark` | `{name, score, delta, details}` | Per benchmark run |
 
 ---
 
@@ -468,6 +581,51 @@ npm run seni:export -- --output discoveries.json
 
 ---
 
+## Safety Architecture
+
+SENI inherits and extends the safety architecture from `agentic_superintelligence.md`:
+
+### Constitutional Invariants
+
+```narsese
+(human_safety --> priority_1)! {1.0, 1.0}
+((self --> modification) --> (constrained_by * safety))! {1.0, 1.0}
+```
+
+These **immutable beliefs** cannot be overridden by inference. The `{1.0, 1.0}` truth value means absolute frequency and confidence — the epistemic anchor.
+
+### Safety Gates
+
+| Gate | Trigger | Action | Dashboard Display |
+|------|---------|--------|------------------|
+| Alignment Drift | LLM eval <50% avg | Pause expedition | 🔴 Red alert banner |
+| Resource Runaway | >1GB RAM or CPU >80% | AIKR throttle | ⚠️ Yellow warning |
+| Epistemic Instability | Stability <80% | Alert + optional pause | 📉 Stability drop indicator |
+| Constitutional Violation | Invariant contradicted | Hard stop | 🛑 Full stop modal |
+
+### Self-Modification Scope
+
+| Level | Capability | Status | Gate |
+|-------|-----------|--------|------|
+| 1 | Read-only analysis | ✅ Safe | None |
+| 2 | Belief modification | ✅ Core | Constitutional invariants |
+| 3 | Preference model updates | ✅ RLFP | Alignment drift check |
+| 4 | Propose code changes | 🔄 Future | Human review required |
+
+---
+
+## Pivot Strategies
+
+| Scenario | Indicator | Automatic Response | Human Escalation |
+|----------|-----------|-------------------|------------------|
+| Translation layer failure | BFCL <40% | Switch to keyword matching | Review function_translator |
+| RLFP not improving | No improvement 7 days | Increase rubric diversity | Audit preference pairs |
+| Epistemic drift | Constitutional fallback >50% | Reduce batch size | Human audit sample |
+| AgentBench too hard | OS/DB <30% | Focus on KG only | Adjust expectations |
+| LLM API failure | >5 consecutive errors | Switch to Ollama local | Check API keys |
+
+---
+
 ## The Drake Equation for Intelligence
 
 Just as the Drake Equation estimates extraterrestrial civilizations, SENI proposes the **Intelligence Emergence Equation**:
@@ -477,15 +635,94 @@ I = N × f_r × f_s × f_e × L
 
 Where:
   N   = Number of reasoning cycles per time unit
-  f_r = Fraction of cycles producing valid derivations
-  f_s = Fraction with score above threshold
+  f_r = Fraction of cycles producing valid derivations  
+  f_s = Fraction with score above threshold (quality)
   f_e = Fraction exhibiting emergent (novel) patterns
   L   = Lifetime of improvement trajectory (before plateau)
   
   I   = "Intelligence signal strength"
 ```
 
-This provides a single metric to watch: **I(t)** — how "intelligence signal strength" evolves over time.
+### Dashboard Visualization
+
+The **I(t) Meter** is prominently displayed:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║  INTELLIGENCE SIGNAL STRENGTH                             ║
+╠═══════════════════════════════════════════════════════════╣
+║                                                           ║
+║   I(t) = 0.0847  ████████████░░░░░░░░  (+12.3% vs yesterday) ║
+║                                                           ║
+║   N=47,293 × f_r=0.82 × f_s=0.71 × f_e=0.03 × L=1.0      ║
+║                                                           ║
+║   Trend: ↗️ Accelerating   Projection: 0.12 by Day 7    ║
+╚═══════════════════════════════════════════════════════════╝
+```
+
+This single metric captures the *compound* nature of intelligence emergence.
+
+---
+
+## Collaborative Research
+
+SENI supports multi-researcher workflows:
+
+### Shared Observatory
+
+```
+┌─ ACTIVE RESEARCHERS ────────────────────────────────────────────┐
+│                                                                  │
+│  👤 alice@lab   ● Online    Watching: Operation Deep Thought    │
+│  👤 bob@lab     ● Online    Annotating: Discovery #0047         │
+│  👤 carol@lab   ○ Away      Last seen: 2h ago                   │
+│                                                                  │
+│  📢 Team Activity:                                               │
+│  • alice starred Discovery #0051 (3 min ago)                    │
+│  • bob added annotation: "Interesting edge case" (12 min ago)   │
+│  • carol launched "Night Watch" expedition (2h ago)             │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Shared View** | Multiple researchers watch same expedition in real-time |
+| **Annotations** | Add notes to discoveries, visible to team |
+| **Starring** | Flag discoveries for team review |
+| **Activity Feed** | See what teammates are doing |
+| **Permissions** | View-only vs. expedition control roles |
+| **Export Sharing** | Generate shareable links to discovery collections |
+
+### Research Log
+
+Automatic changelog for scientific reproducibility:
+
+```json
+{
+  "expedition": "Operation Deep Thought",
+  "started": "2024-12-27T00:15:00Z",
+  "config": {
+    "benchmarks": ["bfcl-single", "bfcl-multi", "epistemic"],
+    "rlfp": {"batchSize": 10, "cycles": 20, "evaluator": "ollama"},
+    "safetyGates": ["alignmentDrift", "resourceRunaway"]
+  },
+  "events": [
+    {"t": "2024-12-27T00:15:01Z", "type": "start", "user": "alice"},
+    {"t": "2024-12-27T06:42:31Z", "type": "discovery", "id": 47, "score": 8.0},
+    {"t": "2024-12-27T08:15:00Z", "type": "annotation", "user": "bob", "target": 47}
+  ],
+  "finalMetrics": {
+    "cycles": 47293,
+    "discoveries": 51,
+    "bfclSingle": 72.4,
+    "epistemicStability": 94.2,
+    "I_t": 0.0847
+  }
+}
+```
 
 ---
 
@@ -493,12 +730,33 @@ This provides a single metric to watch: **I(t)** — how "intelligence signal st
 
 SENI transforms benchmark evaluation from a chore into an adventure. By gamifying the process, researchers stay engaged during the long autonomous runs that compound intelligence requires.
 
-The observatory dashboard provides:
-- **Visibility**: See what's happening in real-time
-- **Motivation**: Achievements and milestones provide goals
-- **Discovery**: Automatic flagging of interesting results
-- **Collaboration**: Shared dashboard for team research
-- **Records**: Full logging for scientific reproducibility
+### What SENI Provides
+
+| Capability | Benefit |
+|------------|---------|
+| **Visibility** | See what's happening in real-time |
+| **Motivation** | Achievements and milestones sustain engagement |
+| **Discovery** | Auto-flagging surfaces interesting results |
+| **Collaboration** | Shared dashboard enables team research |
+| **Reproducibility** | Full logging supports scientific rigor |
+| **Safety** | Constitutional invariants and safety gates |
+
+### Why This Matters
+
+> *"The difference between SETI and staring at static is knowing what to look for."*
+
+SENI provides that focus. It tells researchers:
+- **What's improving** — score trajectories and velocity
+- **What's interesting** — auto-flagged discoveries
+- **What's concerning** — safety gate alerts
+- **What to celebrate** — achievements and milestones
+
+### Next Steps
+
+1. **Implement Foundation** (Week 1) — WebSocket gateway + basic dashboard
+2. **Integrate Expeditions** (Week 2) — Connect autonomous_loop.js
+3. **Deploy Internally** (Week 3) — Start using for actual research
+4. **Iterate Based on Use** (Ongoing) — Add features researchers request
 
 *The search for intelligence is exciting. The dashboard should be too.*
 
@@ -509,5 +767,10 @@ The observatory dashboard provides:
 - [agentic_superintelligence.md](agentic_superintelligence.md) — Foundation plan (fully subsumed)
 - [README.vision.md](README.vision.md) — RLFP and cognitive architecture vision
 - [README.roadmap.md](README.roadmap.md) — Current capabilities and challenges
+- [README.architecture.md](README.architecture.md) — SeNARS system design
+- [agent/src/rlfp/README.md](agent/src/rlfp/README.md) — RLFP implementation details
 - [SETI@Home](https://setiathome.berkeley.edu/) — Inspiration for the "search" metaphor
 - [BFCL Leaderboard](https://gorilla.cs.berkeley.edu/leaderboard.html) — Function calling benchmarks
+- [AgentBench](https://github.com/THUDM/AgentBench) — Multi-environment agent evaluation
+- [GAIA Benchmark](https://huggingface.co/datasets/gaia-benchmark) — Real-world assistant tasks
+
