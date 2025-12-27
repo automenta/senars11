@@ -1,10 +1,10 @@
 /**
- * @file src/reason/rules/LMHypothesisGenerationRule.js
+ * @file src/reason/rules/lm/LMHypothesisGenerationRule.js
  * @description Hypothesis generation rule that uses an LM to create new hypotheses based on existing beliefs.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {isBelief} from '../../RuleHelpers.js';
 
 export const createHypothesisGenerationRule = (dependencies) => {
@@ -19,8 +19,8 @@ export const createHypothesisGenerationRule = (dependencies) => {
         condition: (primaryPremise) => {
             if (!primaryPremise) return false;
 
-            const priority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
-            const confidence = primaryPremise.truth?.c ?? primaryPremise.truth?.confidence ?? 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
+            const confidence = primaryPremise.truth?.c ?? 0;
 
             return isBelief(primaryPremise) && priority > 0.7 && confidence > 0.8;
         },
@@ -39,17 +39,20 @@ State the hypothesis as a clear, single statement.`;
             return lmResponse?.trim?.().replace(/^Hypothesis:\s*/i, '') ?? '';
         },
 
-        generate: (processedOutput) => {
+        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            return [new Task(
-                processedOutput,
-                Punctuation.QUESTION,
-                {frequency: 0.5, confidence: 0.5},
-                null,
-                null,
-                0.7
-            )];
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
+
+            const term = termFactory.atomic(processedOutput);
+
+            return [new Task({
+                term,
+                punctuation: Punctuation.QUESTION,
+                truth: null,
+                budget: {priority: 0.7, durability: 0.5, quality: 0.5}
+            })];
         },
 
         lm_options: {

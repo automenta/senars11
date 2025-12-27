@@ -12,8 +12,8 @@ export * from './baseTestUtils.js';
 export * from './testSuiteFactory.js';
 
 // For backward compatibility, provide the original exports as aliases
-import { StandardTestSuites, FlexibleTestPatterns } from './consolidatedTestSuites.js';
-import { comprehensiveTestSuites, flexibleAssertions, truthAssertions, taskAssertions, memoryAssertions } from './baseTestUtils.js';
+import {FlexibleTestPatterns, StandardTestSuites} from './consolidatedTestSuites.js';
+import {flexibleAssertions, memoryAssertions, taskAssertions, truthAssertions} from './baseTestUtils.js';
 
 export const dataModelTestSuite = StandardTestSuites.dataModel;
 export const initializationTestSuite = StandardTestSuites.lifecycleComponent; // Using similar pattern

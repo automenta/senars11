@@ -5,8 +5,13 @@ import {Rule} from '../../../src/reason/Rule.js';
 import {createTestTask} from '../../support/baseTestUtils.js';
 
 class TestRule extends Rule {
-    constructor(id, type) { super(id, type, 1.0); }
-    apply(p1, p2) { return [{id: `derived-${this.id}`, ruleId: this.id, primary: p1.id, secondary: p2.id}]; }
+    constructor(id, type) {
+        super(id, type, 1.0);
+    }
+
+    apply(p1, p2) {
+        return [{id: `derived-${this.id}`, ruleId: this.id, primary: p1.id, secondary: p2.id}];
+    }
 }
 
 describe('RuleProcessor', () => {
@@ -34,7 +39,8 @@ describe('RuleProcessor', () => {
     });
 
     test('derivation check', () => {
-        const spy = jest.spyOn(console, 'debug').mockImplementation(() => {});
+        const spy = jest.spyOn(console, 'debug').mockImplementation(() => {
+        });
         expect(rp._processDerivation({id: 'valid', stamp: {depth: 5}})).toBeDefined();
         expect(rp._processDerivation({id: 'invalid', stamp: {depth: 15}})).toBeNull();
         spy.mockRestore();
@@ -54,7 +60,10 @@ describe('RuleProcessor', () => {
 
     test('execution', async () => {
         re.register(new TestRule('sync', 'nal'));
-        async function* stream() { yield [createTestTask({id: 'p1'}), createTestTask({id: 'p2'})]; }
+
+        async function* stream() {
+            yield [createTestTask({id: 'p1'}), createTestTask({id: 'p2'})];
+        }
 
         const results = [];
         for await (const r of rp.process(stream())) results.push(r);

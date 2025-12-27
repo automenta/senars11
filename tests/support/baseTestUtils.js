@@ -1116,11 +1116,12 @@ export function createTestReasoner(options = {}) {
     // Use provided focus or create a minimal mock
     const focus = options.focus || {
         getTasks: () => [],
-        addTaskToFocus: () => {}
+        addTaskToFocus: () => {
+        }
     };
     const termFactory = options.termFactory || {};
 
-    const context = { focus, memory, termFactory };
+    const context = {focus, memory, termFactory};
 
     const builder = new ReasonerBuilder(context)
         .withConfig(options.config || {});

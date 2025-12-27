@@ -1,11 +1,11 @@
 /**
- * @file src/reason/rules/LMAnalogicalReasoningRule.js
+ * @file src/reason/rules/lm/LMAnalogicalReasoningRule.js
  * @description Analogical reasoning rule that uses an LM to solve new problems by drawing analogies to known situations.
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers.js';
 
 /**
@@ -30,7 +30,7 @@ export const createAnalogicalReasoningRule = (dependencies) => {
 
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
             const isGoalOrQuestion = isGoal(primaryPremise) || isQuestion(primaryPremise);
-            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
 
             return isGoalOrQuestion && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.problemSolving);
         },
@@ -49,7 +49,7 @@ export const createAnalogicalReasoningRule = (dependencies) => {
                         const topSimilar = similar.slice(0, 3).map(r => r.item);
 
                         if (topSimilar.length > 0) {
-                             contextStr = `\nContext: I recall these similar concepts/problems: ${topSimilar.join(", ")}\n`;
+                            contextStr = `\nContext: I recall these similar concepts/problems: ${topSimilar.join(", ")}\n`;
                         }
                     }
                 } catch (e) {
@@ -70,21 +70,22 @@ Based on that analogy, describe a step-by-step solution for the original problem
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            // Use termFactory to create a proper Term object
-            const termFactory = dependencies.termFactory;
-            const newTermName = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
-            let newTerm;
-            if (termFactory) {
-                newTerm = termFactory.atomic(newTermName);
-            } else {
-                // Fallback to string if no termFactory is available
-                newTerm = newTermName;
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) {
+                console.warn('AnalogicalReasoning: No termFactory available');
+                return [];
             }
+
+            const newTermName = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
+            const newTerm = termFactory.atomic(newTermName);
 
             const newTask = new Task({
                 term: newTerm,
                 punctuation: Punctuation.BELIEF,
-                truth: {frequency: 0.8, confidence: 0.7},
+                truth: {
+                    frequency: 0.8,
+                    confidence: (primaryPremise.truth?.c || 0.9) * 0.8
+                },
                 budget: {priority: 0.7, durability: 0.6, quality: 0.5}
             });
 

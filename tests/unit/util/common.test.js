@@ -54,8 +54,11 @@ describe('Common Utils', () => {
         });
 
         test('catches error -> default', async () => {
-            const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-            const res = await safeAsync(async () => { throw new Error('fail'); }, 'def');
+            const spy = jest.spyOn(console, 'error').mockImplementation(() => {
+            });
+            const res = await safeAsync(async () => {
+                throw new Error('fail');
+            }, 'def');
             expect(res).toBe('def');
             spy.mockRestore();
         });

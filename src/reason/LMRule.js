@@ -178,9 +178,17 @@ export class LMRule extends Rule {
         this.executionStats.successRate = this.executionStats.successfulExecutions / total;
     }
 
-    generatePrompt(p, s, c) { return this.config.prompt(p, s, c); }
-    processLMOutput(r, p, s, c) { return this.config.process(r, p, s, c); }
-    generateTasks(o, p, s, c) { return this.config.generate(o, p, s, c); }
+    generatePrompt(p, s, c) {
+        return this.config.prompt(p, s, c);
+    }
+
+    processLMOutput(r, p, s, c) {
+        return this.config.process(r, p, s, c);
+    }
+
+    generateTasks(o, p, s, c) {
+        return this.config.generate(o, p, s, c);
+    }
 
     getStats() {
         return {
@@ -207,7 +215,9 @@ export class LMRule extends Rule {
         } else if (typeof config.promptTemplate === 'function') {
             return config.promptTemplate;
         }
-        return () => { throw new Error(`Prompt generation not implemented for rule: ${this.id}`); };
+        return () => {
+            throw new Error(`Prompt generation not implemented for rule: ${this.id}`);
+        };
     }
 
     _getProcessFunction(config) {

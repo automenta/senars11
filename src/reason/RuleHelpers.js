@@ -3,7 +3,7 @@
  * @description Shared helper functions for reasoning rules, enhanced for stream-based architecture.
  */
 
-import {Punctuation} from './utils/TaskUtils.js';
+import {Punctuation} from '../task/Task.js';
 
 export function extractPrimaryTask(primaryPremise, secondaryPremise, context) {
     return primaryPremise ?? null;

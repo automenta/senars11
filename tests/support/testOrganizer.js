@@ -148,11 +148,30 @@ export * from './testSuiteFactory.js';
 
 // Export flexible utilities individually to avoid conflicts
 export {
-    flexibleAssertions, flexibleTruthUtils, flexibleTestConfig, flexibleTestWrappers, parameterizedTestUtils, default as flexibleTestUtils
+    flexibleAssertions,
+    flexibleTruthUtils,
+    flexibleTestConfig,
+    flexibleTestWrappers,
+    parameterizedTestUtils,
+    default as flexibleTestUtils
 } from './flexibleTestUtils.js';
 export {TestTemplateFactory, default as testTemplateFactory} from './TestTemplateFactory.js';
-export {TestCategorization, taggedTest, createCategorizedSuite, conditionalTest, createPerformanceSuite, default as testCategorization} from './testCategorization.js';
-export {TestErrorHandling, TestEnvironmentError, TestSetupError, TestTeardownError, TestAssertionError, default as testErrorHandling} from './testErrorHandling.js';
+export {
+    TestCategorization,
+    taggedTest,
+    createCategorizedSuite,
+    conditionalTest,
+    createPerformanceSuite,
+    default as testCategorization
+} from './testCategorization.js';
+export {
+    TestErrorHandling,
+    TestEnvironmentError,
+    TestSetupError,
+    TestTeardownError,
+    TestAssertionError,
+    default as testErrorHandling
+} from './testErrorHandling.js';
 
 /**
  * Fluent test API for more readable and expressive tests

@@ -36,7 +36,7 @@ class ScreenshotGenerator {
         if (options.recordVideo) {
             contextOptions.recordVideo = {
                 dir: this.outputDir,
-                size: { width: 1280, height: 720 }
+                size: {width: 1280, height: 720}
             };
             console.log(`🎥 Video recording enabled in ${this.outputDir}`);
         }
@@ -278,14 +278,28 @@ async function runGenerator() {
         let outputDir = null;
 
         for (let i = 0; i < args.length; i++) {
-             if (args[i] === '--type' && args[i+1]) { mode = args[i+1]; i++; }
-             else if (args[i] === '--url' && args[i+1]) { url = args[i+1]; i++; }
-             else if (args[i] === '--duration' && args[i+1]) { duration = parseInt(args[i+1]); i++; }
-             else if (args[i] === '--interval' && args[i+1]) { interval = parseInt(args[i+1]); i++; }
-             else if (args[i] === '--output' && args[i+1]) { outputDir = args[i+1]; i++; }
-             // Backward compatibility for positional args if not flagged
-             else if (i === 0 && !args[i].startsWith('-')) { mode = args[i]; }
-             else if (i === 1 && !args[i].startsWith('-')) { url = args[i]; }
+            if (args[i] === '--type' && args[i + 1]) {
+                mode = args[i + 1];
+                i++;
+            } else if (args[i] === '--url' && args[i + 1]) {
+                url = args[i + 1];
+                i++;
+            } else if (args[i] === '--duration' && args[i + 1]) {
+                duration = parseInt(args[i + 1]);
+                i++;
+            } else if (args[i] === '--interval' && args[i + 1]) {
+                interval = parseInt(args[i + 1]);
+                i++;
+            } else if (args[i] === '--output' && args[i + 1]) {
+                outputDir = args[i + 1];
+                i++;
+            }
+            // Backward compatibility for positional args if not flagged
+            else if (i === 0 && !args[i].startsWith('-')) {
+                mode = args[i];
+            } else if (i === 1 && !args[i].startsWith('-')) {
+                url = args[i];
+            }
         }
 
         await generator.initialize(outputDir, {
@@ -316,7 +330,7 @@ async function runGenerator() {
 
             case 'gif':
                 console.log('GIF mode requested: generating screenshots only.');
-                await generator.captureScreenshots(url, duration/2, 500, 'gif_frame');
+                await generator.captureScreenshots(url, duration / 2, 500, 'gif_frame');
                 break;
 
             case 'all':
@@ -324,9 +338,9 @@ async function runGenerator() {
                 // Capture different types of visualizations
                 // Note: 'all' mode might be tricky with deduplication and shared output dir,
                 // but we will proceed.
-                await generator.captureScreenshots(url, duration/3, interval, 'overview');
-                await generator.capturePriorityFluctuations(url, duration/3);
-                await generator.captureDerivations(url, duration/3);
+                await generator.captureScreenshots(url, duration / 3, interval, 'overview');
+                await generator.capturePriorityFluctuations(url, duration / 3);
+                await generator.captureDerivations(url, duration / 3);
                 break;
         }
 

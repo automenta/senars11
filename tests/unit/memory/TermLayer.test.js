@@ -46,7 +46,7 @@ describe('TermLayer', () => {
 
     test('capacity eviction', () => {
         layer = new TermLayer({capacity: 2});
-        const pairs = [['A','B',1], ['C','D',2], ['E','F',3]].map(([s, t, p]) => ({
+        const pairs = [['A', 'B', 1], ['C', 'D', 2], ['E', 'F', 3]].map(([s, t, p]) => ({
             s: tf.atomic(s), t: tf.atomic(t), p
         }));
 

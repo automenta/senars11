@@ -43,9 +43,18 @@ describe('Concept', () => {
 
     describe('Properties', () => {
         test.each([
-            ['boostActivation clamped', c => { c.boostActivation(0.5); c.boostActivation(0.6); }, c => c.activation, 1],
-            ['applyDecay', c => { c.boostActivation(1); c.applyDecay(0.2); }, c => c.activation, 0.8],
-            ['updateQuality', c => { c.updateQuality(0.5); c.updateQuality(-0.2); }, c => c.quality, 0.3],
+            ['boostActivation clamped', c => {
+                c.boostActivation(0.5);
+                c.boostActivation(0.6);
+            }, c => c.activation, 1],
+            ['applyDecay', c => {
+                c.boostActivation(1);
+                c.applyDecay(0.2);
+            }, c => c.activation, 0.8],
+            ['updateQuality', c => {
+                c.updateQuality(0.5);
+                c.updateQuality(-0.2);
+            }, c => c.quality, 0.3],
             ['incrementUseCount', c => c.incrementUseCount(), c => c.useCount, 1],
         ])('%s', (_, action, selector, expected) => {
             action(concept);

@@ -1,20 +1,13 @@
 /**
- * @file src/reason/rules/LMSchemaInductionRule.js
+ * @file src/reason/rules/lm/LMSchemaInductionRule.js
  * @description Schema induction rule that uses an LM to extract action schemas from narrative or procedural text.
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
-/**
- * Creates a schema induction rule using the enhanced LMRule.create method.
- * This rule identifies procedural or narrative text and uses an LM to induce a formal schema.
- *
- * @param {object} dependencies - Object containing lm and other dependencies
- * @returns {LMRule} A new LMRule instance for schema induction.
- */
 export const createSchemaInductionRule = (dependencies) => {
     const {lm} = dependencies;
     return LMRule.create({
@@ -28,8 +21,7 @@ export const createSchemaInductionRule = (dependencies) => {
             if (!primaryPremise) return false;
 
             const belief = isBelief(primaryPremise);
-            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
+            const priority = primaryPremise.budget?.priority ?? 0.5;
 
             return belief && priority > 0.6 && hasPattern(primaryPremise, KeywordPatterns.narrative);
         },
@@ -51,13 +43,19 @@ The schema should be abstract enough to apply to similar situations.`;
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const newTask = new Task(
-                processedOutput,
-                Punctuation.BELIEF,
-                {frequency: 0.9, confidence: 0.8}
-            );
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
 
-            return [newTask];
+            const term = termFactory.atomic(processedOutput);
+
+            return [new Task({
+                term,
+                punctuation: Punctuation.BELIEF,
+                truth: {
+                    frequency: 0.9,
+                    confidence: (primaryPremise.truth?.c || 0.9) * 0.9
+                }
+            })];
         },
 
         lm_options: {

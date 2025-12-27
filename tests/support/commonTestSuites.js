@@ -13,9 +13,8 @@ export * from './narTestSetup.js';
 export * from './testSuiteFactory.js';
 
 // For backward compatibility, provide the original exports as aliases
-import { NARTestSuites, FlexibleTestPatterns } from './consolidatedTestSuites.js';
-import { errorHandlingTests, flexibleAssertions, runPerformanceTest, truthAssertions } from './baseTestUtils.js';
-import { narTestPatterns } from './narTestSetup.js';
+import {errorHandlingTests, flexibleAssertions, runPerformanceTest, truthAssertions} from './baseTestUtils.js';
+import {narTestPatterns} from './narTestSetup.js';
 
 export const basicInputProcessingSuite = (narProvider) => {
     describe('Basic Input Processing', () => {

@@ -30,12 +30,16 @@ export class Reasoner extends EventEmitter {
         };
 
         if (this.config.executionMode === 'pipeline') {
-             this.runner = new PipelineRunner(this, this.config);
+            this.runner = new PipelineRunner(this, this.config);
         } else {
-             this.runner = new SimpleRunner(this, this.config);
+            this.runner = new SimpleRunner(this, this.config);
         }
 
         this.consumerFeedbackHandlers = [];
+    }
+
+    get isRunning() {
+        return this.runner.isRunning;
     }
 
     start() {
@@ -48,10 +52,6 @@ export class Reasoner extends EventEmitter {
 
     async stop() {
         await this.runner.stop();
-    }
-
-    get isRunning() {
-        return this.runner.isRunning;
     }
 
     async step(timeoutMs = 5000, suppressEvents = false) {
@@ -100,8 +100,8 @@ export class Reasoner extends EventEmitter {
                         if (primaryTermId === secondaryTermId) continue;
 
                         const pairId = primaryTermId < secondaryTermId
-                             ? `${primaryTermId}-${secondaryTermId}`
-                             : `${secondaryTermId}-${primaryTermId}`;
+                            ? `${primaryTermId}-${secondaryTermId}`
+                            : `${secondaryTermId}-${primaryTermId}`;
 
                         if (processedPairs.has(pairId)) continue;
                         processedPairs.add(pairId);
@@ -281,12 +281,12 @@ export class Reasoner extends EventEmitter {
 
     // Legacy method for compatibility if needed
     getPerformanceMetrics() {
-         return {
-             throughput: 0,
-             avgProcessingTime: 0,
-             memoryUsage: getHeapUsed(),
-             ...this.getMetrics()
-         };
+        return {
+            throughput: 0,
+            avgProcessingTime: 0,
+            memoryUsage: getHeapUsed(),
+            ...this.getMetrics()
+        };
     }
 
     receiveConsumerFeedback(feedback) {

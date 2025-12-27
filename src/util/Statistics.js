@@ -111,7 +111,7 @@ export class Statistics {
      * @returns {Object} Object containing mean, median, and stdDev
      */
     static meanMedianStd(values) {
-        if (!values || values.length === 0) return { mean: 0, median: 0, stdDev: 0 };
+        if (!values || values.length === 0) return {mean: 0, median: 0, stdDev: 0};
 
         const sum = values.reduce((acc, val) => acc + val, 0);
         const mean = sum / values.length;
@@ -126,6 +126,6 @@ export class Statistics {
         const variance = squareDiffs.reduce((acc, val) => acc + val, 0) / values.length;
         const stdDev = Math.sqrt(variance);
 
-        return { mean, median, stdDev };
+        return {mean, median, stdDev};
     }
 }

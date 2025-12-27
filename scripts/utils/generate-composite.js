@@ -16,11 +16,11 @@ let outputDir = path.join(rootDir, 'test-results');
 // Parse args
 const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--input' && args[i+1]) {
-        screenshotsDir = path.resolve(process.cwd(), args[i+1]);
+    if (args[i] === '--input' && args[i + 1]) {
+        screenshotsDir = path.resolve(process.cwd(), args[i + 1]);
         i++;
-    } else if (args[i] === '--output' && args[i+1]) {
-        outputDir = path.resolve(process.cwd(), args[i+1]);
+    } else if (args[i] === '--output' && args[i + 1]) {
+        outputDir = path.resolve(process.cwd(), args[i + 1]);
         i++;
     }
 }
@@ -115,15 +115,15 @@ async function generateComposite() {
         console.log(`✓ HTML generated at ${htmlPath}`);
 
         // Launch browser to capture the composite
-        const browser = await chromium.launch({ headless: true });
+        const browser = await chromium.launch({headless: true});
         const context = await browser.newContext({
-            viewport: { width: 1920, height: 1080 }, // Start with a reasonable size
+            viewport: {width: 1920, height: 1080}, // Start with a reasonable size
             deviceScaleFactor: 1
         });
         const page = await context.newPage();
 
         // Navigate to local file
-        await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle' });
+        await page.goto(`file://${htmlPath}`, {waitUntil: 'networkidle'});
 
         // Calculate height needed
         const bodyHandle = await page.$('body');
@@ -131,10 +131,10 @@ async function generateComposite() {
         const height = boundingBox.height + 40; // Add padding
 
         // Resize viewport to fit full content
-        await page.setViewportSize({ width: 1920, height: Math.ceil(height) });
+        await page.setViewportSize({width: 1920, height: Math.ceil(height)});
 
         const outputPath = path.join(outputDir, 'composite.png');
-        await page.screenshot({ path: outputPath, fullPage: true });
+        await page.screenshot({path: outputPath, fullPage: true});
 
         console.log(`✓ Composite image saved to ${outputPath}`);
 

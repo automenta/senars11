@@ -1,20 +1,13 @@
 /**
- * @file src/reason/rules/LMExplanationGenerationRule.js
+ * @file src/reason/rules/lm/LMExplanationGenerationRule.js
  * @description Explanation generation rule that uses an LM to create natural language explanations for formal conclusions.
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
-/**
- * Creates an explanation generation rule using the enhanced LMRule.create method.
- * This rule identifies complex logical statements and uses an LM to generate natural language explanations.
- *
- * @param {object} dependencies - Object containing lm and other dependencies
- * @returns {LMRule} A new LMRule instance for explanation generation.
- */
 export const createExplanationGenerationRule = (dependencies) => {
     const {lm} = dependencies;
     return LMRule.create({
@@ -28,7 +21,7 @@ export const createExplanationGenerationRule = (dependencies) => {
             if (!primaryPremise) return false;
 
             const belief = isBelief(primaryPremise);
-            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
 
             return belief && priority > 0.6 && KeywordPatterns.complexRelation(termStr);
@@ -50,24 +43,29 @@ Focus on conveying the core meaning and implication of the statement.`;
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const explanationTerm = `explanation_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
 
-            const newTask = new Task(
-                explanationTerm,
-                Punctuation.BELIEF,
-                {frequency: 1.0, confidence: 0.9},
-                null,
-                null,
-                0.8,
-                0.5,
-                null,
-                {
+            const explanationTermStr = `explanation_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
+            const term = termFactory.atomic(explanationTermStr);
+
+            return [new Task({
+                term,
+                punctuation: Punctuation.BELIEF,
+                truth: {
+                    frequency: 1.0,
+                    confidence: (primaryPremise.truth?.c || 0.9) * 0.9
+                },
+                budget: {
+                    priority: 0.8,
+                    durability: 0.5,
+                    quality: 0.5
+                },
+                metadata: {
                     originalTerm: primaryPremise.term?.toString?.(),
-                    explanation: processedOutput // Attach the explanation as metadata
+                    explanation: processedOutput
                 }
-            );
-
-            return [newTask];
+            })];
         },
 
         lm_options: {

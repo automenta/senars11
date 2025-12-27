@@ -3,7 +3,9 @@ import {CircuitBreaker, withCircuitBreaker} from '../../../src/util/CircuitBreak
 
 describe('CircuitBreaker', () => {
     let cb;
-    beforeEach(() => { cb = new CircuitBreaker(); });
+    beforeEach(() => {
+        cb = new CircuitBreaker();
+    });
 
     test('initial state', () => {
         expect(cb.getState().state).toBe('CLOSED');

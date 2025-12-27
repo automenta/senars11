@@ -1,6 +1,6 @@
-import { AgentBuilder } from '../../../src/agent/AgentBuilder.js';
-import { Agent } from '../../../src/agent/Agent.js';
-import { NAR } from '../../../src/nar/NAR.js';
+import {AgentBuilder} from '../../../src/agent/AgentBuilder.js';
+import {Agent} from '../../../src/agent/Agent.js';
+import {NAR} from '../../../src/nar/NAR.js';
 
 describe('AgentBuilder', () => {
     let agent;
@@ -26,7 +26,10 @@ describe('AgentBuilder', () => {
 
     test('individual subsystems enabled', async () => {
         expect((await build(new AgentBuilder().withMetrics(true))).metricsMonitor).toBeDefined();
-        expect((await build(new AgentBuilder().withEmbeddings({enabled: true, model: 'test'}))).embeddingLayer).toBeDefined();
+        expect((await build(new AgentBuilder().withEmbeddings({
+            enabled: true,
+            model: 'test'
+        }))).embeddingLayer).toBeDefined();
         expect((await build(new AgentBuilder().withLM(true))).lm).toBeDefined();
         expect((await build(new AgentBuilder().withTools(true))).tools).toBeDefined();
     });

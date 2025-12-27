@@ -68,7 +68,7 @@ describe('TermLayer Integration', () => {
     test('TermLayer capacity limits are enforced', async () => {
         // Create a new NAR with restricted TermLayer capacity
         const restrictedNar = new NAR({
-            termLayer: { capacity: 2 }
+            termLayer: {capacity: 2}
         });
         await restrictedNar.initialize();
 

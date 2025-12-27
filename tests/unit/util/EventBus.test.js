@@ -3,7 +3,9 @@ import {EventBus} from '../../../src/util/EventBus.js';
 
 describe('EventBus', () => {
     let bus;
-    beforeEach(() => { bus = new EventBus(); });
+    beforeEach(() => {
+        bus = new EventBus();
+    });
 
     test('initialization', () => {
         expect(bus.getStats()).toEqual({eventsEmitted: 0, eventsHandled: 0, errors: 0});
@@ -51,14 +53,18 @@ describe('EventBus', () => {
         bus.onError(errHandler);
 
         // Middleware error
-        bus.use(() => { throw new Error('mw-fail'); });
+        bus.use(() => {
+            throw new Error('mw-fail');
+        });
         await bus.emit('event');
         expect(errHandler).toHaveBeenCalledWith(expect.any(Error), 'middleware', expect.anything());
 
         // Listener error
         bus = new EventBus();
         bus.onError(errHandler);
-        bus.on('event', () => { throw new Error('listener-fail'); });
+        bus.on('event', () => {
+            throw new Error('listener-fail');
+        });
         await bus.emit('event');
         expect(errHandler).toHaveBeenCalledWith(expect.any(Error), 'listener', expect.anything());
         expect(bus.getStats().errors).toBe(1);
@@ -66,7 +72,8 @@ describe('EventBus', () => {
 
     test('listener management', () => {
         expect(bus.listenerCount('test')).toBe(0);
-        bus.on('test', () => {});
+        bus.on('test', () => {
+        });
         expect(bus.listenerCount('test')).toBe(1);
         expect(bus.hasListeners('test')).toBe(true);
 
@@ -75,11 +82,15 @@ describe('EventBus', () => {
     });
 
     test('memory leak warning', () => {
-        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
+        });
         bus.setMaxListeners(2);
-        bus.on('t', () => {});
-        bus.on('t', () => {});
-        bus.on('t', () => {});
+        bus.on('t', () => {
+        });
+        bus.on('t', () => {
+        });
+        bus.on('t', () => {
+        });
         expect(warn).toHaveBeenCalledWith(expect.stringMatching(/Possible memory leak/));
         warn.mockRestore();
     });

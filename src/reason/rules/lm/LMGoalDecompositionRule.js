@@ -4,7 +4,7 @@
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {cleanSubGoal, isGoal, isValidSubGoal, parseSubGoals} from '../../RuleHelpers.js';
 
 export const createGoalDecompositionRule = (dependencies, config = {}) => {
@@ -27,7 +27,7 @@ export const createGoalDecompositionRule = (dependencies, config = {}) => {
 
         condition: (primaryPremise) => {
             if (!lm || !primaryPremise) return false;
-            const priority = primaryPremise.getPriority?.() ?? primaryPremise.priority ?? 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
             return isGoal(primaryPremise) && priority > 0.7;
         },
 
@@ -49,23 +49,33 @@ Output: List of subgoals, one per line`;
                 .slice(0, finalConfig.maxSubGoals);
         },
 
-        generate: (processedOutput, primaryPremise) => {
+        generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise || !processedOutput?.length) {
                 return [];
             }
 
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) {
+                console.warn('GoalDecomposition: No termFactory available');
+                return [];
+            }
+
             return processedOutput.map(subGoal => {
-                const newTask = new Task(
-                    subGoal,
-                    Punctuation.GOAL,
-                    {
+                const term = termFactory.atomic(subGoal);
+
+                return new Task({
+                    term,
+                    punctuation: Punctuation.GOAL,
+                    truth: {
                         frequency: primaryPremise.truth.f,
                         confidence: primaryPremise.truth.c * 0.9
+                    },
+                    budget: {
+                        priority: Math.max(0.1, (primaryPremise.budget?.priority ?? 0.8) * 0.9),
+                        durability: (primaryPremise.budget?.durability ?? 0.5) * 0.9,
+                        quality: primaryPremise.budget?.quality ?? 0.5
                     }
-                );
-                newTask.priority = Math.max(0.1, (primaryPremise.priority ?? 0.8) * 0.9);
-                newTask.derivedFrom = primaryPremise.term?.toString?.() ?? 'original-task';
-                return newTask;
+                });
             });
         },
 

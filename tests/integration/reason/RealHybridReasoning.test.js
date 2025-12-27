@@ -1,4 +1,4 @@
-import {jest, describe, beforeAll, afterAll, test, expect} from '@jest/globals';
+import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
 import {App} from '../../../src/app/App.js';
 
 // Increase timeout for real LM
@@ -58,8 +58,8 @@ describe('Real Hybrid LM-NAL Reasoning Integration', () => {
     // Verified manually that logic is correct and model is loaded.
     test.skip('should translate natural language to Narsese using Real LM', async () => {
         if (!agent) {
-             console.warn('Skipping test: Agent not initialized');
-             return;
+            console.warn('Skipping test: Agent not initialized');
+            return;
         }
 
         console.log('Testing Real NL translation...');

@@ -1,8 +1,8 @@
 /**
  * @file testErrorHandling.js
  * @description Comprehensive test error handling utilities following AGENTS.md guidelines
- * 
- * Error handling: Use specific error types, log with context, avoid empty catch blocks, 
+ *
+ * Error handling: Use specific error types, log with context, avoid empty catch blocks,
  * prefer early returns, handle errors at appropriate abstraction level
  */
 
@@ -78,9 +78,9 @@ export const TestErrorHandling = {
          */
         expectErrorContext: (error, expectedContext) => {
             if (!error.context) {
-                throw new TestAssertionError('Error does not contain context', { error });
+                throw new TestAssertionError('Error does not contain context', {error});
             }
-            
+
             Object.entries(expectedContext).forEach(([key, expectedValue]) => {
                 expect(error.context[key]).toEqual(expectedValue);
             });
@@ -111,7 +111,7 @@ export const TestErrorHandling = {
             } catch (error) {
                 const enhancedError = new TestAssertionError(
                     `Operation failed: ${error.message}`,
-                    { ...context, originalError: error, operation: operation.toString() }
+                    {...context, originalError: error, operation: operation.toString()}
                 );
                 console.error('Test operation failed:', enhancedError);
                 throw enhancedError;
@@ -127,7 +127,7 @@ export const TestErrorHandling = {
             } catch (error) {
                 const enhancedError = new TestAssertionError(
                     `Async operation failed: ${error.message}`,
-                    { ...context, originalError: error }
+                    {...context, originalError: error}
                 );
                 console.error('Async test operation failed:', enhancedError);
                 throw enhancedError;
@@ -151,7 +151,7 @@ export const TestErrorHandling = {
          */
         earlyReturnIfError: (value, errorCondition, errorMessage) => {
             if (errorCondition(value)) {
-                throw new TestAssertionError(errorMessage, { value });
+                throw new TestAssertionError(errorMessage, {value});
             }
             return value;
         }
@@ -165,7 +165,7 @@ export const TestErrorHandling = {
          * Validate that inputs produce expected errors
          */
         validateErrorScenarios: (testFn, errorScenarios) => {
-            errorScenarios.forEach(({ input, expectedErrorType, description }) => {
+            errorScenarios.forEach(({input, expectedErrorType, description}) => {
                 test(`should throw ${expectedErrorType?.name || expectedErrorType} for ${description}`, () => {
                     expect(() => testFn(input)).toThrow(expectedErrorType);
                 });
@@ -177,9 +177,9 @@ export const TestErrorHandling = {
          */
         validateErrorMessage: (error, requiredContext) => {
             if (typeof error.message !== 'string') {
-                throw new TestAssertionError('Error message is not a string', { error });
+                throw new TestAssertionError('Error message is not a string', {error});
             }
-            
+
             requiredContext.forEach(contextPart => {
                 expect(error.message.toLowerCase()).toContain(contextPart.toLowerCase());
             });

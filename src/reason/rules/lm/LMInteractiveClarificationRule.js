@@ -1,11 +1,11 @@
 /**
- * @file src/reason/rules/LMInteractiveClarificationRule.js
+ * @file src/reason/rules/lm/LMInteractiveClarificationRule.js
  * @description Interactive clarification rule that uses an LM to generate clarifying questions for ambiguous input.
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isGoal, isQuestion, KeywordPatterns, parseSubGoals} from '../../RuleHelpers.js';
 
 /**
@@ -29,7 +29,7 @@ export const createInteractiveClarificationRule = (dependencies) => {
 
             const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
             const isGoalOrQuestion = isGoal(primaryPremise) || isQuestion(primaryPremise);
-            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
 
             return isGoalOrQuestion && priority > 0.7 &&
                 (hasPattern(primaryPremise, KeywordPatterns.ambiguous) || termStr.length < 15);
@@ -53,13 +53,17 @@ Frame the questions to elicit concrete information. Provide only the questions.`
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput || processedOutput.length === 0) return [];
 
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
+
             return processedOutput.map(question => {
-                const newTask = new Task(
-                    question,
-                    Punctuation.QUESTION,
-                    {frequency: 1.0, confidence: 0.9}
-                );
-                return newTask;
+                const term = termFactory.atomic(question);
+
+                return new Task({
+                    term,
+                    punctuation: Punctuation.QUESTION,
+                    truth: null
+                });
             });
         },
 

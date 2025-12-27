@@ -1,7 +1,6 @@
 import {LMRule} from '../../LMRule.js';
 import {tryParseNarsese} from '../../RuleHelpers.js';
-import {Punctuation} from '../../utils/TaskUtils.js';
-import {Task} from '../../../task/Task.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {Truth} from '../../../Truth.js';
 
 export const createNarseseTranslationRule = (dependencies) => {

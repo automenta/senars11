@@ -1,10 +1,21 @@
 import {Knowledge, KnowledgeFactory} from '../../../src/know/index.js';
 
 class TestKnowledge extends Knowledge {
-    async toTasks() { return this.data ? [`<test --> ${this.data.value}>. %1.00;0.90%`] : []; }
-    async getItems() { return this.data ? [this.data] : []; }
-    async getSummary() { return {type: 'test', data: this.data}; }
-    async createRelationships() { return []; }
+    async toTasks() {
+        return this.data ? [`<test --> ${this.data.value}>. %1.00;0.90%`] : [];
+    }
+
+    async getItems() {
+        return this.data ? [this.data] : [];
+    }
+
+    async getSummary() {
+        return {type: 'test', data: this.data};
+    }
+
+    async createRelationships() {
+        return [];
+    }
 }
 
 describe('KnowledgeFactory', () => {
@@ -21,7 +32,8 @@ describe('KnowledgeFactory', () => {
     });
 
     test('invalid inheritance throws', () => {
-        expect(() => KnowledgeFactory.registerKnowledgeType('invalid', class {}))
+        expect(() => KnowledgeFactory.registerKnowledgeType('invalid', class {
+        }))
             .toThrow('Knowledge class must extend the Knowledge base class');
     });
 

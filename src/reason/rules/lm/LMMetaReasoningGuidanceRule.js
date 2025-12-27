@@ -1,20 +1,13 @@
 /**
- * @file src/reason/rules/LMMetaReasoningGuidanceRule.js
+ * @file src/reason/rules/lm/LMMetaReasoningGuidanceRule.js
  * @description Meta-reasoning guidance rule that uses an LM to recommend reasoning strategies for complex problems.
  * Based on the v9 implementation with enhancements for stream-based architecture.
  */
 
 import {LMRule} from '../../LMRule.js';
-import {Punctuation, Task} from '../../utils/TaskUtils.js';
+import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isGoal, isQuestion, KeywordPatterns} from '../../RuleHelpers.js';
 
-/**
- * Creates a meta-reasoning guidance rule using the enhanced LMRule.create method.
- * This rule identifies complex problems and uses an LM to recommend a reasoning strategy.
- *
- * @param {object} dependencies - Object containing lm and other dependencies
- * @returns {LMRule} A new LMRule instance for meta-reasoning guidance.
- */
 export const createMetaReasoningGuidanceRule = (dependencies) => {
     const {lm} = dependencies;
     return LMRule.create({
@@ -27,9 +20,8 @@ export const createMetaReasoningGuidanceRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
             const isGoalOrQuestion = isGoal(primaryPremise) || isQuestion(primaryPremise);
-            const priority = primaryPremise.getPriority?.() || primaryPremise.priority || 0;
+            const priority = primaryPremise.budget?.priority ?? 0.5;
 
             return isGoalOrQuestion && priority > 0.8 && hasPattern(primaryPremise, KeywordPatterns.complexity);
         },
@@ -54,21 +46,26 @@ Recommend the best primary strategy and briefly explain why.`;
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const newTerm = `strategy_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
-            const newTask = new Task(
-                newTerm,
-                Punctuation.BELIEF,
-                {frequency: 1.0, confidence: 0.9},
-                null,
-                null,
-                0.8,
-                0.7,
-                null,
-                {
+            const termFactory = context?.termFactory || dependencies.termFactory;
+            if (!termFactory) return [];
+
+            const newTermStr = `strategy_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
+            const term = termFactory.atomic(newTermStr);
+
+            const newTask = new Task({
+                term,
+                punctuation: Punctuation.BELIEF,
+                truth: {frequency: 1.0, confidence: 0.9},
+                budget: {
+                    priority: 0.8,
+                    durability: 0.7,
+                    quality: 0.5
+                },
+                metadata: {
                     originalTerm: primaryPremise.term?.toString?.(),
-                    strategy: processedOutput // Attach the strategy as metadata
+                    strategy: processedOutput
                 }
-            );
+            });
 
             return [newTask];
         },

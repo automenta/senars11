@@ -2,8 +2,22 @@ import {Truth} from '../Truth.js';
 import {ArrayStamp} from '../Stamp.js';
 import {Term} from '../term/Term.js';
 
-const PUNCTUATION_TO_TYPE = Object.freeze({'.': 'BELIEF', '!': 'GOAL', '?': 'QUESTION'});
-const TYPE_TO_PUNCTUATION = Object.freeze({'BELIEF': '.', 'GOAL': '!', 'QUESTION': '?'});
+export const Punctuation = Object.freeze({
+    BELIEF: '.',
+    GOAL: '!',
+    QUESTION: '?'
+});
+
+const PUNCTUATION_TO_TYPE = Object.freeze({
+    [Punctuation.BELIEF]: 'BELIEF',
+    [Punctuation.GOAL]: 'GOAL',
+    [Punctuation.QUESTION]: 'QUESTION'
+});
+const TYPE_TO_PUNCTUATION = Object.freeze({
+    'BELIEF': Punctuation.BELIEF,
+    'GOAL': Punctuation.GOAL,
+    'QUESTION': Punctuation.QUESTION
+});
 const DEFAULT_BUDGET = Object.freeze({priority: 0.5, durability: 0.5, quality: 0.5, cycles: 100, depth: 10});
 
 export class Task {
@@ -12,7 +26,8 @@ export class Task {
                     punctuation = '.',
                     truth = null,
                     budget = DEFAULT_BUDGET,
-                    stamp = null
+                    stamp = null,
+                    metadata = null
                 }) {
         if (!(term instanceof Term)) throw new Error('Task must be initialized with a valid Term object.');
 
@@ -34,6 +49,7 @@ export class Task {
         this.truth = this._createTruth(truth);
         this.budget = Object.freeze({...budget});
         this.stamp = stamp ?? ArrayStamp.createInput();
+        this.metadata = metadata;
         Object.freeze(this);
     }
 

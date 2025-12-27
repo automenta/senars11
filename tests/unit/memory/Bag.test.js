@@ -12,7 +12,9 @@ const createTask = (term, priority = 0.5) => new Task({
 
 describe('Bag', () => {
     let bag;
-    beforeEach(() => { bag = new Bag(10); });
+    beforeEach(() => {
+        bag = new Bag(10);
+    });
 
     describe('Basic Operations', () => {
         test('defaults', () => {

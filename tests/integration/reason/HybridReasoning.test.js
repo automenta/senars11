@@ -1,4 +1,4 @@
-import {jest, describe, beforeAll, afterAll, test, expect} from '@jest/globals';
+import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
 import {App} from '../../../src/app/App.js';
 
 describe('Hybrid LM-NAL Reasoning Integration', () => {
@@ -28,7 +28,7 @@ describe('Hybrid LM-NAL Reasoning Integration', () => {
 
         // Mock the LM generation
         jest.spyOn(agent.lm, 'generateText').mockImplementation(async (prompt) => {
-            console.log('[MockLM] Prompt:', prompt);
+            //console.log('[MockLM] Prompt:', prompt);
 
             if (prompt.includes('"Dogs are animals"')) return '<dog --> animal>.';
             if (prompt.includes('"Fish live in water"')) return '<fish --> [live_in_water]>.';
@@ -44,7 +44,7 @@ describe('Hybrid LM-NAL Reasoning Integration', () => {
     });
 
     test('should translate natural language to Narsese and update stats', async () => {
-        console.log('Testing NL translation...');
+        //console.log('Testing NL translation...');
         await agent.input('"Dogs are animals".');
         await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -62,12 +62,12 @@ describe('Hybrid LM-NAL Reasoning Integration', () => {
         if (asyncExecs === 0) {
             console.warn('Warning: Async Rule Executions is 0 (stats tracking issue in test)');
         } else {
-            console.log('Async Rule Executions:', asyncExecs);
+            //console.log('Async Rule Executions:', asyncExecs);
         }
     });
 
     test('should elaborate concepts using LM', async () => {
-        console.log('Testing Concept Elaboration...');
+        //console.log('Testing Concept Elaboration...');
         await agent.input('bird.');
         await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -78,7 +78,7 @@ describe('Hybrid LM-NAL Reasoning Integration', () => {
     });
 
     test('should support bidirectional synergy (Question Answering)', async () => {
-        console.log('Testing Bidirectional Synergy...');
+        //console.log('Testing Bidirectional Synergy...');
         await agent.input('"Fish live in water".');
         await new Promise(resolve => setTimeout(resolve, 3000));
 

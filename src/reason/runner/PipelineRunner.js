@@ -1,4 +1,3 @@
-
 import {Runner} from './Runner.js';
 import {getHeapUsed} from '../../util/common.js';
 
@@ -29,6 +28,10 @@ export class PipelineRunner extends Runner {
         this.isRunning = false;
     }
 
+    get outputStream() {
+        return this._outputStream ??= this._createOutputStream();
+    }
+
     start() {
         if (this.isRunning) {
             console.warn('PipelineRunner is already running');
@@ -47,10 +50,6 @@ export class PipelineRunner extends Runner {
         this.abortController = null;
         this._outputStream = null;
         await new Promise(resolve => setTimeout(resolve, 10));
-    }
-
-    get outputStream() {
-        return this._outputStream ??= this._createOutputStream();
     }
 
     async* _createOutputStream() {

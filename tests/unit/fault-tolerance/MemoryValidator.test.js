@@ -2,7 +2,9 @@ import {MemoryValidator} from '../../../src/util/MemoryValidator.js';
 
 describe('MemoryValidator', () => {
     let validator;
-    beforeEach(() => { validator = new MemoryValidator(); });
+    beforeEach(() => {
+        validator = new MemoryValidator();
+    });
 
     test('initialization', () => {
         expect(validator.isEnabled).toBe(true);

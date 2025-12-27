@@ -2,11 +2,30 @@ import {BaseComponent} from '../../../src/util/BaseComponent.js';
 import {EventBus} from '../../../src/util/EventBus.js';
 
 class TestComponent extends BaseComponent {
-    constructor(config = {}) { super(config, 'TestComponent'); this.state = 0; }
-    async _initialize() { this.state = 1; return true; }
-    async _start() { this.state = 2; return true; }
-    async _stop() { this.state = 3; return true; }
-    async _dispose() { this.state = 4; return true; }
+    constructor(config = {}) {
+        super(config, 'TestComponent');
+        this.state = 0;
+    }
+
+    async _initialize() {
+        this.state = 1;
+        return true;
+    }
+
+    async _start() {
+        this.state = 2;
+        return true;
+    }
+
+    async _stop() {
+        this.state = 3;
+        return true;
+    }
+
+    async _dispose() {
+        this.state = 4;
+        return true;
+    }
 }
 
 describe('BaseComponent', () => {

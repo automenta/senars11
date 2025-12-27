@@ -30,7 +30,11 @@ describe('TaskManager', () => {
 
     test('processPendingTasks', () => {
         mgr.addTask(new Task({term, budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}}));
-        mgr.addTask(new Task({term: factory.atomic('B'), budget: {priority: 0.4}, truth: {frequency: 0.9, confidence: 0.8}}));
+        mgr.addTask(new Task({
+            term: factory.atomic('B'),
+            budget: {priority: 0.4},
+            truth: {frequency: 0.9, confidence: 0.8}
+        }));
 
         const processed = mgr.processPendingTasks();
         expect(mgr.pendingTasksCount).toBe(0);
@@ -54,7 +58,11 @@ describe('TaskManager', () => {
 
     test('getHighestPriorityTasks', () => {
         mgr.addTask(new Task({term, budget: {priority: 0.6}, truth: {frequency: 0.9, confidence: 0.8}}));
-        mgr.addTask(new Task({term: factory.atomic('B'), budget: {priority: 0.8}, truth: {frequency: 0.9, confidence: 0.8}}));
+        mgr.addTask(new Task({
+            term: factory.atomic('B'),
+            budget: {priority: 0.8},
+            truth: {frequency: 0.9, confidence: 0.8}
+        }));
         mgr.processPendingTasks();
 
         const highest = mgr.getHighestPriorityTasks(2);
