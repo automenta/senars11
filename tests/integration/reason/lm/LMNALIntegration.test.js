@@ -1,14 +1,14 @@
-import { afterAll, beforeAll, describe, test } from '@jest/globals';
-import { Punctuation, Task } from '../../../../core/src/task/Task.js';
-import { TermFactory } from '../../../../core/src/term/TermFactory.js';
-import { createLMNALTestAgent } from '../../../support/lmTestHelpers.js';
-import { assertEventuallyTrue, getTerms, hasTermMatch } from '../../../support/testHelpers.js';
+import {afterAll, beforeAll, describe, test} from '@jest/globals';
+import {Punctuation, Task} from '../../../../core/src/task/Task.js';
+import {TermFactory} from '../../../../core/src/term/TermFactory.js';
+import {createLMNALTestAgent} from '../../../support/lmTestHelpers.js';
+import {assertEventuallyTrue, getTerms, hasTermMatch} from '../../../support/testHelpers.js';
 
 describe('LM ↔ NAL Integration', () => {
     let app, agent, termFactory;
 
     beforeAll(async () => {
-        ({ app, agent } = await createLMNALTestAgent());
+        ({app, agent} = await createLMNALTestAgent());
         termFactory = new TermFactory();
     });
 
@@ -34,8 +34,8 @@ describe('LM ↔ NAL Integration', () => {
                 name: 'Goal decomposition',
                 taskConfig: {
                     punctuation: Punctuation.GOAL,
-                    budget: { priority: 0.9 },
-                    truth: { frequency: 1.0, confidence: 0.9 }
+                    budget: {priority: 0.9},
+                    truth: {frequency: 1.0, confidence: 0.9}
                 },
                 termBuilder: (tf) => tf.atomic('write_book'),
                 verify: (terms, agent) => agent.getGoals().length > 0 || agent.getConcepts().length > 0,
@@ -46,8 +46,8 @@ describe('LM ↔ NAL Integration', () => {
                 name: 'Hypothesis generation',
                 taskConfig: {
                     punctuation: Punctuation.BELIEF,
-                    budget: { priority: 0.9 },
-                    truth: { frequency: 1.0, confidence: 0.9 }
+                    budget: {priority: 0.9},
+                    truth: {frequency: 1.0, confidence: 0.9}
                 },
                 termBuilder: (tf) => tf.atomic('"Activity correlates with results"'),
                 verify: (terms, agent) => {
@@ -60,8 +60,8 @@ describe('LM ↔ NAL Integration', () => {
                 name: 'Variable grounding',
                 taskConfig: {
                     punctuation: Punctuation.BELIEF,
-                    budget: { priority: 0.9 },
-                    truth: { frequency: 0.9, confidence: 0.9 }
+                    budget: {priority: 0.9},
+                    truth: {frequency: 0.9, confidence: 0.9}
                 },
                 termBuilder: (tf) => tf.atomic('"Value is $X"'),
                 verify: (terms) => terms.some(t => ['robin', 'canary', 'Value'].some(w => t.includes(w))),
@@ -71,8 +71,8 @@ describe('LM ↔ NAL Integration', () => {
                 name: 'Analogical reasoning',
                 taskConfig: {
                     punctuation: Punctuation.GOAL,
-                    budget: { priority: 0.9 },
-                    truth: { frequency: 1.0, confidence: 0.9 }
+                    budget: {priority: 0.9},
+                    truth: {frequency: 1.0, confidence: 0.9}
                 },
                 termBuilder: (tf) => tf.atomic('solve_complex_problem'),
                 verify: (terms) => terms.some(t => ['solution', 'problem', 'solve'].some(w => t.includes(w))),
@@ -80,12 +80,12 @@ describe('LM ↔ NAL Integration', () => {
             }
         ];
 
-        test.each(lmToNalTests)('$name', async ({ input, taskConfig, termBuilder, verify, description, timeout }) => {
+        test.each(lmToNalTests)('$name', async ({input, taskConfig, termBuilder, verify, description, timeout}) => {
             let taskInput;
 
             if (termBuilder) {
                 const term = termBuilder(termFactory);
-                taskInput = new Task({ ...taskConfig, term });
+                taskInput = new Task({...taskConfig, term});
             } else {
                 taskInput = input;
             }
@@ -97,7 +97,7 @@ describe('LM ↔ NAL Integration', () => {
                     const terms = getTerms(agent);
                     return verify(terms, agent);
                 },
-                { description, timeout: timeout || 2000 }
+                {description, timeout: timeout || 2000}
             );
         }, 5000);
     });
@@ -130,14 +130,14 @@ describe('LM ↔ NAL Integration', () => {
             }
         ];
 
-        test.each(nalToLmTests)('$name', async ({ premises, verify, description }) => {
+        test.each(nalToLmTests)('$name', async ({premises, verify, description}) => {
             for (const premise of premises) {
                 await agent.input(premise);
             }
 
             await assertEventuallyTrue(
                 () => verify(getTerms(agent)),
-                { description }
+                {description}
             );
         });
     });
@@ -154,7 +154,7 @@ describe('LM ↔ NAL Integration', () => {
                     const hasCanaryBird = hasTermMatch(terms, 'canary', 'bird');
                     return hasBirdFly || hasCanaryBird;
                 },
-                { description: 'full LM→NAL→LM cycle' }
+                {description: 'full LM→NAL→LM cycle'}
             );
         });
 
@@ -168,7 +168,7 @@ describe('LM ↔ NAL Integration', () => {
                     const terms = getTerms(agent);
                     return terms.some(t => ['exercise', 'healthy', 'activity'].some(w => t.includes(w)));
                 },
-                { description: 'NAL→LM→NAL interaction' }
+                {description: 'NAL→LM→NAL interaction'}
             );
         });
     });
@@ -177,9 +177,9 @@ describe('LM ↔ NAL Integration', () => {
         let pureNalApp, pureNalAgent;
 
         beforeAll(async () => {
-            ({ app: pureNalApp, agent: pureNalAgent } = await createLMNALTestAgent({}, {
-                lm: { enabled: false },
-                subsystems: { lm: false }
+            ({app: pureNalApp, agent: pureNalAgent} = await createLMNALTestAgent({}, {
+                lm: {enabled: false},
+                subsystems: {lm: false}
             }));
         });
 
@@ -220,14 +220,14 @@ describe('LM ↔ NAL Integration', () => {
             }
         ];
 
-        test.each(pureNalTests)('$name', async ({ premises, verify, description }) => {
+        test.each(pureNalTests)('$name', async ({premises, verify, description}) => {
             for (const premise of premises) {
                 await pureNalAgent.input(premise);
             }
 
             await assertEventuallyTrue(
                 () => verify(getTerms(pureNalAgent)),
-                { description }
+                {description}
             );
         });
     });

@@ -1,5 +1,5 @@
-import { Bag } from '../../../core/src/memory/Bag.js';
-import { createAtom, createTask } from './testUtils.js';
+import {Bag} from '../../../core/src/memory/Bag.js';
+import {createAtom, createTask} from './testUtils.js';
 
 describe('Bag', () => {
     describe('Basic Operations', () => {
@@ -9,7 +9,7 @@ describe('Bag', () => {
         });
 
         test('defaults', () => {
-            expect(bag).toMatchObject({ size: 0, maxSize: 10 });
+            expect(bag).toMatchObject({size: 0, maxSize: 10});
         });
 
         test('add/duplicate/remove', () => {

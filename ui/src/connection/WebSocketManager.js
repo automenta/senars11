@@ -1,6 +1,6 @@
-import { Config } from '../config/Config.js';
-import { Logger } from '../logging/Logger.js';
-import { WebSocketConnectionError } from '../errors/CustomErrors.js';
+import {Config} from '../config/Config.js';
+import {Logger} from '../logging/Logger.js';
+import {WebSocketConnectionError} from '../errors/CustomErrors.js';
 
 
 export class WebSocketManager {
@@ -68,7 +68,7 @@ export class WebSocketManager {
 
     sendMessage(type, payload) {
         if (!this.isConnected()) return false;
-        this.ws.send(JSON.stringify({ type, payload }));
+        this.ws.send(JSON.stringify({type, payload}));
         return true;
     }
 
@@ -101,7 +101,7 @@ export class WebSocketManager {
         if (message.type === 'eventBatch') {
             const events = message.data ?? [];
             this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
-            const normalized = events.map(e => ({ type: e.type, payload: e.data, timestamp: e.timestamp }));
+            const normalized = events.map(e => ({type: e.type, payload: e.data, timestamp: e.timestamp}));
             this.eventQueue.push(...normalized);
         } else {
             this.eventQueue.push(message);

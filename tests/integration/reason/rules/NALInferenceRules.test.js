@@ -1,4 +1,4 @@
-import { TaskMatch, TestNAR } from '../../../../core/src/testing/TestNAR.js';
+import {TaskMatch, TestNAR} from '../../../../core/src/testing/TestNAR.js';
 
 /**
  * Comprehensive NAL inference rule tests using parameterized approach.
@@ -11,40 +11,40 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Modus Ponens: derive consequent from implication and antecedent',
                 premises: [
-                    { narsese: '(a ==> b)', f: 0.9, c: 0.9 },
-                    { narsese: 'a', f: 0.8, c: 0.8 }
+                    {narsese: '(a ==> b)', f: 0.9, c: 0.9},
+                    {narsese: 'a', f: 0.8, c: 0.8}
                 ],
-                expected: { term: 'b', f: 0.72, c: 0.65, tolerance: 0.05 },
+                expected: {term: 'b', f: 0.72, c: 0.65, tolerance: 0.05},
                 cycles: 1
             },
             {
                 name: 'Modus Ponens: complex terms',
                 premises: [
-                    { narsese: '(sunny_day ==> good_mood)', f: 0.85, c: 0.9 },
-                    { narsese: 'sunny_day', f: 0.9, c: 0.85 }
+                    {narsese: '(sunny_day ==> good_mood)', f: 0.85, c: 0.9},
+                    {narsese: 'sunny_day', f: 0.9, c: 0.85}
                 ],
-                expected: { term: 'good_mood', f: 0.77, c: 0.69, tolerance: 0.05 },
+                expected: {term: 'good_mood', f: 0.77, c: 0.69, tolerance: 0.05},
                 cycles: 1
             },
             {
                 name: 'Syllogism: transitive implication chain',
                 premises: [
-                    { narsese: '(a ==> b)', f: 0.9, c: 0.9 },
-                    { narsese: '(b ==> c)', f: 0.8, c: 0.8 }
+                    {narsese: '(a ==> b)', f: 0.9, c: 0.9},
+                    {narsese: '(b ==> c)', f: 0.8, c: 0.8}
                 ],
-                expected: { term: '(a ==> c)', f: 0.71, c: 0.51, tolerance: 0.25 },
+                expected: {term: '(a ==> c)', f: 0.71, c: 0.51, tolerance: 0.25},
                 cycles: 1
             },
             {
                 name: 'Inheritance Syllogism: transitive inheritance',
                 premises: [
-                    { narsese: '<sparrow --> bird>', f: 0.9, c: 0.9 },
-                    { narsese: '<bird --> animal>', f: 0.9, c: 0.9 }
+                    {narsese: '<sparrow --> bird>', f: 0.9, c: 0.9},
+                    {narsese: '<bird --> animal>', f: 0.9, c: 0.9}
                 ],
-                expected: { term: '<sparrow --> animal>', f: 0.81, c: 0.73, tolerance: 0.1 },
+                expected: {term: '<sparrow --> animal>', f: 0.81, c: 0.73, tolerance: 0.1},
                 cycles: 1
             }
-        ])('$name', ({ premises, expected, cycles }) => {
+        ])('$name', ({premises, expected, cycles}) => {
             test('should derive correct conclusion with proper truth value', async () => {
                 let nar = new TestNAR();
 
@@ -85,8 +85,8 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Induction: shared subject pattern',
                 premises: [
-                    { narsese: '<robin --> bird>', f: 0.9, c: 0.9 },
-                    { narsese: '<robin --> singer>', f: 0.8, c: 0.8 }
+                    {narsese: '<robin --> bird>', f: 0.9, c: 0.9},
+                    {narsese: '<robin --> singer>', f: 0.8, c: 0.8}
                 ],
                 expectedPattern: ['bird', 'singer'],
                 cycles: 2
@@ -94,13 +94,13 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Induction: property generalization',
                 premises: [
-                    { narsese: '<swan --> bird>', f: 0.9, c: 0.9 },
-                    { narsese: '<swan --> [white]>', f: 0.8, c: 0.8 }
+                    {narsese: '<swan --> bird>', f: 0.9, c: 0.9},
+                    {narsese: '<swan --> [white]>', f: 0.8, c: 0.8}
                 ],
                 expectedPattern: ['bird', 'white'],
                 cycles: 2
             }
-        ])('$name', ({ premises, expectedPattern, cycles }) => {
+        ])('$name', ({premises, expectedPattern, cycles}) => {
             test('should produce inductive inference', async () => {
                 let nar = new TestNAR();
 
@@ -130,8 +130,8 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Abduction: shared predicate pattern',
                 premises: [
-                    { narsese: '<cat --> mammal>', f: 0.9, c: 0.9 },
-                    { narsese: '<dog --> mammal>', f: 0.9, c: 0.9 }
+                    {narsese: '<cat --> mammal>', f: 0.9, c: 0.9},
+                    {narsese: '<dog --> mammal>', f: 0.9, c: 0.9}
                 ],
                 expectedPattern: ['cat', 'dog'],
                 cycles: 2
@@ -139,13 +139,13 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Abduction: common property',
                 premises: [
-                    { narsese: '<bird --> animal>', f: 0.9, c: 0.9 },
-                    { narsese: '<fish --> animal>', f: 0.8, c: 0.8 }
+                    {narsese: '<bird --> animal>', f: 0.9, c: 0.9},
+                    {narsese: '<fish --> animal>', f: 0.8, c: 0.8}
                 ],
                 expectedPattern: ['bird', 'fish'],
                 cycles: 2
             }
-        ])('$name', ({ premises, expectedPattern, cycles }) => {
+        ])('$name', ({premises, expectedPattern, cycles}) => {
             test('should produce abductive inference', async () => {
                 let nar = new TestNAR();
 
@@ -173,20 +173,20 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Similarity: symmetric comparison',
                 premises: [
-                    { narsese: '<cat --> mammal>', f: 0.9, c: 0.9 },
-                    { narsese: '<dog --> mammal>', f: 0.9, c: 0.9 }
+                    {narsese: '<cat --> mammal>', f: 0.9, c: 0.9},
+                    {narsese: '<dog --> mammal>', f: 0.9, c: 0.9}
                 ],
                 cycles: 2
             },
             {
                 name: 'Comparison: shared inheritance',
                 premises: [
-                    { narsese: '<tiger --> feline>', f: 0.95, c: 0.9 },
-                    { narsese: '<lion --> feline>', f: 0.95, c: 0.9 }
+                    {narsese: '<tiger --> feline>', f: 0.95, c: 0.9},
+                    {narsese: '<lion --> feline>', f: 0.95, c: 0.9}
                 ],
                 cycles: 2
             }
-        ])('$name', ({ premises, cycles }) => {
+        ])('$name', ({premises, cycles}) => {
             test('should produce comparison result', async () => {
                 let nar = new TestNAR();
 
@@ -211,20 +211,20 @@ describe('NAL Inference Rules', () => {
             {
                 name: 'Analogy: property transfer',
                 premises: [
-                    { narsese: '<bird --> [can_fly]>', f: 0.9, c: 0.9 },
-                    { narsese: '<bat <-> bird>', f: 0.7, c: 0.8 }
+                    {narsese: '<bird --> [can_fly]>', f: 0.9, c: 0.9},
+                    {narsese: '<bat <-> bird>', f: 0.7, c: 0.8}
                 ],
                 cycles: 2
             },
             {
                 name: 'Analogy: relational similarity',
                 premises: [
-                    { narsese: '<robin --> bird>', f: 0.95, c: 0.9 },
-                    { narsese: '<canary <-> robin>', f: 0.8, c: 0.85 }
+                    {narsese: '<robin --> bird>', f: 0.95, c: 0.9},
+                    {narsese: '<canary <-> robin>', f: 0.8, c: 0.85}
                 ],
                 cycles: 2
             }
-        ])('$name', ({ premises, cycles }) => {
+        ])('$name', ({premises, cycles}) => {
             test('should produce analogical inference', async () => {
                 let nar = new TestNAR();
 
@@ -248,15 +248,15 @@ describe('NAL Inference Rules', () => {
         describe.each([
             {
                 name: 'Conversion: inheritance reversal',
-                premises: [{ narsese: '<student --> person>', f: 0.9, c: 0.9 }],
+                premises: [{narsese: '<student --> person>', f: 0.9, c: 0.9}],
                 cycles: 1
             },
             {
                 name: 'Contraposition: negation inference',
-                premises: [{ narsese: '(--,<bird --> mammal>)', f: 0.95, c: 0.9 }],
+                premises: [{narsese: '(--,<bird --> mammal>)', f: 0.95, c: 0.9}],
                 cycles: 1
             }
-        ])('$name', ({ premises, cycles }) => {
+        ])('$name', ({premises, cycles}) => {
             test('should produce conversion/contraposition result', async () => {
                 let nar = new TestNAR();
 

@@ -64,21 +64,6 @@
 
 These technical challenges and design considerations guide development priorities and ensure the system evolves toward its ambitious vision while maintaining practical implementation focus.
 
-## Current Features (Available Now)
-
-The following features are implemented and available for use:
-
-- **Stream Reasoning Pipeline**: Continuous, non-blocking pipeline architecture (`PremiseSource` → `Strategy` → `RuleProcessor`) for processing streams of premises into conclusions
-- **Hybrid Logic Processing**: Integration of NAL (Non-Axiomatic Logic) with Language Model capabilities, with synchronous NAL and asynchronous LM processing
-- **Resource Management**: CPU throttling, backpressure handling, and derivation depth limits to manage computational resources (see [README.resources.md](README.resources.md))
-- **Dynamic Sampling**: Configurable sampling objectives (priority, recency, punctuation, novelty) for task selection
-- **Extensible Architecture**: Pluggable components supporting different reasoning strategies (Bag, Prolog, Exhaustive, Resolution, Goal-Driven, Analogical)
-- **Robust Data Foundation**: Immutable data structures (Terms, Tasks, Truth, Stamps) with canonical representation and functional processing
-- **Event-Based Communication**: Components communicate through a centralized EventBus for loose coupling with built-in metrics
-- **Tensor Logic**: Neural-symbolic integration with differentiable tensors (see [README.tensor.md](README.tensor.md))
-- **MCP Server**: Model Context Protocol integration for AI assistant connectivity
-- **Web UI**: Real-time visualization of reasoning via WebSocket monitoring
-
 ## Development and Operational Specifications
 
 - **Continuous Integration Pipeline**: Automated testing and deployment with quality gates

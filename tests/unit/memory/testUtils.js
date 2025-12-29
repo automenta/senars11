@@ -1,6 +1,6 @@
-import { Concept } from '../../../core/src/memory/Concept.js';
-import { Task } from '../../../core/src/task/Task.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {Concept} from '../../../core/src/memory/Concept.js';
+import {Task} from '../../../core/src/task/Task.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 export const tf = new TermFactory();
 
@@ -8,8 +8,8 @@ export const createAtom = (name) => tf.atomic(name);
 
 export const createTask = (term, priority = 0.5, frequency = 0.9, confidence = 0.8) => new Task({
     term,
-    budget: { priority },
-    truth: { frequency, confidence }
+    budget: {priority},
+    truth: {frequency, confidence}
 });
 
 export const createConcept = (term, config = Concept.DEFAULT_CONFIG) => new Concept(term, config);

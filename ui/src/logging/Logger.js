@@ -1,5 +1,5 @@
-import { UI_CONSTANTS } from '@senars/core';
-import { LogViewer } from '../components/LogViewer.js';
+import {UI_CONSTANTS} from '@senars/core';
+import {LogViewer} from '../components/LogViewer.js';
 
 export class Logger {
     constructor(uiElements = null) {

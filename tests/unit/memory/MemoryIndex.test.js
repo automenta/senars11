@@ -1,6 +1,6 @@
-import { MemoryIndex } from '../../../core/src/memory/MemoryIndex.js';
-import { Concept } from '../../../core/src/memory/Concept.js';
-import { tf, createConcept } from './testUtils.js';
+import {MemoryIndex} from '../../../core/src/memory/MemoryIndex.js';
+import {Concept} from '../../../core/src/memory/Concept.js';
+import {createConcept, tf} from './testUtils.js';
 
 describe('MemoryIndex', () => {
     let index;
@@ -32,7 +32,7 @@ describe('MemoryIndex', () => {
             const concept = createConcept(tf.inheritance(sub, pred));
             index.addConcept(concept);
 
-            expect(index.getStats()).toMatchObject({ totalConcepts: 1, inheritanceEntries: 1 });
+            expect(index.getStats()).toMatchObject({totalConcepts: 1, inheritanceEntries: 1});
             expect(index.findInheritanceConcepts(pred)).toContain(concept);
             expect(index.findConceptsByOperator('-->')).toHaveLength(1);
         });
@@ -42,7 +42,7 @@ describe('MemoryIndex', () => {
             const concept = createConcept(tf.implication(pre, post));
             index.addConcept(concept);
 
-            expect(index.getStats()).toMatchObject({ totalConcepts: 1, implicationEntries: 1 });
+            expect(index.getStats()).toMatchObject({totalConcepts: 1, implicationEntries: 1});
             expect(index.findImplicationConcepts(pre)).toContain(concept);
         });
 
@@ -51,7 +51,7 @@ describe('MemoryIndex', () => {
             const concept = createConcept(tf.similarity(t1, t2));
             index.addConcept(concept);
 
-            expect(index.getStats()).toMatchObject({ totalConcepts: 1, similarityEntries: 2 }); // Bidirectional
+            expect(index.getStats()).toMatchObject({totalConcepts: 1, similarityEntries: 2}); // Bidirectional
             expect(index.findSimilarityConcepts(t1)).toContain(concept);
             expect(index.findSimilarityConcepts(t2)).toContain(concept);
         });

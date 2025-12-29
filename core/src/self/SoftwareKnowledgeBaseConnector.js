@@ -535,7 +535,7 @@ class SelfAnalysisManager {
                 break;
 
             case 'quality': // technical debt
-                            // Technical debt assessment
+                // Technical debt assessment
                 if (item.metrics.totalDebtScore !== undefined) {
                     const debtLevel = item.metrics.totalDebtScore > 2000 ? 'high_debt' :
                         item.metrics.totalDebtScore > 1000 ? 'moderate_debt' :

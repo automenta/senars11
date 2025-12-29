@@ -1,4 +1,4 @@
-import { DESIGN_TOKENS } from '@senars/core';
+import {DESIGN_TOKENS} from '@senars/core';
 
 export const GraphConfig = {
     DEFAULT_NODE_WEIGHT: 50,
@@ -57,20 +57,20 @@ export const GraphConfig = {
                     'curve-style': 'bezier'
                 }
             },
-            { selector: 'node[type = "concept"]', style: { 'background-color': concept } },
-            { selector: 'node[type = "task"]', style: { 'background-color': task } },
-            { selector: 'node[type = "question"]', style: { 'background-color': question } },
+            {selector: 'node[type = "concept"]', style: {'background-color': concept}},
+            {selector: 'node[type = "task"]', style: {'background-color': task}},
+            {selector: 'node[type = "question"]', style: {'background-color': question}},
             {
                 selector: 'edge[type = "inheritance"]',
-                style: { 'line-color': inheritance, 'target-arrow-color': inheritance }
+                style: {'line-color': inheritance, 'target-arrow-color': inheritance}
             },
             {
                 selector: 'edge[type = "similarity"]',
-                style: { 'line-color': similarity, 'target-arrow-color': similarity }
+                style: {'line-color': similarity, 'target-arrow-color': similarity}
             },
             {
                 selector: 'edge[type = "implication"]',
-                style: { 'line-color': implication, 'target-arrow-color': implication }
+                style: {'line-color': implication, 'target-arrow-color': implication}
             },
             // Keyboard navigation highlight
             {

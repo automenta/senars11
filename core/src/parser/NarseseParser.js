@@ -1,5 +1,5 @@
-import { parse } from './peggy-parser.js';
-import { TermFactory } from '../term/TermFactory.js';
+import {parse} from './peggy-parser.js';
+import {TermFactory} from '../term/TermFactory.js';
 
 export class NarseseParser {
     constructor(termFactory) {
@@ -18,7 +18,7 @@ export class NarseseParser {
         }
 
         try {
-            const result = parse(input, { termFactory: this.termFactory });
+            const result = parse(input, {termFactory: this.termFactory});
 
             if (result.term?.operator === '--' && result.term.components.length === 1 && result.truthValue) {
                 result.term = result.term.components[0];

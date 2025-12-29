@@ -1,4 +1,4 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 describe('NARS Inference Cycle Integration with Computational Operations', () => {
     let nar;

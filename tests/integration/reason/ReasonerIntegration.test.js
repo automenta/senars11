@@ -1,21 +1,21 @@
-import { NAR } from '../../../core/src/nar/NAR.js';
+import {NAR} from '../../../core/src/nar/NAR.js';
 
 const createReasonerConfig = (overrides = {}) => ({
-    reasoning: { cpuThrottleInterval: 0, maxDerivationDepth: 5, ...overrides.reasoning },
-    cycle: { delay: 1, ...overrides.cycle },
+    reasoning: {cpuThrottleInterval: 0, maxDerivationDepth: 5, ...overrides.reasoning},
+    cycle: {delay: 1, ...overrides.cycle},
     ...overrides
 });
 
 describe('Reasoner Integration', () => {
     describe.each([
-        ['shallow depth', { maxDerivationDepth: 1 }],
-        ['standard depth', { maxDerivationDepth: 5 }],
-        ['deep depth', { maxDerivationDepth: 10 }]
+        ['shallow depth', {maxDerivationDepth: 1}],
+        ['standard depth', {maxDerivationDepth: 5}],
+        ['deep depth', {maxDerivationDepth: 10}]
     ])('Reasoning with %s', (depthName, reasoningConfig) => {
         let nar;
 
         beforeEach(async () => {
-            nar = new NAR(createReasonerConfig({ reasoning: reasoningConfig }));
+            nar = new NAR(createReasonerConfig({reasoning: reasoningConfig}));
             await nar.initialize();
         });
 
@@ -57,7 +57,7 @@ describe('Reasoner Integration', () => {
 
         test('should respect derivation depth limits', async () => {
             const narLimited = new NAR(createReasonerConfig({
-                reasoning: { maxDerivationDepth: 1 }
+                reasoning: {maxDerivationDepth: 1}
             }));
 
             await narLimited.initialize();

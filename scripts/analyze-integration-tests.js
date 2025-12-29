@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { execSync } from 'child_process';
-import { readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import {execSync} from 'child_process';
+import {readdirSync, statSync} from 'fs';
+import {join} from 'path';
 
 const results = [];
 const testDir = 'tests/integration';
@@ -35,7 +35,7 @@ for (const testFile of tests) {
     try {
         execSync(
             `NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.integration.config.js "${testFile}" --silent`,
-            { timeout: 10000, stdio: 'pipe' }
+            {timeout: 10000, stdio: 'pipe'}
         );
     } catch (e) {
         status = e.code === 124 || e.killed ? 'TIMEOUT' : 'FAIL';
@@ -43,7 +43,7 @@ for (const testFile of tests) {
     }
 
     const duration = Date.now() - start;
-    results.push({ testFile, status, duration, error });
+    results.push({testFile, status, duration, error});
 
     const symbol = status === 'PASS' ? '✓' : status === 'TIMEOUT' ? '⏱' : '✗';
     console.log(`${symbol} ${testFile.padEnd(80)} ${duration}ms`);

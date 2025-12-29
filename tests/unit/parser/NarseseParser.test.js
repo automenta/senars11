@@ -1,6 +1,6 @@
-import { NarseseParser } from '../../../core/src/parser/NarseseParser.js';
-import { Term } from '../../../core/src/term/Term.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
+import {NarseseParser} from '../../../core/src/parser/NarseseParser.js';
+import {Term} from '../../../core/src/term/Term.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
 
 describe('NarseseParser', () => {
     let parser, termFactory;
@@ -36,7 +36,7 @@ describe('NarseseParser', () => {
         });
 
         test('truth value', () => {
-            expect(parser.parse('a. %1.0;0.9%').truthValue).toEqual({ frequency: 1.0, confidence: 0.9 });
+            expect(parser.parse('a. %1.0;0.9%').truthValue).toEqual({frequency: 1.0, confidence: 0.9});
         });
     });
 
@@ -125,15 +125,15 @@ describe('NarseseParser', () => {
 
     describe('Comprehensive Format Support', () => {
         test.each([
-            { input: 'cat.', desc: 'Atomic term with punctuation' },
-            { input: '(cat --> animal).', desc: 'Parentheses with spaced inheritance' },
-            { input: '<cat --> animal>.', desc: 'Angle brackets with spaced inheritance' },
-            { input: '(a ==> b).', desc: 'Parentheses implication' },
-            { input: '<a ==> b>.', desc: 'Angle implication' },
-            { input: '(&, a, b).', desc: 'Prefix conjunction' },
-            { input: '{a, b}.', desc: 'Extensional set' },
-            { input: '[a].', desc: 'Intensional set (single element)' }
-        ])('parses $desc: $input', ({ input }) => {
+            {input: 'cat.', desc: 'Atomic term with punctuation'},
+            {input: '(cat --> animal).', desc: 'Parentheses with spaced inheritance'},
+            {input: '<cat --> animal>.', desc: 'Angle brackets with spaced inheritance'},
+            {input: '(a ==> b).', desc: 'Parentheses implication'},
+            {input: '<a ==> b>.', desc: 'Angle implication'},
+            {input: '(&, a, b).', desc: 'Prefix conjunction'},
+            {input: '{a, b}.', desc: 'Extensional set'},
+            {input: '[a].', desc: 'Intensional set (single element)'}
+        ])('parses $desc: $input', ({input}) => {
             const result = parser.parse(input);
             expect(result?.term).toBeDefined();
         });
@@ -143,7 +143,7 @@ describe('NarseseParser', () => {
         test('tight operators with truth values', () => {
             const result = parser.parse('(a-->b). %1.0;0.9%');
             expect(result.term.toString()).toBe('(-->, a, b)');
-            expect(result.truthValue).toEqual({ frequency: 1.0, confidence: 0.9 });
+            expect(result.truthValue).toEqual({frequency: 1.0, confidence: 0.9});
         });
     });
 });

@@ -1,28 +1,28 @@
-import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
-import { NAR } from '../../../core/src/nar/NAR.js';
-import { Memory } from '../../../core/src/memory/Memory.js';
-import { Focus } from '../../../core/src/memory/Focus.js';
-import { FocusSetSelector } from '../../../core/src/memory/FocusSetSelector.js';
-import { MemoryIndex } from '../../../core/src/memory/MemoryIndex.js';
-import { MemoryConsolidation } from '../../../core/src/memory/MemoryConsolidation.js';
-import { Concept } from '../../../core/src/memory/Concept.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
-import { inputAll, wait } from '../../support/testHelpers.js';
-import { generateBeliefs } from '../../support/integrationTestUtils.js';
-import { createTask, createTerm } from '../../support/factories.js';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {NAR} from '../../../core/src/nar/NAR.js';
+import {Memory} from '../../../core/src/memory/Memory.js';
+import {Focus} from '../../../core/src/memory/Focus.js';
+import {FocusSetSelector} from '../../../core/src/memory/FocusSetSelector.js';
+import {MemoryIndex} from '../../../core/src/memory/MemoryIndex.js';
+import {MemoryConsolidation} from '../../../core/src/memory/MemoryConsolidation.js';
+import {Concept} from '../../../core/src/memory/Concept.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {inputAll, wait} from '../../support/testHelpers.js';
+import {generateBeliefs} from '../../support/integrationTestUtils.js';
+import {createTask, createTerm} from '../../support/factories.js';
 
 describe('Memory Subsystem Integration', () => {
     describe.each([
-        ['minimal', { maxConcepts: 20, priorityThreshold: 0.5, consolidationInterval: 3 }],
-        ['standard', { maxConcepts: 50, priorityThreshold: 0.3, consolidationInterval: 5 }],
-        ['large', { maxConcepts: 100, priorityThreshold: 0.2, consolidationInterval: 8 }]
+        ['minimal', {maxConcepts: 20, priorityThreshold: 0.5, consolidationInterval: 3}],
+        ['standard', {maxConcepts: 50, priorityThreshold: 0.3, consolidationInterval: 5}],
+        ['large', {maxConcepts: 100, priorityThreshold: 0.2, consolidationInterval: 8}]
     ])('Memory with %s configuration', (configName, memConfig) => {
         let nar;
 
         beforeEach(async () => {
             nar = new NAR({
-                debug: { enabled: false },
-                cycle: { delay: 5, maxTasksPerCycle: 10 },
+                debug: {enabled: false},
+                cycle: {delay: 5, maxTasksPerCycle: 10},
                 memory: memConfig
             });
             await nar.initialize?.();
@@ -104,18 +104,22 @@ describe('Memory Subsystem Integration', () => {
 
         beforeEach(() => {
             tf = new TermFactory();
-            memory = new Memory({ priorityThreshold: 0.3, consolidationInterval: 5, priorityDecayRate: 0.1 });
-            focus = new Focus({ maxFocusSets: 3, defaultFocusSetSize: 10, attentionDecayRate: 0.05 });
-            selector = new FocusSetSelector({ maxSize: 5 });
+            memory = new Memory({priorityThreshold: 0.3, consolidationInterval: 5, priorityDecayRate: 0.1});
+            focus = new Focus({maxFocusSets: 3, defaultFocusSetSize: 10, attentionDecayRate: 0.05});
+            selector = new FocusSetSelector({maxSize: 5});
             index = new MemoryIndex();
-            consolidation = new MemoryConsolidation({ activationThreshold: 0.1, decayRate: 0.05, propagationFactor: 0.3 });
+            consolidation = new MemoryConsolidation({
+                activationThreshold: 0.1,
+                decayRate: 0.05,
+                propagationFactor: 0.3
+            });
         });
 
         test('Focus vs long-term memory separation', () => {
             const [tA, tB, tC] = ['A', 'B', 'C'].map(name => createTerm(`term_${name}`));
             const [taskHigh, taskMed, taskLow] = [0.9, 0.6, 0.2].map((p, i) => createTask({
                 term: [tA, tB, tC][i],
-                budget: { priority: p }
+                budget: {priority: p}
             }));
 
             focus.createFocusSet('primary', 5);
@@ -131,7 +135,7 @@ describe('Memory Subsystem Integration', () => {
 
         test('Promotion to long-term memory', () => {
             const term = createTerm('important');
-            const task = createTask({ term, budget: { priority: 0.85 } });
+            const task = createTask({term, budget: {priority: 0.85}});
 
             focus.createFocusSet('test', 3);
             focus.setFocus('test');
@@ -150,7 +154,7 @@ describe('Memory Subsystem Integration', () => {
                 .map(term => new Concept(term, {}))
                 .forEach(c => index.addConcept(c));
 
-            expect(index.getStats()).toMatchObject({ totalConcepts: 3, inheritanceEntries: 1, similarityEntries: 2 });
+            expect(index.getStats()).toMatchObject({totalConcepts: 3, inheritanceEntries: 1, similarityEntries: 2});
 
             const related = index.findInheritanceConcepts(dog);
             expect(related).toHaveLength(1);
@@ -158,9 +162,9 @@ describe('Memory Subsystem Integration', () => {
         });
 
         test('Memory consolidation triggers correctly', () => {
-            Array.from({ length: 5 }, (_, i) => createTask({
+            Array.from({length: 5}, (_, i) => createTask({
                 term: createTerm(`cons_${i}`),
-                budget: { priority: 0.5 - (i * 0.1) }
+                budget: {priority: 0.5 - (i * 0.1)}
             })).forEach((task, i) => memory.addTask(task, Date.now() - (i * 1000)));
 
             const result = consolidation.consolidate(memory, Date.now());
@@ -172,7 +176,10 @@ describe('Memory Subsystem Integration', () => {
             const sets = ['high', 'recent', 'diverse'];
             sets.forEach((s, i) => focus.createFocusSet(s, 3 + i));
 
-            const tasks = sets.map((_, i) => createTask({ term: createTerm(`T${i}`), budget: { priority: 0.9 - i * 0.2 } }));
+            const tasks = sets.map((_, i) => createTask({
+                term: createTerm(`T${i}`),
+                budget: {priority: 0.9 - i * 0.2}
+            }));
 
             sets.forEach((s, i) => {
                 focus.setFocus(s);
@@ -192,7 +199,7 @@ describe('Memory Subsystem Integration', () => {
             focus.createFocusSet('decay-test', 5);
             focus.setFocus('decay-test');
 
-            const task = createTask({ term: createTerm('decaying'), budget: { priority: 0.8 } });
+            const task = createTask({term: createTerm('decaying'), budget: {priority: 0.8}});
             focus.addTaskToFocus(task);
 
             const initialStats = focus.getStats();
@@ -210,9 +217,9 @@ describe('Memory Subsystem Integration', () => {
 
         beforeEach(async () => {
             nar = new NAR({
-                debug: { enabled: false },
-                cycle: { delay: 5, maxTasksPerCycle: 10 },
-                memory: { priorityThreshold: 0.3, consolidationInterval: 5, maxConcepts: 50 }
+                debug: {enabled: false},
+                cycle: {delay: 5, maxTasksPerCycle: 10},
+                memory: {priorityThreshold: 0.3, consolidationInterval: 5, maxConcepts: 50}
             });
             await nar.initialize?.();
         });
@@ -227,7 +234,7 @@ describe('Memory Subsystem Integration', () => {
             await inputAll(nar, beliefs);
             await nar.runCycles(5);
 
-            const { _focus: focus, memory } = nar;
+            const {_focus: focus, memory} = nar;
             if (!focus || !memory) return;
 
             const focusTasks = focus.getTasks(100);
@@ -258,7 +265,7 @@ describe('Memory Subsystem Integration', () => {
         });
 
         test('Concept indexing under load', async () => {
-            const inheritances = Array.from({ length: 25 }, (_, i) =>
+            const inheritances = Array.from({length: 25}, (_, i) =>
                 `<item_${i} --> category_${i % 5}>.`
             );
 
@@ -316,8 +323,8 @@ describe('Memory Subsystem Integration', () => {
 
         beforeEach(() => {
             const tf = new TermFactory();
-            memory = new Memory({ priorityThreshold: 0.3, consolidationInterval: 5, priorityDecayRate: 0.1 });
-            focus = new Focus({ maxFocusSets: 3, defaultFocusSetSize: 10, attentionDecayRate: 0.05 });
+            memory = new Memory({priorityThreshold: 0.3, consolidationInterval: 5, priorityDecayRate: 0.1});
+            focus = new Focus({maxFocusSets: 3, defaultFocusSetSize: 10, attentionDecayRate: 0.05});
             index = new MemoryIndex();
         });
 
@@ -326,8 +333,8 @@ describe('Memory Subsystem Integration', () => {
             focus.createFocusSet('stress', 10);
             focus.setFocus('stress');
 
-            Array.from({ length: 50 }, (_, i) => {
-                const task = createTask({ term: createTerm(`stress_${i}`), budget: { priority: Math.random() } });
+            Array.from({length: 50}, (_, i) => {
+                const task = createTask({term: createTerm(`stress_${i}`), budget: {priority: Math.random()}});
                 focus.addTaskToFocus(task);
                 memory.addTask(task);
                 index.addConcept(memory.getConcept(task.term));

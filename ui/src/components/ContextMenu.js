@@ -1,5 +1,3 @@
-import { DESIGN_TOKENS } from '@senars/core';
-
 export class ContextMenu {
     constructor(graphManager, commandProcessor) {
         this.graphManager = graphManager;
@@ -61,8 +59,8 @@ export class ContextMenu {
     }
 
     _positionMenu(x, y) {
-        const { width, height } = this.menuElement.getBoundingClientRect();
-        const { innerWidth: vw, innerHeight: vh } = window;
+        const {width, height} = this.menuElement.getBoundingClientRect();
+        const {innerWidth: vw, innerHeight: vh} = window;
 
         this.menuElement.style.left = `${Math.min(x, vw - width - 10)}px`;
         this.menuElement.style.top = `${Math.min(y, vh - height - 10)}px`;
@@ -70,21 +68,21 @@ export class ContextMenu {
 
     _getNodeMenuItems(element) {
         const baseItems = [
-            { action: 'focus', icon: '🎯', label: 'Focus' },
-            { action: 'inspect', icon: '🔍', label: 'Inspect Details' },
-            { action: 'expand', icon: '🔗', label: 'Expand Relations' },
-            { action: 'copy', icon: '📋', label: 'Copy Term' },
+            {action: 'focus', icon: '🎯', label: 'Focus'},
+            {action: 'inspect', icon: '🔍', label: 'Inspect Details'},
+            {action: 'expand', icon: '🔗', label: 'Expand Relations'},
+            {action: 'copy', icon: '📋', label: 'Copy Term'},
         ];
 
         return element.data().type === 'task'
-            ? [...baseItems, { action: 'execute', icon: '▶️', label: 'Execute Task' }]
+            ? [...baseItems, {action: 'execute', icon: '▶️', label: 'Execute Task'}]
             : baseItems;
     }
 
     _getEdgeMenuItems() {
         return [
-            { action: 'inspect', icon: '🔍', label: 'Inspect Edge' },
-            { action: 'remove', icon: '🗑️', label: 'Remove Edge' },
+            {action: 'inspect', icon: '🔍', label: 'Inspect Edge'},
+            {action: 'remove', icon: '🗑️', label: 'Remove Edge'},
         ];
     }
 
@@ -106,7 +104,7 @@ export class ContextMenu {
         element.select();
 
         this.graphManager.cy.animate({
-            center: { eles: element },
+            center: {eles: element},
             zoom: 2,
             duration: 300
         });

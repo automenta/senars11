@@ -3,9 +3,9 @@
  */
 
 export const memoryConfigs = {
-    minimal: { maxConcepts: 20, priorityThreshold: 0.5, consolidationInterval: 3 },
-    standard: { maxConcepts: 50, priorityThreshold: 0.3, consolidationInterval: 5 },
-    large: { maxConcepts: 100, priorityThreshold: 0.2, consolidationInterval: 8 }
+    minimal: {maxConcepts: 20, priorityThreshold: 0.5, consolidationInterval: 3},
+    standard: {maxConcepts: 50, priorityThreshold: 0.3, consolidationInterval: 5},
+    large: {maxConcepts: 100, priorityThreshold: 0.2, consolidationInterval: 8}
 };
 
 export const reasoningDepths = {
@@ -15,8 +15,8 @@ export const reasoningDepths = {
 };
 
 export const createNARConfig = (overrides = {}) => ({
-    debug: { enabled: false },
-    cycle: { delay: 5, maxTasksPerCycle: 10 },
+    debug: {enabled: false},
+    cycle: {delay: 5, maxTasksPerCycle: 10},
     ...overrides
 });
 

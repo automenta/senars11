@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { Component, Config, DEFAULT_CONFIG_CORE } from '../../../core/src/config/Config.js';
-import { validateConfig, validateConfigWithDefaults } from '../../../core/src/config/ConfigSchemas.js';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
+import {Component, Config, DEFAULT_CONFIG_CORE} from '../../../core/src/config/Config.js';
+import {validateConfig, validateConfigWithDefaults} from '../../../core/src/config/ConfigSchemas.js';
 
 jest.unstable_mockModule('fs', () => ({
     default: {
@@ -15,7 +15,7 @@ jest.unstable_mockModule('fs', () => ({
     mkdirSync: jest.fn(),
 }));
 
-const { ConfigManager, DEFAULT_CONFIG } = await import('../../../core/src/config/ConfigManager.js');
+const {ConfigManager, DEFAULT_CONFIG} = await import('../../../core/src/config/ConfigManager.js');
 
 
 describe('Config', () => {
@@ -62,7 +62,7 @@ describe('Config', () => {
             }
         ];
 
-        test.each(parseTests)('parses $name', ({ args, expect: expectFn }) =>
+        test.each(parseTests)('parses $name', ({args, expect: expectFn}) =>
             expectFn(Config.parse(args))
         );
     });
@@ -130,8 +130,8 @@ describe('Component', () => {
     });
 
     test('updateConfig merges values', () => {
-        const comp = new TestComponent({ a: 1, b: { c: 2 } });
-        comp.updateConfig({ b: { d: 3 } });
+        const comp = new TestComponent({a: 1, b: {c: 2}});
+        comp.updateConfig({b: {d: 3}});
         expect(comp.config.a).toBe(1);
         expect(comp.config.b.c).toBe(2);
     });
@@ -170,12 +170,12 @@ describe('ConfigManager', () => {
     });
 
     test('updates config values', () => {
-        configManager.update({ lm: { enabled: true } });
+        configManager.update({lm: {enabled: true}});
         expect(configManager._config.lm.enabled).toBe(true);
     });
 
     test('validates config on update', () => {
-        const result = configManager.update({ webSocket: { port: 1234 } });
+        const result = configManager.update({webSocket: {port: 1234}});
         expect(result).toBe(configManager);
     });
 });
@@ -183,13 +183,13 @@ describe('ConfigManager', () => {
 describe('ConfigSchemas', () => {
     describe('validateConfig', () => {
         test('validates a correct minimal config', () => {
-            const result = validateConfig({ memory: { capacity: 1000 } });
+            const result = validateConfig({memory: {capacity: 1000}});
             expect(result.error).toBeNull();
             expect(result.value.memory.capacity).toBe(1000);
         });
 
         test('returns error for invalid config', () => {
-            const result = validateConfig({ memory: { capacity: -1 } });
+            const result = validateConfig({memory: {capacity: -1}});
             expect(result.error).not.toBeNull();
             expect(result.value).toBeNull();
         });
@@ -203,7 +203,7 @@ describe('ConfigSchemas', () => {
         });
 
         test('throws error for invalid config', () =>
-            expect(() => validateConfigWithDefaults({ cycle: { delay: -10 } }))
+            expect(() => validateConfigWithDefaults({cycle: {delay: -10}}))
                 .toThrow(/validation failed/i)
         );
     });
@@ -229,7 +229,7 @@ describe('ConfigSchemas', () => {
         test('allows passthrough for unknown keys', () => {
             const result = validateConfigWithDefaults({
                 extra: 'value',
-                memory: { custom: 123 }
+                memory: {custom: 123}
             });
             expect(result.extra).toBe('value');
             expect(result.memory.custom).toBe(123);

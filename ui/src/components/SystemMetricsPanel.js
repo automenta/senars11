@@ -1,4 +1,4 @@
-import { Component } from './Component.js';
+import {Component} from './Component.js';
 
 export class SystemMetricsPanel extends Component {
     constructor(containerId) {

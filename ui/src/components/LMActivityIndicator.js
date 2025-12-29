@@ -1,11 +1,13 @@
-import { DESIGN_TOKENS } from '@senars/core';
-
 export class LMActivityIndicator {
     constructor(containerElement) {
         this.container = containerElement;
         this.overlay = null;
         this.isActive = false;
         this._createOverlay();
+    }
+
+    get active() {
+        return this.isActive;
     }
 
     _createOverlay() {
@@ -57,10 +59,6 @@ export class LMActivityIndicator {
             spinnerContainer.classList.add('hidden');
             errorContainer.classList.remove('hidden');
         }
-    }
-
-    get active() {
-        return this.isActive;
     }
 
     destroy() {

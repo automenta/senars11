@@ -1,5 +1,5 @@
-import { Config } from '../config/Config.js';
-import { CommandRegistry } from '@senars/core';
+import {Config} from '../config/Config.js';
+import {CommandRegistry} from '@senars/core';
 
 export class CommandProcessor {
     constructor(webSocketManager, logger, graphManager = null) {
@@ -8,7 +8,7 @@ export class CommandProcessor {
         this.graphManager = graphManager;
         this.history = [];
         this.maxHistorySize = Config.getConstants().MAX_HISTORY_SIZE;
-        this.commandRegistry = new CommandRegistry({ logger: this.logger });
+        this.commandRegistry = new CommandRegistry({logger: this.logger});
         this._registerUICommands();
     }
 
@@ -25,7 +25,7 @@ export class CommandProcessor {
             ['/stop', ctx => this._executeStop(ctx), 'Stop continuous execution']
         ];
         commands.forEach(([cmd, handler, desc]) =>
-            this.commandRegistry.registerCommand(cmd, handler, { description: desc })
+            this.commandRegistry.registerCommand(cmd, handler, {description: desc})
         );
     }
 
@@ -55,12 +55,12 @@ export class CommandProcessor {
     }
 
     _listGoals(ctx) {
-        this.webSocketManager.sendMessage('command.execute', { command: 'goals', args: [] });
+        this.webSocketManager.sendMessage('command.execute', {command: 'goals', args: []});
         return true;
     }
 
     _listBeliefs(ctx) {
-        this.webSocketManager.sendMessage('command.execute', { command: 'beliefs', args: [] });
+        this.webSocketManager.sendMessage('command.execute', {command: 'beliefs', args: []});
         return true;
     }
 
@@ -101,7 +101,7 @@ export class CommandProcessor {
 
         this.webSocketManager.sendMessage(
             mode === 'agent' ? 'agent/input' : 'narseseInput',
-            { input: trimmedCommand }
+            {input: trimmedCommand}
         );
         return true;
     }
@@ -144,7 +144,7 @@ export class CommandProcessor {
     }
 
     _addToHistory(command) {
-        this.history.push({ command, timestamp: new Date(), status: 'sent' });
+        this.history.push({command, timestamp: new Date(), status: 'sent'});
         this.history.length > this.maxHistorySize && (this.history = this.history.slice(-this.maxHistorySize));
     }
 
