@@ -2,6 +2,22 @@
 
 The SeNARS Stream Reasoner implements comprehensive resource management to operate effectively under the **AIKR principle** (Assumption of Insufficient Knowledge and Resources). The system is designed to reason continuously with finite computational resources.
 
+## AIKR Principle
+
+The **Assumption of Insufficient Knowledge and Resources** is a core NARS principle that SeNARS implements:
+
+1. **Knowledge Incompleteness**: The system cannot know everything relevant to its tasks
+2. **Resource Scarcity**: Computational resources (time, memory, processing) are always limited
+3. **Real-Time Constraints**: Responses are needed within bounded time
+
+**Implications:**
+- The system must make reasonable inferences with incomplete information
+- Processing must be **anytime**: interrupted at any point and still provide useful results
+- Priority-based processing ensures the most important tasks are handled first
+- Forgetting is a feature, not a bug: low-priority information is discarded to make room for high-priority knowledge
+
+---
+
 ## CPU Throttling
 
 Configurable CPU throttle interval prevents blocking the event loop. Set via `cpuThrottleInterval` in reasoner configuration (see [README.config.md](README.config.md) for detailed configuration).
@@ -55,19 +71,6 @@ Per-cycle execution time constraints (configurable via `SystemConfig`):
 
 Built-in metrics for resource utilization are available through the event system (see [README.api.md](README.api.md) for event handling examples).
 
-## AIKR Principle
-
-The **Assumption of Insufficient Knowledge and Resources** is a core NARS principle that SeNARS implements:
-
-1. **Knowledge Incompleteness**: The system cannot know everything relevant to its tasks
-2. **Resource Scarcity**: Computational resources (time, memory, processing) are always limited
-3. **Real-Time Constraints**: Responses are needed within bounded time
-
-**Implications:**
-- The system must make reasonable inferences with incomplete information
-- Processing must be **anytime**: interrupted at any point and still provide useful results
-- Priority-based processing ensures the most important tasks are handled first
-- Forgetting is a feature, not a bug: low-priority information is discarded to make room for high-priority knowledge
 
 See [README.config.md](README.config.md) for detailed configuration options.
 

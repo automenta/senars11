@@ -145,18 +145,3 @@ This architecture naturally implements RL where:
 **Component Management**: Standardized lifecycle, event-driven architecture, circuit breaker patterns, comprehensive metrics
 
 **Self-Improvement**: Intelligence emerges from data structure properties, with each operation potentially improving all future operations
-
-## Roadmap Connection
-
-For concrete implementation steps and timelines, see [README.roadmap.md](README.roadmap.md).
-
-Current capabilities and future development are tracked in the roadmap document, which outlines:
--   **Current Features**: Available now for use
--   **Technical Challenges**: Known issues and optimization opportunities
--   **Future Development**: Planned enhancements and extensions
--   **Success Metrics**: Measures of system growth and capability
-
--   [Roadmap](README.roadmap.md) - Implementation timeline and features
--   [Architecture](README.architecture.md) - Current system design
--   [RLFP](agent/src/rlfp/README.md) - Reinforcement learning implementation
--   [Introduction](README.intro.md) - System overview

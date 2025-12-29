@@ -336,7 +336,3 @@ Implement NAL-specific truth value calculations:
 4. **Negation:** Properly calculate negated truth values.
 5. **Expectation:** Calculate expectation values for decision making.
 
-- [Architecture](README.architecture.md) - High-level patterns and design principles
-- [API Documentation](README.api.md) - Public API reference and usage examples
-- [Configuration](README.config.md) - Component configuration options
-- [Development Guide](README.development.md) - Component development patterns

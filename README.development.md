@@ -176,9 +176,3 @@ The system provides a fluent API for easy test creation.
 - **Memory Efficient**: Smart caching reduces memory growth as knowledge base expands
 - **Scalable**: Can distribute across multiple nodes
 - **Resource Management**: Configurable limits prevent resource exhaustion (default: 512MB memory, 100ms per cycle)
-
-
-
-- [Architecture](README.architecture.md) - System design and patterns
-- [Core Components](README.core.md) - Deep dive into component implementations
-- [Quick Reference](README.quickref.md) - Common tasks and commands

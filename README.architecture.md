@@ -189,8 +189,3 @@ For detailed data structure implementations, see **[README.core.md](README.core.
 - **Performance Metrics**: Detailed metrics collection across all system components
 - **Component Architecture**: Sophisticated component management with lifecycle control, dependency resolution, and standardized interfaces
 - **Event-Driven Architecture**: Comprehensive event system with middleware support, error handling, and performance tracking
-
-- [Core Components](README.core.md) - Deep dive into Memory, Focus, Strategie, and Rules
-- [Configuration](README.config.md) - System customization and parameters
-- [Development Guide](README.development.md) - Patterns for extending the system
-- [Resources](README.resources.md) - AIKR principle and resource management implementation

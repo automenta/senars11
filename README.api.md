@@ -81,7 +81,3 @@ nar.step();
 nar.step(5); // Execute 5 steps
 ```
 
-- [Usage Guide](README.usage.md) - Complete usage examples
-- [Core Components](README.core.md) - Detailed component documentation
-- [Configuration](README.config.md) - System customization options
-

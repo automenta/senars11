@@ -229,8 +229,3 @@ const config = {
     }
 };
 ```
-
-- [Quick Reference](README.quickref.md) - Command and pattern reference
-- [Configuration](README.config.md) - Detailed configuration options
-- [Development Guide](README.development.md) - Development workflows
-- [API Documentation](README.api.md) - API reference

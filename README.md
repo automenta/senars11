@@ -2,27 +2,23 @@
 
 **SeNARS** is the kernel for a new generation of cognitive architectures. It fuses the **fluid creativity** of Large Language Models (LLMs) with the **rigorous logic** of Non-Axiomatic Reasoning Systems (NARS).
 
-## How to Use This Documentation
 
-This documentation is organized into three main categories:
+## Features
 
-- **Getting Started**: For newcomers to understand and use SeNARS quickly
-- **System Design**: For understanding the architecture and internal workings
-- **Reference**: For detailed API, configuration, and development information
+The following features are implemented and available for use:
 
-Start with [Quick Reference](README.quickref.md) for immediate usage, or [Introduction](README.intro.md) for a comprehensive overview.
-
-## Installation
-
-```bash
-npm install
-npm run build
-npm test  # Verify installation (99.8% pass rate)
-```
+- **Stream Reasoning Pipeline**: Continuous, non-blocking pipeline architecture (`PremiseSource` → `Strategy` → `RuleProcessor`) for processing streams of premises into conclusions
+- **Hybrid Logic Processing**: Integration of NAL (Non-Axiomatic Logic) with Language Model capabilities, with synchronous NAL and asynchronous LM processing
+- **Resource Management**: CPU throttling, backpressure handling, and derivation depth limits to manage computational resources (see [README.resources.md](README.resources.md))
+- **Dynamic Sampling**: Configurable sampling objectives (priority, recency, punctuation, novelty) for task selection
+- **Extensible Architecture**: Pluggable components supporting different reasoning strategies (Bag, Prolog, Exhaustive, Resolution, Goal-Driven, Analogical)
+- **Robust Data Foundation**: Immutable data structures (Terms, Tasks, Truth, Stamps) with canonical representation and functional processing
+- **Event-Based Communication**: Components communicate through a centralized EventBus for loose coupling with built-in metrics
+- **Tensor Logic**: Neural-symbolic integration with differentiable tensors (see [README.tensor.md](README.tensor.md))
+- **MCP Server**: Model Context Protocol integration for AI assistant connectivity
+- **Web UI**: Real-time visualization of reasoning via WebSocket monitoring
 
 ## Documentation
-
-This README has been decomposed into detailed sections:
 
 ### Getting Started
 *   **[Quick Reference](README.quickref.md)**: Commands, subsystems, and common patterns.
@@ -41,21 +37,4 @@ This README has been decomposed into detailed sections:
 *   **[API](README.api.md)**: API reference for `NAR` and Stream Reasoner.
 *   **[Development](README.development.md)**: Development guide, testing strategies, and directory structure.
 *   **[Roadmap](README.roadmap.md)**: Current features, challenges, and future plans.
-
-## Quick Start
-
-```javascript
-import { NAR } from './core/src/nar/NAR.js';
-
-const nar = new NAR();
-nar.start();
-
-/* Input a belief */
-nar.input("(bird --> animal).");
-
-/* Ask a question */
-nar.input("(bird --> ?what)?");
-```
-
-See [README.quickref.md](README.quickref.md) for command reference and [README.usage.md](README.usage.md) for more details.
 
