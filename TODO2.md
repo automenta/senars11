@@ -1,310 +1,940 @@
-# TODO2.md — Maximum Leverage Development Plan
+# TODO2.md — SeNARS Development Roadmap
 
-> **The Winning Strategy**: SeNARS has real technical substance (889 tests, working reasoning, functional tensors). The path to winning is not building more features — it's making existing power **demonstrable**, **accessible**, and **undeniable**.
-
----
-
-## The Big Picture: Why SeNARS Can Win
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                           THE SENAR ADVANTAGE                               │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  LLMs:    Fast pattern matching → Hallucinations, context amnesia         │
-│  Logic:   Perfect consistency   → Brittle, no common sense                │
-│  SeNARS:  NAL + LM + Tensors    → Consistent, adaptive, explainable       │
-│                                                                            │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
-│                                                                            │
-│  UNIQUE ASSETS:                                                            │
-│    ✓ Truth-Tensor Bridge — Differentiable NAL (genuinely novel)            │
-│    ✓ 889 passing tests — Production-grade stability                        │
-│    ✓ AIKR resource awareness — Graceful degradation                        │
-│    ✓ Stream architecture — Modern async reasoner                           │
-│    ✓ MCP server — AI assistant integration ready                           │
-│    ✓ NARL 10-level benchmark — Measures what LLMs can't do                │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+> **Strategy**: Make SeNARS power **demonstrable**, **accessible**, and **undeniable**.
 
 ---
 
-## Phase 0: The 60-Second Win (Days 1-3)
+## Overview
 
-> **Objective**: Anyone can experience SeNARS value in under 60 seconds.
+SeNARS has working NAL reasoning, 889 tests, and a Truth-Tensor bridge. What's missing is **visibility** — making it easy to see, use, and extend. This roadmap builds the **IDE + Lab** environment that showcases SeNARS capabilities.
 
-### 0.1 Create `npx senars` Entry Point ✅
+### Core Deliverables
+
+| Deliverable | Purpose | Status |
+|-------------|---------|--------|
+| `npx senars demo` | 60-second value proof | ✅ Complete |
+| `SeNARS.js` facade | Simple API | ✅ Complete |
+| IDE | Development environment | Planned |
+| Lab | Experiment runner | Planned |
+| NARL Benchmark | Scientific proof | Scaffold exists |
+
+---
+
+## Phase 0: Foundation ✅ COMPLETE
+
+- [x] `npx senars demo` — 3 compelling demos
+- [x] `SeNARS.js` — Friction-free facade API
+- [x] Timeout protection — Prevents hangs
+- [x] Progress logging — Visible feedback
+- [x] Code cleanup — AGENTS.md compliance
+
+---
+
+## Phase 0.5: The Killer Demo — Hybrid NAL + LM 🎯
+
+> **Objective**: Demonstrate neuro-symbolic synergy with transparent visualization.
+
+This is the demo that proves SeNARS is different. Natural language in, reasoned answer out, with **visible proof chains** and **explainable confidence**.
+
+### The Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  User: "Are penguins mammals?"                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  1. LM PARSING                                                  │
+│     Input: "Are penguins mammals?"                              │
+│     → Narsese: (penguin --> mammal)?                            │
+├─────────────────────────────────────────────────────────────────┤
+│  2. NAL REASONING                                               │
+│     Beliefs: (penguin --> bird). (bird --> animal).             │
+│              (mammal --> animal). (penguin --> swimmer).        │
+│     Derivations: [shown step by step in UI]                     │
+│     Result: NO  <0.1, 0.7>  (low frequency, moderate conf)      │
+├─────────────────────────────────────────────────────────────────┤
+│  3. LM EXPLANATION                                              │
+│     "Penguins are not mammals. While both are animals,          │
+│      penguins are birds. Confidence: 70%"                       │
+├─────────────────────────────────────────────────────────────────┤
+│  4. PROOF TREE (visible in Lab UI)                              │
+│     (penguin --> bird) + (bird --> animal) = (penguin --> animal)│
+│     No path: (penguin --> mammal)                               │
+│     Negative evidence from structural difference                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Lab UI Transparency
+
+The Lab displays **every step** in real-time:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  🧪 HYBRID REASONING LAB                                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  INPUT ───────────────────────────────────────────────────────  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ "Are penguins mammals?"                              [▶] │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  PARSING (Transformers.js: LaMini-Flan-T5-248M) ─────────────  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ "Are penguins mammals?" → (penguin --> mammal)?    ✓   │   │
+│  │ Model: Xenova/LaMini-Flan-T5-248M  Time: 312ms         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  REASONING (NAL Inference Engine) ───────────────────────────  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ Beliefs loaded: 4                                       │   │
+│  │ ├─ (penguin --> bird). <1.0, 0.9>                      │   │
+│  │ ├─ (bird --> animal). <1.0, 0.9>                       │   │
+│  │ ├─ (mammal --> animal). <1.0, 0.9>                     │   │
+│  │ └─ (penguin --> swimmer). <1.0, 0.9>                   │   │
+│  │                                                         │   │
+│  │ Derivations:                                            │   │
+│  │ ├─ [DED] (penguin --> animal) <1.0, 0.81>              │   │
+│  │ └─ [ABD] (penguin --> mammal)? → NO SUPPORT            │   │
+│  │                                                         │   │
+│  │ Answer: NO  Freq: 0.1  Conf: 0.7                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  EXPLANATION (LM Generation) ────────────────────────────────  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ "Penguins are not mammals. They are birds. While both  │   │
+│  │  penguins and mammals are animals, penguins belong to  │   │
+│  │  the bird family. Confidence: 70%"                     │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  PROOF TREE ─────────────────────────────────────────────────  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │         (penguin --> mammal)?                           │   │
+│  │               ╱           ╲                             │   │
+│  │    [no support]      [structural diff]                  │   │
+│  │                            │                            │   │
+│  │              (penguin --> bird) ≠ (x --> mammal)        │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Implementation Components
+
+**[NEW] `core/src/hybrid/HybridReasoner.js`**
+```javascript
+export class HybridReasoner {
+    constructor(seNARS, lmProvider) {
+        this.brain = seNARS;
+        this.lm = lmProvider;
+    }
+    
+    async processNaturalLanguage(input) {
+        // 1. LM parses to Narsese
+        const narsese = await this.lm.parseToNarsese(input);
+        
+        // 2. NAL reasons
+        const result = await this.brain.ask(narsese);
+        
+        // 3. LM explains result
+        const explanation = await this.lm.explain(result);
+        
+        return { input, narsese, result, explanation, proof: result.proof };
+    }
+}
+```
+
+**[NEW] `ui/src/components/lab/HybridDemo.js`**
+- Four-panel layout: Input, Parsing, Reasoning, Explanation
+- Live streaming of each phase
+- Proof tree visualization
+- Timing breakdowns
+
+**[NEW] `ui/lab/demos/H_hybrid.json`** — Demo configuration
+```json
+{
+    "id": "H",
+    "name": "Hybrid NAL+LM Reasoning",
+    "category": "Hybrid",
+    "priority": "P0",
+    "description": "The killer demo: natural language meets symbolic reasoning",
+    "config": {
+        "lm": {
+            "provider": "transformers",
+            "model": "Xenova/LaMini-Flan-T5-248M"
+        }
+    },
+    "examples": [
+        { "input": "Are penguins mammals?", "expectedAnswer": false },
+        { "input": "Can birds fly?", "expectedAnswer": true },
+        { "input": "Is Socrates mortal?", "expectedAnswer": true }
+    ]
+}
+```
+
+### Why This Demo Wins
+
+| Aspect | LLM-Only | SeNARS Hybrid |
+|--------|----------|---------------|
+| Answer | "Penguins are not mammals" | Same |
+| Confidence | None / hallucinated | 70% (computed) |
+| Proof | None | Full derivation chain |
+| Explainability | Black box | Transparent steps |
+| Consistency | May contradict | Logically guaranteed |
+| Offline | No (API required) | Yes (Transformers.js) |
+
+### Timeline
+
+| Task | Effort | Status |
+|------|--------|--------|
+| `HybridReasoner.js` class | 2 hrs | [ ] |
+| NL→Narsese prompt tuning | 2 hrs | [ ] |
+| Result→Explanation prompt | 1 hr | [ ] |
+| `HybridDemo.js` UI component | 3 hrs | [ ] |
+| Lab integration | 2 hrs | [ ] |
+| Test & polish | 2 hrs | [ ] |
+| **Total** | **~12 hrs** | |
+
+---
+
+## Phase 1: IDE + Lab Architecture
+
+### Vision
+
+The SeNARS **IDE** is a complete development environment for NAL reasoning. The **Lab** is an integrated experimentation mode for running demos, benchmarks, and autonomous explorations.
+
+### Directory Structure
+
+```
+ui/
+├── src/
+│   ├── components/
+│   │   ├── shared/                 # Reusable across IDE and Lab
+│   │   │   ├── EventStream.js      # WebSocket event handling
+│   │   │   ├── ProofTree.js        # Derivation visualization
+│   │   │   ├── TermView.js         # Term rendering (copulas, compounds)
+│   │   │   ├── TruthDisplay.js     # Truth value badges (<f,c>)
+│   │   │   ├── TaskCard.js         # Task display (belief/goal/question)
+│   │   │   └── ConceptCard.js      # Concept summary card
+│   │   │
+│   │   ├── ide/                    # IDE-specific components
+│   │   │   ├── Editor.js           # Narsese editor + syntax highlighting
+│   │   │   ├── Console.js          # REPL with history
+│   │   │   ├── BeliefBrowser.js    # Query and browse beliefs
+│   │   │   ├── GoalPanel.js        # Active goals display
+│   │   │   ├── ConceptExplorer.js  # Memory exploration
+│   │   │   ├── Debugger.js         # Step-through reasoning
+│   │   │   └── Timeline.js         # Cycle history scrubber
+│   │   │
+│   │   └── lab/                    # Lab-specific components
+│   │       ├── LabRunner.js        # Experiment orchestrator
+│   │       ├── LiveTrace.js        # Real-time inference stream
+│   │       ├── ScoreChart.js       # Performance over time
+│   │       ├── DiscoveryLog.js     # Notable inferences
+│   │       ├── ComparisonView.js   # SeNARS vs LLM side-by-side
+│   │       └── Achievements.js     # Gamification badges
+│   │
+│   ├── layouts/
+│   │   ├── IDELayout.js            # IDE panel arrangement
+│   │   └── LabLayout.js            # Lab dashboard layout
+│   │
+│   ├── hooks/
+│   │   ├── useSeNARS.js            # React hook for SeNARS
+│   │   ├── useWebSocket.js         # Event subscription
+│   │   └── useExperiment.js        # Lab experiment state
+│   │
+│   └── App.js                      # Mode switching (IDE/Lab)
+│
+├── server/
+│   ├── index.js                    # Express + WebSocket server
+│   ├── api/
+│   │   ├── reasoning.js            # /api/input, /api/query, /api/cycle
+│   │   ├── memory.js               # /api/beliefs, /api/concepts
+│   │   └── experiments.js          # /api/lab/start, /api/lab/stop
+│   └── ws/
+│       └── gateway.js              # WebSocket event broadcasting
+│
+└── lab/
+    ├── demos/                      # Demo configurations
+    │   ├── A_explainability.json
+    │   ├── C_uncertainty.json
+    │   └── E_adversarial.json
+    ├── benchmarks/                 # Benchmark definitions
+    │   └── narl.json
+    └── expeditions/                # Long-run configs
+        └── causal_exploration.json
+```
+
+### CLI Commands
 
 ```bash
-# This now works:
-npx senars demo        # Run instant demo
-npx senars repl        # Start REPL
-npx senars serve       # Start MCP + WebSocket servers
+# Primary modes
+npx senars ide                      # Launch full IDE
+npx senars lab                      # Launch Lab dashboard
+npx senars demo                     # Quick 60-second demo
+
+# Lab subcommands
+npx senars lab demo <id>            # Run specific demo
+npx senars lab demo --all           # Run all demos
+npx senars lab demo --priority P0   # Run priority tier
+npx senars lab benchmark narl       # Run NARL benchmark
+npx senars lab expedition <config>  # Start long-running expedition
+
+# Utility
+npx senars repl                     # Terminal REPL
+npx senars serve                    # API server only
+npx senars --help                   # Show all commands
 ```
 
-**Files**:
-- [x] Create `scripts/cli/senars.js` CLI entry point
-- [x] Add `"bin": {"senars": "./scripts/cli/senars.js"}` to root `package.json`
-- [x] Create `examples/instant-demo.js` — 3 compelling demos
+### Configuration
 
-**Demo Content** (must be memorable):
-1. **Knowledge Discovery**: 5 facts → 3 non-obvious conclusions
-2. **Consistency Proof**: LLM contradicts, SeNARS doesn't
-3. **Memory Persistence**: Reload session, knowledge survives
-
-**Success Metric**: `npx senars demo` works and wows. ✅ (confidence=0.81)
-
-### 0.2 Create `SeNARS.js` Facade ✅
-
-The friction-free API:
+**`senars.config.js`** — Project-level configuration:
 
 ```javascript
-import { SeNARS } from 'senars';
-
-const brain = new SeNARS();
-await brain.start();
-brain.learn('(cats --> mammals).');
-brain.learn('(mammals --> animals).');
-
-const answer = await brain.ask('(cats --> animals)?');
-// → { answer: true, confidence: 0.81, frequency: 1, proof: [...] }
+export default {
+    server: {
+        port: 3000,
+        host: 'localhost'
+    },
+    reasoning: {
+        defaultCycles: 20,
+        timeout: 15000,
+        lm: { enabled: false }
+    },
+    lab: {
+        demosDir: './ui/lab/demos',
+        reportsDir: './reports',
+        achievementsFile: './achievements.json'
+    },
+    ide: {
+        theme: 'dark',
+        fontSize: 14,
+        autosave: true
+    }
+};
 ```
-
-**Files**:
-- [x] Create `core/src/SeNARS.js` — Simple facade (~240 lines)
-- [x] Export from `core/src/index.js`
-
-**Design**:
-- Auto-initialization (no manual `.start()` required for basic use)
-- Async/await for all queries
-- Returns structured results with proof chains
-- Sensible defaults, power user config optional
-
-> **Implementation Note**: The `ask()` method must run reasoning cycles (default: 20) before querying beliefs to get proper derivations. Use `includes()` pattern for term matching as NAR stores terms in `(-->, subject, predicate)` format.
 
 ---
 
-## Phase 1: The SENI Observatory (Week 1-2)
+## Phase 1.1: Shared Components
 
-> **Objective**: Transform benchmark running into an engaging, watchable experience.
+Foundation components used everywhere:
 
-The SENI system (from `seni.md`) is the key differentiator. It makes the inevitably long autonomous runs **exciting**.
+### EventStream.js
 
-### 1.1 Foundation (Days 1-5)
+WebSocket client with automatic reconnection:
 
-- [ ] Create `seni/server/ExpeditionEngine.js` — Wraps autonomous RLFP loop
-- [ ] Create `seni/server/WebSocketGateway.js` — Event broadcast
-- [ ] Extend `ui/` with SENI dashboard components:
-  - [ ] `ScoreTrajectory.js` — Live benchmark charts
-  - [ ] `LiveTrace.js` — Real-time reasoning visualization
-  - [ ] `DiscoveryLog.js` — Auto-flagged interesting traces
+```javascript
+const events = useEventStream();
+events.subscribe('derivation', (d) => console.log('New:', d));
+events.subscribe('belief_added', (b) => updateBeliefs(b));
+```
 
-### 1.2 Gamification (Days 5-10)
+### ProofTree.js
 
-- [ ] Create `seni/Achievements.js` — Badge/milestone system
-- [ ] Add streaks, leaderboards, discovery collections
-- [ ] Implement "Intelligence Signal Strength" meter (I(t) from Drake equation analog)
+Renders derivation chains as interactive trees:
+- Expandable nodes
+- Hover for truth values
+- Click to inspect term
 
-**Commands**:
+### TermView.js
+
+Renders Narsese terms with proper formatting:
+- Copulas: `-->`, `<->`, `==>`, `<=>`, etc.
+- Compounds: `(&, ...)`, `(|, ...)`, `(-, ...)`
+- Variables: `$x`, `#y`, `?z`
+- Syntax highlighting
+
+### TruthDisplay.js
+
+Truth value display with visual confidence:
+- Frequency bar (0-1)
+- Confidence indicator
+- Expectation calculation
+
+---
+
+## Phase 1.2: Lab Components
+
+### LabRunner.js
+
+Unified experiment orchestrator:
+
+```javascript
+const runner = new LabRunner();
+
+// Load and run
+await runner.load('./demos/A_explainability.json');
+await runner.start();
+
+// Control
+runner.pause();
+runner.resume();
+runner.stop();
+
+// Events
+runner.on('step', (step) => updateUI(step));
+runner.on('complete', (results) => showResults(results));
+```
+
+### Experiment Config Format
+
+```json
+{
+    "id": "A",
+    "name": "Inference Audit Trail",
+    "category": "Explainability",
+    "priority": "P0",
+    "description": "Demonstrates complete derivation provenance",
+    
+    "setup": {
+        "cycles": 10,
+        "timeout": 5000
+    },
+    
+    "steps": [
+        {
+            "action": "learn",
+            "input": "(socrates --> man).",
+            "description": "Socrates is a man"
+        },
+        {
+            "action": "learn", 
+            "input": "(man --> mortal).",
+            "description": "Men are mortal"
+        },
+        {
+            "action": "ask",
+            "input": "(socrates --> mortal)?",
+            "expect": { "answer": true, "minConfidence": 0.5 },
+            "description": "Is Socrates mortal?"
+        },
+        {
+            "action": "verify",
+            "check": "proof.length >= 2",
+            "description": "Verify proof chain exists"
+        }
+    ],
+    
+    "assertions": [
+        { "type": "hasDerivation", "term": "(socrates --> mortal)" },
+        { "type": "proofLength", "min": 2 }
+    ],
+    
+    "narrative": {
+        "intro": "This demo shows how SeNARS provides complete inference trails.",
+        "conclusion": "Unlike LLMs, SeNARS can show exactly why it believes something.",
+        "llmComparison": "LLMs produce answers but cannot explain derivation steps."
+    }
+}
+```
+
+### LiveTrace.js
+
+Real-time inference display:
+- Streaming derivations
+- Filter by rule type
+- Highlight key inferences
+- Pause/resume stream
+- Search/filter
+
+### ScoreChart.js
+
+Performance visualization:
+- Time-series plot
+- Multiple metrics (accuracy, confidence, throughput)
+- Comparison overlays (SeNARS vs baseline)
+- Zoom and pan
+- Export to PNG/SVG
+
+### DiscoveryLog.js
+
+Notable inference collection:
+- Auto-flagged interesting derivations
+- Manual bookmarking
+- Filter by novelty score
+- Export collection
+
+### Achievements.js
+
+Gamification engine:
+
+```javascript
+const achievements = [
+    { id: 'first_inference', name: 'First Step', condition: 'derivations >= 1' },
+    { id: 'hundred_club', name: 'Century', condition: 'derivations >= 100' },
+    { id: 'chain_master', name: 'Chain Master', condition: 'maxProofLength >= 5' },
+    { id: 'marathon', name: 'Marathon', condition: 'runtime >= 3600000' },
+    { id: 'perfect_narl', name: 'NARL Perfect', condition: 'narlScore >= 100' }
+];
+```
+
+---
+
+## Phase 1.3: IDE Components
+
+### Editor.js
+
+Narsese editor with:
+- Syntax highlighting (terms, copulas, truth values)
+- Auto-complete for common patterns
+- Inline error display
+- Multi-cursor editing
+- Line numbers, folding
+
+### Console.js
+
+Interactive REPL:
+- Command history (up/down arrows)
+- Multi-line input
+- Output formatting
+- Quick commands (`:reset`, `:stats`, `:export`)
+
+### BeliefBrowser.js
+
+Query and explore beliefs:
+- Search by term
+- Filter by truth value range
+- Sort by confidence, recency
+- Bulk operations
+
+### ConceptExplorer.js
+
+Memory visualization:
+- Concept network graph
+- Term relationships
+- Priority heatmap
+- Drill-down inspection
+
+### Debugger.js
+
+Step-through reasoning:
+- Breakpoints on terms/rules
+- Step forward/backward
+- Inspect premise selection
+- Watch expressions
+
+---
+
+## Phase 2: NARL Benchmark
+
+### Enhanced Test Suite
+
+Each of 10 levels gets:
+
+| Level | Name | Tests | Edge Cases |
+|-------|------|-------|------------|
+| 1 | Trace | 5 | Missing term, empty chain |
+| 2 | Revise | 4 | Conflicting evidence, revision order |
+| 3 | Persist | 4 | Large memory, cross-query consistency |
+| 4 | Cause | 5 | Multi-hop chains, temporal ordering |
+| 5 | Resist | 6 | Various injection patterns |
+| 6 | Uncertain | 5 | Confidence math, degradation rates |
+| 7 | Analog | 4 | Structural similarity, transfer |
+| 8 | Meta | 4 | Self-reference, introspection |
+| 9 | Bound | 5 | Resource limits, graceful degradation |
+| 10 | Compose | 5 | Novel combinations, creativity |
+
+### LLM Baseline
+
+```javascript
+// benchmarks/narl/llm_baseline.js
+const baseline = new LLMBaseline({
+    provider: 'openrouter',
+    model: 'gpt-4-turbo',
+    maxRetries: 3
+});
+
+const results = await baseline.runNARL();
+// Returns: { level1: { score: 0, reason: 'No trace available' }, ... }
+```
+
+### Report Generation
+
+Auto-generate markdown reports:
+- Executive summary
+- Level-by-level comparison
+- Charts (mermaid)
+- Raw data export
+- Recommendations
+
+---
+
+## Phase 3: Prototype Demos
+
+### Demo Categories
+
+| ID | Category | Description | Priority |
+|----|----------|-------------|----------|
+| **H** | **Hybrid** | **NAL+LM neuro-symbolic reasoning** | **P0** 🎯 |
+| A | Explainability | Inference audit trail | P0 |
+| C | Uncertainty | Confidence propagation | P0 |
+| E | Adversarial | Prompt injection resistance | P0 |
+| B | Temporal | Event ordering and causality | P1 |
+| D | Memory | Cross-session persistence | P1 |
+| J | Compositional | Novel concept combinations | P1 |
+| L | Resource-Bounded | AIKR graceful degradation | P1 |
+| F | Analogical | A:B::C:? reasoning | P2 |
+| G | Meta-Cognition | Self-reasoning | P2 |
+| I | Learning | RLFP improvement | P2 |
+| K | Multi-Agent | Collaborative reasoning | P3 |
+
+**Note**: Demo H (Hybrid) is the killer demo — all other demos should link back to it to show the neuro-symbolic advantage.
+
+### Demo Development Pattern
+
+1. Create config JSON in `ui/lab/demos/`
+2. Define steps, assertions, narrative
+3. Test via `npx senars lab demo <id>`
+4. Review in Lab dashboard
+5. Refine based on results
+
+---
+
+## Phase 4: Autonomous Expeditions
+
+### Expedition Mode
+
+Long-running autonomous exploration:
+
 ```bash
-npm run seni:start     # Launch observatory dashboard
-npm run seni:demo      # Demo mode with simulated data
-npm run seni:expedition -- --name "Deep Thought" --duration 24h
+npx senars lab expedition causal_exploration --duration 24h
 ```
 
----
+### Expedition Config
 
-## Phase 2: The NARL Benchmark (Week 2-3)
+```json
+{
+    "id": "causal_exploration",
+    "name": "Causal Reasoning Expedition",
+    "duration": "24h",
+    "checkpointInterval": "1h",
+    
+    "task": {
+        "type": "rlfp",
+        "domain": "causal-reasoning",
+        "goalGeneration": "llm",
+        "preferenceSource": "synthetic"
+    },
+    
+    "metrics": ["accuracy", "novelty", "confidence_calibration"],
+    
+    "alerts": {
+        "onDiscovery": true,
+        "onMilestone": true,
+        "onError": true
+    }
+}
+```
 
-> **Objective**: Prove SeNARS does what LLMs can't with a rigorous, demonstrable benchmark.
+### Features
 
-The 10-level NARL benchmark (from PROTOTYPE_DEMOS.md) is the **scientific weapon**:
-
-| Level | Name | What It Tests | LLM Score | SeNARS Target |
-|-------|------|---------------|-----------|---------------|
-| 1 | **Trace** | Derivation provenance | 0% | 100% (automatic) |
-| 2 | **Revise** | Belief revision | ~40% | 95% |
-| 3 | **Persist** | Cross-session memory | ~50% | 90% |
-| 4 | **Cause** | Causal reasoning | ~35% | 80% |
-| 5 | **Resist** | Prompt injection defense | ~30% | 85% |
-| 6 | **Uncertain** | Confidence degradation | ~20% | 90% |
-| 7 | **Analog** | Analogical transfer | ~45% | 75% |
-| 8 | **Meta** | Self-reasoning | ~10% | 80% |
-| 9 | **Bound** | AIKR graceful degradation | ~5% | 85% |
-| 10 | **Compose** | Novel combinations | ~30% | 80% |
-
-### 2.1 Implementation
-
-- [x] Create `benchmarks/narl/` directory structure
-- [ ] Implement each level as a test suite (scaffold complete in `narl_runner.js`)
-- [x] Create `narl_runner.js` CLI — 10-level benchmark runner
-- [ ] Auto-generate comparison reports (SeNARS vs baseline LLM)
-
-### 2.2 Publishing
-
-- [ ] Write NARL benchmark paper (arXiv)
-- [ ] Create interactive NARL demo in SENI dashboard
-- [ ] Publish leaderboard for community contributions
-
----
-
-## Phase 3: The Prototype Demos (Week 3-4)
-
-> **Objective**: 11 demo categories that prove compound intelligence.
-
-From PROTOTYPE_DEMOS.md, build the full demo system:
-
-### 3.1 Demo Infrastructure
-
-- [ ] Extend `ui/src/demo-runner/` with prototype config system
-- [ ] Add Transformers.js local LM support (`Xenova/LaMini-Flan-T5-783M`)
-- [x] Implement demo discovery from `examples/`, `tests/integration/` — `demo-discovery.js` discovers 59 demos
-
-### 3.2 Category Coverage
-
-| Category | Focus Demo | Status |
-|----------|-----------|--------|
-| A: Explainability | Inference Audit Trail | [ ] |
-| B: Temporal | Event Ordering | [ ] |
-| C: Uncertainty | Confidence Degradation | [ ] |
-| D: Memory | Cross-Session Consistency | [ ] |
-| E: Adversarial | Prompt Injection Resistance | [ ] |
-| F: Analogical | A:B::C:? | [ ] |
-| G: Meta-Cognition | Self-Reasoning | [ ] |
-| H: Resource-Bounded | AIKR Demo | [ ] |
-| I: Learning | RLFP Improvement | [ ] |
-| J: Compositional | Novel Combinations | [ ] |
-| K: Multi-Agent | Collaboration | [ ] |
+- Checkpointing and resume
+- Live dashboard tracking
+- Discovery notifications
+- Automatic reporting
+- Resource monitoring
 
 ---
 
-## Phase 4: The Autonomous Loop (Week 4-5)
+## Development Flow
 
-> **Objective**: 10,000+ learning cycles per day, running autonomously.
+### Critical Path
 
-From `agentic_superintelligence.md`:
+```
+Phase 0 ✅ → Phase 0.5 → Phase 1.1 → Phase 1.2 → Phase 2 → Phase 3 → Phase 4
+   │            │            │            │           │         │
+   │            │            │            │           │         └── (3+ weeks)
+   │            │            │            │           └── (1 week)
+   │            │            │            └── (1 week)
+   │            │            └── (3-4 days)
+   │            └── (~12 hours)
+   └── Done!
+```
 
-### 4.1 Core Loop
+### Sprint 1: Killer Demo (Days 1-3) 🎯
 
-- [ ] Create `agent/src/rlfp/autonomous_loop.js`
-- [ ] Create `agent/src/rlfp/llm_evaluator.js` — Synthetic preference scoring
-- [ ] Create `agent/src/rlfp/synthetic_preference.js` — Goal generation
+**Goal**: Working hybrid NAL+LM demo in terminal
 
-### 4.2 Benchmark Harnesses
+| Task | Hours | Dependency |
+|------|-------|------------|
+| `HybridReasoner.js` class | 2 | None |
+| NL→Narsese prompt engineering | 2 | HybridReasoner |
+| Result→Explanation prompt | 1 | HybridReasoner |
+| `examples/hybrid-demo.js` | 2 | All above |
+| Test with 5+ queries | 1 | Demo script |
+| **Sprint 1 Total** | **8 hrs** | |
 
-- [ ] Create `tests/benchmarks/bfcl_harness.js` — BFCL function calling
-- [ ] Create `tests/benchmarks/epistemic_stability.test.js`
-- [ ] Create `agent/src/mcp/function_translator.js` — NAL↔JSON bridge
-
-### 4.3 Enhanced MCP Tools
-
-- [ ] Add `teach` tool — Inject beliefs
-- [ ] Add `set-goal` tool — Set goals
-- [ ] Add `get-trace` tool — Retrieve reasoning trace
+**Deliverable**: `npx senars demo hybrid` works in terminal
 
 ---
 
-## Phase 5: The Ecosystem (Week 5-8)
+### Sprint 2: Lab Foundation (Days 4-7)
 
-> **Objective**: Make SeNARS usable everywhere.
+**Goal**: Basic Lab UI with hybrid demo visualization
 
-### 5.1 Adapters
+| Task | Hours | Dependency |
+|------|-------|------------|
+| `ui/server/ws/gateway.js` | 3 | None |
+| `EventStream.js` (shared) | 2 | WebSocket |
+| `TermView.js` (shared) | 2 | None |
+| `TruthDisplay.js` (shared) | 1 | None |
+| `ProofTree.js` (shared) | 4 | TermView |
+| `LabRunner.js` | 4 | EventStream |
+| `HybridDemo.js` | 4 | All shared |
+| Lab layout + routing | 3 | HybridDemo |
+| CLI `npx senars lab` | 2 | Lab UI |
+| **Sprint 2 Total** | **25 hrs** | |
 
-- [ ] `adapters/react/useSeNARS.js` — React hook
-- [ ] `adapters/langchain/tool.js` — LangChain integration
-- [ ] `adapters/express/middleware.js` — Express middleware
+**Deliverable**: `npx senars lab` opens browser with hybrid demo
 
-### 5.2 Knowledge Portability
+---
 
-- [ ] Define `.sbook` Knowledge Book format
-- [ ] Create `brain.loadBook('common-sense-physics')`
-- [ ] Curate starter knowledge packs
+### Sprint 3: Lab Polish (Days 8-10)
 
-### 5.3 Distribution
+**Goal**: Complete Lab experience with all visualizations
 
-- [ ] Docker image: `docker run -p 8080:8080 senars/observatory`
-- [ ] NPM publish: `npm install senars`
-- [ ] Edge build for Cloudflare Workers
+| Task | Hours | Dependency |
+|------|-------|------------|
+| `LiveTrace.js` | 4 | EventStream |
+| `ScoreChart.js` | 4 | None |
+| `DiscoveryLog.js` | 3 | LiveTrace |
+| Demo config schema | 2 | LabRunner |
+| P0 demo configs (A, C, E) | 4 | Schema |
+| `npx senars lab demo <id>` | 2 | Demos |
+| Achievements system | 3 | LabRunner |
+| **Sprint 3 Total** | **22 hrs** | |
+
+**Deliverable**: All P0 demos runnable in Lab with full visualization
+
+---
+
+### Sprint 4: NARL & Benchmarks (Days 11-14)
+
+**Goal**: Publication-ready NARL benchmark
+
+| Task | Hours | Dependency |
+|------|-------|------------|
+| Enhance Level 1-5 tests | 4 | None |
+| Enhance Level 6-10 tests | 4 | None |
+| LLM baseline runner | 4 | None |
+| Report generator | 4 | Test results |
+| Lab benchmark integration | 3 | LabRunner |
+| `npx senars lab benchmark narl` | 2 | All above |
+| **Sprint 4 Total** | **21 hrs** | |
+
+**Deliverable**: NARL runs in Lab with comparison reports
+
+---
+
+### Sprint 5: IDE (Days 15-21)
+
+**Goal**: Basic IDE for Narsese development
+
+| Task | Hours | Dependency |
+|------|-------|------------|
+| `Editor.js` with syntax highlighting | 8 | None |
+| `Console.js` REPL | 4 | EventStream |
+| `BeliefBrowser.js` | 4 | TermView |
+| `Timeline.js` | 4 | EventStream |
+| IDE layout + panels | 4 | Components |
+| `npx senars ide` | 2 | IDE UI |
+| **Sprint 5 Total** | **26 hrs** | |
+
+**Deliverable**: Basic IDE for interactive Narsese development
+
+---
+
+### Sprint 6: Expeditions (Days 22-28)
+
+**Goal**: Autonomous long-running exploration
+
+| Task | Hours | Dependency |
+|------|-------|------------|
+| Expedition runner | 6 | LabRunner |
+| RLFP loop integration | 6 | Expedition runner |
+| Checkpointing | 4 | Runner |
+| Dashboard integration | 4 | Lab UI |
+| `npx senars lab expedition` | 2 | All above |
+| **Sprint 6 Total** | **22 hrs** | |
+
+**Deliverable**: 24-hour autonomous expeditions with live dashboard
+
+---
+
+### Total Timeline
+
+| Sprint | Duration | Cumulative |
+|--------|----------|------------|
+| 1: Killer Demo | 1 day | Day 1 |
+| 2: Lab Foundation | 3 days | Day 4 |
+| 3: Lab Polish | 3 days | Day 7 |
+| 4: NARL | 4 days | Day 11 |
+| 5: IDE | 7 days | Day 18 |
+| 6: Expeditions | 7 days | Day 25 |
+
+**Total**: ~25 working days (~5 weeks)
+
+---
+
+### Quick Start Path
+
+For fastest time-to-value, focus on **Sprints 1-2**:
+
+```bash
+# Day 1-2: Terminal hybrid demo
+node examples/hybrid-demo.js
+# "Are penguins mammals?" → NAL reasoning → Explained answer
+
+# Day 3-4: Lab visualization
+npx senars lab
+# Browser opens with full transparency
+```
+
+**Minimum viable demo**: 4 days
+
+---
+
+## Implementation Checklist
+
+### Phase 0.5: Hybrid Demo
+- [ ] `core/src/hybrid/HybridReasoner.js`
+- [ ] `core/src/hybrid/prompts.js` (NL→Narsese, Result→Explanation)
+- [ ] `examples/hybrid-demo.js`
+- [ ] `ui/lab/demos/H_hybrid.json`
+
+### Phase 1.1: Shared Components
+- [ ] `ui/server/ws/gateway.js`
+- [ ] `ui/src/components/shared/EventStream.js`
+- [ ] `ui/src/components/shared/ProofTree.js`
+- [ ] `ui/src/components/shared/TermView.js`
+- [ ] `ui/src/components/shared/TruthDisplay.js`
+
+### Phase 1.2: Lab Components
+- [ ] `ui/src/components/lab/LabRunner.js`
+- [ ] `ui/src/components/lab/HybridDemo.js`
+- [ ] `ui/src/components/lab/LiveTrace.js`
+- [ ] `ui/src/components/lab/ScoreChart.js`
+- [ ] `ui/src/components/lab/DiscoveryLog.js`
+- [ ] `ui/src/components/lab/Achievements.js`
+- [ ] CLI: `npx senars lab`
+
+### Phase 1.3: IDE Components
+- [ ] `ui/src/components/ide/Editor.js`
+- [ ] `ui/src/components/ide/Console.js`
+- [ ] `ui/src/components/ide/BeliefBrowser.js`
+- [ ] `ui/src/components/ide/Timeline.js`
+- [ ] CLI: `npx senars ide`
+
+### Phase 2: NARL Enhancement
+- [ ] Enhanced tests (3+ per level)
+- [ ] Edge case coverage
+- [ ] `benchmarks/narl/llm_baseline.js`
+- [ ] `benchmarks/narl/report_generator.js`
+- [ ] Lab integration
+
+### Phase 3: Demo Configs
+- [ ] `ui/lab/demos/A_explainability.json`
+- [ ] `ui/lab/demos/C_uncertainty.json`
+- [ ] `ui/lab/demos/E_adversarial.json`
+- [ ] Demo schema validation
+- [ ] Remaining P1/P2 demos
+
+### Phase 4: Expeditions
+- [ ] Expedition runner class
+- [ ] RLFP loop wrapper
+- [ ] Checkpointing system
+- [ ] Dashboard integration
+- [ ] CLI: `npx senars lab expedition`
+
+---
+
+## Extension Points
+
+### Custom Demos
+
+Drop JSON files in `ui/lab/demos/`:
+
+```json
+{
+    "id": "my_custom_demo",
+    "name": "My Custom Demo",
+    "steps": [ ... ]
+}
+```
+
+### Custom Benchmarks
+
+Add to `benchmarks/`:
+
+```javascript
+export class MyBenchmark {
+    async run(brain) {
+        // Return { score, description, details }
+    }
+}
+```
+
+### Plugins
+
+IDE supports plugins via:
+
+```javascript
+// plugins/my-plugin.js
+export default {
+    name: 'my-plugin',
+    components: { MyPanel },
+    commands: { 'my-command': handler },
+    hooks: { onDerivation: callback }
+};
+```
 
 ---
 
 ## Success Metrics
 
-| Metric | Current | 30 Days | 90 Days |
-|--------|---------|---------|---------|
-| `npx senars` works | ❌ | ✅ | ✅ |
-| NARL Level 1-5 passing | ❌ | ✅ | ✅ |
-| SENI dashboard deployed | ❌ | ✅ | ✅ |
-| Autonomous cycles/day | 0 | 10,000 | 50,000 |
-| BFCL Single-Turn score | ? | ≥70% | ≥85% |
-| Epistemic stability | ? | ≥90% | ≥95% |
-| npm weekly downloads | ? | 500 | 2,000 |
-| GitHub stars | ? | 300 | 1,000 |
-| Published papers | 0 | 1 (NARL) | 2 |
+| Metric | Now | 30 Days | 90 Days |
+|--------|-----|---------|---------|
+| Demo works | ✅ | ✅ | ✅ |
+| **Hybrid demo** | ❌ | ✅ 🎯 | ✅ |
+| Lab deployed | ❌ | ✅ | ✅ |
+| IDE deployed | ❌ | Partial | ✅ |
+| NARL avg | ~80% | ≥85% | ≥95% |
+| P0 demos | 0/4 | 4/4 | 4/4 |
+| All demos | 0/12 | 6/12 | 12/12 |
+| npm downloads | ? | 500 | 2000 |
 
 ---
 
-## The Growth Flywheel
+## Summary
 
-```mermaid
-graph LR
-    A[60-Second Demo] -->|Proves value| B[User Adoption]
-    B -->|Feedback| C[RLFP Training]
-    C -->|Improvement| D[Better Benchmarks]
-    D -->|Credibility| E[Research Citations]
-    E -->|Visibility| A
-    
-    F[SENI Observatory] -->|Engagement| G[Researcher Interest]
-    G -->|Contributions| H[Ecosystem Growth]
-    H -->|Network Effects| F
-```
+**Phase 0** ✅: Quick wins (demo, facade)
 
----
+**Phase 0.5** 🎯: **Hybrid NAL+LM Demo** — The killer demo
+- Natural language in, reasoned answer out
+- Transparent proof chains in Lab UI
+- Offline Transformers.js integration
+- ~12 hours to complete
 
-## What NOT To Do
+**Phase 1**: IDE + Lab foundation
+- Shared components enable everything
+- Lab runner unifies all experiment types
+- IDE provides development environment
 
-❌ **Don't build more features** — Make existing ones accessible first
-❌ **Don't oversell** — Remove claims about unimplemented GPU/superintelligence
-❌ **Don't skip the demo** — 60-second value proof is non-negotiable
-❌ **Don't ignore the tests** — 889 passing tests are a competitive advantage
-❌ **Don't reinvent benchmarks** — Use BFCL/AgentBench for credibility, NARL for differentiation
+**Phase 2**: NARL benchmark
+- Scientific proof of capabilities
+- LLM comparison baseline
+- Auto-generated reports
 
----
+**Phase 3**: Prototype demos
+- 12 categories proving compound intelligence (including Hybrid)
+- Config-driven, easy to extend
+- Narrative-driven for communication
 
-## Priority Stack
-
-| Priority | Action | Effort | Impact | Who Benefits |
-|----------|--------|--------|--------|--------------|
-| **P0** | `npx senars demo` | 4 hrs | ★★★★★ | Everyone |
-| **P0** | `SeNARS.js` facade | 4 hrs | ★★★★★ | Developers |
-| **P1** | SENI dashboard MVP | 2 wks | ★★★★☆ | Researchers |
-| **P1** | NARL benchmark (L1-5) | 1 wk | ★★★★☆ | Academia |
-| **P2** | Autonomous RLFP loop | 1 wk | ★★★☆☆ | Core team |
-| **P2** | Prototype demos (A-E) | 2 wks | ★★★★☆ | Users |
-| **P3** | BFCL harness | 3 days | ★★★☆☆ | Benchmarking |
-| **P3** | Adapters (React, LangChain) | 1 wk | ★★★☆☆ | Ecosystem |
+**Phase 4**: Autonomous expeditions
+- Long-running exploration
+- RLFP integration
+- Discovery-focused
 
 ---
 
-## The Bottom Line
+> *"The best code is code you can watch think."*
 
-SeNARS has everything it needs to win:
-
-1. **Technical substance** — Working NAL, tensors, tests
-2. **Unique value** — Truth-Tensor bridge, epistemic stability
-3. **Clear differentiator** — Does what LLMs can't (NARL proves it)
-4. **Vision docs** — SENI, PROTOTYPE_DEMOS provide the roadmap
-
-What's missing is **accessibility**:
-
-```
-FROM:  "Read 15 READMEs, wire up NAR + Memory + Focus, hope it works"
-  TO:  "npx senars demo → WOW → brain.learn() → brain.ask()"
-```
-
-**Ship the facade. Ship the demo. Prove the NARL benchmark. Let the compound intelligence emergence speak for itself.**
-
----
-
-> *"The best way to predict the future is to invent it — and then make it trivially easy for others to use."*

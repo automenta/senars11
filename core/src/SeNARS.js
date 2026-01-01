@@ -35,17 +35,31 @@ export class SeNARS {
 
         // Auto-initialize for friction-free experience
         this._initialized = false;
-        this._initialize();
+        this._initPromise = null;
     }
 
     async _initialize() {
-        try {
-            await this.nar.initialize();
-            this._initialized = true;
-        } catch (error) {
-            console.error('Failed to initialize SeNARS:', error);
-            throw error;
+        // If already initialized or initialization in progress, return/wait
+        if (this._initialized) {
+            return;
         }
+        if (this._initPromise) {
+            return this._initPromise;
+        }
+
+        // Create initialization promise
+        this._initPromise = (async () => {
+            try {
+                await this.nar.initialize();
+                this._initialized = true;
+            } catch (error) {
+                console.error('Failed to initialize SeNARS:', error);
+                this._initPromise = null; // Reset on error so it can be retried
+                throw error;
+            }
+        })();
+
+        return this._initPromise;
     }
 
     /**
