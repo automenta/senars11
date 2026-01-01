@@ -8,6 +8,9 @@
     "agent",
     "ui"
   ],
+  "bin": {
+    "senars": "./scripts/cli/senars.js"
+  },
   "scripts": {
     "senars": "node scripts/cli/senars.js",
     "repl": "npm run repl --workspace=@senars/agent --",

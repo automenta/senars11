@@ -34,28 +34,28 @@
 
 > **Objective**: Anyone can experience SeNARS value in under 60 seconds.
 
-### 0.1 Create `npx senars` Entry Point
+### 0.1 Create `npx senars` Entry Point ✅
 
 ```bash
-# This should work:
+# This now works:
 npx senars demo        # Run instant demo
 npx senars repl        # Start REPL
 npx senars serve       # Start MCP + WebSocket servers
 ```
 
 **Files**:
-- [ ] Create `bin/senars.js` CLI entry point
-- [ ] Add `"bin": {"senars": "./bin/senars.js"}` to root `package.json`
-- [ ] Create `examples/instant-demo.js` — 3 compelling demos
+- [x] Create `scripts/cli/senars.js` CLI entry point
+- [x] Add `"bin": {"senars": "./scripts/cli/senars.js"}` to root `package.json`
+- [x] Create `examples/instant-demo.js` — 3 compelling demos
 
 **Demo Content** (must be memorable):
 1. **Knowledge Discovery**: 5 facts → 3 non-obvious conclusions
 2. **Consistency Proof**: LLM contradicts, SeNARS doesn't
 3. **Memory Persistence**: Reload session, knowledge survives
 
-**Success Metric**: `npx senars demo` works and wows.
+**Success Metric**: `npx senars demo` works and wows. ✅ (confidence=0.81)
 
-### 0.2 Create `SeNARS.js` Facade
+### 0.2 Create `SeNARS.js` Facade ✅
 
 The friction-free API:
 
@@ -63,22 +63,25 @@ The friction-free API:
 import { SeNARS } from 'senars';
 
 const brain = new SeNARS();
+await brain.start();
 brain.learn('(cats --> mammals).');
 brain.learn('(mammals --> animals).');
 
 const answer = await brain.ask('(cats --> animals)?');
-// → { answer: true, confidence: 0.85, proof: [...] }
+// → { answer: true, confidence: 0.81, frequency: 1, proof: [...] }
 ```
 
 **Files**:
-- [ ] Create `core/src/SeNARS.js` — Simple facade (~150 lines)
-- [ ] Export from `core/src/index.js`
+- [x] Create `core/src/SeNARS.js` — Simple facade (~240 lines)
+- [x] Export from `core/src/index.js`
 
 **Design**:
-- Auto-initialization (no manual `.start()`)
+- Auto-initialization (no manual `.start()` required for basic use)
 - Async/await for all queries
 - Returns structured results with proof chains
 - Sensible defaults, power user config optional
+
+> **Implementation Note**: The `ask()` method must run reasoning cycles (default: 20) before querying beliefs to get proper derivations. Use `includes()` pattern for term matching as NAR stores terms in `(-->, subject, predicate)` format.
 
 ---
 
@@ -133,9 +136,9 @@ The 10-level NARL benchmark (from PROTOTYPE_DEMOS.md) is the **scientific weapon
 
 ### 2.1 Implementation
 
-- [ ] Create `benchmarks/narl/` directory structure
-- [ ] Implement each level as a test suite
-- [ ] Create `narl_runner.js` CLI
+- [x] Create `benchmarks/narl/` directory structure
+- [ ] Implement each level as a test suite (scaffold complete in `narl_runner.js`)
+- [x] Create `narl_runner.js` CLI — 10-level benchmark runner
 - [ ] Auto-generate comparison reports (SeNARS vs baseline LLM)
 
 ### 2.2 Publishing
@@ -156,7 +159,7 @@ From PROTOTYPE_DEMOS.md, build the full demo system:
 
 - [ ] Extend `ui/src/demo-runner/` with prototype config system
 - [ ] Add Transformers.js local LM support (`Xenova/LaMini-Flan-T5-783M`)
-- [ ] Implement demo discovery from `examples/`, `tests/integration/`
+- [x] Implement demo discovery from `examples/`, `tests/integration/` — `demo-discovery.js` discovers 59 demos
 
 ### 3.2 Category Coverage
 

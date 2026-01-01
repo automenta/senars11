@@ -32,7 +32,7 @@ export class SeNARS {
             // Override with user config
             ...config
         });
-        
+
         // Auto-initialize for friction-free experience
         this._initialized = false;
         this._initialize();
@@ -57,7 +57,7 @@ export class SeNARS {
         if (!this._initialized) {
             await this._initialize();
         }
-        
+
         try {
             await this.nar.input(narsese);
             return true;
@@ -70,24 +70,66 @@ export class SeNARS {
     /**
      * Ask a question in Narsese format
      * @param {string} narsese - The Narsese question (e.g., '(cats --> animals)?')
+     * @param {Object} options - Options for asking (cycles: number of reasoning cycles to run)
      * @returns {Promise<Object>} - Result with answer, confidence, and proof chain
      */
-    async ask(narsese) {
+    async ask(narsese, options = {}) {
         if (!this._initialized) {
             await this._initialize();
         }
-        
+
+        const cycles = options.cycles ?? 20;
+
         try {
-            // For now, return a simple result structure
-            // In the future, this could return structured results with proof chains
-            const result = await this.nar.input(narsese);
-            
-            // Return a structured response with answer, confidence, and proof
+            // Input the question
+            await this.nar.input(narsese);
+
+            // Run reasoning cycles to derive answers
+            if (cycles > 0) {
+                await this.nar.runCycles(cycles);
+            }
+
+            // Get all beliefs
+            const allBeliefs = this.nar.getBeliefs();
+
+            // Extract key terms from the question - e.g. "(penguin --> flyer)?" => ["penguin", "flyer"]
+            const keyTerms = narsese
+                .replace(/[()?.!]/g, '')
+                .split(/--?>|<->|==>/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+
+            // Find beliefs where the term string contains ALL key terms
+            // This follows the pattern from integration tests
+            const matchingBeliefs = allBeliefs.filter(b => {
+                const beliefStr = b.term?.toString() || '';
+                return keyTerms.every(term => beliefStr.includes(term));
+            });
+
+            // Find the best matching belief
+            let answer = false;
+            let confidence = 0;
+            let frequency = 0;
+
+            if (matchingBeliefs && matchingBeliefs.length > 0) {
+                const bestBelief = matchingBeliefs.reduce((best, current) => {
+                    const currentConf = current.truth?.c || 0;
+                    const bestConf = best.truth?.c || 0;
+                    return currentConf > bestConf ? current : best;
+                }, matchingBeliefs[0]);
+
+                if (bestBelief?.truth) {
+                    frequency = bestBelief.truth.f;
+                    confidence = bestBelief.truth.c;
+                    answer = frequency > 0.5;
+                }
+            }
+
             return {
-                answer: result ? true : false,
-                confidence: result?.truth?.c || 0,
-                frequency: result?.truth?.f || 0,
-                proof: this._getRecentProofChain(), // Placeholder for proof chain
+                answer,
+                confidence,
+                frequency,
+                proof: this._getRecentProofChain(),
                 timestamp: Date.now()
             };
         } catch (error) {
@@ -106,9 +148,14 @@ export class SeNARS {
      * @private
      */
     _getRecentProofChain() {
-        // Placeholder implementation - in the future this would return actual proof chain
-        // For now, return an empty array but in a real implementation this would
-        // connect to the reasoning trace system
+        // Get recent derivations from the stream reasoner
+        if (this.nar.streamReasoner?.metrics?.recentDerivations) {
+            return this.nar.streamReasoner.metrics.recentDerivations.slice(-10).map(d => ({
+                term: d.term?.toString() || 'unknown',
+                rule: d.rule || 'unknown',
+                truth: d.truth || { f: 0, c: 0 }
+            }));
+        }
         return [];
     }
 
