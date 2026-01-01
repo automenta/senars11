@@ -1,10 +1,10 @@
-import {WebSocketManager} from '../connection/WebSocketManager.js';
-import {DemoClient} from './DemoClient.js';
-import {Sidebar} from '../components/Sidebar.js';
-import {Console} from '../components/Console.js';
-import {ConfigPanel} from '../components/ConfigPanel.js';
-import {DemoControls} from '../components/DemoControls.js';
-import {GraphPanel} from '../components/GraphPanel.js';
+import { ConfigPanel } from '../components/ConfigPanel.js';
+import { Console } from '../components/Console.js';
+import { DemoControls } from '../components/DemoControls.js';
+import { GraphPanel } from '../components/GraphPanel.js';
+import { Sidebar } from '../components/Sidebar.js';
+import { WebSocketManager } from '../connection/WebSocketManager.js';
+import { DemoClient } from './DemoClient.js';
 
 /**
  * DemoRunnerApp - Main application logic for the demo runner UI.
@@ -38,12 +38,12 @@ export class DemoRunnerApp {
         this._setupConsoleControls();
 
         const btnConfig = document.getElementById('btn-config');
-        if (btnConfig) btnConfig.addEventListener('click', () => this.configPanel.show());
+        btnConfig?.addEventListener('click', () => this.configPanel.show());
 
         // Setup console input handler
         this.console.onInput((input) => {
             // Send as Narsese input
-            this.wsManager.sendMessage('narseseInput', {text: input});
+            this.wsManager.sendMessage('narseseInput', { text: input });
         });
 
         this.sidebar.onSelect(this._handleDemoSelect.bind(this));
@@ -56,10 +56,7 @@ export class DemoRunnerApp {
     }
 
     _setupConsoleControls() {
-        const btnClear = document.getElementById('btn-clear-console');
-        if (btnClear) {
-            btnClear.addEventListener('click', () => this.console.clear());
-        }
+        btnClear?.addEventListener('click', () => this.console.clear());
     }
 
     _handleDemoSelect(demoId, demo) {
@@ -76,10 +73,10 @@ export class DemoRunnerApp {
         const btnToggleMetrics = document.getElementById('btn-toggle-metrics');
         const btnCloseRightSidebar = document.getElementById('btn-close-right-sidebar');
 
-        if (btnToggleSource) btnToggleSource.addEventListener('click', () => this._openRightSidebar('source'));
-        if (btnToggleGraph) btnToggleGraph.addEventListener('click', () => this._openRightSidebar('graph'));
-        if (btnToggleMetrics) btnToggleMetrics.addEventListener('click', () => this._openRightSidebar('metrics'));
-        if (btnCloseRightSidebar) btnCloseRightSidebar.addEventListener('click', () => this._closeRightSidebar());
+        btnToggleSource?.addEventListener('click', () => this._openRightSidebar('source'));
+        btnToggleGraph?.addEventListener('click', () => this._openRightSidebar('graph'));
+        btnToggleMetrics?.addEventListener('click', () => this._openRightSidebar('metrics'));
+        btnCloseRightSidebar?.addEventListener('click', () => this._closeRightSidebar());
     }
 
     _openRightSidebar(view) {
@@ -98,7 +95,7 @@ export class DemoRunnerApp {
         if (this.metricsView) this.metricsView.classList.toggle('hidden', view !== 'metrics');
 
         if (this.sidebarTitle) {
-            const titles = {source: 'Source Code', graph: 'Graph View', metrics: 'Demo Metrics'};
+            const titles = { source: 'Source Code', graph: 'Graph View', metrics: 'Demo Metrics' };
             this.sidebarTitle.textContent = titles[view] || 'View';
         }
 

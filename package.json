@@ -9,6 +9,7 @@
     "ui"
   ],
   "scripts": {
+    "senars": "node scripts/cli/senars.js",
     "repl": "npm run repl --workspace=@senars/agent --",
     "web": "node scripts/ui/launcher.js",
     "web:dev": "node scripts/ui/launcher.js --host 0.0.0.0",

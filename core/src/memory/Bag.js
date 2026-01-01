@@ -294,12 +294,8 @@ export class Bag {
                         if (!item) {
                             item = {
                                 budget: {priority: priority},
-                                serialize: function () {
-                                    return itemData;
-                                },
-                                toString: function () {
-                                    return JSON.stringify(itemData);
-                                }
+                                serialize: () => itemData,
+                                toString: () => JSON.stringify(itemData)
                             };
                         }
 
@@ -314,12 +310,8 @@ export class Bag {
             if (data.insertionOrder) {
                 this._insertionOrder = data.insertionOrder.map((itemData, index) => {
                     return {
-                        serialize: function () {
-                            return itemData.item;
-                        },
-                        toString: function () {
-                            return JSON.stringify(itemData.item);
-                        }
+                        serialize: () => itemData.item,
+                        toString: () => JSON.stringify(itemData.item)
                     };
                 });
             }

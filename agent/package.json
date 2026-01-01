@@ -4,7 +4,8 @@
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "senars-agent": "./src/bin/cli.js"
+    "senars-agent": "./src/bin/cli.js",
+    "senars": "../../scripts/cli/senars.js"
   },
   "scripts": {
     "repl": "node src/bin/cli.js",

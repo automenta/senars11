@@ -1,3 +1,5 @@
+import { Logger } from '../util/Logger.js';
+
 export class EmbeddingLayer {
     constructor(config = {}) {
         this.config = {
@@ -34,7 +36,7 @@ export class EmbeddingLayer {
             return 0;
         }
 
-        const {dotProduct, magnitude1, magnitude2} = this._computeSimilarityMetrics(embedding1, embedding2);
+        const { dotProduct, magnitude1, magnitude2 } = this._computeSimilarityMetrics(embedding1, embedding2);
 
         if (magnitude1 === 0 || magnitude2 === 0) {
             return 0;
@@ -63,7 +65,7 @@ export class EmbeddingLayer {
         magnitude1 = Math.sqrt(magnitude1);
         magnitude2 = Math.sqrt(magnitude2);
 
-        return {dotProduct, magnitude1, magnitude2};
+        return { dotProduct, magnitude1, magnitude2 };
     }
 
     async findSimilar(input, candidates, threshold = 0.7) {
@@ -93,15 +95,15 @@ export class EmbeddingLayer {
         if (this.config.model && this.config.model !== 'mock' && !this.config.model.startsWith('mock')) {
             try {
                 if (!this._pipeline) {
-                    console.log(`EmbeddingLayer: Loading pipeline for model ${this.config.model}...`);
-                    const {pipeline} = await import('@huggingface/transformers');
+                    Logger.info(`EmbeddingLayer: Loading pipeline for model ${this.config.model}...`);
+                    const { pipeline } = await import('@huggingface/transformers');
                     this._pipeline = await pipeline('feature-extraction', this.config.model);
-                    console.log(`EmbeddingLayer: Pipeline loaded.`);
+                    Logger.info(`EmbeddingLayer: Pipeline loaded.`);
                 }
-                const output = await this._pipeline(text, {pooling: 'mean', normalize: true});
+                const output = await this._pipeline(text, { pooling: 'mean', normalize: true });
                 return Array.from(output.data);
             } catch (e) {
-                console.warn(`EmbeddingLayer: Failed to load/use model ${this.config.model}, falling back to mock. Error: ${e.message}`);
+                Logger.warn(`EmbeddingLayer: Failed to load/use model ${this.config.model}, falling back to mock. Error: ${e.message}`);
             }
         }
 
