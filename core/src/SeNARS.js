@@ -127,8 +127,8 @@ export class SeNARS {
 
             if (matchingBeliefs && matchingBeliefs.length > 0) {
                 const bestBelief = matchingBeliefs.reduce((best, current) => {
-                    const currentConf = current.truth?.c || 0;
-                    const bestConf = best.truth?.c || 0;
+                    const currentConf = current.truth?.c ?? 0;
+                    const bestConf = best.truth?.c ?? 0;
                     return currentConf > bestConf ? current : best;
                 }, matchingBeliefs[0]);
 

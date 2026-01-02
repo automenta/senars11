@@ -22,7 +22,7 @@ export const createUncertaintyCalibrationRule = (dependencies) => {
 
             const belief = isBelief(primaryPremise);
             const priority = primaryPremise.budget?.priority ?? 0.5;
-            const confidence = primaryPremise.truth?.c || 0.9;
+            const confidence = primaryPremise.truth?.c ?? 0.9;
 
             return belief && priority > 0.6 && confidence >= 0.9 && hasPattern(primaryPremise, KeywordPatterns.uncertainty);
         },
@@ -50,7 +50,7 @@ Statement: "${termStr}"`;
             if (processedOutput === null) return [];
 
             const newTruth = {
-                frequency: primaryPremise.truth.f,
+                frequency: primaryPremise.truth?.f ?? 0.9,
                 confidence: processedOutput
             };
 

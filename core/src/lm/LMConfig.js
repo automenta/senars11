@@ -185,19 +185,6 @@ export class LMConfig {
         throw new Error(`Unknown provider type: ${type}`);
     }
 
-    isConfigured(name) {
-        return this.configs.has(name);
-    }
-
-    getActiveProviderName() {
-        return this.active;
-    }
-
-    clearAll() {
-        this.configs.clear();
-        this.active = null;
-    }
-
     toJSON() {
         return {
             active: this.active,

@@ -62,7 +62,7 @@ Provide only the values, one per line.`;
                     punctuation: primaryPremise.punctuation,
                     truth: {
                         frequency: 0.6,
-                        confidence: (primaryPremise.truth?.c || 0.9) * 0.6
+                        confidence: (primaryPremise.truth?.c ?? 0.9) * 0.6
                     },
                     budget: {
                         priority: 0.8,

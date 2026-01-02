@@ -52,13 +52,13 @@ const DEFAULT_TEMPLATES = Object.freeze({
 
     'file-analysis': ({filePath, metric, value, min = 0, max = 100}, options = {}) => {
         const normalizedValue = TruthValueUtils.normalizeMetric(value, min, max);
-        const truth = {frequency: normalizedValue, confidence: options.confidence || 0.9};
+        const truth = {frequency: normalizedValue, confidence: options.confidence ?? 0.9};
         return `<("${filePath}" --> ${metric}) --> ${value}>${_formatTruthValue(truth)}`;
     },
 
     'directory-analysis': ({dirPath, metric, value, min = 0, max = 100}, options = {}) => {
         const normalizedValue = TruthValueUtils.normalizeMetric(value, min, max);
-        const truth = {frequency: normalizedValue, confidence: options.confidence || 0.8};
+        const truth = {frequency: normalizedValue, confidence: options.confidence ?? 0.8};
         return `<("${dirPath}" --> ${metric}) --> ${value}>${_formatTruthValue(truth)}`;
     },
 
@@ -83,8 +83,8 @@ function _formatTruthValue(truth) {
     }
 
     if (typeof truth === 'object') {
-        const frequency = truth.frequency !== undefined ? truth.frequency : (truth.f || 1.0);
-        const confidence = truth.confidence !== undefined ? truth.confidence : (truth.c || 0.9);
+        const frequency = truth.frequency !== undefined ? truth.frequency : (truth.f ?? 1.0);
+        const confidence = truth.confidence !== undefined ? truth.confidence : (truth.c ?? 0.9);
         return `. ${TruthValueUtils.createTruthValue(frequency, confidence)}`;
     }
 

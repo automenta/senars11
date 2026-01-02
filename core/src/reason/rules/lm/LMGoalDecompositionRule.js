@@ -8,7 +8,7 @@ import {Punctuation, Task} from '../../../task/Task.js';
 import {cleanText, isGoal, isValidSubGoal, parseSubGoals} from '../../RuleHelpers.js';
 
 export const createGoalDecompositionRule = (dependencies, config = {}) => {
-    const {lm} = dependencies;
+    const {lm, eventBus} = dependencies;
     const finalConfig = {
         id: 'goal-decomposition',
         name: 'Goal Decomposition Rule',
@@ -19,7 +19,8 @@ export const createGoalDecompositionRule = (dependencies, config = {}) => {
         minGoalLength: 5,
         maxGoalLength: 150,
         ...config,
-        lm
+        lm,
+        eventBus
     };
 
     return LMRule.create({
@@ -54,7 +55,7 @@ Output: List of subgoals, one per line`;
                 return [];
             }
 
-            const termFactory = context?.termFactory || dependencies.termFactory;
+            const termFactory = context?.termFactory ?? dependencies.termFactory;
             if (!termFactory) {
                 console.warn('GoalDecomposition: No termFactory available');
                 return [];
@@ -67,8 +68,8 @@ Output: List of subgoals, one per line`;
                     term,
                     punctuation: Punctuation.GOAL,
                     truth: {
-                        frequency: primaryPremise.truth.f,
-                        confidence: primaryPremise.truth.c * 0.9
+                        frequency: primaryPremise.truth?.f ?? 0.9,
+                        confidence: (primaryPremise.truth?.c ?? 0.9) * 0.9
                     },
                     budget: {
                         priority: Math.max(0.1, (primaryPremise.budget?.priority ?? 0.8) * 0.9),

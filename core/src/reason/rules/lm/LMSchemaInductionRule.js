@@ -53,7 +53,7 @@ The schema should be abstract enough to apply to similar situations.`;
                 punctuation: Punctuation.BELIEF,
                 truth: {
                     frequency: 0.9,
-                    confidence: (primaryPremise.truth?.c || 0.9) * 0.9
+                    confidence: (primaryPremise.truth?.c ?? 0.9) * 0.9
                 }
             })];
         },

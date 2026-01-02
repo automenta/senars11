@@ -57,7 +57,7 @@ export class QuestionReasoningMessageHandler extends BaseMessageHandler {
             else if (task.type === 'GOAL') punctuation = '!';
         }
 
-        const truth = task.truth ? `%${Number(task.truth.frequency || 0).toFixed(2)};${Number(task.truth.confidence || 0).toFixed(2)}%` : '';
+        const truth = task.truth ? `%${Number(task.truth.frequency ?? 0).toFixed(2)};${Number(task.truth.confidence ?? 0).toFixed(2)}%` : '';
         return `${termStr}${punctuation} ${truth}`.trim();
     }
 }

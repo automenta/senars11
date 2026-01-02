@@ -28,7 +28,7 @@ export const createAnalogicalReasoningRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
+            const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
             const isGoalOrQuestion = isGoal(primaryPremise) || isQuestion(primaryPremise);
             const priority = primaryPremise.budget?.priority ?? 0.5;
 
@@ -36,7 +36,7 @@ export const createAnalogicalReasoningRule = (dependencies) => {
         },
 
         prompt: async (primaryPremise, secondaryPremise, context) => {
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
+            const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? 'unknown');
             let contextStr = "";
 
             if (embeddingLayer && memory) {
@@ -64,32 +64,31 @@ Based on that analogy, describe a step-by-step solution for the original problem
         },
 
         process: (lmResponse) => {
-            return lmResponse?.trim() || '';
+            return lmResponse?.trim() ?? '';
         },
 
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const termFactory = context?.termFactory || dependencies.termFactory;
+            const termFactory = context?.termFactory ?? dependencies.termFactory;
             if (!termFactory) {
                 console.warn('AnalogicalReasoning: No termFactory available');
                 return [];
             }
 
-            const newTermName = `solution_proposal_for_(${primaryPremise.term?.toString?.() || 'unknown'})`;
+            const originalTermStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
+            const newTermName = `solution_proposal_for_(${originalTermStr})`;
             const newTerm = termFactory.atomic(newTermName);
 
-            const newTask = new Task({
+            return [new Task({
                 term: newTerm,
                 punctuation: Punctuation.BELIEF,
                 truth: {
                     frequency: 0.8,
-                    confidence: (primaryPremise.truth?.c || 0.9) * 0.8
+                    confidence: (primaryPremise.truth?.c ?? 0.9) * 0.8
                 },
                 budget: {priority: 0.7, durability: 0.6, quality: 0.5}
-            });
-
-            return [newTask];
+            })];
         },
 
         lm_options: {

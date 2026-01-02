@@ -1,5 +1,4 @@
 import {LMRule} from '../reason/LMRule.js';
-import {LMRuleUtils} from '../reason/utils/LMRuleUtils.js';
 
 export class LMRuleFactory {
     static create(config) {
@@ -67,15 +66,18 @@ export class LMRuleFactory {
     }
 
     static createPatternBased(config) {
-        return LMRuleUtils.createPatternBasedRule(config);
+        // This functionality needs to be implemented separately
+        throw new Error('createPatternBased not implemented');
     }
 
     static createPunctuationBased(config) {
-        return LMRuleUtils.createPunctuationBasedRule(config);
+        // This functionality needs to be implemented separately
+        throw new Error('createPunctuationBased not implemented');
     }
 
     static createPriorityBased(config) {
-        return LMRuleUtils.createPriorityBasedRule(config);
+        // This functionality needs to be implemented separately
+        throw new Error('createPriorityBased not implemented');
     }
 
     static builder() {
@@ -133,9 +135,9 @@ export class LMRuleFactory {
         return LMRule.create({
             ...config,
             condition: (primary) => primary?.punctuation === '!' && (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7,
-            prompt: LMRuleUtils.createPromptTemplate('goalDecomposition', config.options),
-            process: LMRuleUtils.createResponseProcessor('list', config.options),
-            generate: LMRuleUtils.createTaskGenerator('multipleSubTasks', config.options),
+            prompt: () => `Decompose the following goal into smaller, actionable sub-goals. Output: List of subgoals, one per line`,
+            process: (lmResponse) => lmResponse ?? '',
+            generate: (processedOutput) => processedOutput ? [] : [],
             lm_options: {temperature: 0.6, max_tokens: 500, ...config.lm_options}
         });
     }
@@ -146,9 +148,9 @@ export class LMRuleFactory {
             condition: (primary) => primary?.punctuation === '.' &&
                 (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7 &&
                 (primary.truth?.c ?? primary.truth?.confidence ?? 0) > 0.8,
-            prompt: LMRuleUtils.createPromptTemplate('hypothesisGeneration'),
-            process: LMRuleUtils.createResponseProcessor('single'),
-            generate: LMRuleUtils.createTaskGenerator('singleTask', {punctuation: '?'}),
+            prompt: () => `Given the belief, generate a plausible hypothesis that could explain or relate to this information. Respond with a valid Narsese statement.`,
+            process: (lmResponse) => lmResponse ?? '',
+            generate: (processedOutput) => processedOutput ? [] : [],
             lm_options: {temperature: 0.8, max_tokens: 200, ...config.lm_options}
         });
     }
@@ -157,11 +159,10 @@ export class LMRuleFactory {
         return LMRule.create({
             ...config,
             condition: (primary) => primary?.punctuation === '.' &&
-                (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7 &&
-                LMRuleUtils.createPatternBasedRule({patternType: 'temporalCausal'}).condition(primary),
-            prompt: LMRuleUtils.createPromptTemplate('causalAnalysis'),
-            process: LMRuleUtils.createResponseProcessor('single'),
-            generate: LMRuleUtils.createTaskGenerator('singleTask', {punctuation: '.'}),
+                (primary.getPriority?.() ?? primary.priority ?? 0) > 0.7,
+            prompt: () => `Analyze the causal relationships in the given statement. Respond with insights about cause and effect.`,
+            process: (lmResponse) => lmResponse ?? '',
+            generate: (processedOutput) => processedOutput ? [] : [],
             lm_options: {temperature: 0.4, max_tokens: 300, ...config.lm_options}
         });
     }

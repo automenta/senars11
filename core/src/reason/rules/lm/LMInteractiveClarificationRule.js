@@ -16,10 +16,11 @@ import {hasPattern, isGoal, isQuestion, KeywordPatterns, parseSubGoals} from '..
  * @returns {LMRule} A new LMRule instance for interactive clarification.
  */
 export const createInteractiveClarificationRule = (dependencies) => {
-    const {lm} = dependencies;
+    const {lm, eventBus} = dependencies;
     return LMRule.create({
         id: 'interactive-clarification',
         lm,
+        eventBus,
         name: 'Interactive Clarification Rule',
         description: 'Generates clarifying questions when input is ambiguous.',
         priority: 0.8,
@@ -27,7 +28,7 @@ export const createInteractiveClarificationRule = (dependencies) => {
         condition: (primaryPremise, secondaryPremise, context) => {
             if (!primaryPremise) return false;
 
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || '');
+            const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? '');
             const isGoalOrQuestion = isGoal(primaryPremise) || isQuestion(primaryPremise);
             const priority = primaryPremise.budget?.priority ?? 0.5;
 
@@ -36,7 +37,7 @@ export const createInteractiveClarificationRule = (dependencies) => {
         },
 
         prompt: (primaryPremise, secondaryPremise, context) => {
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
+            const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? 'unknown');
             return `The following statement is ambiguous or lacks detail:
 "${termStr}"
 
@@ -53,7 +54,7 @@ Frame the questions to elicit concrete information. Provide only the questions.`
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput || processedOutput.length === 0) return [];
 
-            const termFactory = context?.termFactory || dependencies.termFactory;
+            const termFactory = context?.termFactory ?? dependencies.termFactory;
             if (!termFactory) return [];
 
             return processedOutput.map(question => {
@@ -62,7 +63,8 @@ Frame the questions to elicit concrete information. Provide only the questions.`
                 return new Task({
                     term,
                     punctuation: Punctuation.QUESTION,
-                    truth: null
+                    truth: null,
+                    budget: {priority: 0.8, durability: 0.6, quality: 0.5}
                 });
             });
         },

@@ -51,7 +51,7 @@ If there is a time sequence, describe it.`;
                 punctuation: Punctuation.BELIEF,
                 truth: {
                     frequency: 0.9,
-                    confidence: (primaryPremise.truth?.c || 0.9) * 0.9
+                    confidence: (primaryPremise.truth?.c ?? 0.9) * 0.9
                 }
             })];
         },

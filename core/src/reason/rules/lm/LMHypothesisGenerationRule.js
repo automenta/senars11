@@ -8,10 +8,11 @@ import {Punctuation, Task} from '../../../task/Task.js';
 import {isBelief} from '../../RuleHelpers.js';
 
 export const createHypothesisGenerationRule = (dependencies) => {
-    const {lm} = dependencies;
+    const {lm, eventBus} = dependencies;
     return LMRule.create({
         id: 'hypothesis-generation',
         lm,
+        eventBus,
         name: 'Hypothesis Generation Rule',
         description: 'Generates new, related hypotheses based on existing beliefs.',
         priority: 0.6,
@@ -42,7 +43,7 @@ State the hypothesis as a clear, single statement.`;
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const termFactory = context?.termFactory || dependencies.termFactory;
+            const termFactory = context?.termFactory ?? dependencies.termFactory;
             if (!termFactory) return [];
 
             const term = termFactory.atomic(processedOutput);

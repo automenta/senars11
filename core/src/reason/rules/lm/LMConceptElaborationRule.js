@@ -1,6 +1,6 @@
 import { LMRule } from '../../LMRule.js';
 import { createFallbackTerm, tryParseNarsese } from '../../RuleHelpers.js';
-import { Task } from '../../../task/Task.js';
+import { Punctuation, Task } from '../../../task/Task.js';
 import { Truth } from '../../../Truth.js';
 import { Term } from '../../../term/Term.js';
 
@@ -21,17 +21,17 @@ export const createConceptElaborationRule = (dependencies) => {
             const term = primaryPremise.term;
             if (term.components?.length > 0 && !term.isAtomic) return false;
 
-            const name = term.name || term.toString();
+            const name = term.name ?? term.toString();
             if (typeof name !== 'string') return false;
             if (name.startsWith('?') || name.startsWith('#')) return false;
             if (/^\d+$/.test(name)) return false;
 
-            return (primaryPremise.type || 'BELIEF') === 'BELIEF';
+            return (primaryPremise.type ?? 'BELIEF') === 'BELIEF';
         },
 
         prompt: (primaryPremise) => {
             const term = primaryPremise.term;
-            const content = (term.name || term.toString()).replace(/^"|"$/g, '');
+            const content = (term.name ?? term.toString()).replace(/^"|"$/g, '');
 
             const concept = memory?.getConcept?.(term);
             const beliefs = concept?.getBeliefs?.() ?? concept?.tasks ?? [];
@@ -60,12 +60,17 @@ export const createConceptElaborationRule = (dependencies) => {
 
             if (!termToCreate) return [];
 
-            const punctuation = parsed?.punctuation ?? '.';
+            const punctuation = parsed?.punctuation ?? Punctuation.BELIEF;
             const truth = parsed?.truthValue
                 ? new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence)
                 : (parsed ? new Truth(0.9, 0.8) : new Truth(0.8, 0.7));
 
-            return [new Task({ term: termToCreate, punctuation, truth, budget: { priority: 0.6, durability: 0.7, quality: 0.5 } })];
+            return [new Task({
+                term: termToCreate,
+                punctuation,
+                truth,
+                budget: { priority: 0.6, durability: 0.7, quality: 0.5 }
+            })];
         }
     });
 };

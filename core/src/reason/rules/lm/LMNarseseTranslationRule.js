@@ -20,12 +20,12 @@ export const createNarseseTranslationRule = (dependencies) => {
             const term = primaryPremise.term;
             if (term.components?.length > 0 && !term.isAtomic) return false;
 
-            const name = term.name || term.toString();
+            const name = term.name ?? term.toString();
             return typeof name === 'string' && name.startsWith('"') && name.endsWith('"');
         },
 
         prompt: (primaryPremise) => {
-            const content = (primaryPremise.term.name || primaryPremise.term.toString()).replace(/^"|"$/g, '');
+            const content = (primaryPremise.term.name ?? primaryPremise.term.toString()).replace(/^"|"$/g, '');
             return `Translate the English sentence to a Narsese relation.
 "Dogs are animals" => <dog --> animal>.
 "Birds can fly" => <bird --> [fly]>.
@@ -42,11 +42,16 @@ export const createNarseseTranslationRule = (dependencies) => {
 
             const term = parsed.term ?? parsed;
             const punctuation = parsed.punctuation ?? Punctuation.BELIEF;
-            const truth = parsed.truthValue
+            const truth = parsed?.truthValue
                 ? new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence)
                 : (punctuation === Punctuation.BELIEF ? new Truth(1.0, 0.9) : null);
 
-            return [new Task({ term, punctuation, truth, budget: { priority: 0.8, durability: 0.8, quality: 0.5 } })];
+            return [new Task({
+                term,
+                punctuation,
+                truth,
+                budget: { priority: 0.8, durability: 0.8, quality: 0.5 }
+            })];
         }
     });
 };

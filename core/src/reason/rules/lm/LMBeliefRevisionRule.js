@@ -9,10 +9,11 @@ import {Punctuation, Task} from '../../../task/Task.js';
 import {hasPattern, isBelief, KeywordPatterns} from '../../RuleHelpers.js';
 
 export const createBeliefRevisionRule = (dependencies) => {
-    const {lm} = dependencies;
+    const {lm, eventBus} = dependencies;
     return LMRule.create({
         id: 'belief-revision',
         lm,
+        eventBus,
         name: 'Belief Revision Rule',
         description: 'Helps resolve contradictions by suggesting belief revisions.',
         priority: 0.95,
@@ -27,7 +28,7 @@ export const createBeliefRevisionRule = (dependencies) => {
         },
 
         prompt: (primaryPremise, secondaryPremise, context) => {
-            const termStr = primaryPremise.term?.toString?.() || String(primaryPremise.term || 'unknown');
+            const termStr = primaryPremise.term?.toString?.() ?? String(primaryPremise.term ?? 'unknown');
             return `The following belief appears to contain a contradiction or conflict:
 "${termStr}"
 
@@ -36,13 +37,13 @@ The revised belief should be a single, clear statement.`;
         },
 
         process: (lmResponse) => {
-            return lmResponse?.trim() || '';
+            return lmResponse?.trim() ?? '';
         },
 
         generate: (processedOutput, primaryPremise, secondaryPremise, context) => {
             if (!processedOutput) return [];
 
-            const termFactory = context?.termFactory || dependencies.termFactory;
+            const termFactory = context?.termFactory ?? dependencies.termFactory;
             if (!termFactory) return [];
 
             const term = termFactory.atomic(processedOutput);
@@ -51,9 +52,14 @@ The revised belief should be a single, clear statement.`;
                 term,
                 punctuation: Punctuation.BELIEF,
                 truth: {
-                    frequency: primaryPremise.truth.f,
-                    confidence: primaryPremise.truth.c * 0.8,
+                    frequency: primaryPremise.truth?.f ?? 0.9,
+                    confidence: (primaryPremise.truth?.c ?? 0.9) * 0.8,
                 },
+                budget: {
+                    priority: 0.9,
+                    durability: 0.8,
+                    quality: 0.7
+                }
             })];
         },
 

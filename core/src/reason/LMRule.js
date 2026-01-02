@@ -33,6 +33,7 @@ export class LMRule extends Rule {
 
         this.name = config.name ?? id;
         this.description = config.description ?? 'Language Model Rule for generating inferences using neural models';
+        this.enabled = config.enabled ?? true;
 
         if (config.promptTemplate) {
             this.promptTemplate = config.promptTemplate;
@@ -151,20 +152,28 @@ export class LMRule extends Rule {
     }
 
     _callLMInterface(prompt) {
-        const interfaces = ['generateText', 'process', 'query'];
-        for (const method of interfaces) {
-            if (typeof this.lm[method] === 'function') {
-                return this.lm[method](prompt, this.config.lm_options);
+        // Cache the LM interface method to avoid repeated lookups in hot path
+        if (!this._cachedLMInterface) {
+            const interfaces = ['generateText', 'process', 'query'];
+            for (const method of interfaces) {
+                if (typeof this.lm[method] === 'function') {
+                    this._cachedLMInterface = method;
+                    break;
+                }
+            }
+            if (!this._cachedLMInterface) {
+                throw new Error(`LM compatible interface not found for rule ${this.id}`);
             }
         }
-        throw new Error(`LM compatible interface not found for rule ${this.id}`);
+        return this.lm[this._cachedLMInterface](prompt, this.config.lm_options);
     }
 
     _updateLMStats(tokens, executionTime) {
         const s = this.lmStats;
         s.calls++;
         s.tokens += tokens;
-        s.avgTime = (s.avgTime * (s.calls - 1) + executionTime) / s.calls;
+        // Use a more efficient running average calculation
+        s.avgTime = s.avgTime + (executionTime - s.avgTime) / s.calls;
     }
 
     _updateExecutionStats(success, executionTime) {
@@ -175,7 +184,9 @@ export class LMRule extends Rule {
         }
 
         const total = this.executionStats.totalExecutions;
-        this.executionStats.avgExecutionTime = (this.executionStats.avgExecutionTime * (total - 1) + executionTime) / total;
+        // Use a more efficient running average calculation
+        this.executionStats.avgExecutionTime = this.executionStats.avgExecutionTime +
+            (executionTime - this.executionStats.avgExecutionTime) / total;
         this.executionStats.successRate = this.executionStats.successfulExecutions / total;
     }
 

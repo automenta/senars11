@@ -116,10 +116,10 @@ export class TaskMatch {
     }
 
     _checkTruthValues(task) {
-        if (this.minFreq !== null && task.truth?.f < this.minFreq) {
+        if (this.minFreq !== null && (task.truth?.f ?? 0) < this.minFreq) {
             return false;
         }
-        if (this.minConf !== null && task.truth?.c < this.minConf) {
+        if (this.minConf !== null && (task.truth?.c ?? 0) < this.minConf) {
             return false;
         }
         return true;
@@ -130,18 +130,18 @@ export class TaskMatch {
             return true; // Not applicable
         }
 
-        const freqDiff = Math.abs(task.truth.f - this.expectedFreq);
-        const confDiff = Math.abs(task.truth.c - this.expectedConf);
+        const freqDiff = Math.abs((task.truth.f ?? 0) - this.expectedFreq);
+        const confDiff = Math.abs((task.truth.c ?? 0) - this.expectedConf);
         return freqDiff <= this.tolerance && confDiff <= this.tolerance;
     }
 
     _checkRangeTruth(task) {
         if (this.minFreq !== null && this.maxFreq !== null && task.truth &&
-            (task.truth.f < this.minFreq || task.truth.f > this.maxFreq)) {
+            ((task.truth.f ?? 0) < this.minFreq || (task.truth.f ?? 0) > this.maxFreq)) {
             return false;
         }
         if (this.minConf !== null && this.maxConf !== null && task.truth &&
-            (task.truth.c < this.minConf || task.truth.c > this.maxConf)) {
+            ((task.truth.c ?? 0) < this.minConf || (task.truth.c ?? 0) > this.maxConf)) {
             return false;
         }
         return true;
@@ -250,8 +250,8 @@ export class RemoteTaskMatch extends TaskMatch {
         }
 
         // Handle different truth field names that might come from the server
-        const frequency = taskTruth.frequency || taskTruth.f || taskTruth.freq || 0;
-        const confidence = taskTruth.confidence || taskTruth.c || taskTruth.conf || 0;
+        const frequency = taskTruth.frequency ?? taskTruth.f ?? taskTruth.freq ?? 0;
+        const confidence = taskTruth.confidence ?? taskTruth.c ?? taskTruth.conf ?? 0;
 
         // Check truth values with min/max constraints
         if (this.minFreq !== null && frequency < this.minFreq) {

@@ -3,7 +3,6 @@ import {Punctuation, Task} from '../../../core/src/task/Task.js';
 import {Truth} from '../../../core/src/Truth.js';
 import {TermFactory} from '../../../core/src/term/TermFactory.js';
 import {createGoalDecompositionRule, createHypothesisGenerationRule} from '../../../core/src/reason/rules/lm/index.js';
-import {LMRuleUtils} from '../../../core/src/reason/utils/LMRuleUtils.js';
 import {jest} from '@jest/globals';
 
 class MockLM {
@@ -203,29 +202,3 @@ describe('Specific LM Rules', () => {
     });
 });
 
-describe('LMRuleUtils', () => {
-    let mockLM;
-    let termFactory;
-
-    beforeEach(() => {
-        mockLM = new MockLM({});
-        termFactory = new TermFactory();
-    });
-
-    test('should create pattern-based rules', () => {
-        const rule = LMRuleUtils.createPatternBasedRule({
-            id: 'pattern-test',
-            lm: mockLM,
-            patternType: 'problemSolving'
-        });
-
-        const task = new Task({
-            term: termFactory.atomic('Solve the equation'),
-            punctuation: Punctuation.GOAL,
-            budget: {priority: 0.8},
-            truth: {frequency: 1.0, confidence: 0.9}
-        });
-
-        expect(rule.canApply(task)).toBe(true);
-    });
-});

@@ -147,7 +147,7 @@ export class InputProcessor extends BaseComponent {
             questionBoost = 0.1
         } = priorityConfig;
 
-        const confidenceBoost = (truthValue.confidence || 0) * confidenceMultiplier;
+        const confidenceBoost = (truthValue.confidence ?? 0) * confidenceMultiplier;
         const typeBoost = {
             GOAL: goalBoost,
             QUESTION: questionBoost

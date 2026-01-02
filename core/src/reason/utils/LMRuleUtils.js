@@ -173,8 +173,8 @@ Focus on conveying the core meaning and implication of the statement.`;
                         const term = termFactory.atomic(String(output));
                         const punctuation = originalTask.punctuation;
                         const truth = punctuation === Punctuation.QUESTION ? null : {
-                            frequency: originalTask.truth?.f || 0.5,
-                            confidence: (originalTask.truth?.c || 0.9) * confMult
+                            frequency: originalTask.truth?.f ?? 0.5,
+                            confidence: (originalTask.truth?.c ?? 0.9) * confMult
                         };
 
                         return new Task({
@@ -201,8 +201,8 @@ Focus on conveying the core meaning and implication of the statement.`;
                     }
 
                     const punctuation = options.punctuation ?? originalTask.punctuation;
-                    const freq = options.frequency ?? (originalTask.truth?.f || 0.5);
-                    const conf = options.confidence ?? ((originalTask.truth?.c || 0.9) * (options.confidenceMultiplier ?? 1.0));
+                    const freq = options.frequency ?? (originalTask.truth?.f ?? 0.5);
+                    const conf = options.confidence ?? ((originalTask.truth?.c ?? 0.9) * (options.confidenceMultiplier ?? 1.0));
                     const prior = options.priority ?? originalTask.priority * (options.priorityMultiplier ?? 1.0);
                     const dur = options.durability ?? originalTask.durability;
 
