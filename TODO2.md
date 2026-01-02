@@ -30,8 +30,141 @@ SeNARS has working NAL reasoning, 889 tests, and a Truth-Tensor bridge. What's m
 
 ---
 
+## Phase 0.4: Hybrid Demo — LM as Reasoning Rule 🔬
+
+> **Objective**: Demonstrate that LM is not an external service, but an **internal reasoning rule**.
+
+When you input `"Cats are mammals".`:
+1. This becomes an **atomic term belief** in NAL
+2. The `LMNarseseTranslationRule` **fires automatically** as a reasoning rule
+3. The LM translates → `<cat --> mammal>.` appears as a derived task
+4. This new task enters NAL and triggers **further derivations**
+
+This is fundamentally different from "LLM with tools" — the LM is **inside the reasoning loop**.
+
+### Demo Modes
+
+Each mode showcases a different LM rule:
+
+| Mode | LM Rule | Shows |
+|------|---------|-------|
+| **translate** | `LMNarseseTranslationRule` | NL → Narsese as internal rule |
+| **elaborate** | `LMConceptElaborationRule` | LM adds commonsense properties |
+| **analogize** | `LMAnalogicalReasoningRule` | Problem-solving via analogy |
+| **explain** | `LMExplanationGenerationRule` | Narsese → NL explanation |
+| **hybrid** | All combined | Full pipeline demo |
+
+### Console UI (with colors and emojis)
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║  🧠 SeNARS Hybrid Demo — Where LM Meets Logic                    ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Model: Xenova/LaMini-Flan-T5-783M                               ║
+║  Mode:  hybrid (all LM rules active)                             ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📥 INPUT: "Cats are mammals"
+   └─ Stored as atom: "Cats are mammals"
+
+⚡ LM RULE FIRED: narsese-translation
+   ├─ Prompt: Translate "Cats are mammals" → Narsese
+   ├─ LM Output: <cat --> mammal>.
+   └─ 💡 NEW TASK: (cat --> mammal). <1.0, 0.9>
+
+⚡ LM RULE FIRED: concept-elaboration
+   ├─ Prompt: What properties does "cat" have?
+   ├─ LM Output: <cat --> [furry]>. <cat --> animal>.
+   └─ 💡 NEW TASKS: 
+        (cat --> [furry]). <0.9, 0.8>
+        (cat --> animal). <0.9, 0.8>
+
+🔄 NAL INFERENCE: deduction
+   ├─ Premises: (cat --> mammal), (mammal --> warm_blooded)
+   └─ 💡 DERIVED: (cat --> warm_blooded). <1.0, 0.81>
+
+❓ QUERY: "Are cats warm blooded?"
+   └─ Parsed as: (cat --> warm_blooded)?
+
+✅ ANSWER: YES
+   ├─ Frequency: 1.00
+   ├─ Confidence: 0.81
+   └─ Proof: cat→mammal + mammal→warm_blooded = cat→warm_blooded
+```
+
+### CLI Interface
+
+```bash
+# Run with defaults (hybrid mode, all examples)
+node examples/demo-hybrid.js
+
+# Specific mode
+node examples/demo-hybrid.js --mode=translate
+
+# Custom input
+node examples/demo-hybrid.js --input='"Is coffee hot?"'
+
+# Verbose mode (show all internal events)  
+node examples/demo-hybrid.js --verbose
+```
+
+### Example Scenarios
+
+**1. Translation Mode** — Shows LM-as-rule for NL→Narsese
+```javascript
+inputs: ['"Dogs are loyal animals"', '"Birds can fly"', '"Is water wet?"']
+```
+
+**2. Elaboration Mode** — LM generates commonsense
+```javascript
+inputs: ['coffee', 'penguin']  // → <coffee --> [hot]>. <penguin --> bird>.
+```
+
+**3. Syllogism + Explanation** — Classic logic with LM explanation
+```javascript
+facts: ['(socrates --> man).', '(man --> mortal).'],
+query: '(socrates --> mortal)?',
+explain: true
+```
+
+**4. Full Pipeline** — NL question → NAL reasoning → NL answer
+```javascript
+facts: ['"Penguins are birds"', '"Birds are animals"'],
+query: '"Are penguins animals?"'
+```
+
+### Why This Is Unique
+
+| Other Systems | SeNARS |
+|--------------|--------|
+| LLM calls external tools | LM **is** a reasoning rule |
+| One-shot responses | Continuous inference cycles |
+| No confidence | Computed truth values |
+| Black box | Visible proof chains |
+| Inconsistent | Logically constrained |
+
+### Timeline
+
+| Task | Effort | Status |
+|------|--------|--------|
+| Create `examples/demo-hybrid.js` | 3 hrs | [ ] |
+| Implement demo modes | 2 hrs | [ ] |
+| Add CLI argument parsing | 1 hr | [ ] |
+| Test all scenarios | 1 hr | [ ] |
+| **Total** | **~7 hrs** | |
+
+### Files
+
+- **[NEW]** `examples/demo-hybrid.js` — Main hybrid demo script
+- **Uses** `core/src/reason/rules/lm/*.js` — LM reasoning rules
+- **Uses** `core/src/SeNARS.js` — NAL reasoning facade
+
+---
+
 ## Phase 0.5: The Killer Demo — Hybrid NAL + LM 🎯
 
+> **Prerequisite**: Phase 0.4 smoke test passing
+>
 > **Objective**: Demonstrate neuro-symbolic synergy with transparent visualization.
 
 This is the demo that proves SeNARS is different. Natural language in, reasoned answer out, with **visible proof chains** and **explainable confidence**.
@@ -640,13 +773,14 @@ npx senars lab expedition causal_exploration --duration 24h
 ### Critical Path
 
 ```
-Phase 0 ✅ → Phase 0.5 → Phase 1.1 → Phase 1.2 → Phase 2 → Phase 3 → Phase 4
-   │            │            │            │           │         │
-   │            │            │            │           │         └── (3+ weeks)
-   │            │            │            │           └── (1 week)
-   │            │            │            └── (1 week)
-   │            │            └── (3-4 days)
-   │            └── (~12 hours)
+Phase 0 ✅ → Phase 0.4 → Phase 0.5 → Phase 1.1 → Phase 1.2 → Phase 2 → Phase 3 → Phase 4
+   │            │            │            │            │           │         │
+   │            │            │            │            │           │         └── (3+ weeks)
+   │            │            │            │            │           └── (1 week)
+   │            │            │            │            └── (1 week)
+   │            │            │            └── (3-4 days)
+   │            │            └── (~12 hours)
+   │            └── (~7 hours) LM-as-rule demo
    └── Done!
 ```
 
@@ -795,6 +929,13 @@ npx senars lab
 
 ## Implementation Checklist
 
+### Phase 0.4: Hybrid Demo — LM as Reasoning Rule
+- [ ] `examples/demo-hybrid.js` — Main demo script
+- [ ] Implement demo modes (translate, elaborate, analogize, explain, hybrid)
+- [ ] Add CLI argument parsing (--mode, --input, --verbose)
+- [ ] Colored console output with emojis
+- [ ] Test all example scenarios
+
 ### Phase 0.5: Hybrid Demo
 - [ ] `core/src/hybrid/HybridReasoner.js`
 - [ ] `core/src/hybrid/prompts.js` (NL→Narsese, Result→Explanation)
@@ -907,6 +1048,12 @@ export default {
 ## Summary
 
 **Phase 0** ✅: Quick wins (demo, facade)
+
+**Phase 0.4** 🔬: **Hybrid Demo — LM as Reasoning Rule**
+- LM rules fire *inside* NAL reasoning, not externally
+- Demo modes: translate, elaborate, analogize, explain, hybrid
+- Colored console output with emojis
+- ~7 hours to complete
 
 **Phase 0.5** 🎯: **Hybrid NAL+LM Demo** — The killer demo
 - Natural language in, reasoned answer out
