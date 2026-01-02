@@ -1,10 +1,10 @@
-import {LMRule} from '../../LMRule.js';
-import {tryParseNarsese} from '../../RuleHelpers.js';
-import {Punctuation, Task} from '../../../task/Task.js';
-import {Truth} from '../../../Truth.js';
+import { LMRule } from '../../LMRule.js';
+import { tryParseNarsese } from '../../RuleHelpers.js';
+import { Punctuation, Task } from '../../../task/Task.js';
+import { Truth } from '../../../Truth.js';
 
 export const createNarseseTranslationRule = (dependencies) => {
-    const {lm, parser, eventBus} = dependencies;
+    const { lm, parser, eventBus } = dependencies;
 
     return LMRule.create({
         id: 'narsese-translation',
@@ -40,22 +40,13 @@ export const createNarseseTranslationRule = (dependencies) => {
             const parsed = tryParseNarsese(processedOutput, parser);
             if (!parsed) return [];
 
-            let term = parsed;
-            let punctuation = Punctuation.BELIEF;
-            let truth = null;
+            const term = parsed.term ?? parsed;
+            const punctuation = parsed.punctuation ?? Punctuation.BELIEF;
+            const truth = parsed.truthValue
+                ? new Truth(parsed.truthValue.frequency, parsed.truthValue.confidence)
+                : (punctuation === Punctuation.BELIEF ? new Truth(1.0, 0.9) : null);
 
-            if (parsed.term) {
-                term = parsed.term;
-                punctuation = parsed.punctuation || Punctuation.BELIEF;
-                truth = parsed.truthValue;
-            }
-
-            return [new Task({
-                term,
-                punctuation,
-                truth: truth ? new Truth(truth.frequency, truth.confidence) : (punctuation === Punctuation.BELIEF ? new Truth(1.0, 0.9) : null),
-                budget: {priority: 0.8, durability: 0.8, quality: 0.5}
-            })];
+            return [new Task({ term, punctuation, truth, budget: { priority: 0.8, durability: 0.8, quality: 0.5 } })];
         }
     });
 };
