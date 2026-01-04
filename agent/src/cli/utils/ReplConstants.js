@@ -29,7 +29,7 @@ export const DEFAULT_MODELS = {
 
 export const DEFAULT_CONFIG = {
     OLLAMA: {
-        modelName: 'Xenova/LaMini-Flan-T5-248M',
+        modelName: 'Xenova/t5-small',
         baseUrl: 'http://localhost:11434',
         temperature: 0
     }

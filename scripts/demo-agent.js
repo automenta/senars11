@@ -58,7 +58,7 @@ async function main() {
     // 3. Initialize Agent
     const config = Config.parse([
         '--provider', 'transformers',
-        '--model', 'Xenova/LaMini-Flan-T5-248M',
+        '--model', 'Xenova/t5-small',
         '--temperature', '0'
     ]);
 

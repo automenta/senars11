@@ -12,7 +12,7 @@ export const DEFAULT_CONFIG = Object.freeze({
     },
     lm: {
         provider: 'transformers',
-        modelName: "Xenova/LaMini-Flan-T5-248M",
+        modelName: "Xenova/t5-small",
         baseUrl: "http://localhost:11434",
         temperature: 0,
         enabled: false

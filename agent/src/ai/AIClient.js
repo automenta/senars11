@@ -54,7 +54,7 @@ export class AIClient {
     }
 
     _createTransformersModel(modelName) {
-        const effectiveModel = modelName || 'Xenova/LaMini-Flan-T5-248M';
+        const effectiveModel = modelName || 'Xenova/t5-small';
         const cacheKey = `transformers:${effectiveModel}`;
 
         if (!this.modelInstances.has(cacheKey)) {

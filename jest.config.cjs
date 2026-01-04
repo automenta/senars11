@@ -11,10 +11,10 @@ module.exports = {
         '^.+\\.js$': 'babel-jest',
     },
     collectCoverageFrom: [
-        'src/**/*.js',
-        '!src/**/*.test.js',
-        'ui2/**/*.js',
-        '!ui2/**/*.test.js'
+        'core/src/**/*.js',
+        'agent/src/**/*.js',
+        'ui/src/**/*.js',
+        '!**/*.test.js',
     ],
     coverageThreshold: {
         global: {
