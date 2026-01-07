@@ -8,6 +8,7 @@ import {z} from 'zod';
 // Local imports
 import {BaseProvider} from './BaseProvider.js';
 import {ModelFactory} from './ModelFactory.js';
+import {Logger} from '../util/Logger.js';
 import {
     ConfigurationError,
     ConnectionError as ProviderConnectionError,
