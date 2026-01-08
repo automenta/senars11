@@ -12,7 +12,7 @@ import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 export class NonDeterminism extends BaseMeTTaComponent {
     constructor(config = {}, eventBus = null, termFactory = null) {
         super(config, 'NonDeterminism', eventBus, termFactory);
-        this.rng = config.rng || Math.random;
+        this.rng = config.rng ?? Math.random;
     }
 
     /**

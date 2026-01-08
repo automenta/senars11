@@ -14,8 +14,8 @@ export class MacroExpander extends BaseMeTTaComponent {
     constructor(config = {}, eventBus = null, termFactory = null, matchEngine = null) {
         super(config, 'MacroExpander', eventBus, termFactory);
         this.matchEngine = matchEngine;
-        this.macros = new Map(); // name -> {pattern, expansion}
-        this.maxDepth = config.maxMacroDepth || 100;
+        this.macros = new Map();
+        this.maxDepth = config.maxMacroDepth ?? 100;
     }
 
     /**

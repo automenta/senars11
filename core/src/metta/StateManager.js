@@ -42,10 +42,11 @@ export class StateManager extends BaseMeTTaComponent {
      */
     getState(stateId) {
         return this.trackOperation('getState', () => {
-            if (!this.states.has(stateId)) {
+            const value = this.states.get(stateId);
+            if (value === undefined && !this.states.has(stateId)) {
                 throw new Error(`State not found: ${stateId}`);
             }
-            return this.states.get(stateId);
+            return value;
         });
     }
 

@@ -65,13 +65,23 @@ export class GroundedAtoms extends BaseMeTTaComponent {
     }
 
     /**
+     * Normalize grounded atom name (add & prefix if missing)
+     * @param {string} name - Name
+     * @returns {string} - Normalized name
+     * @private
+     */
+    _normalizeName(name) {
+        return name.startsWith('&') ? name : `&${name}`;
+    }
+
+    /**
      * Register a grounded atom
      * @param {string} name - Name (with & prefix)
      * @param {Function} executor - Executor function
      */
     register(name, executor) {
         this.trackOperation('register', () => {
-            const normalizedName = name.startsWith('&') ? name : `&${name}`;
+            const normalizedName = this._normalizeName(name);
             this.grounded.set(normalizedName, executor);
             this.emitMeTTaEvent('grounded-registered', { name: normalizedName });
         });
@@ -85,7 +95,7 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      */
     execute(name, ...args) {
         return this.trackOperation('execute', () => {
-            const normalizedName = name.startsWith('&') ? name : `&${name}`;
+            const normalizedName = this._normalizeName(name);
             const executor = this.grounded.get(normalizedName);
 
             if (!executor) {
@@ -104,8 +114,7 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      * @returns {boolean}
      */
     has(name) {
-        const normalizedName = name.startsWith('&') ? name : `&${name}`;
-        return this.grounded.has(normalizedName);
+        return this.grounded.has(this._normalizeName(name));
     }
 
     /**
@@ -113,7 +122,7 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      * @returns {Object|null}
      */
     getCurrentSpace() {
-        return this.spaces.get('default') || null;
+        return this.spaces.get('default') ?? null;
     }
 
     /**
