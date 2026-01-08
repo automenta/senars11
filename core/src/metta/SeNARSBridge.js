@@ -24,8 +24,9 @@ export class SeNARSBridge extends BaseMeTTaComponent {
      */
     mettaToNars(mettaTerm, punctuation = '.') {
         return this.trackOperation('mettaToNars', () => {
-            const { Task } = require('../task/Task.js');
-            const { Truth } = require('../truth/Truth.js');
+            // Dynamic import won't work in trackOperation, so create task directly
+            const Task = global.Task || require('../task/Task.js').Task;
+            const Truth = global.Truth || require('../truth/Truth.js').Truth;
 
             const task = new Task({
                 term: mettaTerm,
