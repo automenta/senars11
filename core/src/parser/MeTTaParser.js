@@ -1,37 +1,527 @@
 /**
- * MeTTaParser.js - Parser for MeTTa syntax (stub implementation)
- * This is a placeholder implementation to be expanded in the future
+ * MeTTaParser.js - Complete MeTTa Parser with Configurable Translation
+ * 
+ * Parses MeTTa S-expression syntax and translates to SeNARS terms.
+ * Uses configurable mapper for flexible MeTTa→SeNARS translation.
+ * 
+ * Key mappings:
+ * - (f x y)      → (^, f, (*, x, y))  [functor + product]
+ * - (= A B)      → (=, A, B)          [equality]
+ * - (: term T)   → (-->, term, T)     [type as inheritance]
+ * - $var         → $var               [preserved variable]
  */
 
+import { TermFactory } from '../term/TermFactory.js';
+import { Task } from '../task/Task.js';
+import { Truth } from '../Truth.js';
+
+// Token types
+const TokenType = {
+    LPAREN: 'LPAREN',
+    RPAREN: 'RPAREN',
+    LBRACKET: 'LBRACKET',
+    RBRACKET: 'RBRACKET',
+    LBRACE: 'LBRACE',
+    RBRACE: 'RBRACE',
+    SYMBOL: 'SYMBOL',
+    VARIABLE: 'VARIABLE',
+    STRING: 'STRING',
+    NUMBER: 'NUMBER',
+    BANG: 'BANG',
+    GROUNDED: 'GROUNDED',
+    EOF: 'EOF'
+};
+
+/**
+ * Default operator mappings for MeTTa→SeNARS translation.
+ * Each mapping is a function: (termFactory, args) => Term
+ * Can be overridden or extended via constructor options.
+ */
+const DEFAULT_MAPPINGS = {
+    // Equality - core interop mechanism
+    '=': (tf, args) => tf.equality(args[0], args[1]),
+
+    // Logical operators
+    'and': (tf, args) => tf.conjunction(...args),
+    'or': (tf, args) => tf.disjunction(...args),
+    'not': (tf, args) => tf.negation(args[0]),
+
+    // Implication/inference
+    'implies': (tf, args) => tf.implication(args[0], args[1]),
+    '->': (tf, args) => tf.implication(args[0], args[1]),
+
+    // Type annotation → Inheritance
+    ':': (tf, args) => tf.inheritance(args[0], args[1]),
+
+    // Similarity
+    '~': (tf, args) => tf.similarity(args[0], args[1]),
+
+    // Set constructors
+    'set': (tf, args) => tf.setExt(...args),
+
+    // Control flow - preserved as functors
+    'let': (tf, args, head) => tf.predicate(head, tf.product(...args)),
+    'let*': (tf, args, head) => tf.predicate(head, tf.product(...args)),
+    'if': (tf, args, head) => tf.predicate(head, tf.product(...args)),
+    'case': (tf, args, head) => tf.predicate(head, tf.product(...args)),
+    'match': (tf, args, head) => tf.predicate(head, tf.product(...args)),
+
+    // Quote - preserve unevaluated
+    'quote': (tf, args) => args[0],
+
+    // Empty expression
+    'Empty': (tf) => tf.atomic('Empty'),
+    'Void': (tf) => tf.atomic('Void')
+};
+
+/**
+ * Tokenizer for MeTTa syntax
+ */
+class MeTTaTokenizer {
+    constructor(input) {
+        this.input = input;
+        this.pos = 0;
+        this.tokens = [];
+    }
+
+    tokenize() {
+        while (this.pos < this.input.length) {
+            this._skipWhitespaceAndComments();
+            if (this.pos >= this.input.length) break;
+
+            const char = this.input[this.pos];
+
+            if (char === '(') {
+                this.tokens.push({ type: TokenType.LPAREN, value: '(' });
+                this.pos++;
+            } else if (char === ')') {
+                this.tokens.push({ type: TokenType.RPAREN, value: ')' });
+                this.pos++;
+            } else if (char === '[') {
+                this.tokens.push({ type: TokenType.LBRACKET, value: '[' });
+                this.pos++;
+            } else if (char === ']') {
+                this.tokens.push({ type: TokenType.RBRACKET, value: ']' });
+                this.pos++;
+            } else if (char === '{') {
+                this.tokens.push({ type: TokenType.LBRACE, value: '{' });
+                this.pos++;
+            } else if (char === '}') {
+                this.tokens.push({ type: TokenType.RBRACE, value: '}' });
+                this.pos++;
+            } else if (char === '!') {
+                this.tokens.push({ type: TokenType.BANG, value: '!' });
+                this.pos++;
+            } else if (char === '"') {
+                this.tokens.push(this._readString());
+            } else if (char === '$') {
+                this.tokens.push(this._readVariable());
+            } else if (char === '&') {
+                this.tokens.push(this._readGrounded());
+            } else if (this._isNumberStart(char)) {
+                this.tokens.push(this._readNumber());
+            } else {
+                this.tokens.push(this._readSymbol());
+            }
+        }
+
+        this.tokens.push({ type: TokenType.EOF, value: null });
+        return this.tokens;
+    }
+
+    _skipWhitespaceAndComments() {
+        while (this.pos < this.input.length) {
+            const char = this.input[this.pos];
+            if (/\s/.test(char)) {
+                this.pos++;
+            } else if (char === ';') {
+                // Skip line comment
+                while (this.pos < this.input.length && this.input[this.pos] !== '\n') {
+                    this.pos++;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    _readString() {
+        this.pos++; // Skip opening quote
+        let value = '';
+        while (this.pos < this.input.length && this.input[this.pos] !== '"') {
+            if (this.input[this.pos] === '\\' && this.pos + 1 < this.input.length) {
+                this.pos++;
+                const escaped = this.input[this.pos];
+                value += escaped === 'n' ? '\n' : escaped === 't' ? '\t' : escaped;
+            } else {
+                value += this.input[this.pos];
+            }
+            this.pos++;
+        }
+        this.pos++; // Skip closing quote
+        return { type: TokenType.STRING, value };
+    }
+
+    _readVariable() {
+        let value = '$';
+        this.pos++; // Skip $
+        while (this.pos < this.input.length && this._isSymbolChar(this.input[this.pos])) {
+            value += this.input[this.pos++];
+        }
+        return { type: TokenType.VARIABLE, value };
+    }
+
+    _readGrounded() {
+        let value = '&';
+        this.pos++; // Skip &
+        while (this.pos < this.input.length && this._isSymbolChar(this.input[this.pos])) {
+            value += this.input[this.pos++];
+        }
+        return { type: TokenType.GROUNDED, value };
+    }
+
+    _isNumberStart(char) {
+        return /[0-9]/.test(char) ||
+            (char === '-' && this.pos + 1 < this.input.length && /[0-9]/.test(this.input[this.pos + 1]));
+    }
+
+    _readNumber() {
+        let value = '';
+        if (this.input[this.pos] === '-') {
+            value += this.input[this.pos++];
+        }
+        while (this.pos < this.input.length && /[0-9.]/.test(this.input[this.pos])) {
+            value += this.input[this.pos++];
+        }
+        return { type: TokenType.NUMBER, value };
+    }
+
+    _readSymbol() {
+        let value = '';
+        while (this.pos < this.input.length && this._isSymbolChar(this.input[this.pos])) {
+            value += this.input[this.pos++];
+        }
+        return { type: TokenType.SYMBOL, value };
+    }
+
+    _isSymbolChar(char) {
+        return !/[\s()\[\]{}";]/.test(char);
+    }
+}
+
+/**
+ * MeTTa Parser - Recursive descent parser for S-expressions
+ */
 export class MeTTaParser {
-    constructor(termFactory = null) {
-        this.termFactory = termFactory;
+    /**
+     * @param {TermFactory} termFactory - Term factory for creating SeNARS terms
+     * @param {Object} options - Configuration options
+     * @param {Object} options.mappings - Custom operator mappings to merge with defaults
+     * @param {Object} options.defaultTruth - Default truth value {frequency, confidence}
+     */
+    constructor(termFactory = null, options = {}) {
+        this.termFactory = termFactory || new TermFactory();
+        this.mappings = { ...DEFAULT_MAPPINGS, ...options.mappings };
+        this.defaultTruth = options.defaultTruth || { frequency: 1.0, confidence: 0.9 };
+        this.tokens = [];
+        this.pos = 0;
     }
 
     /**
-     * Parse MeTTa syntax and convert to SeNARS tasks (beliefs/goals)
-     *
-     * @param {string} mettaInput - MeTTa syntax input
-     * @returns {Array} - Array of parsed tasks (currently empty - stub implementation)
-     *
-     * LIMITATION: MeTTa parsing is not yet implemented.
-     * Future implementation should:
-     * - Parse MeTTa expressions into AST
-     * - Convert MeTTa atoms/symbols to Narsese terms
-     * - Handle MeTTa-specific constructs (meta-level expressions)
-     * - Map MeTTa types to truth values and confidence
+     * Parse MeTTa input and convert to SeNARS tasks
+     * @param {string} mettaInput - MeTTa source code
+     * @returns {Array<Task>} - Array of SeNARS tasks
      */
     parseMeTTa(mettaInput) {
-        // Stub implementation - returns empty array
-        // MeTTa parsing requires grammar definition and semantic mapping
-        return [];
+        if (!mettaInput || typeof mettaInput !== 'string') {
+            return [];
+        }
+
+        const tokenizer = new MeTTaTokenizer(mettaInput);
+        this.tokens = tokenizer.tokenize();
+        this.pos = 0;
+
+        const tasks = [];
+
+        while (!this._isAtEnd()) {
+            const { expr, isImmediate } = this._parseTopLevel();
+            if (expr) {
+                const term = this._toTerm(expr);
+                if (term) {
+                    tasks.push(this._createTask(term, isImmediate));
+                }
+            }
+        }
+
+        return tasks;
+    }
+
+    /**
+     * Parse a single MeTTa expression and return the SeNARS term
+     * @param {string} mettaExpr - Single MeTTa expression
+     * @returns {Term} - SeNARS term
+     */
+    parseExpression(mettaExpr) {
+        const tokenizer = new MeTTaTokenizer(mettaExpr);
+        this.tokens = tokenizer.tokenize();
+        this.pos = 0;
+
+        const expr = this._parseExpr();
+        return expr ? this._toTerm(expr) : null;
+    }
+
+    /**
+     * Add or override operator mappings
+     * @param {string} operator - Operator name
+     * @param {Function} mapperFn - Function (termFactory, args, headTerm) => Term
+     */
+    addMapping(operator, mapperFn) {
+        this.mappings[operator] = mapperFn;
+    }
+
+    /**
+     * Get current operator mappings
+     * @returns {Object} - Current mappings
+     */
+    getMappings() {
+        return { ...this.mappings };
+    }
+
+    // ===== Parser internals =====
+
+    _parseTopLevel() {
+        let isImmediate = false;
+
+        // Check for ! immediate evaluation
+        if (this._check(TokenType.BANG)) {
+            this._advance();
+            isImmediate = true;
+        }
+
+        const expr = this._parseExpr();
+        return { expr, isImmediate };
+    }
+
+    _parseExpr() {
+        if (this._isAtEnd()) return null;
+
+        const token = this._peek();
+
+        switch (token.type) {
+            case TokenType.LPAREN:
+                return this._parseList();
+            case TokenType.LBRACKET:
+                return this._parseBracketList();
+            case TokenType.LBRACE:
+                return this._parseBraceSet();
+            case TokenType.SYMBOL:
+            case TokenType.VARIABLE:
+            case TokenType.STRING:
+            case TokenType.NUMBER:
+            case TokenType.GROUNDED:
+                return this._parseAtom();
+            default:
+                this._advance(); // Skip unknown token
+                return null;
+        }
+    }
+
+    _parseList() {
+        this._expect(TokenType.LPAREN);
+        const elements = [];
+
+        while (!this._check(TokenType.RPAREN) && !this._isAtEnd()) {
+            const expr = this._parseExpr();
+            if (expr !== null) {
+                elements.push(expr);
+            }
+        }
+
+        this._expect(TokenType.RPAREN);
+        return { type: 'list', elements };
+    }
+
+    _parseBracketList() {
+        this._expect(TokenType.LBRACKET);
+        const elements = [];
+
+        while (!this._check(TokenType.RBRACKET) && !this._isAtEnd()) {
+            const expr = this._parseExpr();
+            if (expr !== null) {
+                elements.push(expr);
+            }
+        }
+
+        this._expect(TokenType.RBRACKET);
+        return { type: 'bracket-list', elements };
+    }
+
+    _parseBraceSet() {
+        this._expect(TokenType.LBRACE);
+        const elements = [];
+
+        while (!this._check(TokenType.RBRACE) && !this._isAtEnd()) {
+            const expr = this._parseExpr();
+            if (expr !== null) {
+                elements.push(expr);
+            }
+        }
+
+        this._expect(TokenType.RBRACE);
+        return { type: 'set', elements };
+    }
+
+    _parseAtom() {
+        const token = this._advance();
+        return {
+            type: 'atom',
+            tokenType: token.type,
+            value: token.value
+        };
+    }
+
+    // ===== Term conversion =====
+
+    _toTerm(expr) {
+        if (!expr) return null;
+
+        switch (expr.type) {
+            case 'atom':
+                return this._atomToTerm(expr);
+            case 'list':
+                return this._listToTerm(expr.elements);
+            case 'bracket-list':
+                return this._bracketListToTerm(expr.elements);
+            case 'set':
+                return this._setToTerm(expr.elements);
+            default:
+                return null;
+        }
+    }
+
+    _atomToTerm(atom) {
+        const { tokenType, value } = atom;
+
+        switch (tokenType) {
+            case TokenType.VARIABLE:
+                // Preserve $ prefix for MeTTa variables
+                return this.termFactory.atomic(value);
+            case TokenType.STRING:
+                return this.termFactory.atomic(`"${value}"`);
+            case TokenType.NUMBER:
+                return this.termFactory.atomic(value);
+            case TokenType.GROUNDED:
+                return this.termFactory.atomic(value);
+            case TokenType.SYMBOL:
+            default:
+                // Check for special atoms
+                if (value === 'True') return this.termFactory.createTrue();
+                if (value === 'False') return this.termFactory.createFalse();
+                return this.termFactory.atomic(value);
+        }
+    }
+
+    _listToTerm(elements) {
+        if (elements.length === 0) {
+            return this.termFactory.atomic('()');
+        }
+
+        // Get head and arguments
+        const head = elements[0];
+        const args = elements.slice(1);
+
+        // Check if head is a known operator
+        if (head.type === 'atom' && head.tokenType === TokenType.SYMBOL) {
+            const op = head.value;
+
+            // Check for custom mapping
+            if (this.mappings[op]) {
+                const argTerms = args.map(a => this._toTerm(a));
+                const headTerm = this._atomToTerm(head);
+                return this.mappings[op](this.termFactory, argTerms, headTerm);
+            }
+        }
+
+        // Default: functor application (f x y) → (^, f, (*, x, y))
+        const headTerm = this._toTerm(head);
+        if (args.length === 0) {
+            // Single symbol in parens - just return it
+            return headTerm;
+        }
+
+        const argTerms = args.map(a => this._toTerm(a));
+        return this.termFactory.predicate(headTerm, this.termFactory.product(...argTerms));
+    }
+
+    _bracketListToTerm(elements) {
+        // [a b c] → intensional set
+        const terms = elements.map(e => this._toTerm(e));
+        return this.termFactory.setInt(...terms);
+    }
+
+    _setToTerm(elements) {
+        // {a b c} → extensional set
+        const terms = elements.map(e => this._toTerm(e));
+        return this.termFactory.setExt(...terms);
+    }
+
+    _createTask(term, isImmediate) {
+        return new Task({
+            term,
+            punctuation: isImmediate ? '!' : '.',
+            truth: new Truth(this.defaultTruth.frequency, this.defaultTruth.confidence),
+            budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
+        });
+    }
+
+    // ===== Token helpers =====
+
+    _peek() {
+        return this.tokens[this.pos];
+    }
+
+    _advance() {
+        if (!this._isAtEnd()) {
+            return this.tokens[this.pos++];
+        }
+        return this.tokens[this.pos];
+    }
+
+    _check(type) {
+        return !this._isAtEnd() && this._peek().type === type;
+    }
+
+    _expect(type) {
+        if (this._check(type)) {
+            return this._advance();
+        }
+        throw new Error(`Expected ${type} but got ${this._peek().type}`);
+    }
+
+    _isAtEnd() {
+        return this._peek().type === TokenType.EOF;
     }
 }
 
 /**
  * Convenience function to parse MeTTa and return SeNARS tasks
+ * @param {string} mettaString - MeTTa source code
+ * @param {TermFactory} termFactory - Optional term factory
+ * @param {Object} options - Parser options
+ * @returns {Array<Task>} - Array of SeNARS tasks
  */
-export function parseMeTTaToNars(mettaString, termFactory = null) {
-    const parser = new MeTTaParser(termFactory);
+export function parseMeTTaToNars(mettaString, termFactory = null, options = {}) {
+    const parser = new MeTTaParser(termFactory, options);
     return parser.parseMeTTa(mettaString);
+}
+
+/**
+ * Convenience function to parse a single MeTTa expression to a term
+ * @param {string} mettaExpr - Single MeTTa expression
+ * @param {TermFactory} termFactory - Optional term factory
+ * @returns {Term} - SeNARS term
+ */
+export function parseMeTTaExpression(mettaExpr, termFactory = null) {
+    const parser = new MeTTaParser(termFactory);
+    return parser.parseExpression(mettaExpr);
 }
