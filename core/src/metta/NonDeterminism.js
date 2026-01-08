@@ -106,11 +106,10 @@ export class NonDeterminism extends BaseMeTTaComponent {
                 return fn(superposition);
             }
 
-            const mappedValues = superposition.values.map(v => {
+            const mappedValues = superposition.values.flatMap(v => {
                 const result = fn(v);
-                // If mapping produces more superpositions, flatten them
                 return this.isSuperposition(result) ? result.values : result;
-            }).flat();
+            });
 
             return this.superpose(...mappedValues);
         });
@@ -129,9 +128,10 @@ export class NonDeterminism extends BaseMeTTaComponent {
             }
 
             const filtered = superposition.values.filter(predicate);
-            if (filtered.length === 0) return null;
-            if (filtered.length === 1) return filtered[0];
-            return this.superpose(...filtered);
+
+            return filtered.length === 0 ? null :
+                filtered.length === 1 ? filtered[0] :
+                    this.superpose(...filtered);
         });
     }
 
@@ -173,15 +173,11 @@ export class NonDeterminism extends BaseMeTTaComponent {
             const vals1 = this.isSuperposition(s1) ? s1.values : [s1];
             const vals2 = this.isSuperposition(s2) ? s2.values : [s2];
 
-            const results = [];
-            for (const v1 of vals1) {
-                for (const v2 of vals2) {
-                    results.push(combineFn(v1, v2));
-                }
-            }
+            const results = vals1.flatMap(v1 =>
+                vals2.map(v2 => combineFn(v1, v2))
+            );
 
-            if (results.length === 1) return results[0];
-            return this.superpose(...results);
+            return results.length === 1 ? results[0] : this.superpose(...results);
         });
     }
 }

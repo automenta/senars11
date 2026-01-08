@@ -53,10 +53,8 @@ export class MacroExpander extends BaseMeTTaComponent {
                 return term;
             }
 
-            // Try to expand current term
             const expanded = this._expandOnce(term);
 
-            // If expanded, try expanding again
             if (expanded !== term) {
                 this.emitMeTTaEvent('macro-expanded', {
                     original: term.toString(),
@@ -65,19 +63,12 @@ export class MacroExpander extends BaseMeTTaComponent {
                 return this.expand(expanded, depth + 1);
             }
 
-            // No macro match, expand components recursively
-            if (term.components && term.components.length > 0) {
-                const expandedComponents = term.components.map(c => this.expand(c, depth));
+            if (!term.components?.length) return term;
 
-                // Check if any component changed
-                const changed = expandedComponents.some((c, i) => c !== term.components[i]);
-                if (changed) {
-                    // Create new term with expanded components
-                    return this.termFactory.create(term.operator, expandedComponents);
-                }
-            }
+            const expandedComponents = term.components.map(c => this.expand(c, depth));
+            const changed = expandedComponents.some((c, i) => c !== term.components[i]);
 
-            return term;
+            return changed ? this.termFactory.create(term.operator, expandedComponents) : term;
         });
     }
 
@@ -88,33 +79,15 @@ export class MacroExpander extends BaseMeTTaComponent {
      * @private
      */
     _expandOnce(term) {
-        // Only expand compound terms
-        if (!term.operator || !term.components) {
-            return term;
-        }
+        if (!term.operator || !term.components) return term;
 
-        // Get the head (first component) for macro lookup
-        const head = term.components[0];
-        if (!head || !head.name) {
-            return term;
-        }
-
-        const macroName = head.name;
-        if (!this.hasMacro(macroName)) {
-            return term;
-        }
+        const macroName = term.components[0]?.name;
+        if (!macroName || !this.hasMacro(macroName)) return term;
 
         const { pattern, expansion } = this.macros.get(macroName);
+        const bindings = this.matchEngine?.unify(pattern, term);
 
-        // Try to unify with pattern
-        if (this.matchEngine) {
-            const bindings = this.matchEngine.unify(pattern, term);
-            if (bindings) {
-                return this.matchEngine.substitute(expansion, bindings);
-            }
-        }
-
-        return term;
+        return bindings ? this.matchEngine.substitute(expansion, bindings) : term;
     }
 
     /**

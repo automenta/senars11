@@ -11,6 +11,21 @@ import { TypeMismatchError } from './helpers/MeTTaHelpers.js';
  * Supports optional typing with runtime checks
  */
 export class TypeSystem extends BaseMeTTaComponent {
+    // Type hierarchy for subtype checking
+    static TYPE_HIERARCHY = {
+        'Number': 'Symbol',
+        'String': 'Symbol',
+        'Symbol': 'Atom',
+        'Variable': 'Atom',
+        'Grounded': 'Atom',
+        'Expression': 'Atom',
+        'List': 'Expression',
+        'Set': 'Expression'
+    };
+
+    // Type precedence order for inference
+    static TYPE_ORDER = ['Number', 'String', 'Variable', 'Grounded', 'Symbol', 'Expression', 'List', 'Set'];
+
     constructor(config = {}, eventBus = null, termFactory = null) {
         super(config, 'TypeSystem', eventBus, termFactory);
         this.typeRules = new Map();
@@ -19,21 +34,23 @@ export class TypeSystem extends BaseMeTTaComponent {
     }
 
     _registerBuiltinTypes() {
-        // Base types
-        this.defineType('Atom', () => true);
-        this.defineType('Symbol', (t) => t.isAtomic && !t.name.startsWith('$') && !t.name.startsWith('&'));
-        this.defineType('Variable', (t) => t.name?.startsWith('$') || t.name?.startsWith('?'));
-        this.defineType('Grounded', (t) => t.name?.startsWith('&'));
-        this.defineType('Expression', (t) => t.operator && t.components);
-        this.defineType('Number', (t) => t.isAtomic && !isNaN(Number(t.name)));
-        this.defineType('String', (t) => t.isAtomic && t.name?.startsWith('"'));
+        // Define all base types at once
+        const baseTypes = {
+            'Atom': () => true,
+            'Symbol': (t) => t.isAtomic && !t.name.startsWith('$') && !t.name.startsWith('&'),
+            'Variable': (t) => t.name?.startsWith('$') || t.name?.startsWith('?'),
+            'Grounded': (t) => t.name?.startsWith('&'),
+            'Expression': (t) => t.operator && t.components,
+            'Number': (t) => t.isAtomic && !isNaN(Number(t.name)),
+            'String': (t) => t.isAtomic && t.name?.startsWith('"'),
+            'List': (t) => t.operator === '*',
+            'Set': (t) => t.operator === '{}' || t.operator === '[]',
+            'Type': () => true
+        };
 
-        // Compound types
-        this.defineType('List', (t) => t.operator === '*');
-        this.defineType('Set', (t) => t.operator === '{}' || t.operator === '[]');
-
-        // Type of types
-        this.defineType('Type', () => true);
+        Object.entries(baseTypes).forEach(([name, predicate]) => {
+            this.typeRules.set(name, predicate);
+        });
     }
 
     /**
@@ -59,7 +76,7 @@ export class TypeSystem extends BaseMeTTaComponent {
         }
 
         const predicate = this.typeRules.get(typeName);
-        const result = predicate ? predicate(term) : false;
+        const result = predicate?.(term) ?? false;
         this.typeCache.set(cacheKey, result);
         return result;
     }
@@ -71,22 +88,12 @@ export class TypeSystem extends BaseMeTTaComponent {
      */
     inferType(term) {
         return this.trackOperation('inferType', () => {
-            // Check cache
-            if (this.typeCache.has(term.name)) {
-                return this.typeCache.get(term.name);
-            }
+            const cached = this.typeCache.get(term.name);
+            if (cached) return cached;
 
-            // Check each type in order of specificity
-            const typeOrder = ['Number', 'String', 'Variable', 'Grounded', 'Symbol', 'Expression', 'List', 'Set'];
-
-            for (const typeName of typeOrder) {
-                if (this.hasType(term, typeName)) {
-                    this.typeCache.set(term.name, typeName);
-                    return typeName;
-                }
-            }
-
-            return 'Atom'; // Default
+            const inferredType = TypeSystem.TYPE_ORDER.find(typeName => this.hasType(term, typeName)) ?? 'Atom';
+            this.typeCache.set(term.name, inferredType);
+            return inferredType;
         });
     }
 
@@ -121,24 +128,11 @@ export class TypeSystem extends BaseMeTTaComponent {
      * @returns {boolean}
      */
     _isSubtype(subType, superType) {
-        // Simple subtype hierarchy
-        const hierarchy = {
-            'Number': 'Symbol',
-            'String': 'Symbol',
-            'Symbol': 'Atom',
-            'Variable': 'Atom',
-            'Grounded': 'Atom',
-            'Expression': 'Atom',
-            'List': 'Expression',
-            'Set': 'Expression'
-        };
-
         let current = subType;
         while (current) {
             if (current === superType) return true;
-            current = hierarchy[current];
+            current = TypeSystem.TYPE_HIERARCHY[current];
         }
-
         return false;
     }
 

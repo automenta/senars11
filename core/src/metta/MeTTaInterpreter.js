@@ -14,6 +14,7 @@ import { ReductionEngine } from './ReductionEngine.js';
 import { NonDeterminism } from './NonDeterminism.js';
 import { GroundedAtoms } from './GroundedAtoms.js';
 import { StateManager } from './StateManager.js';
+import { TermFactory } from '../term/TermFactory.js';
 
 /**
  * Complete stdlib mappings for MeTTa
@@ -85,8 +86,10 @@ export const COMPLETE_STDLIB_MAPPINGS = {
  */
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(memory, config = {}, eventBus = null) {
-        const termFactory = config.termFactory || new (require('../term/TermFactory.js').TermFactory)();
+        const termFactory = config.termFactory ?? new TermFactory();
         super(config, 'MeTTaInterpreter', eventBus, termFactory);
+
+        const sharedConfig = { config, eventBus, termFactory: this.termFactory };
 
         // Initialize subsystems
         this.parser = new MeTTaParser(this.termFactory, {
@@ -103,8 +106,10 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.stateManager = new StateManager(config, eventBus, this.termFactory);
 
         // Link components
-        this.space.groundedAtoms = this.groundedAtoms;
-        this.space.stateManager = this.stateManager;
+        Object.assign(this.space, {
+            groundedAtoms: this.groundedAtoms,
+            stateManager: this.stateManager
+        });
         this.groundedAtoms.setSpace('default', this.space);
 
         this._registerBuiltinRules();
@@ -121,36 +126,23 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * @private
      */
     _registerBuiltinRules() {
-        // Arithmetic rules
-        this.reductionEngine.addRule(
-            TermBuilders.functor(this.termFactory, this.termFactory.atomic('+'),
-                this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
-            (bindings) => {
-                const a = Number(bindings['$a'].name);
-                const b = Number(bindings['$b'].name);
-                return this.termFactory.atomic(String(a + b));
-            }
-        );
+        // Helper to create arithmetic rules
+        const addArithmeticRule = (op, fn) => {
+            this.reductionEngine.addRule(
+                TermBuilders.functor(this.termFactory, this.termFactory.atomic(op),
+                    this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
+                (bindings) => {
+                    const a = Number(bindings['$a'].name);
+                    const b = Number(bindings['$b'].name);
+                    return this.termFactory.atomic(String(fn(a, b)));
+                }
+            );
+        };
 
-        this.reductionEngine.addRule(
-            TermBuilders.functor(this.termFactory, this.termFactory.atomic('-'),
-                this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
-            (bindings) => {
-                const a = Number(bindings['$a'].name);
-                const b = Number(bindings['$b'].name);
-                return this.termFactory.atomic(String(a - b));
-            }
-        );
-
-        this.reductionEngine.addRule(
-            TermBuilders.functor(this.termFactory, this.termFactory.atomic('*'),
-                this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
-            (bindings) => {
-                const a = Number(bindings['$a'].name);
-                const b = Number(bindings['$b'].name);
-                return this.termFactory.atomic(String(a * b));
-            }
-        );
+        // Register arithmetic operations
+        addArithmeticRule('+', (a, b) => a + b);
+        addArithmeticRule('-', (a, b) => a - b);
+        addArithmeticRule('*', (a, b) => a * b);
     }
 
     /**
@@ -162,13 +154,12 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         return this.trackOperation('load', () => {
             const tasks = this.parser.parseMeTTa(mettaCode);
 
-            // Expand macros
+            // Expand macros and optionally type check
             const expanded = tasks.map(task => ({
                 ...task,
                 term: this.macroExpander.expand(task.term)
             }));
 
-            // Type check if enabled
             if (this.config.typeChecking) {
                 expanded.forEach(({ term }) => this._typeCheck(term));
             }
@@ -228,15 +219,15 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     query(pattern, template) {
         return this.trackOperation('query', () => {
-            // Parse if strings
-            if (typeof pattern === 'string') {
-                pattern = this.parser.parseExpression(pattern);
-            }
-            if (typeof template === 'string') {
-                template = this.parser.parseExpression(template);
-            }
+            // Parse strings to terms
+            const parseIfString = (val) =>
+                typeof val === 'string' ? this.parser.parseExpression(val) : val;
 
-            return this.matchEngine.executeMatch(this.space, pattern, template);
+            return this.matchEngine.executeMatch(
+                this.space,
+                parseIfString(pattern),
+                parseIfString(template)
+            );
         });
     }
 

@@ -23,66 +23,45 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      * @private
      */
     _registerBuiltins() {
+        // Helper: Extract number from term
+        const toNum = (term) => Number(term.name ?? term);
+
+        // Helper: Create boolean term
+        const boolTerm = (value) => value ? this.termFactory.createTrue() : this.termFactory.createFalse();
+
+        // Helper: Normalize grounded atom name
+        const normalizeName = (name) => name.startsWith('&') ? name : `&${name}`;
+
         // Self reference
         this.register('&self', () => this.getCurrentSpace());
 
-        // Arithmetic operations
-        this.register('&+', (...args) => {
-            const nums = args.map(a => Number(a.name || a));
-            return this.termFactory.atomic(String(nums.reduce((a, b) => a + b, 0)));
+        // Arithmetic operations (data-driven)
+        const arithmeticOps = [
+            ['+', (...args) => args.map(toNum).reduce((a, b) => a + b, 0)],
+            ['-', (...args) => args.map(toNum).reduce((a, b) => a - b)],
+            ['*', (...args) => args.map(toNum).reduce((a, b) => a * b, 1)],
+            ['/', (a, b) => toNum(a) / toNum(b)]
+        ];
+
+        arithmeticOps.forEach(([op, fn]) => {
+            this.register(`&${op}`, (...args) => this.termFactory.atomic(String(fn(...args))));
         });
 
-        this.register('&-', (...args) => {
-            const nums = args.map(a => Number(a.name || a));
-            return this.termFactory.atomic(String(nums.reduce((a, b) => a - b)));
+        // Comparison operations (data-driven)
+        const comparisonOps = [
+            ['<', (a, b) => toNum(a) < toNum(b)],
+            ['>', (a, b) => toNum(a) > toNum(b)],
+            ['==', (a, b) => (a.name ?? a) === (b.name ?? b)]
+        ];
+
+        comparisonOps.forEach(([op, fn]) => {
+            this.register(`&${op}`, (a, b) => boolTerm(fn(a, b)));
         });
 
-        this.register('&*', (...args) => {
-            const nums = args.map(a => Number(a.name || a));
-            return this.termFactory.atomic(String(nums.reduce((a, b) => a * b, 1)));
-        });
-
-        this.register('&/', (a, b) => {
-            const num1 = Number(a.name || a);
-            const num2 = Number(b.name || b);
-            return this.termFactory.atomic(String(num1 / num2));
-        });
-
-        // Comparison
-        this.register('&<', (a, b) => {
-            const num1 = Number(a.name || a);
-            const num2 = Number(b.name || b);
-            return num1 < num2 ? this.termFactory.createTrue() : this.termFactory.createFalse();
-        });
-
-        this.register('&>', (a, b) => {
-            const num1 = Number(a.name || a);
-            const num2 = Number(b.name || b);
-            return num1 > num2 ? this.termFactory.createTrue() : this.termFactory.createFalse();
-        });
-
-        this.register('&==', (a, b) => {
-            return (a.name || a) === (b.name || b)
-                ? this.termFactory.createTrue()
-                : this.termFactory.createFalse();
-        });
-
-        // Boolean
-        this.register('&and', (...args) => {
-            const all = args.every(a => (a.name || a) === 'True');
-            return all ? this.termFactory.createTrue() : this.termFactory.createFalse();
-        });
-
-        this.register('&or', (...args) => {
-            const any = args.some(a => (a.name || a) === 'True');
-            return any ? this.termFactory.createTrue() : this.termFactory.createFalse();
-        });
-
-        this.register('&not', (a) => {
-            return (a.name || a) === 'True'
-                ? this.termFactory.createFalse()
-                : this.termFactory.createTrue();
-        });
+        // Boolean operations
+        this.register('&and', (...args) => boolTerm(args.every(a => (a.name ?? a) === 'True')));
+        this.register('&or', (...args) => boolTerm(args.some(a => (a.name ?? a) === 'True')));
+        this.register('&not', (a) => boolTerm((a.name ?? a) !== 'True'));
     }
 
     /**
@@ -92,11 +71,9 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      */
     register(name, executor) {
         this.trackOperation('register', () => {
-            if (!name.startsWith('&')) {
-                name = `&${name}`;
-            }
-            this.grounded.set(name, executor);
-            this.emitMeTTaEvent('grounded-registered', { name });
+            const normalizedName = name.startsWith('&') ? name : `&${name}`;
+            this.grounded.set(normalizedName, executor);
+            this.emitMeTTaEvent('grounded-registered', { name: normalizedName });
         });
     }
 
@@ -108,17 +85,15 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      */
     execute(name, ...args) {
         return this.trackOperation('execute', () => {
-            if (!name.startsWith('&')) {
-                name = `&${name}`;
-            }
+            const normalizedName = name.startsWith('&') ? name : `&${name}`;
+            const executor = this.grounded.get(normalizedName);
 
-            const executor = this.grounded.get(name);
             if (!executor) {
-                throw new Error(`Grounded atom not found: ${name}`);
+                throw new Error(`Grounded atom not found: ${normalizedName}`);
             }
 
             const result = executor(...args);
-            this.emitMeTTaEvent('grounded-executed', { name, argCount: args.length });
+            this.emitMeTTaEvent('grounded-executed', { name: normalizedName, argCount: args.length });
             return result;
         });
     }
@@ -129,10 +104,8 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      * @returns {boolean}
      */
     has(name) {
-        if (!name.startsWith('&')) {
-            name = `&${name}`;
-        }
-        return this.grounded.has(name);
+        const normalizedName = name.startsWith('&') ? name : `&${name}`;
+        return this.grounded.has(normalizedName);
     }
 
     /**

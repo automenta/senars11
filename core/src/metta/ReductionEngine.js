@@ -43,18 +43,18 @@ export class ReductionEngine extends BaseMeTTaComponent {
             // Try each reduction rule
             for (const { pattern, result } of this.reductionRules) {
                 const bindings = this.matchEngine.unify(pattern, expr);
-                if (bindings) {
-                    const reduced = typeof result === 'function'
-                        ? result(bindings)
-                        : this.matchEngine.substitute(result, bindings);
+                if (!bindings) continue;
 
-                    this.emitMeTTaEvent('reduced', {
-                        original: expr.toString(),
-                        reduced: reduced.toString()
-                    });
+                const reduced = typeof result === 'function'
+                    ? result(bindings)
+                    : this.matchEngine.substitute(result, bindings);
 
-                    return { reduced, applied: true };
-                }
+                this.emitMeTTaEvent('reduced', {
+                    original: expr.toString(),
+                    reduced: reduced.toString()
+                });
+
+                return { reduced, applied: true };
             }
 
             // Try evaluating grounded atoms
@@ -124,12 +124,12 @@ export class ReductionEngine extends BaseMeTTaComponent {
      * @private
      */
     _evalGrounded(expr, space) {
-        if (!space || !space.groundedAtoms) {
+        if (!space?.groundedAtoms) {
             throw new ReductionError('No grounded atoms available', expr);
         }
 
         const groundedName = expr.components[0].name;
-        const args = expr.components[1]?.components || [];
+        const args = expr.components[1]?.components ?? [];
 
         return space.groundedAtoms.execute(groundedName, ...args);
     }

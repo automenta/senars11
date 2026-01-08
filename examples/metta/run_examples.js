@@ -22,19 +22,13 @@ const interpreter = new MeTTaInterpreter(null, {
 
 // Find all .metta files
 function findMettaFiles(dir) {
-    const files = [];
     const items = fs.readdirSync(dir, { withFileTypes: true });
 
-    for (const item of items) {
+    return items.flatMap(item => {
         const fullPath = path.join(dir, item.name);
-        if (item.isDirectory()) {
-            files.push(...findMettaFiles(fullPath));
-        } else if (item.name.endsWith('.metta')) {
-            files.push(fullPath);
-        }
-    }
-
-    return files;
+        return item.isDirectory() ? findMettaFiles(fullPath) :
+            item.name.endsWith('.metta') ? [fullPath] : [];
+    });
 }
 
 // Run a single file
@@ -51,7 +45,7 @@ function runFile(filePath) {
 
         const results = interpreter.run(code);
         results.forEach((result, i) => {
-            console.log(`${i + 1}. ${result?.toString() || 'null'}`);
+            console.log(`${i + 1}. ${result?.toString() ?? 'null'}`);
         });
 
         return { success: true, file: filePath };
@@ -76,16 +70,19 @@ for (const file of files) {
 }
 
 // Summary
+const successCount = results.filter(r => r.success).length;
+const failedResults = results.filter(r => !r.success);
+
 console.log('\n' + '='.repeat(70));
 console.log('Summary');
 console.log('='.repeat(70));
 console.log(`Total: ${results.length}`);
-console.log(`Success: ${results.filter(r => r.success).length}`);
-console.log(`Failed: ${results.filter(r => !r.success).length}`);
+console.log(`Success: ${successCount}`);
+console.log(`Failed: ${failedResults.length}`);
 
-if (results.some(r => !r.success)) {
+if (failedResults.length > 0) {
     console.log('\nFailed files:');
-    results.filter(r => !r.success).forEach(r => {
+    failedResults.forEach(r => {
         console.log(`  - ${path.relative(__dirname, r.file)}: ${r.error}`);
     });
 }

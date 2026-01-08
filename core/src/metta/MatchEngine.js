@@ -57,16 +57,12 @@ export class MatchEngine extends BaseMeTTaComponent {
      */
     executeMatch(space, pattern, template) {
         return this.trackOperation('executeMatch', () => {
-            const results = [];
             const atoms = space.getAtoms();
 
-            for (const atom of atoms) {
-                const bindings = this.unify(pattern, atom);
-                if (bindings) {
-                    const result = this.substitute(template, bindings);
-                    results.push(result);
-                }
-            }
+            const results = atoms
+                .map(atom => this.unify(pattern, atom))
+                .filter(bindings => bindings !== null)
+                .map(bindings => this.substitute(template, bindings));
 
             this.emitMeTTaEvent('match-query-executed', {
                 atomsChecked: atoms.length,
