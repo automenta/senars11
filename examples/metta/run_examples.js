@@ -21,20 +21,20 @@ const interpreter = new MeTTaInterpreter(null, {
 });
 
 // Find all .metta files
-function findMettaFiles(dir) {
+const findMettaFiles = (dir) => {
     const items = fs.readdirSync(dir, { withFileTypes: true });
-
     return items.flatMap(item => {
         const fullPath = path.join(dir, item.name);
         return item.isDirectory() ? findMettaFiles(fullPath) :
             item.name.endsWith('.metta') ? [fullPath] : [];
     });
-}
+};
 
 // Run a single file
-function runFile(filePath) {
+const runFile = (filePath) => {
+    const relativePath = path.relative(__dirname, filePath);
     console.log(`\n${'='.repeat(70)}`);
-    console.log(`Running: ${path.relative(__dirname, filePath)}`);
+    console.log(`Running: ${relativePath}`);
     console.log('='.repeat(70));
 
     try {
@@ -51,11 +51,12 @@ function runFile(filePath) {
         return { success: true, file: filePath };
     } catch (error) {
         console.error(`✗ Error: ${error.message}`);
+        console.error(error.stack);
         return { success: false, file: filePath, error: error.message };
     }
-}
+};
 
-// Main
+// Main execution
 const examplesDir = __dirname;
 const files = findMettaFiles(examplesDir);
 
@@ -63,15 +64,13 @@ console.log('MeTTa Examples Runner');
 console.log('='.repeat(70));
 console.log(`Found ${files.length} example files\n`);
 
-const results = [];
-for (const file of files) {
-    const result = runFile(file);
-    results.push(result);
-}
+const results = files.map(runFile);
 
 // Summary
-const successCount = results.filter(r => r.success).length;
-const failedResults = results.filter(r => !r.success);
+const { successCount, failedResults } = results.reduce((acc, r) => ({
+    successCount: acc.successCount + (r.success ? 1 : 0),
+    failedResults: r.success ? acc.failedResults : [...acc.failedResults, r]
+}), { successCount: 0, failedResults: [] });
 
 console.log('\n' + '='.repeat(70));
 console.log('Summary');
@@ -82,7 +81,7 @@ console.log(`Failed: ${failedResults.length}`);
 
 if (failedResults.length > 0) {
     console.log('\nFailed files:');
-    failedResults.forEach(r => {
-        console.log(`  - ${path.relative(__dirname, r.file)}: ${r.error}`);
+    failedResults.forEach(({ file, error }) => {
+        console.log(`  - ${path.relative(__dirname, file)}: ${error}`);
     });
 }

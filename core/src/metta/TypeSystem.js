@@ -71,12 +71,11 @@ export class TypeSystem extends BaseMeTTaComponent {
      */
     hasType(term, typeName) {
         const cacheKey = `${term.name}-${typeName}`;
-        if (this.typeCache.has(cacheKey)) {
-            return this.typeCache.get(cacheKey);
-        }
+        const cached = this.typeCache.get(cacheKey);
 
-        const predicate = this.typeRules.get(typeName);
-        const result = predicate?.(term) ?? false;
+        if (cached !== undefined) return cached;
+
+        const result = this.typeRules.get(typeName)?.(term) ?? false;
         this.typeCache.set(cacheKey, result);
         return result;
     }

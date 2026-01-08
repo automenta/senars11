@@ -74,16 +74,14 @@ export const Unification = {
 
     // Unify two terms, return bindings or null
     unify: (pattern, term, bindings = {}) => {
-        // Already failed
         if (bindings === null) return null;
 
         // Variable in pattern
         if (Unification.isVar(pattern)) {
             const varName = pattern.name;
-            if (bindings[varName]) {
-                return Unification.unify(bindings[varName], term, bindings);
-            }
-            return { ...bindings, [varName]: term };
+            return varName in bindings
+                ? Unification.unify(bindings[varName], term, bindings)
+                : { ...bindings, [varName]: term };
         }
 
         // Atomic terms must match exactly
@@ -92,19 +90,16 @@ export const Unification = {
         }
 
         // Compound terms
-        if (pattern.operator && term.operator) {
-            if (pattern.operator !== term.operator) return null;
-            if (pattern.components.length !== term.components.length) return null;
+        if (!pattern.operator || !term.operator) return null;
+        if (pattern.operator !== term.operator) return null;
+        if (pattern.components.length !== term.components.length) return null;
 
-            let result = bindings;
-            for (let i = 0; i < pattern.components.length; i++) {
-                result = Unification.unify(pattern.components[i], term.components[i], result);
-                if (result === null) return null;
-            }
-            return result;
+        let result = bindings;
+        for (let i = 0; i < pattern.components.length; i++) {
+            result = Unification.unify(pattern.components[i], term.components[i], result);
+            if (result === null) return null;
         }
-
-        return null;
+        return result;
     },
 
     // Match multiple patterns/terms

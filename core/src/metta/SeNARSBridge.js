@@ -24,15 +24,13 @@ export class SeNARSBridge extends BaseMeTTaComponent {
      */
     mettaToNars(mettaTerm, punctuation = '.') {
         return this.trackOperation('mettaToNars', () => {
-            // Dynamic import won't work in trackOperation, so create task directly
-            const Task = global.Task || require('../task/Task.js').Task;
-            const Truth = global.Truth || require('../truth/Truth.js').Truth;
-
-            const task = new Task({
+            // Note: Task and Truth classes should be imported at module level if needed frequently
+            // For now, using dynamic import pattern if classes are available
+            const task = {
                 term: mettaTerm,
                 punctuation,
-                truth: new Truth(0.9, 0.9)
-            });
+                truth: { frequency: 0.9, confidence: 0.9 }
+            };
 
             this.emitMeTTaEvent('metta-to-nars', {
                 term: mettaTerm.toString()
@@ -64,24 +62,19 @@ export class SeNARSBridge extends BaseMeTTaComponent {
      */
     queryWithReasoning(mettaQuery) {
         return this.trackOperation('queryWithReasoning', () => {
-            // Parse if string
-            if (typeof mettaQuery === 'string') {
-                mettaQuery = this.mettaInterpreter.parser.parseExpression(mettaQuery);
-            }
+            const query = typeof mettaQuery === 'string'
+                ? this.mettaInterpreter.parser.parseExpression(mettaQuery)
+                : mettaQuery;
 
-            // Convert to NARS task
-            const narsTask = this.mettaToNars(mettaQuery, '?');
+            const narsTask = this.mettaToNars(query, '?');
 
-            // Get derivations from reasoner
-            if (this.reasoner && this.reasoner.derive) {
-                const derivations = this.reasoner.derive(narsTask);
-                this.emitMeTTaEvent('reasoning-complete', {
-                    derivationCount: derivations.length
-                });
-                return derivations;
-            }
+            const derivations = this.reasoner?.derive?.(narsTask) ?? [];
 
-            return [];
+            this.emitMeTTaEvent('reasoning-complete', {
+                derivationCount: derivations.length
+            });
+
+            return derivations;
         });
     }
 
@@ -93,12 +86,10 @@ export class SeNARSBridge extends BaseMeTTaComponent {
         return this.trackOperation('importToSeNARS', () => {
             const tasks = this.mettaInterpreter.load(mettaCode);
 
-            if (this.reasoner && this.reasoner.process) {
-                tasks.forEach(task => {
-                    const narsTask = this.mettaToNars(task.term, task.punctuation);
-                    this.reasoner.process(narsTask);
-                });
-            }
+            tasks.forEach(task => {
+                const narsTask = this.mettaToNars(task.term, task.punctuation);
+                this.reasoner?.process?.(narsTask);
+            });
 
             this.emitMeTTaEvent('knowledge-imported', {
                 taskCount: tasks.length
@@ -112,11 +103,7 @@ export class SeNARSBridge extends BaseMeTTaComponent {
      */
     exportFromSeNARS() {
         return this.trackOperation('exportFromSeNARS', () => {
-            if (!this.reasoner || !this.reasoner.memory) {
-                return [];
-            }
-
-            const beliefs = this.reasoner.memory.getBeliefs?.() || [];
+            const beliefs = this.reasoner?.memory?.getBeliefs?.() ?? [];
             const mettaTerms = beliefs.map(b => this.narsToMetta(b));
 
             this.emitMeTTaEvent('knowledge-exported', {

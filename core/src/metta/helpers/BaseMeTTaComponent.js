@@ -32,6 +32,33 @@ export class BaseMeTTaComponent extends BaseComponent {
     }
 
     /**
+     * Update metrics for an operation
+     * @param {string} metricKey - Metric key
+     * @param {number} duration - Operation duration in ms
+     * @private
+     */
+    _updateMetrics(metricKey, duration) {
+        const current = this._mettaMetrics.get(metricKey) ?? { count: 0, totalTime: 0, errors: 0 };
+        this._mettaMetrics.set(metricKey, {
+            count: current.count + 1,
+            totalTime: current.totalTime + duration,
+            avgTime: (current.totalTime + duration) / (current.count + 1),
+            errors: current.errors,
+            lastDuration: duration
+        });
+    }
+
+    /**
+     * Record operation error in metrics
+     * @param {string} metricKey - Metric key
+     * @private
+     */
+    _recordError(metricKey) {
+        const current = this._mettaMetrics.get(metricKey) ?? { count: 0, totalTime: 0, errors: 0 };
+        this._mettaMetrics.set(metricKey, { ...current, errors: current.errors + 1 });
+    }
+
+    /**
      * Track a MeTTa operation with timing and metrics
      * @param {string} opName - Operation name
      * @param {Function} fn - Operation function
@@ -45,34 +72,15 @@ export class BaseMeTTaComponent extends BaseComponent {
             const result = fn();
             const duration = Date.now() - start;
 
-            // Update metrics
-            const current = this._mettaMetrics.get(metricKey) || {
-                count: 0,
-                totalTime: 0,
-                errors: 0
-            };
+            this._updateMetrics(metricKey, duration);
 
-            this._mettaMetrics.set(metricKey, {
-                count: current.count + 1,
-                totalTime: current.totalTime + duration,
-                avgTime: (current.totalTime + duration) / (current.count + 1),
-                errors: current.errors,
-                lastDuration: duration
-            });
-
-            // Emit event for slow operations
-            if (duration > (this.config.slowOpThreshold || 100)) {
+            if (duration > (this.config.slowOpThreshold ?? 100)) {
                 this.emitMeTTaEvent('slow-operation', { opName, duration });
             }
 
             return result;
         } catch (error) {
-            const current = this._mettaMetrics.get(metricKey) || { count: 0, totalTime: 0, errors: 0 };
-            this._mettaMetrics.set(metricKey, {
-                ...current,
-                errors: current.errors + 1
-            });
-
+            this._recordError(metricKey);
             this.logError(`${opName} failed`, { error: error.message, stack: error.stack });
             this.emitMeTTaEvent('operation-error', { opName, error: error.message });
             throw error;
@@ -91,30 +99,10 @@ export class BaseMeTTaComponent extends BaseComponent {
 
         try {
             const result = await fn();
-            const duration = Date.now() - start;
-
-            const current = this._mettaMetrics.get(metricKey) || {
-                count: 0,
-                totalTime: 0,
-                errors: 0
-            };
-
-            this._mettaMetrics.set(metricKey, {
-                count: current.count + 1,
-                totalTime: current.totalTime + duration,
-                avgTime: (current.totalTime + duration) / (current.count + 1),
-                errors: current.errors,
-                lastDuration: duration
-            });
-
+            this._updateMetrics(metricKey, Date.now() - start);
             return result;
         } catch (error) {
-            const current = this._mettaMetrics.get(metricKey) || { count: 0, totalTime: 0, errors: 0 };
-            this._mettaMetrics.set(metricKey, {
-                ...current,
-                errors: current.errors + 1
-            });
-
+            this._recordError(metricKey);
             this.logError(`${opName} failed`, { error: error.message });
             this.emitMeTTaEvent('operation-error', { opName, error: error.message });
             throw error;

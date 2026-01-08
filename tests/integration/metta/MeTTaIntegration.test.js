@@ -23,7 +23,6 @@ describe('MeTTa Integration Tests', () => {
 
             const results = interpreter.run(program);
             expect(results).toHaveLength(1);
-            // Result should be 16 after full reduction
         });
 
         test('pattern matching with multiple rules', () => {
@@ -126,17 +125,11 @@ describe('MeTTa Integration Tests', () => {
     });
 
     describe('SeNARS Bridge', () => {
-        test('MeTTa to SeNARS conversion', () => {
+        test('bidirectional conversion exists', () => {
             const bridge = new SeNARSBridge(null, interpreter, {}, null);
-            const mettaTerm = termFactory.atomic('test');
-
-            // Skip this test - requires Task/Truth classes
-            expect(true).toBe(true);
-        });
-
-        test('SeNARS to MeTTa conversion', () => {
-            // Skip this test - requires Task/Truth classes  
-            expect(true).toBe(true);
+            expect(bridge).toBeDefined();
+            expect(bridge.mettaToNars).toBeDefined();
+            expect(bridge.narsToMetta).toBeDefined();
         });
     });
 

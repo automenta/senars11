@@ -33,16 +33,16 @@ export class ReductionEngine extends BaseMeTTaComponent {
     }
 
     /**
-     * Reduce expression one step
-     * @param {Term} expr - Expression to reduce
-     * @param {MeTTaSpace} space - Space for grounded atom evaluation
-     * @returns {Object} - {reduced, applied}
-     */
+      * Reduce expression one step
+      * @param {Term} expr - Expression to reduce
+      * @param {MeTTaSpace} space - Space for grounded atom evaluation
+      * @returns {Object} - {reduced, applied}
+      */
     reduceStep(expr, space) {
         return this.trackOperation('reduceStep', () => {
             // Try each reduction rule
             for (const { pattern, result } of this.reductionRules) {
-                const bindings = this.matchEngine.unify(pattern, expr);
+                const bindings = this.matchEngine?.unify(pattern, expr);
                 if (!bindings) continue;
 
                 const reduced = typeof result === 'function'
@@ -60,8 +60,7 @@ export class ReductionEngine extends BaseMeTTaComponent {
             // Try evaluating grounded atoms
             if (this._isGroundedCall(expr)) {
                 try {
-                    const reduced = this._evalGrounded(expr, space);
-                    return { reduced, applied: true };
+                    return { reduced: this._evalGrounded(expr, space), applied: true };
                 } catch (error) {
                     this.logError('Grounded atom evaluation failed', {
                         expr: expr.toString(),
