@@ -1,6 +1,7 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TermBuilders } from './helpers/MeTTaHelpers.js';
 import { BUILTIN_OPERATIONS, COMPLETE_STDLIB_MAPPINGS } from './helpers/MeTTaLib.js';
+import { loadStdlib } from './stdlib/StdlibLoader.js';
 
 import { GroundedAtoms } from './GroundedAtoms.js';
 import { MacroExpander } from './MacroExpander.js';
@@ -22,6 +23,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * @param {TermFactory} config.termFactory - Optional injected TermFactory
      * @param {MeTTaSpace} config.space - Optional injected MeTTaSpace
      * @param {MatchEngine} config.matchEngine - Optional injected MatchEngine
+     * @param {boolean} config.loadStdlib - Auto-load standard library (default: true)
      * @param {EventBus} eventBus - Event bus
      */
     constructor(memory, config = {}, eventBus = null) {
@@ -49,6 +51,11 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.groundedAtoms.setSpace('default', this.space);
 
         this._registerStdLib();
+
+        // Load MeTTa standard library if enabled
+        if (config.loadStdlib !== false) {
+            this._loadMeTTaStdlib();
+        }
     }
 
     async _initialize() {
@@ -66,6 +73,18 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                     return this.termFactory.atomic(String(fn(a, b)));
                 }
             );
+        }
+    }
+
+    _loadMeTTaStdlib() {
+        try {
+            const stats = loadStdlib(this, this.config.stdlibOptions || {});
+            this.emitMeTTaEvent('stdlib-loaded', stats);
+            return stats;
+        } catch (error) {
+            console.warn('Failed to load MeTTa stdlib:', error.message);
+            this.emitMeTTaEvent('stdlib-load-error', { error: error.message });
+            return null;
         }
     }
 
