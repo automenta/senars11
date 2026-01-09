@@ -1,1270 +1,695 @@
-# MeTTa × SeNARS: Unified Cognitive Architecture
+# MeTTa × SeNARS: Minimal Core, Maximum Power
 
-> **Vision**: A self-describing, meta-programmable reasoning system where logic, control, and knowledge share a unified representation—enabling the system to reason about and modify its own reasoning.
-
----
-
-## Architectural Principles
-
-| Principle | Manifestation |
-|-----------|---------------|
-| **Homoiconicity** | Rules, data, and control are all atoms in the same space |
-| **Meta-Circularity** | The interpreter can interpret itself; rules can rewrite rules |
-| **Grounded Abstraction** | Symbolic reasoning with escape hatches to native computation |
-| **Non-Deterministic Completeness** | Superposition semantics for exhaustive search |
-| **Uncertainty-Native** | Truth values as first-class citizens, not bolted on |
-| **Composable Inference** | Small inference rules compose into complex reasoning |
-| **Observable Execution** | Every operation emits events; the system is fully introspectable |
+> **Philosophy**: A small set of orthogonal primitives that compose into unbounded capability.
+> Everything that *can* be MeTTa *should* be MeTTa.
 
 ---
 
-## Layered Architecture
+## The Insight: Self-Describing Systems
+
+The power of MeTTa lies in its homoiconicity—code, data, and rules share the same representation. This means:
+
+| Instead of... | We implement... |
+|---------------|-----------------|
+| ECAN attention module in JS | Attention as MeTTa rules operating on atom metadata |
+| Strategy classes in JS | Strategies as MeTTa functions the system calls |
+| NAL inference engine in JS | NAL rules as MeTTa rewrite rules |
+| Learning algorithms in JS | Learning as MeTTa programs that modify `&self` |
+| Search algorithms in JS | Search as MeTTa recursive functions |
+
+**The Minimal JS Core** enables the **Maximal MeTTa Surface**.
+
+---
+
+## Minimal JavaScript Core (The "Kernel")
+
+These are the **only** things that must be JavaScript:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        APPLICATION LAYER                            │
-│   Demos · Agents · Domain Applications · External Integrations      │
-├─────────────────────────────────────────────────────────────────────┤
-│                       META-COGNITION LAYER                          │
-│   Attention (ECAN) · Strategy Selection · Self-Modification         │
-├─────────────────────────────────────────────────────────────────────┤
-│                        REASONING LAYER                              │
-│   NAL Rules · PLN Inference · Planning · Learning                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                       INTERPRETATION LAYER                          │
-│   MeTTaInterpreter · ReductionEngine · NonDeterminism · Macros     │
-├─────────────────────────────────────────────────────────────────────┤
-│                       REPRESENTATION LAYER                          │
-│   MeTTaSpace · TypeSystem · MatchEngine · GroundedAtoms            │
-├─────────────────────────────────────────────────────────────────────┤
-│                        FOUNDATION LAYER                             │
-│   TermFactory · BaseMeTTaComponent · EventBus · Memory              │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                   JS KERNEL (5 primitives)          │
+├─────────────────────────────────────────────────────┤
+│  1. TERM     - Immutable S-expression structures    │
+│  2. SPACE    - Add, remove, iterate atoms           │
+│  3. UNIFY    - Pattern matching with bindings       │
+│  4. REDUCE   - Single-step rewriting               │
+│  5. GROUND   - JS function escape hatch             │
+└─────────────────────────────────────────────────────┘
+         ↑ Everything else is MeTTa ↑
 ```
 
----
+### Why These 5?
 
-## Current Implementation Status
-
-### Foundation Layer ✅
-| Component | File | Status |
-|-----------|------|--------|
-| Term Factory | `core/src/term/TermFactory.js` | ✅ Complete |
-| Base Component | `helpers/BaseMeTTaComponent.js` | ✅ Complete |
-| Event System | SeNARS EventBus | ✅ Integrated |
-
-### Representation Layer ✅
-| Component | File | Status |
-|-----------|------|--------|
-| MeTTa Space | `MeTTaSpace.js` | ✅ Memory sync |
-| Match Engine | `MatchEngine.js` | ✅ Unification |
-| Type System | `TypeSystem.js`, `TypeChecker.js` | ✅ H-M inference |
-| Grounded Atoms | `GroundedAtoms.js` | ✅ Arithmetic/Logic |
-
-### Interpretation Layer ✅
-| Component | File | Status |
-|-----------|------|--------|
-| Interpreter | `MeTTaInterpreter.js` | ✅ Core ops |
-| Reduction Engine | `ReductionEngine.js` | ✅ Evaluation |
-| Non-Determinism | `NonDeterminism.js` | ✅ Superposition |
-| Macro Expander | `MacroExpander.js` | ✅ Basic macros |
-
-### Reasoning Layer ⏳
-| Component | File | Status |
-|-----------|------|--------|
-| SeNARS Bridge | `SeNARSBridge.js` | ✅ Bidirectional |
-| Rule Adapter | `helpers/MeTTaRuleAdapter.js` | ✅ Basic |
-| NAL in MeTTa | `stdlib/rules_nal.metta` | ❌ Pending |
-| PLN Functions | (grounded) | ❌ Pending |
-
-### Meta-Cognition Layer ❌
-| Component | File | Status |
-|-----------|------|--------|
-| ECAN Attention | - | ❌ Not started |
-| MeTTa Strategies | `strategies/MeTTaStrategy.js` | ❌ Pending |
-| Self-Modification | - | ❌ Pending |
+| Primitive | Why JS? | What it enables |
+|-----------|---------|-----------------|
+| **Term** | Memory representation, structural sharing | All data |
+| **Space** | Mutable collection, memory management | Knowledge base |
+| **Unify** | Performance-critical, occurs-check | Pattern matching |
+| **Reduce** | Evaluation loop, stack management | Computation |
+| **Ground** | JS interop, I/O, system calls | World interface |
 
 ---
 
-## 🏗️ Track 1: Unified Knowledge Foundation
+## Current State → Minimal Core Mapping
 
-> **Goal**: Single source of truth where MeTTa atoms and NARS tasks are interchangeable views of the same knowledge.
+| Existing Component | Kernel Primitive | Notes |
+|--------------------|------------------|-------|
+| `TermFactory` | **TERM** | ✅ Complete |
+| `MeTTaSpace` | **SPACE** | ✅ Simplify (remove indexing—do in MeTTa) |
+| `MatchEngine` + `MeTTaHelpers` | **UNIFY** | ✅ Keep core unification |
+| `ReductionEngine` | **REDUCE** | ✅ Simplify to single-step |
+| `GroundedAtoms` | **GROUND** | ✅ Keep as escape hatch |
+| `NonDeterminism` | MeTTa `superpose` | ⚡ Move logic to MeTTa |
+| `TypeSystem` | MeTTa type rules | ⚡ Express types as constraints |
+| `MacroExpander` | MeTTa rewrite rules | ⚡ Macros are just early reduction |
+| `SeNARSBridge` | Grounded ops | ⚡ Bridge as grounded functions |
 
-### 1.1 Canonical Atom-Task Mapping
+**⚡ = Can be simplified or moved to MeTTa**
+
+---
+
+## The Five Kernel Primitives
+
+### 1. TERM (Already Complete)
 
 ```javascript
-// Bidirectional isomorphism: Atom ↔ Task
-class AtomTaskIsomorphism {
-    // MeTTa Atom → NARS Task
-    atomToTask(atom, punctuation = '.') {
-        return {
-            term: atom,
-            punctuation,
-            truth: this.extractTruth(atom),
-            budget: this.extractBudget(atom),
-            stamp: this.extractStamp(atom)
-        };
-    }
+// Minimal term interface
+class Term {
+    // Structure
+    get operator()   // null for atomic, string for compound
+    get components() // children for compound
+    get name()       // value for atomic/variable
+    get isVariable() // true if $-prefixed
     
-    // NARS Task → MeTTa Atom (with metadata)
-    taskToAtom(task) {
-        return this.termFactory.compound('Task', [
-            task.term,
-            this.termFactory.compound('tv', [task.truth.f, task.truth.c]),
-            this.termFactory.compound('budget', [task.budget.priority])
-        ]);
-    }
+    // Equality
+    equals(other)    // Structural equality
+    
+    // Factory (via TermFactory)
+    static atomic(name)
+    static variable(name)
+    static compound(op, children)
 }
 ```
 
-**Truth Value Extraction Protocol:**
-```metta
-; Explicit truth annotation
-(Statement :tv (0.9 0.8))
-
-; Confidence-only (default f=0.9)
-(Statement :conf 0.8)
-
-; Bare statement (default <0.9, 0.9>)
-Statement
-
-; PLN-style with evidence
-(TruthValue Statement (Evidence $pos $neg))
-```
-
-### 1.2 Space as PremiseSource
+### 2. SPACE (Simplify)
 
 ```javascript
-class MeTTaSpace extends BaseMeTTaComponent {
-    // PremiseSource interface for Reasoner
-    async *stream(signal) {
-        for (const atom of this.atoms) {
-            if (signal?.aborted) return;
-            yield this.isomorphism.atomToTask(atom);
+// Minimal space - just a set with notifications
+class Space {
+    add(atom)        // → void, emits 'added'
+    remove(atom)     // → boolean, emits 'removed'  
+    has(atom)        // → boolean
+    *[Symbol.iterator]() // → yields all atoms
+    
+    // Query is just: filter + unify (done in MeTTa)
+}
+```
+
+**Indexing moves to MeTTa:**
+```metta
+; Build index as atoms in space
+(= (index-by-functor $space)
+   (fold (lambda ($atom $idx)
+           (let (($f (head $atom)))
+             (add $idx (Index $f $atom))))
+         (empty-index)
+         (atoms $space)))
+
+; Query via index
+(= (match-functor $space $functor)
+   (match $space (Index $functor $atom) $atom))
+```
+
+### 3. UNIFY (Keep, Optimize)
+
+```javascript
+// Core unification - the heart of pattern matching
+function unify(pattern, term, bindings = {}) {
+    // Variable binding
+    if (isVariable(pattern)) {
+        const name = pattern.name;
+        if (name in bindings) return unify(bindings[name], term, bindings);
+        return { ...bindings, [name]: term };
+    }
+    if (isVariable(term)) return unify(term, pattern, bindings);
+    
+    // Atomic equality
+    if (isAtomic(pattern) && isAtomic(term)) {
+        return pattern.equals(term) ? bindings : null;
+    }
+    
+    // Compound: unify children
+    if (isCompound(pattern) && isCompound(term)) {
+        if (pattern.arity !== term.arity) return null;
+        for (let i = 0; i < pattern.arity; i++) {
+            bindings = unify(pattern.children[i], term.children[i], bindings);
+            if (!bindings) return null;
+        }
+        return bindings;
+    }
+    
+    return null;
+}
+
+function substitute(template, bindings) {
+    if (isVariable(template)) {
+        return bindings[template.name] ?? template;
+    }
+    if (isCompound(template)) {
+        return compound(template.operator, 
+            template.children.map(c => substitute(c, bindings)));
+    }
+    return template;
+}
+```
+
+### 4. REDUCE (Simplify to Single-Step)
+
+```javascript
+// Single reduction step - that's all we need
+function step(atom, space, grounded) {
+    // 1. Try grounded operation
+    if (isCompound(atom) && grounded.has(atom.operator)) {
+        return grounded.execute(atom.operator, ...atom.children);
+    }
+    
+    // 2. Try space rules (= pattern result)
+    for (const rule of space) {
+        if (rule.operator === '=') {
+            const [pattern, result] = rule.children;
+            const bindings = unify(pattern, atom);
+            if (bindings) return substitute(result, bindings);
         }
     }
     
-    // Indexed retrieval
-    getByFunctor(functor) {
-        return this.functorIndex.get(functor) ?? [];
+    // 3. Reduce children
+    if (isCompound(atom)) {
+        const reduced = atom.children.map(c => step(c, space, grounded));
+        if (reduced.some((c, i) => c !== atom.children[i])) {
+            return compound(atom.operator, reduced);
+        }
     }
     
-    getByType(type) {
-        return this.typeIndex.get(type) ?? [];
+    // 4. Fixed point
+    return atom;
+}
+
+// Full reduction is just: step until fixed point
+function reduce(atom, space, grounded, maxSteps = 1000) {
+    for (let i = 0; i < maxSteps; i++) {
+        const next = step(atom, space, grounded);
+        if (next === atom) return atom;
+        atom = next;
     }
+    throw new Error('Max steps exceeded');
 }
 ```
 
-### 1.3 Multi-Index Architecture
-
-| Index Type | Key | Value | Use Case |
-|------------|-----|-------|----------|
-| Functor Index | `functor` | `Set<Atom>` | Fast pattern head matching |
-| Type Index | `type` | `Set<Atom>` | Type-directed retrieval |
-| Arity Index | `(functor, arity)` | `Set<Atom>` | Structural filtering |
-| Truth Index | `confidence bucket` | `Set<Atom>` | Certainty-based selection |
-| Recency Index | `timestamp` | `SortedSet<Atom>` | Temporal reasoning |
+### 5. GROUND (Escape Hatch)
 
 ```javascript
-class IndexedSpace extends MeTTaSpace {
-    constructor(memory, termFactory) {
-        super(memory, termFactory);
-        this.indices = {
-            functor: new Map(),
-            type: new Map(),
-            arityFunctor: new Map(),
-            confidence: new BucketedIndex(10), // 10 buckets
-            recency: new SortedSet((a, b) => b.timestamp - a.timestamp)
-        };
+// Registry of JS functions callable from MeTTa
+class Grounded {
+    constructor() {
+        this.fns = new Map();
+        this._registerBuiltins();
     }
     
-    addAtom(atom) {
-        super.addAtom(atom);
-        this._updateIndices(atom, 'add');
+    register(name, fn) { this.fns.set(name, fn); }
+    has(name) { return this.fns.has(name); }
+    execute(name, ...args) { return this.fns.get(name)(...args); }
+    
+    _registerBuiltins() {
+        // Arithmetic
+        this.register('+', (a, b) => atomic(Number(a.name) + Number(b.name)));
+        this.register('-', (a, b) => atomic(Number(a.name) - Number(b.name)));
+        this.register('*', (a, b) => atomic(Number(a.name) * Number(b.name)));
+        this.register('/', (a, b) => atomic(Number(a.name) / Number(b.name)));
+        
+        // Comparison
+        this.register('<', (a, b) => atomic(Number(a.name) < Number(b.name) ? 'True' : 'False'));
+        this.register('>', (a, b) => atomic(Number(a.name) > Number(b.name) ? 'True' : 'False'));
+        this.register('==', (a, b) => atomic(a.equals(b) ? 'True' : 'False'));
+        
+        // Space operations (the bridge)
+        this.register('add-atom', (space, atom) => { space.add(atom); return atom; });
+        this.register('remove-atom', (space, atom) => atomic(space.remove(atom) ? 'True' : 'False'));
+        this.register('get-atoms', (space) => compound('List', [...space]));
     }
 }
 ```
-
-### 1.4 Deliverables
-
-- [ ] `SpaceToTaskAdapter.js` - Isomorphism implementation
-- [ ] `IndexedSpace.js` - Multi-index extension
-- [ ] Update `Reasoner.js` to accept `MeTTaSpace` as PremiseSource
-- [ ] Integration test: circular flow (atom → task → derivation → atom)
 
 ---
 
-## 🧮 Track 2: Complete Logic System
+## Everything Else: Pure MeTTa
 
-> **Goal**: All NAL-1 through NAL-8 inference implemented as executable MeTTa rules, with PLN truth functions as grounded atoms.
+### The Standard Library (`stdlib.metta`)
 
-### 2.1 Truth Function Library
-
-```javascript
-// Register ALL truth functions from Truth.js
-const TRUTH_FUNCTIONS = {
-    // First-order
-    'truth:deduction':   (tv1, tv2) => Truth.deduction(tv1, tv2),
-    'truth:induction':   (tv1, tv2) => Truth.induction(tv1, tv2),
-    'truth:abduction':   (tv1, tv2) => Truth.abduction(tv1, tv2),
-    'truth:exemplification': (tv1, tv2) => Truth.exemplification(tv1, tv2),
-    
-    // Revision
-    'truth:revision':    (tv1, tv2) => Truth.revision(tv1, tv2),
-    
-    // Compositional
-    'truth:intersection': (tv1, tv2) => Truth.intersection(tv1, tv2),
-    'truth:union':        (tv1, tv2) => Truth.union(tv1, tv2),
-    'truth:difference':   (tv1, tv2) => Truth.difference(tv1, tv2),
-    
-    // Higher-order
-    'truth:analogy':     (tv1, tv2) => Truth.analogy(tv1, tv2),
-    'truth:comparison':  (tv1, tv2) => Truth.comparison(tv1, tv2),
-    'truth:resemblance': (tv1, tv2) => Truth.resemblance(tv1, tv2),
-    
-    // Negation
-    'truth:negation':    (tv) => Truth.negation(tv),
-    'truth:contraposition': (tv) => Truth.contraposition(tv),
-    
-    // Temporal
-    'truth:eternalization': (tv) => Truth.eternalization(tv),
-    'truth:projection':     (tv, t1, t2) => Truth.projection(tv, t1, t2)
-};
-```
-
-### 2.2 NAL Rule Hierarchy
+This single file bootstraps the entire system:
 
 ```metta
 ; ═══════════════════════════════════════════════════════════════════
-; NAL-1: Inheritance
+; PART 1: CORE CONTROL FLOW
 ; ═══════════════════════════════════════════════════════════════════
 
-(: nal:deduction (-> Statement Statement Statement))
-(= (nal:deduction (Inh $S $M) (Inh $M $P))
-   (Inh $S $P :tv (truth:deduction (get-tv $1) (get-tv $2))))
+; Boolean operations
+(= (if True $then $else) $then)
+(= (if False $then $else) $else)
+(= (and True True) True)
+(= (and $x $y) False)
+(= (or False False) False)
+(= (or $x $y) True)
+(= (not True) False)
+(= (not False) True)
 
-(= (nal:induction (Inh $M $P) (Inh $M $S))
-   (Inh $S $P :tv (truth:induction (get-tv $1) (get-tv $2))))
-
-(= (nal:abduction (Inh $P $M) (Inh $S $M))
-   (Inh $S $P :tv (truth:abduction (get-tv $1) (get-tv $2))))
-
-(= (nal:exemplification (Inh $S $M) (Inh $M $P))
-   (Inh $P $S :tv (truth:exemplification (get-tv $1) (get-tv $2))))
-
-; ═══════════════════════════════════════════════════════════════════
-; NAL-2: Similarity
-; ═══════════════════════════════════════════════════════════════════
-
-(= (nal:comparison (Inh $M $P) (Inh $M $S))
-   (Sim $S $P :tv (truth:comparison (get-tv $1) (get-tv $2))))
-
-(= (nal:analogy (Sim $S $P) (Inh $M $S))
-   (Inh $M $P :tv (truth:analogy (get-tv $1) (get-tv $2))))
+; Sequencing
+(= (seq $a $b) (let ($_ $a) $b))
+(= (do $a) $a)
+(= (do $a $rest ...) (seq $a (do $rest ...)))
 
 ; ═══════════════════════════════════════════════════════════════════
-; NAL-3: Set Operations
+; PART 2: NON-DETERMINISM (No special JS needed!)
 ; ═══════════════════════════════════════════════════════════════════
 
-(= (nal:intersection-ext ($A ∩ $B))
-   (ExtSet (intersection (members $A) (members $B))))
+; Superposition: Multiple results from single expression
+; This is just multiple rules with same head!
+(= (choice) 1)
+(= (choice) 2)
+(= (choice) 3)
+; (choice) reduces to 1, 2, OR 3 non-deterministically
 
-(= (nal:union-int ($A ∪ $B))
-   (IntSet (union (members $A) (members $B))))
+; Collapse: Collect all results
+(= (collapse $expr)
+   (let (($results (collect (reduce $expr))))
+     (List $results ...)))
 
-; ═══════════════════════════════════════════════════════════════════
-; NAL-4: Products and Images
-; ═══════════════════════════════════════════════════════════════════
-
-(= (nal:product-deduction (Inh (* $A $B) $R))
-   (Inh $A (/ $R $B)))
-
-(= (nal:image-deduction (Inh (/ $R $B) $A))
-   (Inh (* $A $B) $R))
-
-; ═══════════════════════════════════════════════════════════════════
-; NAL-5: Implication
-; ═══════════════════════════════════════════════════════════════════
-
-(= (nal:conditional-deduction (Impl $S $P) $S)
-   $P :tv (truth:deduction (get-tv $1) (get-tv $2)))
-
-(= (nal:conditional-abduction (Impl $S $P) $P)
-   $S :tv (truth:abduction (get-tv $1) (get-tv $2)))
-
-; ═══════════════════════════════════════════════════════════════════
-; NAL-6: Variables
-; ═══════════════════════════════════════════════════════════════════
-
-(= (nal:unification (Impl $S1 $P) (Impl $S2 $P))
-   (Impl (unify $S1 $S2) $P))
-
-(= (nal:introduction $S)
-   (ForAll $x (substitute $S $x)))
+; Match over space
+(= (match $space $pattern $template)
+   (let (($atom (element-of $space)))
+     (let (($bindings (unify $pattern $atom)))
+       (if (some? $bindings)
+           (substitute $template $bindings)
+           Empty))))
 
 ; ═══════════════════════════════════════════════════════════════════  
-; NAL-7: Temporal
+; PART 3: LISTS & ITERATION
 ; ═══════════════════════════════════════════════════════════════════
 
-(= (nal:induction-temporal (Seq $A $B) (Seq $A $C))
-   (Seq $B $C :tv (truth:induction (get-tv $1) (get-tv $2))))
+(= (cons $h $t) (Cons $h $t))
+(= (head (Cons $h $t)) $h)
+(= (tail (Cons $h $t)) $t)
+(= (nil) Nil)
+(= (nil? Nil) True)
+(= (nil? (Cons $h $t)) False)
 
-(= (nal:predictive (Impl/> $S $P) $S)
-   $P :after (+ (now) (interval $1)))
+(= (map $f Nil) Nil)
+(= (map $f (Cons $h $t)) (cons ($f $h) (map $f $t)))
+
+(= (filter $p Nil) Nil)
+(= (filter $p (Cons $h $t))
+   (if ($p $h)
+       (cons $h (filter $p $t))
+       (filter $p $t)))
+
+(= (fold $f $init Nil) $init)
+(= (fold $f $init (Cons $h $t))
+   (fold $f ($f $h $init) $t))
+
+(= (range $a $a) (cons $a Nil))
+(= (range $a $b) (cons $a (range (+ $a 1) $b)))
 
 ; ═══════════════════════════════════════════════════════════════════
-; NAL-8: Operations
+; PART 4: TYPES AS CONSTRAINTS (No separate TypeSystem!)
 ; ═══════════════════════════════════════════════════════════════════
 
-(= (nal:operation-deduction (Op $name $args) (Goal $G))
-   (if (achieves (Op $name $args) $G)
-       (Execute (Op $name $args))))
-```
+; Type declarations are just atoms
+(: + (-> Number Number Number))
+(: head (-> (List $a) $a))
+(: map (-> (-> $a $b) (List $a) (List $b)))
 
-### 2.3 Rule Compiler & Optimizer
+; Type checking is pattern matching
+(= (type-of $expr)
+   (match &self (: $expr $type) $type))
 
-```javascript
-class MeTTaRuleCompiler {
-    compile(rules) {
-        // Build discrimination tree for O(log n) rule matching
-        const tree = new DiscriminationTree();
-        
-        for (const rule of rules) {
-            const pattern = this.extractPattern(rule);
-            const action = this.extractAction(rule);
-            tree.insert(pattern, { rule, action, priority: this.computePriority(rule) });
-        }
-        
-        return tree;
-    }
-    
-    computePriority(rule) {
-        // Priority factors:
-        // - Specificity (more specific patterns first)
-        // - Frequency of successful application
-        // - Computational cost estimate
-        return this.specificity(rule) * this.successRate(rule) / this.costEstimate(rule);
-    }
-}
-```
+(= (well-typed? ($f $arg))
+   (let* (($ft (type-of $f))
+          ($at (type-of $arg)))
+     (match $ft (-> $expected $result)
+       (unifies? $expected $at))))
 
-### 2.4 Deliverables
+; ═══════════════════════════════════════════════════════════════════
+; PART 5: NAL TRUTH FUNCTIONS (Grounded for performance)
+; ═══════════════════════════════════════════════════════════════════
 
-- [ ] `stdlib/truth.metta` - Truth function bindings
-- [ ] `stdlib/nal1.metta` through `stdlib/nal8.metta` - Complete NAL
-- [ ] `MeTTaRuleCompiler.js` - Discrimination tree compilation
-- [ ] Truth value propagation in ReductionEngine
-- [ ] Tests for each NAL level with known examples from NARS literature
+; Truth value constructors
+(= (tv $f $c) (TruthValue $f $c))
+(= (frequency (TruthValue $f $c)) $f)
+(= (confidence (TruthValue $f $c)) $c)
 
----
+; Core truth functions (grounded to JS Truth.js)
+(= (truth:deduction $tv1 $tv2) (&truth-deduction $tv1 $tv2))
+(= (truth:induction $tv1 $tv2) (&truth-induction $tv1 $tv2))
+(= (truth:abduction $tv1 $tv2) (&truth-abduction $tv1 $tv2))
+(= (truth:revision $tv1 $tv2) (&truth-revision $tv1 $tv2))
+(= (truth:negation $tv) (&truth-negation $tv))
 
-## 🎭 Track 3: Non-Determinism & Search
+; ═══════════════════════════════════════════════════════════════════
+; PART 6: NAL INFERENCE RULES
+; ═══════════════════════════════════════════════════════════════════
 
-> **Goal**: Complete superposition semantics with controllable search strategies.
+; Deduction: (A → B), (B → C) ⊢ (A → C)
+(= (nal:deduction (Inh $a $b :tv $tv1) (Inh $b $c :tv $tv2))
+   (Inh $a $c :tv (truth:deduction $tv1 $tv2)))
 
-### 3.1 Enhanced Superposition
+; Induction: (B → A), (B → C) ⊢ (A → C)  
+(= (nal:induction (Inh $b $a :tv $tv1) (Inh $b $c :tv $tv2))
+   (Inh $a $c :tv (truth:induction $tv1 $tv2)))
 
-```javascript
-class NonDeterminism extends BaseMeTTaComponent {
-    // Lazy superposition (generator-based)
-    *superpose(atoms) {
-        for (const atom of atoms) {
-            yield this.interpreter.reduce(atom);
-        }
-    }
-    
-    // Collapse with strategy
-    collapse(superposition, strategy = 'all') {
-        const results = [...superposition];
-        
-        switch (strategy) {
-            case 'all':     return results;
-            case 'first':   return results.slice(0, 1);
-            case 'random':  return [results[Math.floor(Math.random() * results.length)]];
-            case 'best':    return [this.selectBest(results)];
-            case 'sample':  return this.sampleK(results, this.config.sampleSize ?? 10);
-        }
-    }
-    
-    // Parallel evaluation with early termination
-    async collapseParallel(superposition, predicate) {
-        return Promise.race(
-            [...superposition].map(async atom => {
-                const result = await this.interpreter.reduce(atom);
-                if (predicate(result)) return result;
-                throw new NotSatisfied();
-            })
-        );
-    }
-}
-```
+; Abduction: (A → B), (C → B) ⊢ (A → C)
+(= (nal:abduction (Inh $a $b :tv $tv1) (Inh $c $b :tv $tv2))
+   (Inh $a $c :tv (truth:abduction $tv1 $tv2)))
 
-### 3.2 Search Strategies
+; Revision: same statement, different evidence
+(= (nal:revision ($s :tv $tv1) ($s :tv $tv2))
+   ($s :tv (truth:revision $tv1 $tv2)))
 
-```metta
-; Depth-first search (default)
-(= (search-dfs $goal $state)
-   (if (goal? $state) 
-       $state
-       (superpose (map (lambda ($action) 
-                         (search-dfs $goal (apply $action $state)))
-                       (valid-actions $state)))))
+; ═══════════════════════════════════════════════════════════════════
+; PART 7: ATTENTION (ECAN) - Just metadata manipulation!
+; ═══════════════════════════════════════════════════════════════════
 
-; Breadth-first search
-(= (search-bfs $goal $frontier)
-   (match $frontier (Cons $state $rest)
-     (if (goal? $state)
-         $state
-         (search-bfs $goal (append $rest (successors $state))))))
+; Attention is metadata on atoms
+(= (sti $atom) (match &self (STI $atom $v) $v))
+(= (lti $atom) (match &self (LTI $atom $v) $v))
 
-; A* search with heuristic
-(= (search-astar $goal $frontier)
-   (let (($best (min-by heuristic $frontier)))
-     (if (goal? $best)
-         $best
-         (search-astar $goal 
-           (insert-sorted (successors $best) 
-                          (remove $best $frontier))))))
-
-; Iterative deepening
-(= (search-iddfs $goal $state)
-   (fold-until found?
-     (lambda ($depth) (search-dfs-limited $goal $state $depth))
-     (iterate inc 1)))
-```
-
-### 3.3 Choice Points & Backtracking
-
-```javascript
-class ChoicePoint {
-    constructor(alternatives, continuation, bindings) {
-        this.alternatives = alternatives;
-        this.continuation = continuation;
-        this.bindings = new Map(bindings);
-        this.index = 0;
-    }
-    
-    next() {
-        if (this.index >= this.alternatives.length) return null;
-        return {
-            value: this.alternatives[this.index++],
-            bindings: new Map(this.bindings)
-        };
-    }
-    
-    hasMore() { return this.index < this.alternatives.length; }
-}
-
-class BacktrackingInterpreter extends MeTTaInterpreter {
-    constructor(...args) {
-        super(...args);
-        this.choiceStack = [];
-    }
-    
-    choose(alternatives) {
-        if (alternatives.length === 0) {
-            return this.backtrack();
-        }
-        
-        if (alternatives.length > 1) {
-            this.choiceStack.push(new ChoicePoint(
-                alternatives.slice(1),
-                this.currentContinuation,
-                this.currentBindings
-            ));
-        }
-        
-        return alternatives[0];
-    }
-    
-    backtrack() {
-        while (this.choiceStack.length > 0) {
-            const cp = this.choiceStack.pop();
-            const next = cp.next();
-            if (next) {
-                if (cp.hasMore()) this.choiceStack.push(cp);
-                this.currentBindings = next.bindings;
-                return next.value;
-            }
-        }
-        return this.termFactory.atomic('Empty');
-    }
-}
-```
-
-### 3.4 Deliverables
-
-- [ ] Lazy generator-based superposition
-- [ ] Collapse strategies (first, random, best, sample)
-- [ ] `stdlib/search.metta` - Search algorithm library
-- [ ] Choice point backtracking interpreter
-- [ ] Parallel collapse with early termination
-
----
-
-## 🎮 Track 4: Scriptable Meta-Reasoning
-
-> **Goal**: Control flow, attention, and strategy are MeTTa programs that the system can introspect and modify.
-
-### 4.1 Attention Allocation (ECAN)
-
-```metta
-; Attention values as atom metadata
-(: AttentionValue (-> Number Number AtomMeta))
-(: STI (-> Atom Number))  ; Short-term importance
-(: LTI (-> Atom Number))  ; Long-term importance
+(= (set-sti $atom $v)
+   (do (remove-atom &self (STI $atom $_))
+       (add-atom &self (STI $atom $v))))
 
 ; Spreading activation
-(= (spread-activation $atom $amount)
-   (for-each (links $atom)
-     (lambda ($link)
-       (let (($target (other-end $link $atom))
-             ($portion (* $amount (link-weight $link))))
-         (inc-sti $target $portion)))))
+(= (spread-from $atom $decay)
+   (for-each (neighbors $atom)
+     (lambda ($n)
+       (set-sti $n (+ (sti $n) (* $decay (sti $atom)))))))
 
-; Hebbian learning for link weights
-(= (hebbian-update $link)
-   (let (($a (source $link))
-         ($b (target $link)))
-     (set-weight $link 
-       (+ (weight $link) 
-          (* (learning-rate) (STI $a) (STI $b))))))
-
-; Forgetting (rent collection)
-(= (collect-rent)
+; Rent collection (forgetting)
+(= (collect-rent $rate)
    (for-each (all-atoms)
-     (lambda ($atom)
-       (let (($new-sti (- (STI $atom) (rent-amount $atom))))
-         (if (< $new-sti (forget-threshold))
-             (remove-atom $atom)
-             (set-sti $atom $new-sti))))))
-```
-
-### 4.2 Strategy Framework
-
-```javascript
-class MeTTaStrategy extends BaseMeTTaComponent {
-    constructor(strategyCode, interpreter) {
-        super({}, 'MeTTaStrategy', null, interpreter.termFactory);
-        this.interpreter = interpreter;
-        this.strategyFn = this.compile(strategyCode);
-    }
-    
-    compile(code) {
-        // Parse strategy definition
-        const ast = this.interpreter.parser.parse(code);
-        // Extract the main selection function
-        return ast.find(node => node.head?.name === 'select-premises');
-    }
-    
-    async selectSecondaryPremises(primary, context) {
-        const result = await this.interpreter.run(
-            `(select-premises ${this.serialize(primary)} ${this.serialize(context)})`
-        );
-        return result.map(atom => this.isomorphism.atomToTask(atom));
-    }
-}
-```
-
-```metta
-; ═══════════════════════════════════════════════════════════════════
-; Strategy: Novelty-Seeking (explore uncertain knowledge)
-; ═══════════════════════════════════════════════════════════════════
-(= (select-premises:novelty $primary $context)
-   (let* (($related (match &self (Related $primary $x) $x))
-          ($uncertain (filter (lambda ($t) (< (confidence $t) 0.5)) $related))
-          ($sorted (sort-by confidence $uncertain)))
-     (take 5 $sorted)))
+     (lambda ($a)
+       (let (($new (- (sti $a) $rate)))
+         (if (< $new 0)
+             (remove-atom &self $a)
+             (set-sti $a $new))))))
 
 ; ═══════════════════════════════════════════════════════════════════
-; Strategy: Exploitation (use confident knowledge)
+; PART 8: SEARCH STRATEGIES
 ; ═══════════════════════════════════════════════════════════════════
-(= (select-premises:exploit $primary $context)
-   (let* (($related (match &self (Related $primary $x) $x))
-          ($confident (filter (lambda ($t) (> (confidence $t) 0.8)) $related)))
-     (take 5 (sort-by (lambda ($t) (- 1 (confidence $t))) $confident))))
+
+; Depth-first search
+(= (dfs $goal? $successors $state)
+   (if ($goal? $state)
+       $state
+       (let (($next (superpose ($successors $state))))
+         (dfs $goal? $successors $next))))
+
+; Breadth-first (accumulator-based)
+(= (bfs $goal? $successors $frontier)
+   (match $frontier (Cons $s $rest)
+     (if ($goal? $s)
+         $s
+         (bfs $goal? $successors 
+              (append $rest ($successors $s))))))
+
+; Best-first with heuristic
+(= (best-first $goal? $successors $heuristic $frontier)
+   (let (($best (min-by $heuristic $frontier))
+         ($rest (remove $best $frontier)))
+     (if ($goal? $best)
+         $best
+         (best-first $goal? $successors $heuristic
+                     (insert-sorted $heuristic 
+                                    ($successors $best) 
+                                    $rest)))))
 
 ; ═══════════════════════════════════════════════════════════════════
-; Strategy: Goal-Directed (prioritize goal-relevant)
+; PART 9: LEARNING (Self-modification!)
 ; ═══════════════════════════════════════════════════════════════════
-(= (select-premises:goal-directed $primary $context)
-   (let* (($goals (current-goals))
-          ($relevant (filter (lambda ($t) (any (goal-relevant? $t) $goals)) 
-                            (premises-for $primary))))
-     (sort-by goal-utility $relevant)))
 
-; ═══════════════════════════════════════════════════════════════════
-; Meta-Strategy: Adaptive selection based on system state
-; ═══════════════════════════════════════════════════════════════════
-(= (select-strategy)
-   (cond
-     ((> (novelty-score) 0.8) novelty)      ; Too predictable → explore
-     ((< (goal-progress) 0.2) goal-directed) ; Not progressing → focus
-     ((> (cpu-load) 0.9) exploit)            ; Overloaded → use known
-     (else balanced)))
-```
-
-### 4.3 Self-Modification
-
-```metta
-; The system can modify its own rules
-(= (learn-rule $premise1 $premise2 $conclusion)
-   (let (($pattern (generalize (Pair $premise1 $premise2)))
-         ($truth (calculate-truth $premise1 $premise2 $conclusion)))
-     (add-atom &self 
-       (=> $pattern $conclusion :tv $truth :source learned))))
-
-; Self-optimization: remove low-utility rules
-(= (prune-rules)
-   (for-each (match &self (=> $p $c :utility $u) (Rule $p $c $u))
-     (lambda ($rule)
-       (if (< (utility $rule) (prune-threshold))
-           (remove-atom &self $rule)))))
-
-; Hot-swap strategy at runtime
-(= (adapt-control)
-   (let (($new-strategy (select-strategy)))
-     (set-current-strategy $new-strategy)
-     (log "Switched to strategy: " $new-strategy)))
-```
-
-### 4.4 Deliverables
-
-- [ ] `ECAN.js` - Attention value management
-- [ ] `MeTTaStrategy.js` - Strategy execution framework
-- [ ] `stdlib/attention.metta` - ECAN operations
-- [ ] `stdlib/strategies/` - Strategy library
-- [ ] Self-modification API (add-atom, remove-atom on &self)
-- [ ] Runtime strategy switching
-
----
-
-## 👁️ Track 5: Perception & Action
-
-> **Goal**: Grounded atoms that connect symbolic reasoning to the world via sensors and effectors.
-
-### 5.1 Sensor Framework
-
-```javascript
-class SensorRegistry extends BaseMeTTaComponent {
-    constructor(config, eventBus, termFactory) {
-        super(config, 'SensorRegistry', eventBus, termFactory);
-        this.sensors = new Map();
-        this.cache = new Map();
-        this.cacheTimeout = config.cacheTimeout ?? 1000;
-    }
-    
-    register(name, sampler, options = {}) {
-        this.sensors.set(name, {
-            sampler,          // () => value
-            rate: options.rate ?? 10,      // Hz
-            transform: options.transform ?? (x => x),
-            type: options.type ?? 'Number'
-        });
-    }
-    
-    sample(name) {
-        const sensor = this.sensors.get(name);
-        if (!sensor) throw new Error(`Unknown sensor: ${name}`);
-        
-        const cached = this.cache.get(name);
-        if (cached && Date.now() - cached.time < this.cacheTimeout) {
-            return cached.value;
-        }
-        
-        const raw = sensor.sampler();
-        const value = sensor.transform(raw);
-        this.cache.set(name, { value, time: Date.now() });
-        
-        this.emitMeTTaEvent('sensor-sampled', { name, value });
-        return this.termFactory.atomic(String(value));
-    }
-}
-```
-
-```metta
-; Built-in sensors
-(Sensor time) ;=> current timestamp
-(Sensor random) ;=> random float [0,1)
-(Sensor memory-load) ;=> heap usage ratio
-(Sensor attention-focus) ;=> highest-STI atom
-
-; Custom sensor registration (via grounded)
-(&register-sensor "temperature" (lambda () (read-gpio 4)))
-
-; Reactive sensing (trigger on change)
-(= (on-change $sensor $threshold $action)
-   (let (($current (sample $sensor))
-         ($prev (previous-value $sensor)))
-     (if (> (abs (- $current $prev)) $threshold)
-         $action
-         Empty)))
-```
-
-### 5.2 Effector Framework
-
-```javascript
-class EffectorRegistry extends BaseMeTTaComponent {
-    constructor(config, eventBus, termFactory) {
-        super(config, 'EffectorRegistry', eventBus, termFactory);
-        this.effectors = new Map();
-        this.sandboxed = config.sandboxed ?? true;
-    }
-    
-    register(name, executor, options = {}) {
-        this.effectors.set(name, {
-            executor,
-            permissions: options.permissions ?? [],
-            sideEffect: options.sideEffect ?? true
-        });
-    }
-    
-    execute(name, ...args) {
-        const effector = this.effectors.get(name);
-        if (!effector) throw new Error(`Unknown effector: ${name}`);
-        
-        if (this.sandboxed && effector.sideEffect) {
-            this.emitMeTTaEvent('effector-request', { name, args, awaiting: 'approval' });
-            // In sandboxed mode, queue for approval
-            return this.queueForApproval(name, args);
-        }
-        
-        this.emitMeTTaEvent('effector-executed', { name, args });
-        return effector.executor(...args);
-    }
-}
-```
-
-```metta
-; Safe effectors (always allowed)
-(exec (print $message))
-(exec (log $level $message))
-(exec (emit-event $name $data))
-
-; Controlled effectors (require approval or capability)
-(exec (file-write $path $content) :requires (capability file-write))
-(exec (http-request $url $method $body) :requires (capability network))
-(exec (shell-command $cmd) :requires (capability system))
-
-; Compound actions
-(= (save-and-notify $data $path)
-   (seq
-     (exec (file-write $path $data))
-     (exec (emit-event 'saved {:path $path}))))
-```
-
-### 5.3 Neural Integration (Optional)
-
-```metta
-; Neural network predicates
-(: neural-classify (-> Tensor Concept))
-(: neural-embed (-> Text Tensor))
-(: neural-similarity (-> Tensor Tensor Number))
-
-; Usage
-(= (is-cat? $image)
-   (> (confidence (neural-classify $image "cat")) 0.8))
-
-; Hybrid reasoning: neural perception + symbolic reasoning
-(= (identify-and-reason $image)
-   (let (($category (neural-classify $image))
-         ($properties (match &self (HasProperty $category $p) $p)))
-     (Identified $category $properties)))
-```
-
-### 5.4 Deliverables
-
-- [ ] `SensorRegistry.js` - Sensor management
-- [ ] `EffectorRegistry.js` - Action execution with sandboxing
-- [ ] `stdlib/perception.metta` - Sensor operations
-- [ ] `stdlib/action.metta` - Effector operations
-- [ ] Built-in sensors (time, random, memory)
-- [ ] Capability-based permission system
-
----
-
-## 🔄 Track 6: Learning & Adaptation
-
-> **Goal**: The system improves its own performance through experience.
-
-### 6.1 Experience-Driven Learning
-
-```metta
-; Record experience tuples
-(: Experience (-> State Action State Reward Timestamp Experience))
-
-; Store experiences
-(= (record-experience $s $a $s' $r)
+; Learn a new rule from observation
+(= (learn-rule $pattern $result $confidence)
    (add-atom &self 
-     (Experience $s $a $s' $r (now))))
+     (= $pattern $result :tv (tv 1.0 $confidence) :source learned)))
 
-; Learn from experience (temporal difference)
-(= (td-update $state $action)
-   (let* (($experiences (match &self (Experience $state $action $s' $r $t) 
-                               (Exp $s' $r)))
-          ($avg-reward (mean (map reward $experiences)))
-          ($avg-next-value (mean (map (lambda ($e) (value (next-state $e))) 
-                                      $experiences))))
-     (set-q-value $state $action 
-       (+ $avg-reward (* (gamma) $avg-next-value)))))
-```
+; Strengthen rule on successful use
+(= (reinforce $rule)
+   (let (($tv (get-tv $rule))
+         ($new-c (min 0.99 (+ (confidence $tv) 0.01))))
+     (set-tv $rule (tv (frequency $tv) $new-c))))
 
-### 6.2 Rule Learning
+; Weaken rule on failure
+(= (weaken $rule)
+   (let (($tv (get-tv $rule))
+         ($new-c (- (confidence $tv) 0.05)))
+     (if (< $new-c 0.1)
+         (remove-atom &self $rule)
+         (set-tv $rule (tv (frequency $tv) $new-c)))))
 
-```metta
-; Inductive rule learning from examples
-(= (induce-rule $positive-examples $negative-examples)
-   (let* (($generalized (lgg $positive-examples))      ; Least general generalization
-          ($specialized (specialize $generalized $negative-examples)))
-     (if (valid-rule? $specialized)
-         (add-atom &self $specialized)
-         Empty)))
-
-; Learn from successful derivations
-(= (learn-from-derivation $premises $conclusion)
-   (let (($pattern (extract-pattern $premises))
-         ($support (length $premises)))
-     (if (> $support (min-support))
-         (add-atom &self 
-           (=> $pattern $conclusion :tv (1.0 (/ 1 (+ 1 $support))))))))
-```
-
-### 6.3 Reinforcement Learning Integration
-
-```javascript
-class MeTTaRL extends BaseMeTTaComponent {
-    constructor(interpreter, config) {
-        super(config, 'MeTTaRL', null, interpreter.termFactory);
-        this.interpreter = interpreter;
-        this.episodeBuffer = [];
-        this.qTable = new Map(); // Or neural Q-network
-    }
-    
-    async step(state) {
-        // Select action using current policy (ε-greedy)
-        const action = this.selectAction(state);
-        
-        // Execute action
-        const result = await this.interpreter.run(`(execute ${action})`);
-        
-        // Observe new state and reward
-        const newState = await this.interpreter.run('(observe-state)');
-        const reward = this.computeReward(state, action, newState);
-        
-        // Store experience
-        this.episodeBuffer.push({ state, action, newState, reward });
-        
-        // Periodic update
-        if (this.episodeBuffer.length >= this.config.batchSize) {
-            this.update();
-        }
-        
-        return { action, reward, newState };
-    }
-}
-```
-
-### 6.4 Deliverables
-
-- [ ] `MeTTaRL.js` - Reinforcement learning integration
-- [ ] `stdlib/learning.metta` - Learning operations
-- [ ] Experience buffer and replay
-- [ ] Q-learning / policy gradient support
-- [ ] Rule induction from examples
-
----
-
-## 🌐 Track 7: Distribution & Scale
-
-> **Goal**: Scale from single-process to distributed cluster seamlessly.
-
-### 7.1 Remote Space Protocol
-
-```javascript
-class RemoteMeTTaSpace extends MeTTaSpace {
-    constructor(endpoint, options = {}) {
-        super(null, options.termFactory);
-        this.endpoint = endpoint;
-        this.client = new SpaceClient(endpoint, {
-            retries: options.retries ?? 3,
-            timeout: options.timeout ?? 5000
-        });
-    }
-    
-    async addAtom(atom) {
-        const serialized = this.serialize(atom);
-        await this.client.post('/atoms', { atom: serialized });
-        this.emitMeTTaEvent('remote-atom-added', { endpoint: this.endpoint });
-    }
-    
-    async *match(pattern) {
-        const serialized = this.serialize(pattern);
-        const stream = this.client.stream('/match', { pattern: serialized });
-        
-        for await (const chunk of stream) {
-            yield this.deserialize(chunk);
-        }
-    }
-    
-    async getStats() {
-        return this.client.get('/stats');
-    }
-}
-```
-
-### 7.2 Sharding Strategy
-
-```metta
-; Shard by concept hash
-(= (shard-for $atom)
-   (mod (hash (head $atom)) (num-shards)))
-
-; Distributed query (map-reduce)
-(= (distributed-match $pattern)
-   (let* (($shards (all-shards))
-          ($partial-results (pmap (lambda ($s) 
-                                    (remote-match $s $pattern)) 
-                                  $shards)))
-     (flatten $partial-results)))
-
-; Consistency protocol
-(= (replicated-add $atom)
-   (let (($primary (shard-for $atom))
-         ($replicas (replica-shards $primary)))
-     (seq
-       (remote-add $primary $atom)
-       (pmap (lambda ($r) (remote-add $r $atom)) $replicas))))
-```
-
-### 7.3 Deliverables
-
-- [ ] `RemoteMeTTaSpace.js` - Remote space client
-- [ ] `SpaceServer.js` - HTTP/gRPC server for space operations
-- [ ] Sharding strategy implementation
-- [ ] Distributed match with map-reduce
-- [ ] Replication and consistency
-
----
-
-## 🎨 Track 8: Capability Demonstrations
-
-> **Goal**: Prove capability parity with OpenCog MeTTa through working demos.
-
-### 8.1 Demo Matrix
-
-| Demo | Category | Capabilities Demonstrated | Status |
-|------|----------|---------------------------|--------|
-| **Syllogism Prover** | Reasoning | Deduction, chaining, proof generation | 📋 Planned |
-| **Maze Solver** | Planning | Search, backtracking, state | 📋 Planned |
-| **Family Tree** | Knowledge | Queries, transitive closure | 📋 Planned |
-| **Supply Chain** | Decision | PLN, risk, expected utility | 📋 Planned |
-| **Negotiation** | Multi-Agent | Multiple spaces, utility | 📋 Planned |
-| **Chatbot** | Integration | NL→MeTTa, grounding | 📋 Planned |
-| **Learning Agent** | Adaptation | RL, rule learning | 📋 Planned |
-| **Self-Optimizer** | Meta | Self-modification, introspection | 📋 Planned |
-
-### 8.2 Demo: Complete Reasoning Chain
-
-```metta
 ; ═══════════════════════════════════════════════════════════════════
-; demos/reasoning/socrates.metta
-; Demonstrates: Knowledge assertion, rule application, proof trace
+; PART 10: META-REASONING (Strategies as data)
 ; ═══════════════════════════════════════════════════════════════════
 
-; Knowledge base
-(Inheritance Socrates Human :tv (1.0 0.95))
-(Inheritance Human Mortal :tv (0.99 0.99))
-(Inheritance Mortal BeingThatDies :tv (1.0 0.99))
+; Current strategy is an atom in the space
+(= (current-strategy)
+   (match &self (CurrentStrategy $s) $s))
 
-; Load NAL rules
-!(import "stdlib/nal1.metta")
+; Strategy implementations
+(= (select-premises:balanced $primary)
+   (take 5 (shuffle (related-to $primary))))
 
-; Query: Is Socrates mortal?
-; Should derive via deduction chain:
-; Socrates → Human → Mortal
+(= (select-premises:exploration $primary)
+   (take 5 (filter low-confidence? (related-to $primary))))
 
-!(trace 
-  (derive-with-proof 
-    (Inheritance Socrates Mortal)))
+(= (select-premises:exploitation $primary)
+   (take 5 (sort-by confidence (related-to $primary))))
 
-; Expected output:
-; (Proof 
-;   (Inheritance Socrates Mortal :tv (0.99 0.93))
-;   (Via deduction
-;     (Inheritance Socrates Human :tv (1.0 0.95))
-;     (Inheritance Human Mortal :tv (0.99 0.99))))
+; Dispatch based on current strategy
+(= (select-premises $primary)
+   (let (($strategy (current-strategy)))
+     ((symbol-concat "select-premises:" $strategy) $primary)))
+
+; Switch strategy at runtime
+(= (use-strategy $name)
+   (do (remove-atom &self (CurrentStrategy $_))
+       (add-atom &self (CurrentStrategy $name))))
 ```
-
-### 8.3 Demo: Planning with Uncertainty
-
-```metta
-; ═══════════════════════════════════════════════════════════════════
-; demos/planning/supply_chain.metta
-; Demonstrates: PLN risk assessment, expected utility, decision making
-; ═══════════════════════════════════════════════════════════════════
-
-; Situation: Storm approaching port
-(Probability StormHitsPort 0.7 :confidence 0.8)
-(Consequence (StormHits PortA) (Delay Shipment 5 days))
-(Consequence (StormMisses PortA) (Delay Shipment 0 days))
-
-; Alternative: Reroute to PortB
-(Cost Reroute 50000)
-(Consequence Reroute (Delay Shipment 2 days))
-
-; Cost of delay
-(= (delay-cost $days) (* $days 20000))
-
-; Expected utility calculation
-(= (expected-utility $action)
-   (- (expected-benefit $action)
-      (expected-cost $action)))
-
-; Decision
-!(let* (($eu-stay (expected-utility Stay))
-        ($eu-reroute (expected-utility Reroute)))
-   (if (> $eu-reroute $eu-stay)
-       (Decision Reroute :reason (Better $eu-reroute $eu-stay))
-       (Decision Stay :reason (Better $eu-stay $eu-reroute))))
-```
-
-### 8.4 Deliverables
-
-- [ ] `demos/reasoning/socrates.metta` - Syllogism with proof
-- [ ] `demos/planning/maze.metta` - A* maze solver
-- [ ] `demos/knowledge/family.metta` - Relational queries
-- [ ] `demos/decision/supply_chain.metta` - Risk-based decision
-- [ ] `demos/multiagent/negotiation.metta` - Two-agent trade
-- [ ] `demos/learning/rl_gridworld.metta` - RL agent
-- [ ] `demos/meta/self_optimizer.metta` - Self-modifying system
 
 ---
 
-## 🔧 Track 9: Developer Experience
+## What We Gain
 
-> **Goal**: Make MeTTa development delightful with excellent tooling.
-
-### 9.1 Interactive REPL
-
-```javascript
-class MeTTaREPL {
-    constructor(interpreter) {
-        this.interpreter = interpreter;
-        this.history = [];
-        this.bindings = new Map();
-    }
-    
-    async evaluate(input) {
-        // Special commands
-        if (input.startsWith(':')) {
-            return this.command(input.slice(1));
-        }
-        
-        this.history.push(input);
-        
-        try {
-            const result = await this.interpreter.run(input);
-            return { success: true, value: result };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-    
-    command(cmd) {
-        const [name, ...args] = cmd.split(' ');
-        switch (name) {
-            case 'trace': return this.toggleTrace();
-            case 'stats': return this.showStats();
-            case 'space': return this.inspectSpace();
-            case 'type':  return this.showType(args[0]);
-            case 'load':  return this.loadFile(args[0]);
-            case 'save':  return this.saveSession(args[0]);
-            case 'help':  return this.showHelp();
-        }
-    }
-}
-```
-
-### 9.2 Visualization
-
-```javascript
-class MeTTaVisualizer {
-    // Space as graph
-    renderSpaceGraph(space, options = {}) {
-        const nodes = space.getAtoms().map(atom => ({
-            id: atom.id,
-            label: atom.toString(),
-            type: this.atomType(atom)
-        }));
-        
-        const edges = this.extractLinks(space);
-        
-        return { nodes, edges, layout: options.layout ?? 'force' };
-    }
-    
-    // Reduction trace as tree
-    renderReductionTrace(trace) {
-        return {
-            type: 'tree',
-            root: trace.initial,
-            children: trace.steps.map(step => ({
-                rule: step.rule,
-                before: step.before,
-                after: step.after
-            }))
-        };
-    }
-    
-    // Type inference visualization
-    renderTypeInference(term, inferredType, constraints) {
-        return {
-            term: term.toString(),
-            type: inferredType.toString(),
-            constraints: constraints.map(c => ({
-                lhs: c.lhs.toString(),
-                rhs: c.rhs.toString()
-            }))
-        };
-    }
-}
-```
-
-### 9.3 LSP Server
-
-```javascript
-// Language Server Protocol for IDE integration
-class MeTTaLSP {
-    // Hover: show type and documentation
-    onHover(position) { /* ... */ }
-    
-    // Completion: suggest atoms, functions
-    onCompletion(position) { /* ... */ }
-    
-    // Diagnostics: type errors, undefined refs
-    onDiagnostics(document) { /* ... */ }
-    
-    // Go to definition
-    onDefinition(position) { /* ... */ }
-    
-    // Find references
-    onReferences(position) { /* ... */ }
-}
-```
-
-### 9.4 Deliverables
-
-- [ ] `cli/repl.js` - Interactive REPL with commands
-- [ ] `viz/SpaceGraph.js` - Space visualization
-- [ ] `viz/TraceTree.js` - Reduction trace visualization
-- [ ] `lsp/MeTTaLSP.js` - Language server
-- [ ] VS Code extension (uses LSP)
-- [ ] Web-based playground
-
----
-
-## 📊 Success Metrics
-
-### Functional Completeness
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| NAL Coverage | 100% of NAL-1 to NAL-8 | Automated rule tests |
-| Demo Parity | All 8 demos working | Integration tests |
-| API Completeness | All MeTTa builtins | API test suite |
-
-### Performance
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Atom throughput | 10K atoms/sec add | Benchmark |
-| Query latency | <10ms for 100K atoms | Benchmark |
-| Memory per atom | <1KB average | Profiling |
-| Reduction steps | <1000 for typical | Tracing |
-
-### Quality
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Test coverage | >80% line coverage | Istanbul |
-| Type safety | Zero runtime type errors | TypeChecker |
-| Documentation | All public APIs documented | JSDoc |
-
----
-
-## Implementation Phases
-
-### Phase 1: Logic Foundation (Weeks 1-2)
-Focus: Tracks 2, 3
-- Complete NAL rule library
-- Truth function bindings
-- Enhanced non-determinism
-
-### Phase 2: Intelligence (Weeks 3-4)
-Focus: Tracks 1, 4
-- Unified storage
-- ECAN attention
-- Scriptable strategies
-
-### Phase 3: Grounding (Weeks 5-6)
-Focus: Tracks 5, 6
-- Sensor/effector framework
-- Learning integration
-- Perception-action loop
-
-### Phase 4: Scale & Polish (Weeks 7-8)
-Focus: Tracks 7, 8, 9
-- Distribution basics
-- All demos complete
-- Developer tooling
-
----
-
-## Appendix: File Structure
+### Minimal JS (< 500 LOC)
 
 ```
 core/src/metta/
-├── MeTTaInterpreter.js       # Orchestration
-├── MeTTaSpace.js             # Atomspace
-├── IndexedSpace.js           # Multi-index (NEW)
-├── MatchEngine.js            # Unification
-├── ReductionEngine.js        # Evaluation
-├── NonDeterminism.js         # Superposition
-├── BacktrackingInterpreter.js # Choice points (NEW)
-├── TypeSystem.js             # Types
-├── TypeChecker.js            # Validation
-├── GroundedAtoms.js          # Native functions
-├── SeNARSBridge.js           # NARS integration
-├── MacroExpander.js          # Macros
-├── StateManager.js           # State
-├── ECAN.js                   # Attention (NEW)
-├── MeTTaRL.js                # Learning (NEW)
-├── SensorRegistry.js         # Perception (NEW)
-├── EffectorRegistry.js       # Action (NEW)
-├── RemoteMeTTaSpace.js       # Distribution (NEW)
-├── helpers/
-│   ├── BaseMeTTaComponent.js
-│   ├── MeTTaHelpers.js
-│   ├── MeTTaLib.js
-│   ├── MeTTaRuleAdapter.js
-│   └── MeTTaRuleCompiler.js  # NEW
-├── strategies/
-│   ├── UnificationStrategy.js
-│   └── MeTTaStrategy.js      # NEW
-└── stdlib/
-    ├── truth.metta           # NEW
-    ├── nal1.metta - nal8.metta # NEW
-    ├── search.metta          # NEW
-    ├── attention.metta       # NEW
-    ├── perception.metta      # NEW
-    ├── action.metta          # NEW
-    ├── learning.metta        # NEW
-    └── strategies/
-        ├── novelty.metta     # NEW
-        ├── exploit.metta     # NEW
-        └── goal-directed.metta # NEW
+├── kernel/
+│   ├── Term.js          (~50 LOC)
+│   ├── Space.js         (~30 LOC)  
+│   ├── Unify.js         (~60 LOC)
+│   ├── Reduce.js        (~80 LOC)
+│   └── Grounded.js      (~100 LOC)
+├── MeTTaInterpreter.js  (~100 LOC) ; Just wires kernel + loads stdlib
+└── stdlib.metta         (~300 LOC) ; Everything else
 ```
+
+### Maximum Capability
+
+| Capability | Implementation |
+|------------|----------------|
+| Types | MeTTa constraint rules |
+| NAL Inference | MeTTa rewrite rules |
+| ECAN Attention | MeTTa metadata ops |
+| Search | MeTTa recursive functions |
+| Learning | MeTTa self-modification |
+| Strategies | MeTTa functions in space |
+| Non-determinism | Multiple rules, same head |
+| Macros | Early-phase reduction |
+
+### Emergent Properties
+
+1. **Self-Optimizing**: The system can rewrite its own rules to be more efficient
+2. **Introspectable**: `(match &self (= $p $r) (Rule $p $r))` returns all rules
+3. **Hot-Swappable**: Change any behavior by modifying atoms in `&self`
+4. **Composable**: Small rules combine into complex reasoning
+5. **Explainable**: Every derivation is a traceable reduction chain
+
+---
+
+## Implementation Roadmap
+
+### Phase 1: The Pure Kernel (Week 1)
+
+**Deliverables:**
+- [ ] `kernel/Term.js` - Immutable terms with structural equality
+- [ ] `kernel/Space.js` - Minimal set with add/remove/iterate
+- [ ] `kernel/Unify.js` - Recursive unification + substitution
+- [ ] `kernel/Reduce.js` - Single-step reduction
+- [ ] `kernel/Grounded.js` - JS function registry
+
+**Test:** `(+ 1 2)` reduces to `3`
+
+### Phase 2: Bootstrap Standard Library (Week 2)
+
+**Deliverables:**
+- [ ] `stdlib/core.metta` - Control flow (if, seq, let)
+- [ ] `stdlib/list.metta` - List operations
+- [ ] `stdlib/match.metta` - Non-deterministic matching
+
+**Test:** `(map (lambda ($x) (* $x 2)) (list 1 2 3))` → `(list 2 4 6)`
+
+### Phase 3: Logic & Inference (Week 3)
+
+**Deliverables:**
+- [ ] `stdlib/types.metta` - Type checking as pattern matching
+- [ ] `stdlib/truth.metta` - Truth functions (grounded wrappers)
+- [ ] `stdlib/nal.metta` - NAL-1 through NAL-6 rules
+
+**Test:** Deduction chain produces correct truth values
+
+### Phase 4: Intelligence Layer (Week 4)
+
+**Deliverables:**
+- [ ] `stdlib/attention.metta` - ECAN operations
+- [ ] `stdlib/search.metta` - DFS, BFS, A*
+- [ ] `stdlib/learning.metta` - Rule learning/reinforcement
+- [ ] `stdlib/strategy.metta` - Strategy selection
+
+**Test:** Self-modifying agent learns to solve a simple task
+
+---
+
+## Grounded Operations (The Only JS Escapes)
+
+These are registered in `Grounded.js` and called from MeTTa:
+
+### Arithmetic (Required)
+```javascript
+'+', '-', '*', '/', '%', 'pow', 'sqrt', 'abs'
+```
+
+### Comparison (Required)
+```javascript
+'<', '>', '<=', '>=', '==', '!='
+```
+
+### Space Primitives (Required)
+```javascript
+'add-atom', 'remove-atom', 'get-atoms', 'atom-count'
+```
+
+### I/O (Optional)
+```javascript
+'print', 'read-file', 'write-file', 'http-get', 'now'
+```
+
+### SeNARS Bridge (Integration)
+```javascript
+'&nars-derive'     // Invoke NARS reasoner
+'&nars-add-task'   // Add task to NARS
+'&nars-beliefs'    // Get NARS beliefs
+```
+
+### Truth Functions (Performance)
+```javascript
+'&truth-deduction', '&truth-induction', '&truth-abduction',
+'&truth-revision', '&truth-negation', '&truth-analogy'
+```
+
+---
+
+## Comparison: Old vs New
+
+| Aspect | Previous Design | Minimal Core |
+|--------|-----------------|--------------|
+| JS LOC | ~2000+ | ~500 |
+| MeTTa LOC | ~100 | ~500 |
+| Modules | 15+ | 5 |
+| Concepts | Many special cases | 5 primitives |
+| Extensibility | Add JS class | Add MeTTa rule |
+| Debugging | JS debugger | MeTTa trace |
+| Self-modification | Complex API | `add-atom &self` |
+| Learning | Separate module | MeTTa rules |
+
+---
+
+## The Composability Insight
+
+Everything builds from 5 primitives:
+
+```
+TERM + SPACE = Knowledge Base
+     ↓
++ UNIFY = Pattern Matching
+     ↓
++ REDUCE = Computation
+     ↓
++ GROUND = World Interface
+     ↓
++ METTA RULES = Everything Else
+```
+
+**NAL Inference** = `reduce` with NAL rules in space
+**ECAN Attention** = `reduce` with attention rules + metadata
+**Planning** = `reduce` with search rules
+**Learning** = `add-atom` of new rules based on experience
+**Meta-Reasoning** = `match` over rules, `add-atom` of strategies
+
+---
+
+## The Ultimate Test
+
+If the design is right, we should be able to:
+
+```metta
+; Define a meta-interpreter IN MeTTa
+(= (eval $expr $space)
+   (let (($result (step $expr $space)))
+     (if (== $result $expr)
+         $result
+         (eval $result $space))))
+
+; And it should be equivalent to the JS reduce!
+```
+
+The system interprets itself. That's the proof of minimality.
+
+---
+
+## File Structure (Final)
+
+```
+core/src/metta/
+├── kernel/
+│   ├── Term.js           # Atom representation
+│   ├── Space.js          # Mutable atom set
+│   ├── Unify.js          # Pattern matching
+│   ├── Reduce.js         # Evaluation
+│   └── Grounded.js       # JS escape hatch
+├── MeTTaInterpreter.js   # Wires kernel + loads stdlib
+└── stdlib/
+    ├── core.metta        # Control flow
+    ├── list.metta        # Data structures  
+    ├── match.metta       # Non-determinism
+    ├── types.metta       # Type checking
+    ├── truth.metta       # PLN truth functions
+    ├── nal.metta         # NAL inference rules
+    ├── attention.metta   # ECAN
+    ├── search.metta      # Search algorithms
+    ├── learning.metta    # Self-modification
+    └── strategy.metta    # Meta-reasoning
+```
+
+**Total: 5 JS files + 10 MeTTa files = Complete cognitive architecture**
 
 ---
 
 *Last Updated: 2026-01-09*
-*Version: 2.0 - Comprehensive Architecture*
+*Version: 3.0 - Minimal Core*
