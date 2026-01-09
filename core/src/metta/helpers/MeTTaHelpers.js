@@ -1,48 +1,28 @@
+import { Unifier } from '../../term/Unifier.js';
 
 export const Unification = {
     isVar: (term) => term?.name?.startsWith('$') || term?.name?.startsWith('?'),
 
     subst: (term, bindings, termFactory = null) => {
-        if (!term) return term;
-        if (Unification.isVar(term)) return bindings[term.name] || term;
-
-        if (term.components) {
-            const newComponents = term.components.map(c => Unification.subst(c, bindings, termFactory));
-            if (termFactory) {
-                return term.operator
-                    ? termFactory.create({ operator: term.operator, components: newComponents })
-                    : termFactory.create({ components: newComponents });
-            }
-            if (term.constructor?.name === 'Term') {
-                return new term.constructor(term.type, term.name, newComponents, term.operator);
-            }
-            return { ...term, components: newComponents };
-        }
-        return term;
+        // Delegate to Unifier for consistent substitution logic
+        // We use a minimal Unifier instance or the provided termFactory
+        const factory = termFactory || { create: (op, comps) => ({ operator: op, components: comps }) };
+        const unifier = new Unifier(factory);
+        return unifier.applySubstitution(term, bindings);
     },
 
     unify: (pattern, term, bindings = {}) => {
-        if (!bindings) return null;
+        // Create a temporary Unifier - in a real app, this should be dependency-injected
+        // For helper functions, we can instantiate it on the fly or reuse a singleton if possible
+        // but here we just need the logic.
+        // We pass a minimal mock termFactory since Unifier only calls create when applying substitution for compound terms
+        // and we are just unifying here.
+        const unifier = new Unifier({
+            create: (op, comps) => ({ operator: op, components: comps, isCompound: true }) // Minimal mock
+        });
 
-        if (Unification.isVar(pattern)) {
-            const name = pattern.name;
-            return name in bindings
-                ? Unification.unify(bindings[name], term, bindings)
-                : { ...bindings, [name]: term };
-        }
-
-        if (!pattern.operator && !term.operator) {
-            return pattern.name === term.name ? bindings : null;
-        }
-
-        if (pattern.operator !== term.operator || pattern.components?.length !== term.components?.length) return null;
-
-        let result = bindings;
-        for (let i = 0; i < pattern.components.length; i++) {
-            result = Unification.unify(pattern.components[i], term.components[i], result);
-            if (!result) return null;
-        }
-        return result;
+        const result = unifier.unify(pattern, term, bindings);
+        return result.success ? result.substitution : null;
     },
 
     matchAll: (patterns, terms) => patterns.flatMap(pattern =>

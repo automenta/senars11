@@ -1,4 +1,5 @@
-import { TypeChecker, TypeConstructors, freshTypeVar } from '../../../core/src/metta/TypeChecker.js';
+import { TypeChecker } from '../../../core/src/metta/TypeChecker.js';
+import { TypeConstructors, freshTypeVar } from '../../../core/src/metta/helpers/TypeUtils.js';
 import { TypeSystem } from '../../../core/src/metta/TypeSystem.js';
 import { TermFactory } from '../../../core/src/term/TermFactory.js';
 

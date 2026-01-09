@@ -3,7 +3,7 @@
  */
 
 import { TypeMismatchError } from '../helpers/MeTTaHelpers.js';
-import { TypeConstructors } from './TypeUtils.js';
+import { TypeConstructors } from '../helpers/TypeUtils.js';
 
 /**
  * Abstract base strategy for unification

@@ -23,7 +23,7 @@ export const termsEqual = (t1, t2) => {
  * @returns {boolean} True if the term is a variable
  */
 export const isVariable = (term) => {
-    return term?.isVariable ?? false;
+    return term?.isVariable || term?.name?.startsWith('$') || false;
 };
 
 /**

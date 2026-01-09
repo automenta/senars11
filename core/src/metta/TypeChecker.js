@@ -1,9 +1,9 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TypeMismatchError } from './helpers/MeTTaHelpers.js';
-import { TypeConstructors, freshTypeVar } from './strategies/TypeUtils.js';
+import { TypeConstructors, freshTypeVar } from './helpers/TypeUtils.js';
 import { HindleyMilnerUnification } from './strategies/UnificationStrategy.js';
 
-export { TypeConstructors, freshTypeVar };
+
 
 export class TypeChecker extends BaseMeTTaComponent {
     /**

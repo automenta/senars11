@@ -1,5 +1,6 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TaskBuilders } from './helpers/MeTTaHelpers.js';
+import { MeTTaRuleAdapter } from './helpers/MeTTaRuleAdapter.js';
 
 export class SeNARSBridge extends BaseMeTTaComponent {
     constructor(reasoner, mettaInterpreter, config = {}, eventBus = null) {
@@ -50,6 +51,20 @@ export class SeNARSBridge extends BaseMeTTaComponent {
             const terms = beliefs.map(b => this.narsToMetta(b));
             this.emitMeTTaEvent('knowledge-exported', { termCount: terms.length });
             return terms;
+        });
+    }
+
+    injectRule(mettaRuleTerm) {
+        return this.trackOperation('injectRule', () => {
+            // Import lazily to avoid circular dependencies if any, or just import at top if clean.
+            // Using dynamic import or assuming global/module availability might be tricky in pure JS modules without bundler if not careful.
+            // But we can import at top. Let's assume top level import is fine.
+
+            const rule = new MeTTaRuleAdapter(mettaRuleTerm, this.mettaInterpreter);
+            this.reasoner.ruleProcessor.ruleExecutor.registerRule(rule);
+
+            this.emitMeTTaEvent('rule-injected', { ruleId: rule.id });
+            return rule;
         });
     }
 
