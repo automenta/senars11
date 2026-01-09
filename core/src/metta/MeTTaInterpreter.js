@@ -125,13 +125,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.emitMeTTaEvent('interpreter-initialized', {});
     }
 
-    /**
-     * Register built-in reduction rules
-     * @private
-     */
     _registerBuiltinRules() {
-        // Helper to create arithmetic rules
-        const addArithmeticRule = (op, fn) => {
+        const arithmeticOps = [
+            ['+', (a, b) => a + b],
+            ['-', (a, b) => a - b],
+            ['*', (a, b) => a * b]
+        ];
+
+        arithmeticOps.forEach(([op, fn]) => {
             this.reductionEngine.addRule(
                 TermBuilders.functor(this.termFactory, this.termFactory.atomic(op),
                     this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
@@ -141,12 +142,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                     return this.termFactory.atomic(String(fn(a, b)));
                 }
             );
-        };
-
-        // Register arithmetic operations
-        addArithmeticRule('+', (a, b) => a + b);
-        addArithmeticRule('-', (a, b) => a - b);
-        addArithmeticRule('*', (a, b) => a * b);
+        });
     }
 
     /**

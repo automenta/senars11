@@ -30,17 +30,17 @@ describe('NonDeterminism', () => {
         });
 
         test('collapse on non-superposition returns value', () => {
-            const result = nonDet.collapse('foo');
-            expect(result).toBe('foo');
+            expect(nonDet.collapse('foo')).toBe('foo');
         });
 
-        test.each([
-            ['collapseFirst', (s) => nonDet.collapseFirst(s), (s) => s.values[0]],
-            ['collapseAll', (s) => nonDet.collapseAll(s), (s) => s.values]
-        ])('%s returns expected value', (name, collapseFn, expected) => {
+        test('collapseFirst returns first value', () => {
             const s = nonDet.superpose('a', 'b', 'c');
-            const result = collapseFn(s);
-            expect(result).toEqual(expected(s));
+            expect(nonDet.collapseFirst(s)).toBe('a');
+        });
+
+        test('collapseAll returns all values', () => {
+            const s = nonDet.superpose('a', 'b', 'c');
+            expect(nonDet.collapseAll(s)).toEqual(['a', 'b', 'c']);
         });
     });
 

@@ -23,45 +23,24 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      * @private
      */
     _registerBuiltins() {
-        // Helper: Extract number from term
         const toNum = (term) => Number(term.name ?? term);
-
-        // Helper: Create boolean term
         const boolTerm = (value) => value ? this.termFactory.createTrue() : this.termFactory.createFalse();
 
-        // Helper: Normalize grounded atom name
-        const normalizeName = (name) => name.startsWith('&') ? name : `&${name}`;
-
-        // Self reference
-        this.register('&self', () => this.getCurrentSpace());
-
-        // Arithmetic operations (data-driven)
-        const arithmeticOps = [
-            ['+', (...args) => args.map(toNum).reduce((a, b) => a + b, 0)],
-            ['-', (...args) => args.map(toNum).reduce((a, b) => a - b)],
-            ['*', (...args) => args.map(toNum).reduce((a, b) => a * b, 1)],
-            ['/', (a, b) => toNum(a) / toNum(b)]
+        const operations = [
+            ['&self', () => this.getCurrentSpace()],
+            ['+', (...args) => this.termFactory.atomic(String(args.map(toNum).reduce((a, b) => a + b, 0)))],
+            ['-', (...args) => this.termFactory.atomic(String(args.map(toNum).reduce((a, b) => a - b)))],
+            ['*', (...args) => this.termFactory.atomic(String(args.map(toNum).reduce((a, b) => a * b, 1)))],
+            ['/', (a, b) => this.termFactory.atomic(String(toNum(a) / toNum(b)))],
+            ['<', (a, b) => boolTerm(toNum(a) < toNum(b))],
+            ['>', (a, b) => boolTerm(toNum(a) > toNum(b))],
+            ['==', (a, b) => boolTerm((a.name ?? a) === (b.name ?? b))],
+            ['&and', (...args) => boolTerm(args.every(a => (a.name ?? a) === 'True'))],
+            ['&or', (...args) => boolTerm(args.some(a => (a.name ?? a) === 'True'))],
+            ['&not', (a) => boolTerm((a.name ?? a) !== 'True')]
         ];
 
-        arithmeticOps.forEach(([op, fn]) => {
-            this.register(`&${op}`, (...args) => this.termFactory.atomic(String(fn(...args))));
-        });
-
-        // Comparison operations (data-driven)
-        const comparisonOps = [
-            ['<', (a, b) => toNum(a) < toNum(b)],
-            ['>', (a, b) => toNum(a) > toNum(b)],
-            ['==', (a, b) => (a.name ?? a) === (b.name ?? b)]
-        ];
-
-        comparisonOps.forEach(([op, fn]) => {
-            this.register(`&${op}`, (a, b) => boolTerm(fn(a, b)));
-        });
-
-        // Boolean operations
-        this.register('&and', (...args) => boolTerm(args.every(a => (a.name ?? a) === 'True')));
-        this.register('&or', (...args) => boolTerm(args.some(a => (a.name ?? a) === 'True')));
-        this.register('&not', (a) => boolTerm((a.name ?? a) !== 'True'));
+        operations.forEach(([name, fn]) => this.register(name, fn));
     }
 
     /**

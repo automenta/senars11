@@ -12,22 +12,14 @@ describe('TypeChecker', () => {
     });
 
     describe('Type Inference', () => {
-        test('infers Number type', () => {
-            const term = termFactory.atomic('42');
+        test.each([
+            ['Number', '42'],
+            ['String', '"hello"'],
+            ['Bool', 'True']
+        ])('infers %s type for %s', (expectedKind, input) => {
+            const term = termFactory.atomic(input);
             const type = typeChecker.infer(term);
-            expect(type.kind).toBe('Number');
-        });
-
-        test('infers String type', () => {
-            const term = termFactory.atomic('"hello"');
-            const type = typeChecker.infer(term);
-            expect(type.kind).toBe('String');
-        });
-
-        test('infers Bool type', () => {
-            const term = termFactory.atomic('True');
-            const type = typeChecker.infer(term);
-            expect(type.kind).toBe('Bool');
+            expect(type.kind).toBe(expectedKind);
         });
 
         test('infers function application type', () => {
@@ -78,29 +70,17 @@ describe('TypeChecker', () => {
     });
 
     describe('Type Constructors', () => {
-        test('creates Arrow type', () => {
-            const arrType = TypeConstructors.Arrow(TypeConstructors.Number, TypeConstructors.Bool);
-            expect(arrType.kind).toBe('Arrow');
-            expect(arrType.from.kind).toBe('Number');
-            expect(arrType.to.kind).toBe('Bool');
-        });
-
-        test('creates List type', () => {
-            const listType = TypeConstructors.List(TypeConstructors.Number);
-            expect(listType.kind).toBe('List');
-            expect(listType.elemType.kind).toBe('Number');
-        });
-
-        test('creates Maybe type', () => {
-            const maybeType = TypeConstructors.Maybe(TypeConstructors.String);
-            expect(maybeType.kind).toBe('Maybe');
-            expect(maybeType.elemType.kind).toBe('String');
-        });
-
-        test('creates Vector dependent type', () => {
-            const vecType = TypeConstructors.Vector(3);
-            expect(vecType.kind).toBe('Vector');
-            expect(vecType.length).toBe(3);
+        test.each([
+            ['Arrow', () => TypeConstructors.Arrow(TypeConstructors.Number, TypeConstructors.Bool), 'Arrow', { from: 'Number', to: 'Bool' }],
+            ['List', () => TypeConstructors.List(TypeConstructors.Number), 'List', { elemType: 'Number' }],
+            ['Maybe', () => TypeConstructors.Maybe(TypeConstructors.String), 'Maybe', { elemType: 'String' }],
+            ['Vector', () => TypeConstructors.Vector(3), 'Vector', { length: 3 }]
+        ])('creates %s type', (name, createFn, expectedKind, expectedProps) => {
+            const type = createFn();
+            expect(type.kind).toBe(expectedKind);
+            Object.entries(expectedProps).forEach(([key, val]) => {
+                expect(type[key]?.kind || type[key]).toBe(val);
+            });
         });
     });
 

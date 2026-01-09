@@ -200,13 +200,8 @@ export class TypeChecker extends BaseMeTTaComponent {
             return this.unify(t1.to, t2.to, s1);
         }
 
-        // List types
-        if (t1.kind === 'List' && t2.kind === 'List') {
-            return this.unify(t1.elemType, t2.elemType, subst);
-        }
-
-        // Maybe types
-        if (t1.kind === 'Maybe' && t2.kind === 'Maybe') {
+        // List/Maybe types
+        if ((t1.kind === 'List' && t2.kind === 'List') || (t1.kind === 'Maybe' && t2.kind === 'Maybe')) {
             return this.unify(t1.elemType, t2.elemType, subst);
         }
 

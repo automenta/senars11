@@ -66,11 +66,8 @@ console.log(`Found ${files.length} example files\n`);
 
 const results = files.map(runFile);
 
-// Summary
-const { successCount, failedResults } = results.reduce((acc, r) => ({
-    successCount: acc.successCount + (r.success ? 1 : 0),
-    failedResults: r.success ? acc.failedResults : [...acc.failedResults, r]
-}), { successCount: 0, failedResults: [] });
+const successCount = results.filter(r => r.success).length;
+const failedResults = results.filter(r => !r.success);
 
 console.log('\n' + '='.repeat(70));
 console.log('Summary');
