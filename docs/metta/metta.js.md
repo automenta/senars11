@@ -218,6 +218,48 @@ function substitute(template, bindings) {
 }
 ```
 
+### 5.3 Variable Scoping
+
+```javascript
+// Variables are lexically scoped within expressions
+class Context {
+  constructor(parent = null) {
+    this.parent = parent;
+    this.bindings = new Map();
+  }
+  
+  // Lookup with shadowing
+  get(name) {
+    if (this.bindings.has(name)) {
+      return this.bindings.get(name);
+    }
+    return this.parent?.get(name) ?? null;
+  }
+  
+  // Create child scope
+  child() {
+    return new Context(this);
+  }
+}
+
+// Scoping rules:
+// 1. Variables bound by unification are local to that match
+// 2. Global definitions (=) add to space, not context
+// 3. Let/lambda create new scopes
+```
+
+**Example:**
+```metta
+(= $x 1)  ; Global in space
+
+(= (foo)
+  (let (($x 2))  ; Shadow global $x
+    $x))  ; => 2
+
+!(foo)  ; => 2
+!$x     ; => 1 (global unchanged)
+```
+
 ---
 
 ## 6. Reduction Engine
@@ -274,12 +316,243 @@ class Reducer {
       case 'superpose': return this.nondet.superpose(args);
       case 'collapse': return this.nondet.collapse(args[0]);
       case 'if': return this.evalIf(args);
+      case 'quote': return args[0];  // Return unevaluated
+      case 'unquote': return this.reduce(args[0]);
+      case 'lambda': return this.createClosure(args);
+      case 'let': return this.evalLet(args);
       case 'addAtom': return this.evalAddAtom(args);
       case 'remAtom': return this.evalRemAtom(args);
       default: return this.grounded.call(head.value, args);
     }
   }
 }
+
+### 6.2 Evaluation Order
+
+**Default: Strict, Left-to-Right**
+
+```javascript
+// Arguments are evaluated before function application
+class Reducer {
+  evaluateArgs(args) {
+    // Strict: evaluate all args left-to-right
+    return args.map(arg => this.reduce(arg));
+  }
+  
+  // step method is already updated above
+  
+  isSpecialForm(head) {
+    return head?.isSymbol && ['if', 'quote', 'lambda', 'let', 'match'].includes(head.value);
+  }
+}
+```
+
+**Special Forms (Lazy Evaluation):**
+
+| Form | Evaluation |
+|------|------------|
+| `if` | Condition evaluated, then only one branch |
+| `quote` | Arguments **not** evaluated |
+| `lambda` | Body **not** evaluated until applied |
+| `let` | Bindings evaluated, body evaluated in new scope |
+| `match` | Pattern **not** evaluated, terms are |
+
+### 6.3 Match Implementation
+
+```javascript
+class Reducer {
+  // (match &space pattern template)
+  evalMatch(args) {
+    const [spaceRef, pattern, template] = args;
+    const space = this.resolveSpace(spaceRef);  // &self -> this.space
+    
+    const results = [];
+    for (const atom of space.all()) {
+      const bindings = unify(pattern, atom);
+      if (bindings) {
+        results.push(substitute(template, bindings));
+      }
+    }
+    
+    // Return superposition of all results
+    return results.length === 0 ? A.Empty :
+           results.length === 1 ? results[0] :
+           this.nondet.superpose(results);
+  }
+  
+  resolveSpace(ref) {
+    if (ref.isSymbol && ref.value === '&self') {
+      return this.space;
+    }
+    // Support named spaces (assuming this.spaces exists or is handled)
+    return this.spaces?.get(ref.value) ?? this.space;
+  }
+}
+```
+
+### 6.4 If/Conditional
+
+```javascript
+class Reducer {
+  // (if condition then-expr else-expr)
+  evalIf(args) {
+    const [cond, thenExpr, elseExpr] = args;
+    const condResult = this.reduce(cond);
+    
+    // Truthy: anything except False or Empty
+    const isTruthy = !condResult.equals(A.False) && !condResult.equals(A.Empty);
+    
+    return isTruthy ? this.reduce(thenExpr) : this.reduce(elseExpr);
+  }
+}
+```
+
+### 6.5 Lambda & Closures
+
+```javascript
+class Closure extends Atom {
+  constructor(params, body, capturedEnv) {
+    super('closure', null); // 'closure' is a placeholder type, null value
+    this.params = params;      // Array of variable names (strings)
+    this.body = body;          // Expression to evaluate
+    this.env = capturedEnv;    // Captured bindings (closure)
+    this.isExpression = false; // Closures are not expressions in the traditional sense
+    this.isAtomic = true;      // Treat as atomic for unification purposes
+  }
+  
+  equals(other) {
+    return other instanceof Closure &&
+           this.params.length === other.params.length &&
+           this.params.every((p, i) => p === other.params[i]) &&
+           this.body.equals(other.body) &&
+           // Environment comparison is tricky, often by reference or deep equality
+           // For now, assume closures are unique unless explicitly made equal
+           this.env === other.env; 
+  }
+
+  toString() {
+    return `<closure (${this.params.join(' ')})>`;
+  }
+}
+
+class Reducer {
+  // (lambda ($x $y) (+ $x $y))
+  createClosure(args) {
+    const [paramsExpr, body] = args;
+    
+    // Capture current environment
+    const capturedEnv = new Map(this.context.bindings); // Deep copy bindings
+    
+    return new Closure(
+      paramsExpr.children.map(p => p.value),  // ['$x', '$y']
+      body,
+      capturedEnv
+    );
+  }
+  
+  // Apply closure: ((lambda ($x) (* $x 2)) 5)
+  applyClosure(closure, args) {
+    // Create new scope with captured environment as parent
+    const newContext = new Context();
+    newContext.bindings = new Map(closure.env); // Start with captured env
+    
+    // Bind parameters
+    if (closure.params.length !== args.length) {
+      throw new Error(`Closure expected ${closure.params.length} arguments, got ${args.length}`);
+    }
+    closure.params.forEach((param, i) => {
+      newContext.bindings.set(param, args[i]);
+    });
+    
+    // Evaluate body in new context
+    return this.reduce(closure.body, newContext);
+  }
+  
+  // step method is already updated above
+}
+```
+
+**Lambda Examples:**
+
+```metta
+; Simple lambda
+(= $double (lambda ($x) (* $x 2)))
+!($double 5)  ; => 10
+
+; Higher-order function
+(= (map $f $list)
+  (if (== $list ())\n    ()\n    (cons ($f (car $list)) (map $f (cdr $list)))))
+
+!(map (lambda ($x) (+ $x 1)) (1 2 3))  ; => (2 3 4)
+
+; Closure capturing environment
+(= (make-adder $n)
+  (lambda ($x) (+ $x $n)))  ; Captures $n
+
+(= $add5 (make-adder 5))
+!($add5 3)  ; => 8
+```
+
+### 6.6 Let Bindings
+
+```javascript
+class Reducer {
+  // (let (($x 1) ($y 2)) (+ $x $y))
+  evalLet(args) {
+    const [bindingsExpr, body] = args;
+    
+    // Create new scope
+    const newContext = this.context.child();
+    
+    // Evaluate and bind each binding
+    for (const binding of bindingsExpr.children) {
+      const [varAtom, valueExpr] = binding.children;
+      // Evaluate value in the *current* (parent) scope
+      const value = this.reduce(valueExpr, this.context);
+      newContext.bindings.set(varAtom.value, value);
+    }
+    
+    // Evaluate body in new scope
+    return this.reduce(body, newContext);
+  }
+}
+```
+
+### 6.7 Quote & Unquote
+
+```javascript
+class Reducer {
+  // (quote expr) - Return expression unevaluated
+  evalQuote(args) {
+    return args[0];  // Don't evaluate
+  }
+  
+  // (unquote expr) - Evaluate quoted expression
+  evalUnquote(args) {
+    return this.reduce(args[0]);
+  }
+}
+```
+
+**Quote Examples:**
+
+```metta
+; Quote prevents evaluation
+!(quote (+ 1 2))  ; => (+ 1 2) (not 3)
+!+(quote 1 2)     ; => (+ 1 2)
+
+; Unquote forces evaluation
+(= $code (quote (+ 1 2)))
+!$code            ; => (+ 1 2)
+!(unquote $code)  ; => 3
+
+; Code as data manipulation
+(= (first $expr) (car $expr))
+!(first (quote (+ 1 2)))  ; => +
+
+; Quasiquote for templating (future)
+(= $x 10)
+`(+ ,x 5)  ; => (+ 10 5)  ; Unquote $x with comma
 ```
 
 ---
@@ -729,9 +1002,249 @@ class PatternMiner {
 | `<`, `>`, `==`, `!=` | Comparison |
 | `and`, `or`, `not` | Logic |
 
----
+### 14.5 List Operations
 
-## 15. Example Programs
+```javascript
+class Grounded {
+  registerBuiltins() {
+    // ... existing operations
+    
+    // List construction
+    this.register('cons', (head, tail) => {
+      if (!tail.isExpression) {
+        return Atom.expr(Atom.symbol('cons'), head, tail);
+      }
+      return Atom.expr(head, ...tail.children);
+    });
+    
+    this.register('list', (...items) => {
+      return items.length === 0 ? A.Empty : Atom.expr(...items);
+    });
+    
+    // List deconstruction
+    this.register('car', (list) => {
+      return list.head ?? A.Empty;
+    });
+    
+    this.register('cdr', (list) => {
+      const tail = list.tail;
+      return tail.length === 0 ? A.Empty : 
+             tail.length === 1 ? tail[0] :
+             Atom.expr(...tail);
+    });
+    
+    this.register('head', (list) => this.call('car', [list]));
+    this.register('tail', (list) => this.call('cdr', [list]));
+    
+    // List predicates
+    this.register('null?', (list) => {
+      return list.equals(A.Empty) ? A.True : A.False;
+    });
+    
+    this.register('list?', (atom) => {
+      return atom.isExpression ? A.True : A.False;
+    });
+    
+    // List utilities
+    this.register('length', (list) => {
+      return A.sym(String(list.arity || 0));
+    });
+    
+    this.register('nth', (list, n) => {
+      const index = Number(n.value);
+      return list.children?.[index] ?? A.Empty;
+    });
+    
+    this.register('append', (list1, list2) => {
+      if (list1.equals(A.Empty)) return list2;
+      if (list2.equals(A.Empty)) return list1;
+      return Atom.expr(...list1.children, ...list2.children);
+    });
+    
+    this.register('reverse', (list) => {
+      if (!list.isExpression) return list;
+      return Atom.expr(...list.children.reverse());
+    });
+  }
+}
+```
+
+**List Examples:**
+
+```metta
+; Construction
+!(cons 1 (cons 2 (cons 3 ())))  ; => (1 2 3)
+!(list 1 2 3)                    ; => (1 2 3)
+
+; Deconstruction
+!(car (1 2 3))   ; => 1
+!(cdr (1 2 3))   ; => (2 3)
+!(head (1 2 3))  ; => 1
+!(tail (1 2 3))  ; => (2 3)
+
+; Utilities
+!(length (1 2 3 4))      ; => 4
+!(nth (a b c d) 2)       ; => c (0-indexed)
+!(append (1 2) (3 4))    ; => (1 2 3 4)
+!(reverse (1 2 3))       ; => (3 2 1)
+
+; Higher-order (with lambda)
+(= (map $f $list)
+  (if (null? $list)
+    ()
+    (cons ($f (car $list)) (map $f (cdr $list)))))
+
+!(map (lambda ($x) (* $x 2)) (1 2 3))  ; => (2 4 6)
+```
+
+### 14.6 String Operations
+
+```javascript
+class Grounded {
+  registerBuiltins() {
+    // ... existing operations
+    
+    // String utilities
+    this.register('str-concat', (...strings) => {
+      return A.sym(strings.map(s => s.value).join(''));
+    });
+    
+    this.register('str-length', (str) => {
+      return A.sym(String(str.value.length));
+    });
+    
+    this.register('str-slice', (str, start, end) => {
+      const s = Number(start.value);
+      const e = end ? Number(end.value) : undefined;
+      return A.sym(str.value.slice(s, e));
+    });
+    
+    this.register('str-split', (str, delim) => {
+      const parts = str.value.split(delim.value);
+      return Atom.expr(...parts.map(p => A.sym(p)));
+    });
+    
+    this.register('str-join', (list, delim) => {
+      const parts = list.children.map(c => c.value);
+      return A.sym(parts.join(delim.value));
+    });
+    
+    this.register('str-upper', (str) => {
+      return A.sym(str.value.toUpperCase());
+    });
+    
+    this.register('str-lower', (str) => {
+      return A.sym(str.value.toLowerCase());
+    });
+    
+    this.register('str-contains?', (str, substr) => {
+      return str.value.includes(substr.value) ? A.True : A.False;
+    });
+    
+    this.register('str-starts-with?', (str, prefix) => {
+      return str.value.startsWith(prefix.value) ? A.True : A.False;
+    });
+    
+    this.register('str-ends-with?', (str, suffix) => {
+      return str.value.endsWith(suffix.value) ? A.True : A.False;
+    });
+    
+    this.register('str->number', (str) => {
+      const num = Number(str.value);
+      return isNaN(num) ? A.Empty : A.sym(String(num));
+    });
+    
+    this.register('number->str', (num) => {
+      return A.sym(num.value);
+    });
+  }
+}
+```
+
+**String Examples:**
+
+```metta
+!(str-concat "Hello" " " "World")  ; => "Hello World"
+!(str-length "MeTTa")             ; => 5
+!(str-slice "JavaScript" 0 4)     ; => "Java"
+!(str-split "a,b,c" ",")          ; => ("a" "b" "c")
+!(str-join ("one" "two" "three") "-")  ; => "one-two-three"
+!(str-upper "hello")              ; => "HELLO"
+!(str-contains? "MeTTa" "TT")     ; => True
+!(str->number "42")               ; => 42
+```
+
+### 14.7 Standard Library
+
+**Core stdlib to implement:**
+
+| Module | Functions |
+|--------|-----------|
+| **math.metta** | `sqrt`, `pow`, `sin`, `cos`, `tan`, `atan`, `log`, `exp`, `abs`, `min`, `max`, `floor`, `ceil`, `round` |
+| **list.metta** | `map`, `filter`, `reduce`, `fold`, `zip`, `range`, `take`, `drop`, `flatten` |
+| **string.metta** | All str-* functions above |
+| **logic.metta** | `and`, `or`, `not`, `xor`, `implies`, `iff` |
+| **control.metta** | `when`, `unless`, `cond`, `do`, `begin` |
+| **space.metta** | `query`, `find-all`, `count-atoms`, `filter-atoms` |
+
+**Example Standard Library Definitions:**
+
+```metta
+; stdlib/math.metta
+(= (sqrt $x) (&sqrt $x))  ; Delegate to grounded
+(= (abs $x) (if (< $x 0) (- 0 $x) $x))
+(= (min $a $b) (if (< $a $b) $a $b))
+(= (max $a $b) (if (> $a $b) $a $b))
+
+; stdlib/list.metta
+(= (map $f $list)
+  (if (null? $list)
+    ()
+    (cons ($f (car $list)) (map $f (cdr $list)))))
+
+(= (filter $pred $list)
+  (if (null? $list)
+    ()
+    (if ($pred (car $list))
+      (cons (car $list) (filter $pred (cdr $list)))
+      (filter $pred (cdr $list)))))
+
+(= (reduce $f $init $list)
+  (if (null? $list)
+    $init
+    (reduce $f ($f $init (car $list)) (cdr $list))))
+
+(= (range $n)
+  (if (<= $n 0)
+    ()
+    (append (range (- $n 1)) (list (- $n 1)))))
+
+; stdlib/control.metta
+(= (when $cond $body)
+  (if $cond $body Empty))
+
+(= (unless $cond $body)
+  (if $cond Empty $body))
+
+(= (cond $clauses)
+  ; Pattern match on clauses
+  (match &self $clauses
+    (($test $result) (if $test $result (cond (cdr $clauses))))))
+```
+
+**Loading stdlib:**
+
+```javascript
+class MeTTa {
+  async loadStdlib() {
+    await this.moduleLoader.import('https://metta-lang.dev/stdlib/math.metta');
+    await this.moduleLoader.import('https://metta-lang.dev/stdlib/list.metta');
+    await this.moduleLoader.import('https://metta-lang.dev/stdlib/string.metta');
+  }
+}
+```
+
+
 
 ### Hello World
 ```metta
@@ -767,6 +1280,179 @@ class PatternMiner {
 ```metta
 (= (learn $fact) (addAtom &self $fact))
 !(learn (knows Alice math))
+```
+
+### Complex Example: Knowledge Base with Inference
+
+```metta
+; knowledge_base.metta - Multi-file program
+
+; Facts
+(parent Alice Bob)
+(parent Bob Charlie)
+(parent Bob Diana)
+(parent Eve Frank)
+(gender Alice female)
+(gender Bob male)
+(gender Charlie male)
+(gender Diana female)
+
+; Rules
+(= (ancestor $a $d)
+  (parent $a $d))
+
+(= (ancestor $a $d)
+  (match &self (parent $a $p)
+    (ancestor $p $d)))
+
+(= (sibling $a $b)
+  (match &self (parent $p $a)
+    (match &self (parent $p $b)
+      (if (!= $a $b) (Sibling $a $b) Empty))))
+
+(= (mother $m $c)
+  (match &self (and (parent $m $c) (gender $m female))
+    $m))
+
+; Query examples
+!(ancestor Alice Charlie)  ; => Charlie (via Bob)
+!(sibling Charlie Diana)    ; => (Sibling Charlie Diana)
+!(mother Alice Bob)         ; => Alice
+```
+
+### Complex Example: Forward Chaining
+
+```metta
+; inference.metta - Automated reasoning
+
+; Facts
+(implies P Q)
+(implies Q R)
+(implies R S)
+P
+
+; Forward chaining rule
+(= (derive)
+  (match &self (implies $a $b)
+    (match &self $a
+      (if (not (match &self $b Empty))
+        Empty
+        (do (addAtom &self $b) (derive))))))
+
+; Run inference
+!(derive)
+; Now space contains: P, Q, R, S (all derived)
+
+; Check results
+!(match &self S S)  ; => S (proven!)
+```
+
+### Complex Example: Type-Safe DSL
+
+```metta
+; typed_dsl.metta - Type-safe embedded DSL
+
+; Type declarations
+(: Expr Type)
+(: Lit (-> Number Expr))
+(: Add (-> Expr Expr Expr))
+(: Mul (-> Expr Expr Expr))
+
+; Type-safe constructors
+(= (lit $n) (Lit $n))
+(= (add $a $b) (Add $a $b))
+(= (mul $a $b) (Mul $a $b))
+
+; Interpreter
+(= (eval-expr (Lit $n)) $n)
+(= (eval-expr (Add $a $b))
+  (+ (eval-expr $a) (eval-expr $b)))
+(= (eval-expr (Mul $a $b))
+  (* (eval-expr $a) (eval-expr $b)))
+
+; Optimizer
+(= (optimize (Add (Lit 0) $x)) (optimize $x))
+(= (optimize (Mul (Lit 1) $x)) (optimize $x))
+(= (optimize (Mul (Lit 0) $x)) (Lit 0))
+(= (optimize $x) $x)
+
+; Usage
+(= $expr (add (lit 0) (mul (lit 2) (lit 3))))
+!(eval-expr (optimize $expr))  ; => 6
+```
+
+### Complex Example: Meta-Interpreter
+
+```metta
+; meta.metta - Meta-circular interpreter
+
+; Evaluate MeTTa in MeTTa
+(= (meta-eval (quote $x)) $x)
+(= (meta-eval (!$x)) (meta-eval $x))
+(= (meta-eval (+ $a $b))
+  (+ (meta-eval $a) (meta-eval $b)))
+(= (meta-eval (if $c $t $e))
+  (if (meta-eval $c)
+    (meta-eval $t)
+    (meta-eval $e)))
+(= (meta-eval $x) $x)  ; Symbols eval to themselves
+
+; Self-hosting!
+!(meta-eval (quote (! (+ 1 2))))  ; => 3
+```
+
+### Complex Example: Constraint Solver
+
+```metta
+; constraints.metta - Simple constraint solver
+
+; Domain constraints
+(domain X (1 2 3))
+(domain Y (2 3 4))
+(domain Z (3 4 5))
+
+; Constraint: X < Y < Z
+(= (solve-constraints)
+  (match &self (domain X $vx)
+    (match &self (domain Y $vy)
+      (match &self (domain Z $vz)
+        (if (and (< $vx $vy) (< $vy $vz))
+          (Solution $vx $vy $vz)
+          Empty)))))
+
+; Find all solutions
+!(collapse-all (solve-constraints))
+; => (Solution 1 2 3) (Solution 1 2 4) (Solution 1 2 5)
+;    (Solution 1 3 4) (Solution 1 3 5) (Solution 1 4 5)
+;    (Solution 2 3 4) (Solution 2 3 5) (Solution 2 4 5)
+```
+
+### Complex Example: Parser Combinator
+
+```metta
+; parser.metta - Parser combinators in MeTTa
+
+; Parser results: (Success parsed remaining) or (Failure message)
+(= (char $c $input)
+  (if (str-starts-with? $input $c)
+    (Success $c (str-slice $input 1))
+    (Failure "Expected char")))
+
+(= (seq $p1 $p2 $input)
+  (match &self ($p1 $input)
+    ((Success $r1 $rest1)
+      (match &self ($p2 $rest1)
+        ((Success $r2 $rest2)
+          (Success (cons $r1 $r2) $rest2))))))
+
+(= (or $p1 $p2 $input)
+  (match &self ($p1 $input)
+    ((Success $r $rest) (Success $r $rest))
+    ((Failure $_) ($p2 $input))))
+
+; Parse "ab"
+(= $ab-parser (seq (char "a") (char "b")))
+!($ab-parser "abc")  ; => (Success ("a" "b") "c")
 ```
 
 ---
@@ -2003,3 +2689,196 @@ export class MeTTaInterpreter extends MeTTa {
 - [ ] Performance profiling
 - [ ] Optimization (if needed)
 - [ ] Advanced inference algorithms
+
+---
+
+## 38. Probabilistic Logic Networks (PLN) — Optional Extension
+
+> **Note**: PLN is optional since SeNARS already provides NAL (Non-Axiomatic Logic) for reasoning. PLN extends capabilities for probabilistic/uncertain inference scenarios not covered by NAL.
+
+### 38.1 Truth Value Representation
+
+```metta
+; Truth values as symbolic atoms
+(tv frequency confidence)
+
+; Example: "Alice is a person" with 90% frequency, 80% confidence
+(: Alice Person (tv 0.9 0.8))
+
+; Rules can propagate truth values
+(= (derive-tv (tv $f1 $c1) (tv $f2 $c2))
+   (tv (* $f1 $f2) (* $c1 $c2 0.9)))
+```
+
+### 38.2 PLN Inference Rules
+
+```javascript
+class PLNExtension {
+  constructor(metta) {
+    this.metta = metta;
+    this.registerRules();
+  }
+  
+  registerRules() {
+    // Deduction: A→B, B→C ⊢ A→C
+    this.metta.space.addRule(
+      parse('(deduction (Implication $A $B (tv $f1 $c1)) (Implication $B $C (tv $f2 $c2)))')[0],
+      (bindings) => {
+        const f = num(bindings['$f1']) * num(bindings['$f2']);
+        const c = num(bindings['$c1']) * num(bindings['$c2']) * 0.9;
+        return parse(`(Implication ${bindings['$A']} ${bindings['$C']} (tv ${f} ${c}))`)[0];
+      }
+    );
+    
+    // Induction: A→B, A→C ⊢ B→C
+    this.metta.space.addRule(
+      parse('(induction (Implication $A $B (tv $f1 $c1)) (Implication $A $C (tv $f2 $c2)))')[0],
+      (bindings) => {
+        const f = num(bindings['$f1']) * num(bindings['$f2']);
+        const c = num(bindings['$c1']) * num(bindings['$c2']) * 0.5;
+        return parse(`(Implication ${bindings['$B']} ${bindings['$C']} (tv ${f} ${c}))`)[0];
+      }
+    );
+  }
+  
+  // Query with confidence threshold
+  queryWithConfidence(pattern, minConfidence = 0.5) {
+    const results = this.metta.query(pattern);
+    return results.filter(r => {
+      const tv = this.extractTruthValue(r);
+      return tv && tv.confidence >= minConfidence;
+    });
+  }
+  
+  extractTruthValue(term) {
+    // Extract (tv freq conf) from term
+    if (term.operator === 'tv' && term.components?.length === 2) {
+      return {
+        frequency: parseFloat(term.components[0].name),
+        confidence: parseFloat(term.components[1].name)
+      };
+    }
+    return null;
+  }
+}
+```
+
+### 38.3 PLN vs NAL
+
+| Feature | NAL (SeNARS) | PLN (MeTTa Extension) |
+|---------|--------------|----------------------|
+| **Primary use** | Real-time reasoning | Knowledge integration |
+| **Truth values** | Built-in | Symbolic atoms |
+| **Temporal** | Yes (events) | Limited |
+| **Self-control** | Priority/budget | Not included |
+| **When to use** | Agent reasoning | Knowledge graphs, ontologies |
+
+### 38.4 Integration with SeNARS NAL
+
+```javascript
+class PLNNALBridge {
+  constructor(metta, narsReasoner) {
+    this.metta = metta;
+    this.nars = narsReasoner;
+  }
+  
+  // Convert NAL truth value to PLN tv atom
+  nalToPlnTruth(narsTruth) {
+    return this.metta.termFactory.compound('tv', [
+      this.metta.termFactory.atomic(narsTruth.frequency.toFixed(3)),
+      this.metta.termFactory.atomic(narsTruth.confidence.toFixed(3))
+    ]);
+  }
+  
+  // Use PLN for knowledge integration, NAL for reasoning
+  hybridQuery(pattern) {
+    // First: PLN knowledge lookup
+    const plnResults = this.metta.query(pattern);
+    
+    // Then: NAL temporal/procedural reasoning
+    const narsDerivations = this.nars.derive(this.mettaToNars(pattern));
+    
+    // Merge with confidence-weighted selection
+    return this.mergeResults(plnResults, narsDerivations);
+  }
+}
+```
+
+---
+
+## 39. Architecture Alignment Notes
+
+> **Important**: MeTTa is implemented **within** SeNARS, not as a standalone system. The specification should align with existing SeNARS patterns.
+
+### 39.1 Term Representation
+
+The specification uses a unified `Atom` class for clarity, but implementation reuses SeNARS `Term` via `TermFactory`:
+
+```javascript
+// Specification (conceptual)
+const atom = Atom.symbol('foo');
+const expr = Atom.expr(Atom.symbol('f'), Atom.variable('$x'));
+
+// Implementation (actual)
+const term = termFactory.atomic('foo');
+const expr = termFactory.compound('^', [
+  termFactory.atomic('f'),
+  termFactory.variable('$x')
+]);
+```
+
+### 39.2 Component Pattern
+
+All MeTTa components extend `BaseMeTTaComponent`:
+
+```javascript
+// Current pattern (retain)
+class MeTTaSpace extends BaseMeTTaComponent {
+  constructor(memory, termFactory) {
+    super({}, 'MeTTaSpace', null, termFactory);
+    this.memory = memory;  // SeNARS integration
+    this.atoms = new Set();
+  }
+  
+  addAtom(term) {
+    return this.trackOperation('addAtom', () => {
+      this.atoms.add(term);
+      // Sync to SeNARS memory
+      if (this.memory?.addTask) {
+        this.memory.addTask({ term, punctuation: '.', truth: { frequency: 0.9, confidence: 0.9 } });
+      }
+      this.emitMeTTaEvent('atom-added', { totalAtoms: this.atoms.size });
+    });
+  }
+}
+```
+
+### 39.3 Nondeterminism Style
+
+Current implementation uses object-based superpositions (not generators):
+
+```javascript
+// Current pattern (retain for consistency)
+superpose(...values) {
+  return {
+    type: 'superposition',
+    values: values.flat(),
+    toString() { return `(superpose ${this.values.join(' ')})`; }
+  };
+}
+
+// Generator style (future optimization, not required for prototype)
+*superposeGen(values) {
+  for (const v of values) yield v;
+}
+```
+
+### 39.4 Performance Deferral
+
+All performance optimization is deferred until functional prototype is complete:
+- MORK-level optimization: **Deferred**
+- Distributed atomspace: **Deferred**  
+- Triemap indexing: **Deferred**
+- Worker threads: **Deferred**
+
+Focus: **Correctness → Completeness → Performance**
