@@ -78,11 +78,11 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
     _loadMeTTaStdlib() {
         try {
-            const stats = loadStdlib(this, this.config.stdlibOptions || {});
+            const stats = loadStdlib(this, this.config.stdlibOptions ?? {});
             this.emitMeTTaEvent('stdlib-loaded', stats);
             return stats;
         } catch (error) {
-            console.warn('Failed to load MeTTa stdlib:', error.message);
+            console.warn(`Failed to load MeTTa stdlib: ${error.message}`);
             this.emitMeTTaEvent('stdlib-load-error', { error: error.message });
             return null;
         }
