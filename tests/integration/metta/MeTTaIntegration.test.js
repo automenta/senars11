@@ -1,16 +1,12 @@
-import { MeTTaInterpreter } from '../../../core/src/metta/MeTTaInterpreter.js';
+import { MeTTaTestUtils } from '../../helpers/MeTTaTestUtils.js';
 import { SeNARSBridge } from '../../../core/src/metta/SeNARSBridge.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('MeTTa Integration Tests', () => {
     let interpreter, termFactory;
 
     beforeEach(() => {
-        termFactory = new TermFactory();
-        interpreter = new MeTTaInterpreter(null, {
-            termFactory,
-            typeChecking: false
-        });
+        termFactory = MeTTaTestUtils.createTermFactory();
+        interpreter = MeTTaTestUtils.createInterpreter({ termFactory });
     });
 
     describe('End-to-End Execution', () => {
@@ -26,31 +22,27 @@ describe('MeTTa Integration Tests', () => {
         });
 
         test('pattern matching with multiple rules', () => {
-            interpreter.load(`
+            const program = `
                 (= (human Socrates) True)
                 (= (human Plato) True)
                 (= (mortal $x) (human $x))
-            `);
+            `;
 
-            const query = interpreter.query(
-                termFactory.equality(
-                    termFactory.predicate(
-                        termFactory.atomic('human'),
-                        termFactory.product(termFactory.atomic('$x'))
-                    ),
-                    termFactory.createTrue()
-                ),
-                termFactory.atomic('$x')
-            );
+            // Query for humans to match original test logic
+            const query = interpreter.loadAndQuery(program, '(= (human $x) True)', '$x');
 
             expect(query.length).toBeGreaterThan(0);
-            const names = query.map(t => t.name);
+            const names = query.map(t => {
+                if (!t) return 'undefined';
+                return t.name;
+            });
             expect(names).toContain('Socrates');
             expect(names).toContain('Plato');
         });
 
         test('macro expansion in real programs', () => {
-            // Define when macro
+            // ... setup ...
+            // (keeping existing setup code)
             interpreter.macroExpander.defineMacro(
                 'when',
                 termFactory.predicate(
@@ -79,9 +71,13 @@ describe('MeTTa Integration Tests', () => {
             );
 
             const expanded = interpreter.macroExpander.expand(macroTerm);
+
             // Expansion should change the term
             expect(expanded).toBeDefined();
-            expect(expanded.toString()).toContain('if');
+            // Expanded term should be an 'if' predicate (functor)
+            expect(expanded.operator).toBe('^');
+            // Check the head is 'if'
+            expect(expanded.components[0].name).toBe('if');
         });
     });
 

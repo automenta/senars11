@@ -236,6 +236,29 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     }
 
     /**
+     * Run a program and return the first result (convenience method)
+     * @param {string} program - MeTTa program code
+     * @returns {Term|null} - First result term or null
+     */
+    evalOne(program) {
+        const results = this.run(program);
+        return results[0] ?? null;
+    }
+
+    /**
+     * Load a program and then execute a query (convenience method)
+     * @param {string} program - MeTTa program code to load
+     * @param {string} queryStr - MeTTa query expression
+     * @returns {Array<Term>} - Query results
+     */
+    loadAndQuery(program, queryStr, templateStr) {
+        this.load(program);
+        const queryTerm = this.parser.parseExpression(queryStr);
+        const templateTerm = templateStr ? this.parser.parseExpression(templateStr) : queryTerm;
+        return this.query(queryTerm, templateTerm);
+    }
+
+    /**
      * Execute match operation
      * @param {Term} pattern - Pattern
      * @param {Term} template - Template

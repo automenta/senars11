@@ -11,19 +11,13 @@ describe('TypeSystem', () => {
     });
 
     describe('Type Inference', () => {
-        test('infers Symbol type', () => {
-            const term = termFactory.atomic('foo');
-            expect(typeSystem.inferType(term)).toBe('Symbol');
-        });
-
-        test('infers Variable type', () => {
-            const term = termFactory.atomic('$x');
-            expect(typeSystem.inferType(term)).toBe('Variable');
-        });
-
-        test('infers Number type', () => {
-            const term = termFactory.atomic('42');
-            expect(typeSystem.inferType(term)).toBe('Number');
+        test.each([
+            ['Symbol', 'foo'],
+            ['Variable', '$x'],
+            ['Number', '42'],
+        ])('infers %s type for %s', (expectedType, input) => {
+            const term = termFactory.atomic(input);
+            expect(typeSystem.inferType(term)).toBe(expectedType);
         });
 
         test('infers Expression type', () => {

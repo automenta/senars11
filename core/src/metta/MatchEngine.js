@@ -44,7 +44,7 @@ export class MatchEngine extends BaseMeTTaComponent {
      */
     substitute(template, bindings) {
         return this.trackOperation('substitute', () => {
-            return Unification.subst(template, bindings);
+            return Unification.subst(template, bindings, this.termFactory);
         });
     }
 

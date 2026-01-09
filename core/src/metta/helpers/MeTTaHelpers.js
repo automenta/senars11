@@ -55,7 +55,7 @@ export const Unification = {
     },
 
     // Variable substitution
-    subst: (term, bindings) => {
+    subst: (term, bindings, termFactory = null) => {
         if (!term) return term;
 
         if (Unification.isVar(term)) {
@@ -63,9 +63,26 @@ export const Unification = {
         }
 
         if (term.components) {
+            const newComponents = term.components.map(c => Unification.subst(c, bindings, termFactory));
+
+            // Reconstruct proper Term if possible
+            if (termFactory) {
+                // If original had operator, use it (likely compound)
+                if (term.operator) {
+                    return termFactory.create({ operator: term.operator, components: newComponents });
+                }
+                // If it was list/compound without operator (e.g. from parsing)
+                return termFactory.create({ components: newComponents });
+            }
+
+            // Fallback: try to match constructor (for Term instances)
+            if (term.constructor && term.constructor.name === 'Term') {
+                return new term.constructor(term.type, term.name, newComponents, term.operator);
+            }
+
             return {
                 ...term,
-                components: term.components.map(c => Unification.subst(c, bindings))
+                components: newComponents
             };
         }
 
