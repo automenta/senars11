@@ -39,11 +39,14 @@ export class BaseMeTTaComponent extends BaseComponent {
      */
     _updateMetrics(metricKey, duration) {
         const current = this._mettaMetrics.get(metricKey) ?? { count: 0, totalTime: 0, errors: 0 };
+        const newCount = current.count + 1;
+        const newTotal = current.totalTime + duration;
+
         this._mettaMetrics.set(metricKey, {
-            count: current.count + 1,
-            totalTime: current.totalTime + duration,
-            avgTime: (current.totalTime + duration) / (current.count + 1),
-            errors: current.errors,
+            ...current,
+            count: newCount,
+            totalTime: newTotal,
+            avgTime: newTotal / newCount,
             lastDuration: duration
         });
     }
@@ -114,11 +117,9 @@ export class BaseMeTTaComponent extends BaseComponent {
      * @returns {Object} Metrics object
      */
     getMeTTaMetrics() {
-        const metrics = {};
-        for (const [key, value] of this._mettaMetrics) {
-            metrics[key] = { ...value };
-        }
-        return metrics;
+        return Object.fromEntries(
+            Array.from(this._mettaMetrics, ([key, value]) => [key, { ...value }])
+        );
     }
 
     /**

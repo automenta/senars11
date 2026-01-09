@@ -48,6 +48,16 @@ export class NonDeterminism extends BaseMeTTaComponent {
     }
 
     /**
+     * Get values array from superposition or single value
+     * @param {*} value - Superposition or regular value
+     * @returns {Array} Values array
+     * @private
+     */
+    _getValues(value) {
+        return this.isSuperposition(value) ? value.values : [value];
+    }
+
+    /**
      * Collapse superposition to single value (non-deterministic choice)
      * @param {Object|*} superposition - Superposition or regular value
      * @returns {*} Single value
@@ -76,10 +86,7 @@ export class NonDeterminism extends BaseMeTTaComponent {
      * @returns {*} First value
      */
     collapseFirst(superposition) {
-        if (!this.isSuperposition(superposition)) {
-            return superposition;
-        }
-        return superposition.values[0];
+        return this._getValues(superposition)[0];
     }
 
     /**
@@ -88,10 +95,7 @@ export class NonDeterminism extends BaseMeTTaComponent {
      * @returns {Array} All values
      */
     collapseAll(superposition) {
-        if (!this.isSuperposition(superposition)) {
-            return [superposition];
-        }
-        return superposition.values;
+        return this._getValues(superposition);
     }
 
     /**
@@ -102,13 +106,9 @@ export class NonDeterminism extends BaseMeTTaComponent {
      */
     mapSuperpose(superposition, fn) {
         return this.trackOperation('mapSuperpose', () => {
-            if (!this.isSuperposition(superposition)) {
-                return fn(superposition);
-            }
-
-            const mappedValues = superposition.values.flatMap(v => {
+            const mappedValues = this._getValues(superposition).flatMap(v => {
                 const result = fn(v);
-                return this.isSuperposition(result) ? result.values : result;
+                return this._getValues(result);
             });
 
             return this.superpose(...mappedValues);
@@ -144,20 +144,13 @@ export class NonDeterminism extends BaseMeTTaComponent {
      */
     bind(superposition, bindFn) {
         return this.trackOperation('bind', () => {
-            if (!this.isSuperposition(superposition)) {
-                const result = bindFn(superposition);
-                return result;
-            }
-
-            const results = superposition.values.flatMap(val => {
+            const results = this._getValues(superposition).flatMap(val => {
                 const result = bindFn(val);
-                // Flatten nested superpositions
-                return this.isSuperposition(result) ? result.values : result;
+                return this._getValues(result);
             });
 
             if (results.length === 0) return null;
-            if (results.length === 1) return results[0];
-            return this.superpose(...results);
+            return results.length === 1 ? results[0] : this.superpose(...results);
         });
     }
 
@@ -170,13 +163,10 @@ export class NonDeterminism extends BaseMeTTaComponent {
      */
     combine(s1, s2, combineFn) {
         return this.trackOperation('combine', () => {
-            const vals1 = this.isSuperposition(s1) ? s1.values : [s1];
-            const vals2 = this.isSuperposition(s2) ? s2.values : [s2];
+            const vals1 = this._getValues(s1);
+            const vals2 = this._getValues(s2);
 
-            const results = vals1.flatMap(v1 =>
-                vals2.map(v2 => combineFn(v1, v2))
-            );
-
+            const results = vals1.flatMap(v1 => vals2.map(v2 => combineFn(v1, v2)));
             return results.length === 1 ? results[0] : this.superpose(...results);
         });
     }

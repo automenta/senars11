@@ -25,22 +25,25 @@ export class GroundedAtoms extends BaseMeTTaComponent {
     _registerBuiltins() {
         const toNum = (term) => Number(term.name ?? term);
         const boolTerm = (value) => value ? this.termFactory.createTrue() : this.termFactory.createFalse();
+        const makeNumOp = (op, initial) => (...args) =>
+            this.termFactory.atomic(String(args.map(toNum).reduce(op, initial)));
+        const makeCmpOp = (op) => (a, b) => boolTerm(op(toNum(a), toNum(b)));
 
-        const operations = [
-            ['&self', () => this.getCurrentSpace()],
-            ['+', (...args) => this.termFactory.atomic(String(args.map(toNum).reduce((a, b) => a + b, 0)))],
-            ['-', (...args) => this.termFactory.atomic(String(args.map(toNum).reduce((a, b) => a - b)))],
-            ['*', (...args) => this.termFactory.atomic(String(args.map(toNum).reduce((a, b) => a * b, 1)))],
-            ['/', (a, b) => this.termFactory.atomic(String(toNum(a) / toNum(b)))],
-            ['<', (a, b) => boolTerm(toNum(a) < toNum(b))],
-            ['>', (a, b) => boolTerm(toNum(a) > toNum(b))],
-            ['==', (a, b) => boolTerm((a.name ?? a) === (b.name ?? b))],
-            ['&and', (...args) => boolTerm(args.every(a => (a.name ?? a) === 'True'))],
-            ['&or', (...args) => boolTerm(args.some(a => (a.name ?? a) === 'True'))],
-            ['&not', (a) => boolTerm((a.name ?? a) !== 'True')]
-        ];
+        const operations = {
+            '&self': () => this.getCurrentSpace(),
+            '+': makeNumOp((a, b) => a + b, 0),
+            '-': makeNumOp((a, b) => a - b),
+            '*': makeNumOp((a, b) => a * b, 1),
+            '/': (a, b) => this.termFactory.atomic(String(toNum(a) / toNum(b))),
+            '<': makeCmpOp((a, b) => a < b),
+            '>': makeCmpOp((a, b) => a > b),
+            '==': (a, b) => boolTerm((a.name ?? a) === (b.name ?? b)),
+            '&and': (...args) => boolTerm(args.every(a => (a.name ?? a) === 'True')),
+            '&or': (...args) => boolTerm(args.some(a => (a.name ?? a) === 'True')),
+            '&not': (a) => boolTerm((a.name ?? a) !== 'True')
+        };
 
-        operations.forEach(([name, fn]) => this.register(name, fn));
+        Object.entries(operations).forEach(([name, fn]) => this.register(name, fn));
     }
 
     /**
@@ -81,9 +84,8 @@ export class GroundedAtoms extends BaseMeTTaComponent {
                 throw new Error(`Grounded atom not found: ${normalizedName}`);
             }
 
-            const result = executor(...args);
             this.emitMeTTaEvent('grounded-executed', { name: normalizedName, argCount: args.length });
-            return result;
+            return executor(...args);
         });
     }
 
