@@ -18,15 +18,15 @@ export class ReductionEngine extends BaseMeTTaComponent {
     }
 
     /**
-      * Reduce expression one step
-      * @param {Term} expr - Expression to reduce
-      * @param {MeTTaSpace} space - Space for grounded atom evaluation
-      * @returns {Object} - {reduced, applied}
-      */
+     * Reduce expression one step
+     * @param {Term} expr - Expression to reduce
+     * @param {MeTTaSpace} space - Space for grounded atom evaluation
+     * @returns {Object} - {reduced, applied}
+     */
     reduceStep(expr, space) {
         return this.trackOperation('reduceStep', () => {
-            // Try each reduction rule from space
-            const rules = space?.getRules ? space.getRules() : [];
+            // Priority 1: User defined rules from space
+            const rules = space?.getRules?.() ?? [];
             for (const { pattern, result } of rules) {
                 const bindings = this.matchEngine?.unify(pattern, expr);
                 if (!bindings) continue;
@@ -43,18 +43,12 @@ export class ReductionEngine extends BaseMeTTaComponent {
                 return { reduced, applied: true };
             }
 
-            // Try evaluating grounded atoms
+            // Priority 2: Grounded atoms evaluation
             if (this._isGroundedCall(expr)) {
-                try {
-                    return { reduced: this._evalGrounded(expr, space), applied: true };
-                } catch (error) {
-                    this.logError('Grounded atom evaluation failed', {
-                        expr: expr.toString(),
-                        error: error.message
-                    });
-                }
+                return this._evalGroundedSafely(expr, space);
             }
 
+            // No reduction applied
             return { reduced: expr, applied: false };
         });
     }
@@ -78,10 +72,7 @@ export class ReductionEngine extends BaseMeTTaComponent {
             }
 
             if (steps >= this.maxSteps) {
-                this.logWarn('Max reduction steps reached', {
-                    expr: expr.toString(),
-                    steps
-                });
+                this.logWarn('Max reduction steps reached', { expr: expr.toString(), steps });
                 throw new ReductionError('Max reduction steps exceeded', expr);
             }
 
@@ -97,26 +88,43 @@ export class ReductionEngine extends BaseMeTTaComponent {
      * @private
      */
     _isGroundedCall(expr) {
-        return expr.operator === '^' &&
-            expr.components[0]?.name?.startsWith('&');
+        // Safe access to components using optional chaining
+        return expr?.operator === '^' &&
+            expr.components?.[0]?.name?.startsWith('&');
     }
 
     /**
-     * Evaluate grounded atom
+     * Evaluate grounded atom with error handling
      * @param {Term} expr - Grounded atom expression
      * @param {MeTTaSpace} space - Space with grounded atoms
-     * @returns {Term} - Result
+     * @returns {Object} - {reduced, applied}
      * @private
      */
-    _evalGrounded(expr, space) {
-        if (!space?.groundedAtoms) {
-            throw new ReductionError('No grounded atoms available', expr);
+    _evalGroundedSafely(expr, space) {
+        try {
+            if (!space?.groundedAtoms) {
+                throw new ReductionError('No grounded atoms available', expr);
+            }
+
+            const groundedName = expr.components[0].name;
+            // Extract arguments from the product term (second component of application)
+            const args = expr.components[1]?.components ?? [];
+
+            const reduced = space.groundedAtoms.execute(groundedName, ...args);
+            return { reduced, applied: true };
+        } catch (error) {
+            this.logError('Grounded atom evaluation failed', {
+                expr: expr.toString(),
+                error: error.message
+            });
+            // Propagate error or return original? 
+            // For now, if grounded execution fails, we stop reduction of this step effectively
+            // But usually we should throw or return error term.
+            // Keeping consistent with previous behavior of logging but potentially swallowing if we just return original.
+            // Ideally we rethrow critical errors or return an Error atom.
+            // Let's rethrow for now as MeTTa errors should be visible.
+            throw error;
         }
-
-        const groundedName = expr.components[0].name;
-        const args = expr.components[1]?.components ?? [];
-
-        return space.groundedAtoms.execute(groundedName, ...args);
     }
 
     /**

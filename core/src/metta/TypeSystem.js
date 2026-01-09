@@ -40,7 +40,7 @@ export class TypeSystem extends BaseMeTTaComponent {
             'Symbol': (t) => t.isAtomic && !t.name.startsWith('$') && !t.name.startsWith('&'),
             'Variable': (t) => t.name?.startsWith('$') || t.name?.startsWith('?'),
             'Grounded': (t) => t.name?.startsWith('&'),
-            'Expression': (t) => t.operator && t.components,
+            'Expression': (t) => !!(t.operator && t.components),
             'Number': (t) => t.isAtomic && !isNaN(Number(t.name)),
             'String': (t) => t.isAtomic && t.name?.startsWith('"'),
             'List': (t) => t.operator === '*',
@@ -71,11 +71,15 @@ export class TypeSystem extends BaseMeTTaComponent {
      */
     hasType(term, typeName) {
         const cacheKey = `${term.name}-${typeName}`;
-        const cached = this.typeCache.get(cacheKey);
 
-        if (cached !== undefined) return cached;
+        // Cache hit
+        if (this.typeCache.has(cacheKey)) {
+            return this.typeCache.get(cacheKey);
+        }
 
-        const result = this.typeRules.get(typeName)?.(term) ?? false;
+        const predicate = this.typeRules.get(typeName);
+        const result = predicate ? predicate(term) : false;
+
         this.typeCache.set(cacheKey, result);
         return result;
     }
@@ -87,8 +91,10 @@ export class TypeSystem extends BaseMeTTaComponent {
      */
     inferType(term) {
         return this.trackOperation('inferType', () => {
-            const cached = this.typeCache.get(term.name);
-            if (cached) return cached;
+            // Check if we have a direct cache for this term's primary type
+            if (this.typeCache.has(term.name)) {
+                return this.typeCache.get(term.name);
+            }
 
             const inferredType = TypeSystem.TYPE_ORDER.find(typeName => this.hasType(term, typeName)) ?? 'Atom';
             this.typeCache.set(term.name, inferredType);

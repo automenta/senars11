@@ -26,7 +26,7 @@ export class NonDeterminism extends BaseMeTTaComponent {
             const result = {
                 type: 'superposition',
                 values: vals,
-                toString: () => `(superpose ${vals.map(v => v.toString ? v.toString() : v).join(' ')})`
+                toString: () => `(superpose ${vals.map(v => v?.toString?.() ?? v).join(' ')})`
             };
             this.emitMeTTaEvent('superposition-created', { count: vals.length });
             return result;
@@ -63,11 +63,14 @@ export class NonDeterminism extends BaseMeTTaComponent {
                 return superposition;
             }
 
-            const idx = Math.floor(this.rng() * superposition.values.length);
-            const selected = superposition.values[idx];
+            const values = superposition.values;
+            if (values.length === 0) return null; // Or Empty?
+
+            const idx = Math.floor(this.rng() * values.length);
+            const selected = values[idx];
 
             this.emitMeTTaEvent('superposition-collapsed', {
-                totalValues: superposition.values.length,
+                totalValues: values.length,
                 selectedIndex: idx
             });
 
@@ -117,11 +120,8 @@ export class NonDeterminism extends BaseMeTTaComponent {
      */
     filterSuperpose(superposition, predicate) {
         return this.trackOperation('filterSuperpose', () => {
-            if (!this.isSuperposition(superposition)) {
-                return predicate(superposition) ? superposition : null;
-            }
-
-            const filtered = superposition.values.filter(predicate);
+            const values = this._getValues(superposition);
+            const filtered = values.filter(predicate);
 
             return filtered.length === 0 ? null :
                 filtered.length === 1 ? filtered[0] :

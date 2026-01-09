@@ -23,15 +23,16 @@ export class MatchEngine extends BaseMeTTaComponent {
      * @returns {Object|null} - Bindings or null if unification fails
      */
     unify(pattern, term, bindings = {}) {
+        // Optimization: Skip tracking for simple atomic checks if not strictly required by metrics
+        // But for consistency we keep trackOperation
         return this.trackOperation('unify', () => {
             const result = Unification.unify(pattern, term, bindings);
-
             if (result) {
+                // Only emit detailed event on success to reduce noise, or use debug level if available
                 this.emitMeTTaEvent('unification-success', {
                     bindingCount: Object.keys(result).length
                 });
             }
-
             return result;
         });
     }
@@ -57,13 +58,14 @@ export class MatchEngine extends BaseMeTTaComponent {
      */
     executeMatch(space, pattern, template) {
         return this.trackOperation('executeMatch', () => {
-            const atoms = space.getAtoms();
+            const atoms = space.getAtoms?.() ?? [];
             if (atoms.length === 0) return [];
 
-            const results = atoms.reduce((acc, atom) => {
+            // Use flatMap for cleaner reduction
+            const results = atoms.flatMap(atom => {
                 const bindings = this.unify(pattern, atom);
-                return bindings ? [...acc, this.substitute(template, bindings)] : acc;
-            }, []);
+                return bindings ? [this.substitute(template, bindings)] : [];
+            });
 
             this.emitMeTTaEvent('match-query-executed', {
                 atomsChecked: atoms.length,

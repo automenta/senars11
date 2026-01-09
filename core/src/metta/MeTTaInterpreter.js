@@ -5,7 +5,7 @@
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TermBuilders } from './helpers/MeTTaHelpers.js';
-import { COMPLETE_STDLIB_MAPPINGS } from './helpers/MeTTaLib.js';
+import { COMPLETE_STDLIB_MAPPINGS, BUILTIN_OPERATIONS } from './helpers/MeTTaLib.js';
 import { MeTTaParser } from '../parser/MeTTaParser.js';
 import { MeTTaSpace } from './MeTTaSpace.js';
 import { MatchEngine } from './MatchEngine.js';
@@ -17,8 +17,6 @@ import { GroundedAtoms } from './GroundedAtoms.js';
 import { StateManager } from './StateManager.js';
 import { TermFactory } from '../term/TermFactory.js';
 
-
-
 /**
  * MeTTaInterpreter - Complete MeTTa execution environment
  * Provides load, run, evaluate, and query operations
@@ -27,8 +25,6 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(memory, config = {}, eventBus = null) {
         const termFactory = config.termFactory ?? new TermFactory();
         super(config, 'MeTTaInterpreter', eventBus, termFactory);
-
-        const sharedConfig = { config, eventBus, termFactory: this.termFactory };
 
         // Initialize subsystems
         this.parser = new MeTTaParser(this.termFactory, {
@@ -51,7 +47,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         });
         this.groundedAtoms.setSpace('default', this.space);
 
-        this._registerBuiltinRules();
+        this._registerStdLib();
     }
 
     async _initialize() {
@@ -60,14 +56,15 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.emitMeTTaEvent('interpreter-initialized', {});
     }
 
-    _registerBuiltinRules() {
-        const arithmeticOps = {
-            '+': (a, b) => a + b,
-            '-': (a, b) => a - b,
-            '*': (a, b) => a * b
-        };
-
-        for (const [op, fn] of Object.entries(arithmeticOps)) {
+    /**
+     * Register standard library rules from MeTTaLib
+     * @private
+     */
+    _registerStdLib() {
+        // Register arithmetic operations as reduction rules
+        const { arithmetic } = BUILTIN_OPERATIONS;
+        for (const [op, fn] of Object.entries(arithmetic)) {
+            // Rule: (= (op $a $b) (fn $a $b))
             this.space.addRule(
                 TermBuilders.functor(this.termFactory, this.termFactory.atomic(op),
                     this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
@@ -89,12 +86,13 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         return this.trackOperation('load', () => {
             const tasks = this.parser.parseMeTTa(mettaCode);
 
-            // Expand macros and optionally type check
+            // Expand macros and transform terms
             const expanded = tasks.map(task => ({
                 ...task,
                 term: this.macroExpander.expand(task.term)
             }));
 
+            // Optional type checking
             if (this.config.typeChecking) {
                 expanded.forEach(({ term }) => this._typeCheck(term));
             }
@@ -131,18 +129,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     evaluate(term) {
         return this.trackOperation('evaluate', () => {
-            // Macro expansion
             const expanded = this.macroExpander.expand(term);
-
-            // Type checking
-            if (this.config.typeChecking) {
-                this._typeCheck(expanded);
-            }
-
-            // Reduction
-            const reduced = this.reductionEngine.reduce(expanded, this.space);
-
-            return reduced;
+            if (this.config.typeChecking) this._typeCheck(expanded);
+            return this.reductionEngine.reduce(expanded, this.space);
         });
     }
 
@@ -154,14 +143,11 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     query(pattern, template) {
         return this.trackOperation('query', () => {
-            // Parse strings to terms
-            const parseIfString = (val) =>
-                typeof val === 'string' ? this.parser.parseExpression(val) : val;
-
+            const parse = (val) => typeof val === 'string' ? this.parser.parseExpression(val) : val;
             return this.matchEngine.executeMatch(
                 this.space,
-                parseIfString(pattern),
-                parseIfString(template)
+                parse(pattern),
+                parse(template)
             );
         });
     }
@@ -172,14 +158,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * @returns {Term|null} - First result term or null
      */
     evalOne(program) {
-        const results = this.run(program);
-        return results[0] ?? null;
+        return this.run(program)[0] ?? null;
     }
 
     /**
      * Load a program and then execute a query (convenience method)
      * @param {string} program - MeTTa program code to load
      * @param {string} queryStr - MeTTa query expression
+     * @param {string} [templateStr] - Result template
      * @returns {Array<Term>} - Query results
      */
     loadAndQuery(program, queryStr, templateStr) {
@@ -190,7 +176,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     }
 
     /**
-     * Execute match operation
+     * Execute match operation (alias for query)
      * @param {Term} pattern - Pattern
      * @param {Term} template - Template
      * @returns {Array<Term>}

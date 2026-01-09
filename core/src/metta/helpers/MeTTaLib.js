@@ -8,6 +8,15 @@ import { TermBuilders } from './MeTTaHelpers.js';
 // Helper to create simple functor mapping
 const makeFunctor = (name) => (tf, args) => TermBuilders.functor(tf, tf.atomic(name), ...args);
 
+// Arithmetic implementations
+const arithmeticOps = {
+    '+': (a, b) => a + b,
+    '-': (a, b) => a - b,
+    '*': (a, b) => a * b,
+    '/': (a, b) => a / b,
+    '%': (a, b) => a % b
+};
+
 export const COMPLETE_STDLIB_MAPPINGS = {
     // === Atomspace Operations ===
     'match': makeFunctor('match'),
@@ -46,7 +55,7 @@ export const COMPLETE_STDLIB_MAPPINGS = {
     '>=': makeFunctor('>='),
 
     // === Arithmetic ===
-    '+': makeFunctor('+'),
+    '+': makeFunctor('+'), // Mapping for parser
     '-': makeFunctor('-'),
     '*': makeFunctor('*'),
     '/': makeFunctor('/'),
@@ -67,4 +76,9 @@ export const COMPLETE_STDLIB_MAPPINGS = {
     'quote': (tf, args) => args[0],
     'eval': makeFunctor('eval'),
     'pragma!': makeFunctor('pragma!')
+};
+
+// Export implementations for use in Interpreter/GroundedAtoms
+export const BUILTIN_OPERATIONS = {
+    arithmetic: arithmeticOps
 };

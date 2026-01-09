@@ -4,6 +4,7 @@
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
+import { BUILTIN_OPERATIONS } from './helpers/MeTTaLib.js';
 
 /**
  * GroundedAtoms - Registry for grounded (executable) atoms
@@ -23,29 +24,38 @@ export class GroundedAtoms extends BaseMeTTaComponent {
      * @private
      */
     _registerBuiltins() {
-        const toNum = (term) => Number(term.name ?? term);
-        const boolTerm = (value) => value ? this.termFactory.createTrue() : this.termFactory.createFalse();
-        const makeNumOp = (op, initial) => (...args) =>
-            this.termFactory.atomic(String(args.map(toNum).reduce(op, initial)));
-        const makeCmpOp = (op) => (a, b) => boolTerm(op(toNum(a), toNum(b)));
+        // Core operations
+        this.register('&self', () => this.getCurrentSpace());
 
-        const operations = {
-            '&self': () => this.getCurrentSpace(),
-            '+': makeNumOp((a, b) => a + b, 0),
-            '-': makeNumOp((a, b) => a - b),
-            '*': makeNumOp((a, b) => a * b, 1),
-            '/': (a, b) => this.termFactory.atomic(String(toNum(a) / toNum(b))),
-            '<': makeCmpOp((a, b) => a < b),
-            '>': makeCmpOp((a, b) => a > b),
-            '==': (a, b) => boolTerm((a.name ?? a) === (b.name ?? b)),
-            '&and': (...args) => boolTerm(args.every(a => (a.name ?? a) === 'True')),
-            '&or': (...args) => boolTerm(args.some(a => (a.name ?? a) === 'True')),
-            '&not': (a) => boolTerm((a.name ?? a) !== 'True')
+        // Arithmetic operations from MeTTaLib
+        const { arithmetic } = BUILTIN_OPERATIONS;
+        for (const [op, fn] of Object.entries(arithmetic)) {
+            // Adapt raw JS function to MeTTa term result
+            this.register(op, (...args) => {
+                const numArgs = args.map(arg => Number(arg?.name ?? arg));
+                const result = fn(...numArgs);
+                return this.termFactory.atomic(String(result));
+            });
+        }
+
+        // Logic operations (TODO: Move to MeTTaLib if complex)
+        const boolTerm = (val) => val ? this.termFactory.createTrue() : this.termFactory.createFalse();
+
+        // Comparison
+        const makeCmp = (fn) => (a, b) => {
+            const valA = Number(a?.name ?? a);
+            const valB = Number(b?.name ?? b);
+            return boolTerm(fn(valA, valB));
         };
 
-        for (const [name, fn] of Object.entries(operations)) {
-            this.register(name, fn);
-        }
+        this.register('<', makeCmp((a, b) => a < b));
+        this.register('>', makeCmp((a, b) => a > b));
+        this.register('==', (a, b) => boolTerm((a?.name ?? a) === (b?.name ?? b)));
+
+        // Logical
+        this.register('&and', (...args) => boolTerm(args.every(a => (a?.name ?? a) === 'True')));
+        this.register('&or', (...args) => boolTerm(args.some(a => (a?.name ?? a) === 'True')));
+        this.register('&not', (a) => boolTerm((a?.name ?? a) !== 'True'));
     }
 
     /**

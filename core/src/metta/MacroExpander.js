@@ -4,7 +4,6 @@
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
-import { MeTTaAST } from './helpers/MeTTaHelpers.js';
 
 /**
  * MacroExpander - Macro expansion via pattern matching
@@ -47,14 +46,17 @@ export class MacroExpander extends BaseMeTTaComponent {
      * @returns {Term} - Expanded term
      */
     expand(term, depth = 0) {
+        // Option to skip tracking for performance in deep recursion?
         return this.trackOperation('expand', () => {
             if (depth >= this.maxDepth) {
                 this.logWarn('Max macro expansion depth reached', { term: term.toString() });
                 return term;
             }
 
+            // 1. Try expand top-level
             const expanded = this._expandOnce(term);
 
+            // 2. If changed, recurse on result (tail recursion logic)
             if (expanded !== term) {
                 this.emitMeTTaEvent('macro-expanded', {
                     original: term.toString(),
@@ -63,8 +65,12 @@ export class MacroExpander extends BaseMeTTaComponent {
                 return this.expand(expanded, depth + 1);
             }
 
-            if (!term.components?.length) return term;
+            // 3. If atomic or no components, done
+            if (!term.operator || !term.components?.length) {
+                return term;
+            }
 
+            // 4. Recurse into components
             const expandedComponents = term.components.map(c => this.expand(c, depth));
             const changed = expandedComponents.some((c, i) => c !== term.components[i]);
 
@@ -79,10 +85,12 @@ export class MacroExpander extends BaseMeTTaComponent {
      * @private
      */
     _expandOnce(term) {
-        if (!term.operator || !term.components) return term;
+        // Must be an expression with at least one component (the macro name)
+        if (!term.operator || !term.components?.length) return term;
 
         const macroName = term.components[0]?.name;
-        if (!macroName || !this.hasMacro(macroName)) return term;
+        // Optimization: Quick check before map lookup
+        if (!macroName || !this.macros.has(macroName)) return term;
 
         const { pattern, expansion } = this.macros.get(macroName);
         const bindings = this.matchEngine?.unify(pattern, term);
