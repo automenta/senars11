@@ -620,3 +620,124 @@ The result will be a powerful, flexible foundation that can grow into whatever w
 
 *Version 7.2 — Final with Execution Guide*
 *Last Updated: 2026-01-09*
+
+# Complete MeTTa Demo Catalog
+
+## Source
+Extracted from [PROTOTYPE_DEMOS.md](file:///home/me/senars11/PROTOTYPE_DEMOS.md) - comprehensive demonstration suite for SeNARS + MeTTa capabilities.
+
+---
+
+## Demo Categories (11 Total)
+
+### Category A: Explainability (3 demos)
+1. **A1. Inference Audit Trail** - Complete proof traces for every conclusion
+2. **A2. Contradiction Detection** - Explicit conflict acknowledgment with revision
+3. **A3. Epistemic Source Attribution** - Distinguish input vs inferred vs derived knowledge
+
+### Category B: Temporal Reasoning (3 demos)
+4. **B1. Event Ordering and Causation** - Derive causal relationships from temporal sequences
+5. **B2. Frame Problem / Persistence** - What remains true when things change
+6. **B3. Delayed Effect Reasoning** - Effects that manifest after delay
+
+### Category C: Multi-Step Reasoning Under Uncertainty (2 demos)
+7. **C1. Confidence Degradation Tracking** - Quantify uncertainty accumulation in long chains
+8. **C2. Competing Hypothesis Evaluation** - Rank multiple explanations by plausibility
+
+### Category D: Memory Coherence (2 demos)
+9. **D1. Identity Persistence Through Updates** - Maintain consistent entity identity across updates
+10. **D2. Cross-Session Consistency** - Same answer after 100 distractor queries
+
+### Category E: Adversarial Robustness (2 demos)
+11. **E1. Prompt Injection Resistance** - Reject adversarial belief override attempts
+12. **E2. Trojan Belief Detection** - Detect subtle false information injected over time
+
+### Category F: Analogical Transfer (2 demos)
+13. **F1. A:B :: C:?** - Solve analogical reasoning tasks
+14. **F2. Cross-Domain Transfer** - Apply knowledge from one domain to another
+
+### Category G: Meta-Cognition (2 demos)
+15. **G1. Reasoning About Own Reasoning** - Self-assessment of epistemic state
+16. **G2. Strategy Selection** - Choose reasoning strategy based on problem characteristics
+
+### Category H: Resource-Bounded Reasoning (AIKR) (2 demos)
+17. **H1. Time-Limited Inference** - Best answer within cycle budget
+18. **H2. Memory Pressure** - Graceful degradation under resource constraints
+
+### Category I: Learning/Adaptation (2 demos)
+19. **I1. Performance Improvement Over Time** - System gets better with experience
+20. **I2. Domain Knowledge Accumulation** - Building expertise incrementally
+
+### Category J: Compositional Generalization (2 demos)
+21. **J1. Novel Combinations** - Handle never-before-seen concept combinations
+22. **J2. Recursive Structure** - Self-referential concepts
+
+### Category K: Multi-Agent (2 demos)
+23. **K1. Belief Exchange with Trust** - Integrate information from agents with unknown reliability
+24. **K2. Collaborative Problem Solving** - Distributed reasoning across multiple agents
+
+---
+
+## NARL Benchmark Levels (10 Total)
+
+| Level | Name | Focus | Auto-Pass | SeNARS | LM Alone |
+|-------|------|-------|-----------|--------|----------|
+| 1 | **Trace** | Proof traces | ✅ | 100% | 0% |
+| 2 | **Revise** | Belief revision | | ~95% | ~40% |
+| 3 | **Persist** | Memory coherence | | ~90% | ~50% |
+| 4 | **Cause** | Temporal causation | | ~80% | ~35% |
+| 5 | **Resist** | Adversarial robustness | | ~85% | ~30% |
+| 6 | **Uncertain** | Confidence tracking | | ~90% | ~20% |
+| 7 | **Analog** | Analogical reasoning | | ~75% | ~45% |
+| 8 | **Meta** | Meta-cognition | | ~80% | ~10% |
+| 9 | **Bound** | Resource-bounded | | ~85% | ~5% |
+| 10 | **Compose** | Compositional | | ~80% | ~30% |
+
+---
+
+## Key Demonstration Scenarios (3 Core)
+
+### 1. "LM Can't Do This Alone"
+- Multi-step syllogism with truth degradation
+- Shows SeNARS + LM > LM alone
+
+### 2. "Consistent Across Paraphrases"
+- Same belief queried 3 different ways
+- Identical truth values every time
+
+### 3. "Explains Itself Perfectly"
+- Complete derivation trace on demand
+- 100% verifiable reasoning
+
+---
+
+## Total Demo Count
+
+- **Category Demos**: 24 demos (A-K)
+- **NARL Benchmarks**: 10 levels
+- **Core Scenarios**: 3 demonstrations
+- **Existing Examples**: 6+ (from [examples/demos.js](file:///home/me/senars11/examples/demos.js))
+
+**Grand Total**: **40+ demonstrations**
+
+---
+
+## Integration with TODO.metta.md
+
+**Recommendation**: TODO.metta.md should include:
+
+1. **Phase 4 Core Demos** (3):
+   - Maze solver (search)
+   - Adaptive reasoning (meta-reasoning)
+   - Truth chain (reasoning)
+
+2. **Examples Directory** (6):
+   - Basics: arithmetic, lists, functions
+   - Logic: socrates, inheritance, revision
+
+3. **Post-MVP Expansion** (Reference to full catalog):
+   - Link to PROTOTYPE_DEMOS.md for 40+ demos
+   - NARL benchmark integration
+   - Category-based demo suite
+
+**This ensures TODO.metta.md remains focused on MVP while acknowledging the comprehensive demo ecosystem.**
