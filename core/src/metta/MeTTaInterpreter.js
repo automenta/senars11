@@ -16,23 +16,35 @@ import { TermFactory } from '../term/TermFactory.js';
 
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
+    /**
+     * @param {Object} memory - SeNARS memory
+     * @param {Object} config - Configuration
+     * @param {TermFactory} config.termFactory - Optional injected TermFactory
+     * @param {MeTTaSpace} config.space - Optional injected MeTTaSpace
+     * @param {MatchEngine} config.matchEngine - Optional injected MatchEngine
+     * @param {EventBus} eventBus - Event bus
+     */
     constructor(memory, config = {}, eventBus = null) {
         const termFactory = config.termFactory ?? new TermFactory();
         super(config, 'MeTTaInterpreter', eventBus, termFactory);
 
-        this.parser = new MeTTaParser(this.termFactory, {
+        // Core dependencies - inject or create default
+        this.parser = config.parser ?? new MeTTaParser(this.termFactory, {
             mappings: { ...COMPLETE_STDLIB_MAPPINGS, ...config.customMappings }
         });
 
-        this.space = new MeTTaSpace(memory, this.termFactory);
-        this.matchEngine = new MatchEngine(config, eventBus, this.termFactory);
-        this.macroExpander = new MacroExpander(config, eventBus, this.termFactory, this.matchEngine);
-        this.typeSystem = new TypeSystem(config, eventBus, this.termFactory);
-        this.reductionEngine = new ReductionEngine(config, eventBus, this.termFactory, this.matchEngine);
-        this.nonDeterminism = new NonDeterminism(config, eventBus, this.termFactory);
-        this.groundedAtoms = new GroundedAtoms(config.functorRegistry, config, eventBus, this.termFactory);
-        this.stateManager = new StateManager(config, eventBus, this.termFactory);
+        this.space = config.space ?? new MeTTaSpace(memory, this.termFactory);
+        this.matchEngine = config.matchEngine ?? new MatchEngine(config, eventBus, this.termFactory);
+        this.macroExpander = config.macroExpander ?? new MacroExpander(config, eventBus, this.termFactory, this.matchEngine);
+        this.typeSystem = config.typeSystem ?? new TypeSystem(config, eventBus, this.termFactory);
+        this.reductionEngine = config.reductionEngine ?? new ReductionEngine(config, eventBus, this.termFactory, this.matchEngine);
+        this.nonDeterminism = config.nonDeterminism ?? new NonDeterminism(config, eventBus, this.termFactory);
+        this.groundedAtoms = config.groundedAtoms ?? new GroundedAtoms(config.functorRegistry, config, eventBus, this.termFactory);
+        this.stateManager = config.stateManager ?? new StateManager(config, eventBus, this.termFactory);
 
+        // Component wiring
+        // Note: In a pure DI world, wiring happens in the composition root (Factory),
+        // but to maintain backward compatibility and ease of use, we wire here for defaults.
         Object.assign(this.space, { groundedAtoms: this.groundedAtoms, stateManager: this.stateManager });
         this.groundedAtoms.setSpace('default', this.space);
 

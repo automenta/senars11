@@ -39,14 +39,11 @@ export class BaseMeTTaComponent extends BaseComponent {
      */
     _updateMetrics(metricKey, duration) {
         const current = this._mettaMetrics.get(metricKey) ?? { count: 0, totalTime: 0, errors: 0 };
-        const newCount = current.count + 1;
-        const newTotal = current.totalTime + duration;
-
         this._mettaMetrics.set(metricKey, {
             ...current,
-            count: newCount,
-            totalTime: newTotal,
-            avgTime: newTotal / newCount,
+            count: current.count + 1,
+            totalTime: current.totalTime + duration,
+            avgTime: (current.totalTime + duration) / (current.count + 1),
             lastDuration: duration
         });
     }

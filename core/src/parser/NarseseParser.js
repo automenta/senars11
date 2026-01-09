@@ -1,24 +1,16 @@
-import {parse} from './peggy-parser.js';
-import {TermFactory} from '../term/TermFactory.js';
+import { BaseParser } from './BaseParser.js';
+import { parse } from './peggy-parser.js';
 
-export class NarseseParser {
-    constructor(termFactory) {
-        this.termFactory = termFactory || new TermFactory();
-        this._parseCache = new Map();
-        this._maxCacheSize = 1000;
-    }
-
+export class NarseseParser extends BaseParser {
     parse(input) {
-        if (typeof input !== 'string' || input.trim() === '') {
-            throw new Error('Input must be a non-empty string');
-        }
+        const validInput = this._validateInput(input);
 
-        if (this._parseCache.has(input)) {
-            return this._parseCache.get(input);
+        if (this._cacheHas(validInput)) {
+            return this._cacheGet(validInput);
         }
 
         try {
-            const result = parse(input, {termFactory: this.termFactory});
+            const result = parse(validInput, { termFactory: this.termFactory });
 
             if (result.term?.operator === '--' && result.term.components.length === 1 && result.truthValue) {
                 result.term = result.term.components[0];
@@ -28,24 +20,10 @@ export class NarseseParser {
                 };
             }
 
-            if (this._parseCache.size < this._maxCacheSize) {
-                this._parseCache.set(input, result);
-            }
-
+            this._cacheSet(validInput, result);
             return result;
         } catch (error) {
-            throw new Error(`Narsese parsing failed: ${error.message}`);
+            throw this._wrapError(error, validInput);
         }
-    }
-
-    clearCache() {
-        this._parseCache.clear();
-    }
-
-    getCacheStats() {
-        return {
-            size: this._parseCache.size,
-            maxSize: this._maxCacheSize
-        };
     }
 }

@@ -45,16 +45,12 @@ export const Unification = {
         return result;
     },
 
-    matchAll: (patterns, terms) => {
-        const results = [];
-        for (const pattern of patterns) {
-            for (const term of terms) {
-                const bindings = Unification.unify(pattern, term);
-                if (bindings) results.push({ pattern, term, bindings });
-            }
-        }
-        return results;
-    }
+    matchAll: (patterns, terms) => patterns.flatMap(pattern =>
+        terms.flatMap(term => {
+            const bindings = Unification.unify(pattern, term);
+            return bindings ? [{ pattern, term, bindings }] : [];
+        })
+    )
 };
 
 export const TermBuilders = {

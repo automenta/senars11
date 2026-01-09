@@ -1,10 +1,10 @@
-import {Term, TermType} from './Term.js';
-import {CognitiveDiversity} from './CognitiveDiversity.js';
-import {BaseComponent} from '../util/BaseComponent.js';
-import {IntrospectionEvents} from '../util/IntrospectionEvents.js';
-import {TermCache} from './TermCache.js';
+import { Term, TermType } from './Term.js';
+import { CognitiveDiversity } from './CognitiveDiversity.js';
+import { BaseComponent } from '../util/BaseComponent.js';
+import { IntrospectionEvents } from '../util/IntrospectionEvents.js';
+import { TermCache } from './TermCache.js';
 
-export {Term};
+export { Term };
 
 const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&', '<~>', '{}', '[]']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
@@ -34,7 +34,7 @@ const CANONICAL_NAME_PATTERNS = {
 export class TermFactory extends BaseComponent {
     constructor(config = {}, eventBus = null) {
         super(config, 'TermFactory', eventBus);
-        this._cache = new TermCache({maxSize: this.config.maxCacheSize || 5000});
+        this._cache = new TermCache({ maxSize: this.config.maxCacheSize ?? 5000 });
         this._complexityCache = new Map();
         this._cognitiveDiversity = new CognitiveDiversity(this);
     }
@@ -52,7 +52,7 @@ export class TermFactory extends BaseComponent {
     }
 
     _createCompound(operator, components) {
-        const {operator: op, components: comps} = this._normalizeTermData(operator, components);
+        const { operator: op, components: comps } = this._normalizeTermData(operator, components);
 
         if (this._reflexiveMarker) {
             const shouldBeTrue = this._reflexiveMarker.shouldBeTrue;
@@ -82,11 +82,11 @@ export class TermFactory extends BaseComponent {
         const cachedTerm = this._cache.get(name);
 
         if (cachedTerm) {
-            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, {termName: name});
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, { termName: name });
             return cachedTerm;
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, {termName: name});
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, { termName: name });
         const term = this._createAndCache(operator, normalizedComponents, name);
         this._calculateComplexityMetrics(term, normalizedComponents);
         this._cognitiveDiversity.registerTerm(term);
@@ -207,7 +207,7 @@ export class TermFactory extends BaseComponent {
             this._cognitiveDiversity.unregisterTerm(evictedKey);
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, {term: term.serialize()});
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { term: term.serialize() });
         return term;
     }
 
@@ -221,7 +221,7 @@ export class TermFactory extends BaseComponent {
         if (operator && normalizedComponents.length === 2 && RELATIONAL_OPERATORS.includes(operator)) {
             const [left, right] = normalizedComponents;
             if (left.name === right.name) {
-                this._reflexiveMarker = {operator, shouldBeTrue: true};
+                this._reflexiveMarker = { operator, shouldBeTrue: true };
             }
         }
 
@@ -239,7 +239,7 @@ export class TermFactory extends BaseComponent {
             }
         }
 
-        return {operator, components: normalizedComponents};
+        return { operator, components: normalizedComponents };
     }
 
     _validateOperator(op) {
@@ -373,14 +373,14 @@ export class TermFactory extends BaseComponent {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({name, complexity}));
+            .map(([name, complexity]) => ({ name, complexity }));
     }
 
     getSimplestTerms(limit = 10) {
         return Array.from(this._complexityCache.entries())
             .sort((a, b) => a[1] - b[1])
             .slice(0, limit)
-            .map(([name, complexity]) => ({name, complexity}));
+            .map(([name, complexity]) => ({ name, complexity }));
     }
 
     getAverageComplexity() {

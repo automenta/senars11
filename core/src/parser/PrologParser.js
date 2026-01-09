@@ -2,20 +2,27 @@
  * PrologParser.js - Parser that translates Prolog syntax into SeNARS beliefs/goals
  */
 
-import {TermFactory} from '../term/TermFactory.js';
-import {Task} from '../task/Task.js';
-import {Truth} from '../Truth.js';
+import { BaseParser } from './BaseParser.js';
+import { Task } from '../task/Task.js';
+import { Truth } from '../Truth.js';
+import { TermFactory } from '../term/TermFactory.js'; // Ensure TermFactory is imported if needed by helper functions not in class - wait, helper was using this.termFactory
 
-export class PrologParser {
-    constructor(termFactory = null) {
-        this.termFactory = termFactory || new TermFactory();
+export class PrologParser extends BaseParser {
+    /**
+     * Parse Prolog syntax and convert to SeNARS tasks (beliefs/goals)
+     * @param {string} prologInput
+     */
+    parse(prologInput) {
+        return this.parseProlog(prologInput);
     }
 
     /**
-     * Parse Prolog syntax and convert to SeNARS tasks (beliefs/goals)
+     * Parse Prolog syntax (alias for compatibility)
      */
     parseProlog(prologInput) {
-        return prologInput
+        const input = this._validateInput(prologInput);
+
+        return input
             .split('\n')
             .map(line => line.trim())
             .filter(line => line && !line.startsWith('%'))
@@ -24,12 +31,12 @@ export class PrologParser {
 
     _parseLine(line) {
         const parsers = [
-            {predicate: this._isRule, parser: this._parseRule.bind(this)},
-            {predicate: this._isFact, parser: (l) => [this._parseFact(l)]},
-            {predicate: this._isQuery, parser: (l) => [this._parseQuery(l)]}
+            { predicate: this._isRule, parser: this._parseRule.bind(this) },
+            { predicate: this._isFact, parser: (l) => [this._parseFact(l)] },
+            { predicate: this._isQuery, parser: (l) => [this._parseQuery(l)] }
         ];
 
-        const matchingParser = parsers.find(({predicate}) => predicate(line));
+        const matchingParser = parsers.find(({ predicate }) => predicate(line));
         return matchingParser ? matchingParser.parser(line) : [];
     }
 
@@ -48,7 +55,7 @@ export class PrologParser {
             term: relationTerm,
             punctuation: '.',
             truth: new Truth(1.0, 0.9),
-            budget: {priority: 0.8, durability: 0.7, quality: 0.8}
+            budget: { priority: 0.8, durability: 0.7, quality: 0.8 }
         });
     }
 
@@ -120,30 +127,13 @@ export class PrologParser {
 
         // Infix Math Operators (+, -, *, /)
         // Simple top-level split (naive precedence)
-        // We look for operator outside parens/brackets
         const operators = ['+', '-', '*', '/'];
         for (const op of operators) {
             // Check if op exists
             if (str.includes(op)) {
-                // Find split point respecting structure
                 const parts = this._splitByDelimiter(str, op);
                 if (parts.length > 1) {
-                    // Create operator term: op(Part1, Part2) (assuming binary)
-                    // Handling precedence correctly requires more logic,
-                    // but for "X + 1" simple split works if we respect order.
-                    // Assuming left-associative or just binary for now.
-                    // Actually, if we have A+B+C, split returns [A, B, C].
-                    // We need to fold.
-                    // For simplicity, we just take the first split found that works.
-                    // But standard parse is recursive.
-                    // Let's implement simple binary split.
-
-                    // We split by the *last* occurrence of lowest precedence op for correct tree?
-                    // Or simply: assume standard binary ops.
-
-                    // Let's try simpler regex matching for A op B
-                    // But we must respect parens.
-                    // Reuse _splitByComma logic but with custom delimiter.
+                    // Placeholder for more complex infix parsing
                 }
             }
         }
@@ -151,23 +141,7 @@ export class PrologParser {
         // Simple Math Regex for "A + B" (only one op supported for MVP)
         const mathMatch = str.match(/^(.+?)(\+|-|\*|\/)(.+)$/);
         if (mathMatch) {
-            // Check nesting? If A+B is inside parens `(A+B)`, this regex might fail or match wrong.
-            // We'll rely on _createTerm handling atoms/vars if no op found.
-            // This is heuristic. Proper expression parsing is out of scope for simple enhancement.
-            // We'll trust user uses simple expressions "X + 1".
             const [_, left, op, right] = mathMatch;
-            // Ensure parens balance in left?
-            // This is risky.
-            // Better: "X + 1" -> op is +. left "X", right " 1".
-            // We will try to parse left/right.
-            // For "X is Y + 1", "Y + 1" is parsed here.
-
-            // Check if it's really a compound term `f(a)` which might match `f(a` + `)`? No.
-            // Only if op is outside parens.
-            // Let's skip complex math parsing for now and rely on atomic structure except for simple cases.
-            // For "Y + 1", it matches.
-
-            // Check balanced parens in left part to ensure op is top-level
             if (this._isBalanced(left)) {
                 return this._createPredicateTerm(op.trim(), [
                     this._parseTerm(left),
@@ -191,8 +165,6 @@ export class PrologParser {
         }
 
         // Number/Atom
-        // If it looks like a number, treat as atomic (or specific number type if NARS supported it)
-        // NARS uses atomic terms.
         return this.termFactory.atomic(str.toLowerCase());
     }
 
@@ -209,7 +181,7 @@ export class PrologParser {
     _parseList(str) {
         // [a, b, c] or [H|T]
         const content = str.slice(1, -1).trim(); // remove [ ]
-        if (!content) return this.termFactory.atomic('[]'); // Empty list
+        if (!content) return this.termFactory.atomic('[]');
 
         // Check for pipe |
         const pipeSplit = this._splitByDelimiter(content, '|');
@@ -239,7 +211,6 @@ export class PrologParser {
         });
 
         const argsTerm = this.termFactory.tuple(argTerms);
-
         const predicateTerm = this.termFactory.atomic(predicate);
 
         return this.termFactory.predicate(predicateTerm, argsTerm);

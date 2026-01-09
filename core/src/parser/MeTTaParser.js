@@ -1,41 +1,19 @@
 /**
  * MeTTaParser.js - Complete MeTTa Parser with Configurable Translation
- * 
+ *
  * Parses MeTTa S-expression syntax and translates to SeNARS terms.
  * Uses configurable mapper for flexible MeTTa→SeNARS translation.
- * 
- * Key mappings:
- * - (f x y)      → (^, f, (*, x, y))  [functor + product]
- * - (= A B)      → (=, A, B)          [equality]
- * - (: term T)   → (-->, term, T)     [type as inheritance]
- * - $var         → $var               [preserved variable]
  */
 
-import { TermFactory } from '../term/TermFactory.js';
+import { BaseParser } from './BaseParser.js';
+import { MeTTaTokenizer, TokenType } from './MeTTaTokenizer.js';
 import { Task } from '../task/Task.js';
+import { TermFactory } from '../term/TermFactory.js';
 import { Truth } from '../Truth.js';
-
-// Token types
-const TokenType = {
-    LPAREN: 'LPAREN',
-    RPAREN: 'RPAREN',
-    LBRACKET: 'LBRACKET',
-    RBRACKET: 'RBRACKET',
-    LBRACE: 'LBRACE',
-    RBRACE: 'RBRACE',
-    SYMBOL: 'SYMBOL',
-    VARIABLE: 'VARIABLE',
-    STRING: 'STRING',
-    NUMBER: 'NUMBER',
-    BANG: 'BANG',
-    GROUNDED: 'GROUNDED',
-    EOF: 'EOF'
-};
 
 /**
  * Default operator mappings for MeTTa→SeNARS translation.
  * Each mapping is a function: (termFactory, args) => Term
- * Can be overridden or extended via constructor options.
  */
 const DEFAULT_MAPPINGS = {
     // Equality - core interop mechanism
@@ -75,144 +53,9 @@ const DEFAULT_MAPPINGS = {
 };
 
 /**
- * Tokenizer for MeTTa syntax
- */
-class MeTTaTokenizer {
-    constructor(input) {
-        this.input = input;
-        this.pos = 0;
-        this.tokens = [];
-    }
-
-    tokenize() {
-        while (this.pos < this.input.length) {
-            this._skipWhitespaceAndComments();
-            if (this.pos >= this.input.length) break;
-
-            const char = this.input[this.pos];
-
-            if (char === '(') {
-                this.tokens.push({ type: TokenType.LPAREN, value: '(' });
-                this.pos++;
-            } else if (char === ')') {
-                this.tokens.push({ type: TokenType.RPAREN, value: ')' });
-                this.pos++;
-            } else if (char === '[') {
-                this.tokens.push({ type: TokenType.LBRACKET, value: '[' });
-                this.pos++;
-            } else if (char === ']') {
-                this.tokens.push({ type: TokenType.RBRACKET, value: ']' });
-                this.pos++;
-            } else if (char === '{') {
-                this.tokens.push({ type: TokenType.LBRACE, value: '{' });
-                this.pos++;
-            } else if (char === '}') {
-                this.tokens.push({ type: TokenType.RBRACE, value: '}' });
-                this.pos++;
-            } else if (char === '!') {
-                this.tokens.push({ type: TokenType.BANG, value: '!' });
-                this.pos++;
-            } else if (char === '"') {
-                this.tokens.push(this._readString());
-            } else if (char === '$') {
-                this.tokens.push(this._readVariable());
-            } else if (char === '&') {
-                this.tokens.push(this._readGrounded());
-            } else if (this._isNumberStart(char)) {
-                this.tokens.push(this._readNumber());
-            } else {
-                this.tokens.push(this._readSymbol());
-            }
-        }
-
-        this.tokens.push({ type: TokenType.EOF, value: null });
-        return this.tokens;
-    }
-
-    _skipWhitespaceAndComments() {
-        while (this.pos < this.input.length) {
-            const char = this.input[this.pos];
-            if (/\s/.test(char)) {
-                this.pos++;
-            } else if (char === ';') {
-                // Skip line comment
-                while (this.pos < this.input.length && this.input[this.pos] !== '\n') {
-                    this.pos++;
-                }
-            } else {
-                break;
-            }
-        }
-    }
-
-    _readString() {
-        this.pos++; // Skip opening quote
-        let value = '';
-        while (this.pos < this.input.length && this.input[this.pos] !== '"') {
-            if (this.input[this.pos] === '\\' && this.pos + 1 < this.input.length) {
-                this.pos++;
-                const escaped = this.input[this.pos];
-                value += escaped === 'n' ? '\n' : escaped === 't' ? '\t' : escaped;
-            } else {
-                value += this.input[this.pos];
-            }
-            this.pos++;
-        }
-        this.pos++; // Skip closing quote
-        return { type: TokenType.STRING, value };
-    }
-
-    _readVariable() {
-        let value = '$';
-        this.pos++; // Skip $
-        while (this.pos < this.input.length && this._isSymbolChar(this.input[this.pos])) {
-            value += this.input[this.pos++];
-        }
-        return { type: TokenType.VARIABLE, value };
-    }
-
-    _readGrounded() {
-        let value = '&';
-        this.pos++; // Skip &
-        while (this.pos < this.input.length && this._isSymbolChar(this.input[this.pos])) {
-            value += this.input[this.pos++];
-        }
-        return { type: TokenType.GROUNDED, value };
-    }
-
-    _isNumberStart(char) {
-        return /[0-9]/.test(char) ||
-            (char === '-' && this.pos + 1 < this.input.length && /[0-9]/.test(this.input[this.pos + 1]));
-    }
-
-    _readNumber() {
-        let value = '';
-        if (this.input[this.pos] === '-') {
-            value += this.input[this.pos++];
-        }
-        while (this.pos < this.input.length && /[0-9.]/.test(this.input[this.pos])) {
-            value += this.input[this.pos++];
-        }
-        return { type: TokenType.NUMBER, value };
-    }
-
-    _readSymbol() {
-        let value = '';
-        while (this.pos < this.input.length && this._isSymbolChar(this.input[this.pos])) {
-            value += this.input[this.pos++];
-        }
-        return { type: TokenType.SYMBOL, value };
-    }
-
-    _isSymbolChar(char) {
-        return !/[\s()\[\]{}";]/.test(char);
-    }
-}
-
-/**
  * MeTTa Parser - Recursive descent parser for S-expressions
  */
-export class MeTTaParser {
+export class MeTTaParser extends BaseParser {
     /**
      * @param {TermFactory} termFactory - Term factory for creating SeNARS terms
      * @param {Object} options - Configuration options
@@ -220,7 +63,7 @@ export class MeTTaParser {
      * @param {Object} options.defaultTruth - Default truth value {frequency, confidence}
      */
     constructor(termFactory = null, options = {}) {
-        this.termFactory = termFactory ?? new TermFactory();
+        super(termFactory, options);
         this.mappings = { ...DEFAULT_MAPPINGS, ...options.mappings };
         this.defaultTruth = options.defaultTruth ?? { frequency: 1.0, confidence: 0.9 };
         this.tokens = [];
@@ -232,9 +75,19 @@ export class MeTTaParser {
      * @param {string} mettaInput - MeTTa source code
      * @returns {Array<Task>} - Array of SeNARS tasks
      */
+    parse(mettaInput) {
+        return this.parseMeTTa(mettaInput);
+    }
+
+    /**
+     * Parse MeTTa input (alias)
+     * @param {string} mettaInput
+     * @returns {Array<Task>}
+     */
     parseMeTTa(mettaInput) {
         if (!mettaInput?.trim()) return [];
 
+        this._validateInput(mettaInput);
         const tokenizer = new MeTTaTokenizer(mettaInput);
         this.tokens = tokenizer.tokenize();
         this.pos = 0;
@@ -260,6 +113,7 @@ export class MeTTaParser {
      * @returns {Term} - SeNARS term
      */
     parseExpression(mettaExpr) {
+        this._validateInput(mettaExpr);
         const tokenizer = new MeTTaTokenizer(mettaExpr);
         this.tokens = tokenizer.tokenize();
         this.pos = 0;
