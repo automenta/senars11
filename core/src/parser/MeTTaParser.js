@@ -220,9 +220,9 @@ export class MeTTaParser {
      * @param {Object} options.defaultTruth - Default truth value {frequency, confidence}
      */
     constructor(termFactory = null, options = {}) {
-        this.termFactory = termFactory || new TermFactory();
+        this.termFactory = termFactory ?? new TermFactory();
         this.mappings = { ...DEFAULT_MAPPINGS, ...options.mappings };
-        this.defaultTruth = options.defaultTruth || { frequency: 1.0, confidence: 0.9 };
+        this.defaultTruth = options.defaultTruth ?? { frequency: 1.0, confidence: 0.9 };
         this.tokens = [];
         this.pos = 0;
     }
@@ -233,9 +233,7 @@ export class MeTTaParser {
      * @returns {Array<Task>} - Array of SeNARS tasks
      */
     parseMeTTa(mettaInput) {
-        if (!mettaInput || typeof mettaInput !== 'string') {
-            return [];
-        }
+        if (!mettaInput?.trim()) return [];
 
         const tokenizer = new MeTTaTokenizer(mettaInput);
         this.tokens = tokenizer.tokenize();
@@ -488,7 +486,7 @@ export class MeTTaParser {
     }
 
     _check(type) {
-        return !this._isAtEnd() && this._peek().type === type;
+        return !this._isAtEnd() && this._peek()?.type === type;
     }
 
     _expect(type) {
