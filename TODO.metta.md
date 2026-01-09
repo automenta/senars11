@@ -1,475 +1,608 @@
-# MeTTa
+# MeTTa × SeNARS: Final Design
 
-> *Atoms rewriting atoms, all the way down.*
-
----
-
-## Axioms
-
-```
-1. EVERYTHING IS AN ATOM     Data, code, rules, types, metadata—one form
-2. COMPUTATION IS REWRITING  Pattern match, substitute, repeat
-3. THE SPACE IS THE PROGRAM  Rules live where data lives
-4. GROUND ESCAPES TO WORLD   Native functions for I/O and performance
-```
+> *Atoms rewriting atoms. Pragmatic minimalism.*
 
 ---
 
-## Kernel
+## Design Principles
 
-**Four operations. Nothing else.**
+```
+1. HOMOICONICITY    Code, data, rules share one representation
+2. SELF-DESCRIPTION The system can query and modify its own rules
+3. GROUNDED ESCAPE  Native functions for I/O, performance, integration
+4. EVOLUTIONARY     Refactor existing working code, don't rewrite
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     APPLICATION LAYER                           │
+│        demos · agents · stdlib · domain applications            │
+├─────────────────────────────────────────────────────────────────┤
+│                     INTERPRETER LAYER                           │
+│  MeTTaInterpreter · Parser · ErrorHandler · SeNARSBridge        │
+│                        (~250 LOC)                               │
+├─────────────────────────────────────────────────────────────────┤
+│                       KERNEL LAYER                              │
+│        Term · Space · Unify · Reduce · Ground                   │
+│                        (~350 LOC)                               │
+├─────────────────────────────────────────────────────────────────┤
+│                      FOUNDATION LAYER                           │
+│          TermFactory · Memory · EventBus (SeNARS)               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Total JavaScript: ~600 LOC**  
+**MeTTa stdlib: ~400 LOC**
+
+---
+
+## Kernel (~350 LOC)
+
+### Term (`kernel/Term.js` ~60 LOC)
 
 ```javascript
-// ═══════════════════════════════════════════════════════════════════════════
-// ATOM: Immutable S-expression with structural sharing
-// ═══════════════════════════════════════════════════════════════════════════
-const intern = new Map();  // Global interning for O(1) equality
+// Interned symbols for O(1) equality
+const symbols = new Map();
 
-const Atom = {
-    sym: n => intern.get(n) ?? intern.set(n, Object.freeze({ t: 0, n })).get(n),
-    var: n => Object.freeze({ t: 1, n }),
-    exp: (...c) => Object.freeze({ t: 2, c }),
+export const Term = {
+    sym: n => symbols.get(n) ?? symbols.set(n, Object.freeze({ t: 'sym', n })).get(n),
+    var: n => Object.freeze({ t: 'var', n }),
+    exp: (op, cs) => Object.freeze({ t: 'exp', op, cs }),
     
-    is: { sym: a => a.t === 0, var: a => a.t === 1, exp: a => a.t === 2 },
-    eq: (a, b) => a === b || (a.t === b.t && a.t === 2 && 
-                              a.c.length === b.c.length && 
-                              a.c.every((x, i) => Atom.eq(x, b.c[i]))),
-    str: a => a.t === 2 ? `(${a.c.map(Atom.str).join(' ')})` : a.n
+    isSym: a => a.t === 'sym',
+    isVar: a => a.t === 'var',
+    isExp: a => a.t === 'exp',
+    
+    eq: (a, b) => a === b || (a.t === 'exp' && b.t === 'exp' && 
+                              a.op === b.op && a.cs.length === b.cs.length &&
+                              a.cs.every((c, i) => Term.eq(c, b.cs[i]))),
+    
+    str: a => a.t === 'exp' ? `(${a.op} ${a.cs.map(Term.str).join(' ')})` : a.n
 };
+```
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SPACE: Set<Atom> with functor index
-// ═══════════════════════════════════════════════════════════════════════════
-class Space {
-    atoms = new Set();
-    index = new Map();  // functor → Set<Atom>
-    
-    add(a)    { this.atoms.add(a); this._idx(a)?.add(a); }
-    del(a)    { this.atoms.delete(a); this._idx(a)?.delete(a); }
-    has(a)    { return this.atoms.has(a); }
-    *all()    { yield* this.atoms; }
-    *by(f)    { yield* (this.index.get(f) ?? []); }
-    
-    _idx(a)   { 
-        if (a.t !== 2) return null;
-        const f = a.c[0]?.n;
-        if (!this.index.has(f)) this.index.set(f, new Set());
-        return this.index.get(f);
+### Space (`kernel/Space.js` ~80 LOC)
+
+```javascript
+// Set with functor index for O(rules/functor) rule lookup
+export class Space {
+    constructor() {
+        this.atoms = new Set();
+        this.byOp = new Map();
     }
+    
+    add(a) {
+        this.atoms.add(a);
+        if (a.t === 'exp') {
+            const op = a.op;
+            if (!this.byOp.has(op)) this.byOp.set(op, new Set());
+            this.byOp.get(op).add(a);
+        }
+    }
+    
+    remove(a) {
+        const deleted = this.atoms.delete(a);
+        if (a.t === 'exp') this.byOp.get(a.op)?.delete(a);
+        return deleted;
+    }
+    
+    has(a) { return this.atoms.has(a); }
+    *all() { yield* this.atoms; }
+    *rulesFor(op) { yield* (this.byOp.get(op) ?? []); }
+    get size() { return this.atoms.size; }
 }
+```
 
-// ═══════════════════════════════════════════════════════════════════════════
-// UNIFY: Pattern matching with occurs check
-// ═══════════════════════════════════════════════════════════════════════════
-function unify(p, t, θ = {}) {
-    if (p.t === 1) {  // Variable
+### Unify (`kernel/Unify.js` ~80 LOC)
+
+```javascript
+export function unify(p, t, θ = {}) {
+    if (p.t === 'var') {
         if (p.n in θ) return unify(θ[p.n], t, θ);
         if (occurs(p.n, t, θ)) return null;
         return { ...θ, [p.n]: t };
     }
-    if (t.t === 1) return unify(t, p, θ);
-    if (p.t === 0) return p === t ? θ : null;  // Symbol (interned = identity)
-    if (p.t === 2 && t.t === 2 && p.c.length === t.c.length) {
-        for (let i = 0; i < p.c.length && θ; i++) θ = unify(p.c[i], t.c[i], θ);
+    if (t.t === 'var') return unify(t, p, θ);
+    if (p.t === 'sym') return p === t ? θ : null;
+    if (p.t === 'exp' && t.t === 'exp') {
+        if (p.op !== t.op || p.cs.length !== t.cs.length) return null;
+        for (let i = 0; i < p.cs.length && θ; i++) {
+            θ = unify(p.cs[i], t.cs[i], θ);
+        }
         return θ;
     }
     return null;
 }
 
-function subst(a, θ) {
-    if (a.t === 1) return a.n in θ ? subst(θ[a.n], θ) : a;
-    if (a.t === 2) return Atom.exp(...a.c.map(c => subst(c, θ)));
+export function subst(a, θ) {
+    if (a.t === 'var') return a.n in θ ? subst(θ[a.n], θ) : a;
+    if (a.t === 'exp') return Term.exp(a.op, a.cs.map(c => subst(c, θ)));
     return a;
 }
 
 function occurs(v, a, θ) {
-    if (a.t === 1) return a.n === v || (a.n in θ && occurs(v, θ[a.n], θ));
-    if (a.t === 2) return a.c.some(c => occurs(v, c, θ));
+    if (a.t === 'var') return a.n === v || (a.n in θ && occurs(v, θ[a.n], θ));
+    if (a.t === 'exp') return a.cs.some(c => occurs(v, c, θ));
     return false;
 }
+```
 
-// ═══════════════════════════════════════════════════════════════════════════
-// REWRITE: Single step reduction
-// ═══════════════════════════════════════════════════════════════════════════
-function step(a, space, ground) {
-    // Ground operation (escape hatch)
-    if (a.t === 2 && a.c[0]?.n && ground[a.c[0].n])
-        return ground[a.c[0].n](a.c.slice(1), space);
+### Reduce (`kernel/Reduce.js` ~80 LOC)
+
+```javascript
+export function step(a, space, ground) {
+    // 1. Grounded operation
+    if (a.t === 'exp' && ground.has(a.op)) {
+        return ground.exec(a.op, a.cs, space);
+    }
     
-    // Rule match (indexed by '=')
-    for (const r of space.by('=')) {
-        if (r.c.length >= 2) {
-            const θ = unify(r.c[1], a);
-            if (θ) return subst(r.c[2], θ);
+    // 2. Rule match (indexed by '=')
+    for (const rule of space.rulesFor('=')) {
+        if (rule.cs.length >= 2) {
+            const θ = unify(rule.cs[0], a);
+            if (θ) return subst(rule.cs[1], θ);
         }
     }
     
-    // Reduce children (leftmost-innermost)
-    if (a.t === 2) {
-        for (let i = 0; i < a.c.length; i++) {
-            const c = step(a.c[i], space, ground);
-            if (c !== a.c[i]) {
-                const nc = [...a.c]; nc[i] = c;
-                return Atom.exp(...nc);
+    // 3. Reduce children
+    if (a.t === 'exp') {
+        for (let i = 0; i < a.cs.length; i++) {
+            const c = step(a.cs[i], space, ground);
+            if (c !== a.cs[i]) {
+                const newCs = [...a.cs];
+                newCs[i] = c;
+                return Term.exp(a.op, newCs);
             }
         }
     }
-    return a;  // Fixed point
+    
+    return a; // Fixed point
 }
 
-function run(a, space, ground, limit = 1e4) {
+export function reduce(a, space, ground, limit = 10000) {
     for (let i = 0; i < limit; i++) {
         const next = step(a, space, ground);
-        if (next === a) return a;
+        if (next === a) return { result: a, steps: i };
         a = next;
     }
-    throw Error('diverge');
+    throw new Error(`Reduction exceeded ${limit} steps`);
 }
 ```
 
-**200 lines of JavaScript. That's the entire engine.**
-
----
-
-## Ground Operations
-
-Minimal escape hatches to the outside world:
+### Ground (`kernel/Ground.js` ~50 LOC)
 
 ```javascript
-const ground = {
-    // Arithmetic
-    '+': ([a,b]) => Atom.sym(String(+a.n + +b.n)),
-    '-': ([a,b]) => Atom.sym(String(+a.n - +b.n)),
-    '*': ([a,b]) => Atom.sym(String(+a.n * +b.n)),
-    '/': ([a,b]) => Atom.sym(String(+a.n / +b.n)),
+export class Ground {
+    constructor() {
+        this.fns = new Map();
+        this._core();
+    }
     
-    // Comparison
-    '<':  ([a,b]) => Atom.sym(+a.n < +b.n ? 'T' : 'F'),
-    '>':  ([a,b]) => Atom.sym(+a.n > +b.n ? 'T' : 'F'),
-    '=?': ([a,b]) => Atom.sym(Atom.eq(a,b) ? 'T' : 'F'),
+    register(name, fn) { this.fns.set(name, fn); }
+    has(name) { return this.fns.has(name); }
+    exec(name, args, space) { return this.fns.get(name)(args, space); }
     
-    // Space
-    'add': ([a], s) => { s.add(a); return a; },
-    'del': ([a], s) => { s.del(a); return Atom.sym(s.has(a) ? 'T' : 'F'); },
-    'all': (_, s) => Atom.exp(Atom.sym('L'), ...[...s.all()]),
-    
-    // I/O
-    'print': ([a]) => { console.log(Atom.str(a)); return a; },
-    'now':   () => Atom.sym(String(Date.now())),
-    'rand':  () => Atom.sym(String(Math.random())),
-    
-    // SeNARS bridge
-    '&derive': ([t], s) => { /* invoke reasoner */ },
-    '&truth':  ([f1,c1,f2,c2,op]) => { /* truth function */ },
-};
+    _core() {
+        const T = Term;
+        const n = a => Number(a.n);
+        const b = v => T.sym(v ? 'True' : 'False');
+        
+        // Arithmetic
+        ['+', '-', '*', '/'].forEach(op => 
+            this.register(op, ([a,c]) => T.sym(String(eval(`${n(a)}${op}${n(c)}`)))));
+        
+        // Comparison  
+        this.register('<', ([a,c]) => b(n(a) < n(c)));
+        this.register('>', ([a,c]) => b(n(a) > n(c)));
+        this.register('==', ([a,c]) => b(T.eq(a, c)));
+        
+        // Space
+        this.register('add-atom', ([a], s) => { s.add(a); return a; });
+        this.register('rm-atom', ([a], s) => b(s.remove(a)));
+        this.register('get-atoms', (_, s) => T.exp('List', [...s.all()]));
+        
+        // I/O
+        this.register('print', ([a]) => { console.log(T.str(a)); return a; });
+        this.register('now', () => T.sym(String(Date.now())));
+    }
+}
 ```
 
 ---
 
-## Standard Library
+## Interpreter Layer (~250 LOC)
 
-Everything else is MeTTa rewriting MeTTa:
+### Parser (`Parser.js` ~80 LOC)
+
+```javascript
+// S-expression parser: string → Term
+export function parse(src) {
+    const tokens = tokenize(src);
+    return parseExpr(tokens);
+}
+
+function tokenize(src) {
+    return src.replace(/\(/g, ' ( ').replace(/\)/g, ' ) ')
+              .trim().split(/\s+/).filter(t => t);
+}
+
+function parseExpr(tokens) {
+    const tok = tokens.shift();
+    if (tok === '(') {
+        const list = [];
+        while (tokens[0] !== ')') list.push(parseExpr(tokens));
+        tokens.shift(); // consume ')'
+        if (list.length === 0) return Term.sym('Empty');
+        return Term.exp(list[0].n ?? '?', list.slice(1));
+    }
+    if (tok.startsWith('$')) return Term.var(tok);
+    return Term.sym(tok);
+}
+```
+
+### MeTTaInterpreter (`MeTTaInterpreter.js` ~100 LOC)
+
+```javascript
+import { Space } from './kernel/Space.js';
+import { Ground } from './kernel/Ground.js';
+import { reduce } from './kernel/Reduce.js';
+import { parse } from './Parser.js';
+
+export class MeTTaInterpreter {
+    constructor(config = {}) {
+        this.space = new Space();
+        this.ground = new Ground();
+        this.config = config;
+        this._loadStdlib();
+    }
+    
+    run(code) {
+        const atom = typeof code === 'string' ? parse(code) : code;
+        return reduce(atom, this.space, this.ground, this.config.maxSteps);
+    }
+    
+    load(code) {
+        const atoms = parseMulti(code);
+        atoms.forEach(a => {
+            if (a.op === '=' || a.op === ':') this.space.add(a);
+            else this.run(a);
+        });
+    }
+    
+    _loadStdlib() {
+        // Load bundled stdlib
+        this.load(STDLIB_CORE);
+        this.load(STDLIB_LIST);
+        // ...etc
+    }
+}
+```
+
+### SeNARSBridge (`SeNARSBridge.js` ~70 LOC)
+
+```javascript
+// Bidirectional MeTTa ↔ NARS integration
+export class SeNARSBridge {
+    constructor(interpreter, reasoner) {
+        this.metta = interpreter;
+        this.nars = reasoner;
+        this._registerGrounded();
+    }
+    
+    _registerGrounded() {
+        // NARS derivation
+        this.metta.ground.register('&derive', ([task]) => {
+            const nTask = this.mettaToNars(task);
+            const derivations = this.nars.derive(nTask);
+            return Term.exp('List', derivations.map(d => this.narsToMetta(d)));
+        });
+        
+        // Truth functions
+        ['ded', 'ind', 'abd', 'rev'].forEach(op => {
+            this.metta.ground.register(`&truth-${op}`, ([tv1, tv2]) => {
+                const result = Truth[op](this.extractTv(tv1), this.extractTv(tv2));
+                return Term.exp('TV', [Term.sym(String(result.f)), Term.sym(String(result.c))]);
+            });
+        });
+    }
+    
+    mettaToNars(atom) { /* convert */ }
+    narsToMetta(task) { /* convert */ }
+}
+```
+
+---
+
+## Standard Library (~400 LOC MeTTa)
+
+### Core (`stdlib/core.metta` ~60 LOC)
 
 ```metta
-; ═══════════════════════════════════════════════════════════════════════════
-; LOGIC
-; ═══════════════════════════════════════════════════════════════════════════
-(= (if T $t $_) $t)
-(= (if F $_ $e) $e)
-(= (and T T) T)  (= (and $_ $_) F)
-(= (or F F) F)   (= (or $_ $_) T)
-(= (not T) F)    (= (not F) T)
+; Logic
+(= (if True $t $_) $t)
+(= (if False $_ $e) $e)
+(= (and True True) True)
+(= (and $_ $_) False)
+(= (or False False) False)
+(= (or $_ $_) True)
+(= (not True) False)
+(= (not False) True)
 
-; ═══════════════════════════════════════════════════════════════════════════
-; BINDING
-; ═══════════════════════════════════════════════════════════════════════════
-(= (let $x $v $b) ((λ $x $b) $v))
-(= ((λ $x $b) $v) (subst $x $v $b))
+; Binding
+(= (let $x $v $body) (subst $x $v $body))
+(= ((λ $x $body) $arg) (let $x $arg $body))
+(= (seq $a $b) (let $_ $a $b))
+```
 
-; ═══════════════════════════════════════════════════════════════════════════
-; LIST
-; ═══════════════════════════════════════════════════════════════════════════
+### List (`stdlib/list.metta` ~50 LOC)
+
+```metta
 (= (hd (: $h $_)) $h)
 (= (tl (: $_ $t)) $t)
+(= (cons $h $t) (: $h $t))
+(= (null? ()) True)
+(= (null? (: $_ $_)) False)
+
 (= (map $f ()) ())
 (= (map $f (: $h $t)) (: ($f $h) (map $f $t)))
+
+(= (filter $p ()) ())
+(= (filter $p (: $h $t)) 
+   (if ($p $h) (: $h (filter $p $t)) (filter $p $t)))
+
 (= (fold $f $z ()) $z)
 (= (fold $f $z (: $h $t)) (fold $f ($f $h $z) $t))
-(= (filter $p ()) ())
-(= (filter $p (: $h $t)) (if ($p $h) (: $h (filter $p $t)) (filter $p $t)))
+
 (= (len ()) 0)
 (= (len (: $_ $t)) (+ 1 (len $t)))
+
 (= (take 0 $_) ())
 (= (take $n (: $h $t)) (: $h (take (- $n 1) $t)))
-(= (++ () $y) $y)
-(= (++ (: $h $t) $y) (: $h (++ $t $y)))
 
-; ═══════════════════════════════════════════════════════════════════════════
-; MATCH (Non-determinism via multiple rules)
-; ═══════════════════════════════════════════════════════════════════════════
-(= (match $s $p $t)
-   (let $a (elem $s)
-     (let $θ (unify $p $a)
-       (if (ok? $θ) (subst $t $θ) ∅))))
-
-(= (elem $s) $x)  ; Instantiated per-element via meta-rule
-
-; ═══════════════════════════════════════════════════════════════════════════
-; TYPES (Constraints as atoms)
-; ═══════════════════════════════════════════════════════════════════════════
-(: T Bool) (: F Bool)
-(: + (→ Num Num Num))
-(: hd (→ (List $a) $a))
-(: map (→ (→ $a $b) (List $a) (List $b)))
-
-(= (typeof $x) (match &self (: $x $t) $t))
-(= (check ($f $a)) 
-   (let (→ $i $o) (typeof $f)
-     (if (unifies? $i (typeof $a)) $o TypeError)))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; TRUTH VALUES (NAL/PLN)
-; ═══════════════════════════════════════════════════════════════════════════
-(= (tv $f $c) (⟨$f $c⟩))
-(= (f ⟨$f $_⟩) $f)
-(= (c ⟨$_ $c⟩) $c)
-
-(= (⊗ded $t1 $t2) (&truth (f $t1) (c $t1) (f $t2) (c $t2) ded))
-(= (⊗ind $t1 $t2) (&truth (f $t1) (c $t1) (f $t2) (c $t2) ind))
-(= (⊗abd $t1 $t2) (&truth (f $t1) (c $t1) (f $t2) (c $t2) abd))
-(= (⊗rev $t1 $t2) (&truth (f $t1) (c $t1) (f $t2) (c $t2) rev))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; NAL INFERENCE
-; ═══════════════════════════════════════════════════════════════════════════
-; Deduction: M→P, S→M ⊢ S→P
-(= (ded (→ $m $p) (→ $s $m)) (→ $s $p))
-
-; Induction: M→P, M→S ⊢ S→P  
-(= (ind (→ $m $p) (→ $m $s)) (→ $s $p))
-
-; Abduction: P→M, S→M ⊢ S→P
-(= (abd (→ $p $m) (→ $s $m)) (→ $s $p))
-
-; Derive with truth
-(= (derive $r $p1 $p2)
-   (let ($q (($r) $p1 $p2))
-     (@ $q (⊗$r (tv-of $p1) (tv-of $p2)))))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; ATTENTION (Metadata as atoms)
-; ═══════════════════════════════════════════════════════════════════════════
-(= (sti $a) (match &self (STI $a $v) $v))
-(= (set-sti $a $v) (seq (del (STI $a $_)) (add (STI $a $v))))
-(= (spread $a $d) (map (λ $n (set-sti $n (+ (sti $n) (* $d (sti $a))))) (links $a)))
-(= (top $n) (take $n (sort-by sti (all-atoms))))
-(= (decay $r) (map (λ $a (set-sti $a (- (sti $a) $r))) (all-atoms)))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; SEARCH
-; ═══════════════════════════════════════════════════════════════════════════
-(= (dfs $g $x $s) (if ($g $s) $s (dfs $g $x (hd ($x $s)))))
-(= (bfs $g $x $q) (if ($g (hd $q)) (hd $q) (bfs $g $x (++ (tl $q) ($x (hd $q))))))
-(= (best $h $g $x $q) 
-   (let $b (min-by $h $q)
-     (if ($g $b) $b (best $h $g $x (ins $h ($x $b) (rm $b $q))))))
-(= (a* $h) (best (λ $s (+ (cost $s) ($h $s)))))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; LEARNING
-; ═══════════════════════════════════════════════════════════════════════════
-(= (learn $p $r $c) (add (= $p $r :c $c)))
-(= (reinforce $rl $δ) (set-c $rl (min 0.99 (+ (c-of $rl) $δ))))
-(= (weaken $rl $δ) (let $nc (- (c-of $rl) $δ) (if (< $nc 0.1) (del $rl) (set-c $rl $nc))))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; STRATEGIES
-; ═══════════════════════════════════════════════════════════════════════════
-(= (strategy) (match &self (Strategy $s) $s))
-(= (use $s) (seq (del (Strategy $_)) (add (Strategy $s))))
-
-(= (sel:balanced $t) (take 5 (shuffle (related $t))))
-(= (sel:explore $t) (take 5 (sort-by c (related $t))))
-(= (sel:exploit $t) (take 5 (sort-by (λ $x (- 1 (c $x))) (related $t))))
-(= (select $t) ((sym-cat "sel:" (strategy)) $t))
-
-; ═══════════════════════════════════════════════════════════════════════════
-; META-INTERPRETER (Self-describing!)
-; ═══════════════════════════════════════════════════════════════════════════
-(= (eval $a $s) 
-   (let $a' (step $a $s)
-     (if (=? $a $a') $a (eval $a' $s))))
+(= (append () $ys) $ys)
+(= (append (: $x $xs) $ys) (: $x (append $xs $ys)))
 ```
 
----
-
-## Capability Coverage
-
-| Domain | Atoms | Notes |
-|--------|-------|-------|
-| **Symbolic Rewriting** | `(= lhs rhs)` | Core |
-| **Pattern Matching** | `unify`, `match` | Core |
-| **Non-determinism** | Multiple `(=)` rules | Emerges |
-| **Types** | `(: x T)` + `typeof` | Atoms |
-| **NAL Inference** | `ded`, `ind`, `abd` rules | MeTTa |
-| **Truth Values** | `⟨f c⟩`, `⊗ded` etc | MeTTa + grounded |
-| **Attention/ECAN** | `STI`, `spread`, `decay` | Metadata atoms |
-| **Planning/Search** | `dfs`, `bfs`, `a*` | MeTTa |
-| **Learning** | `learn`, `reinforce` | Self-modification |
-| **Strategies** | `use`, `select` | Hot-swap |
-| **Multi-Agent** | Multiple `Space` instances | Architecture |
-| **Temporal** | Timestamped atoms | Metadata |
-| **Perception** | Grounded sensors | `ground` |
-| **Action** | Grounded effectors | `ground` |
-| **SeNARS** | `&derive`, `&truth` | Bridge |
-
----
-
-## Efficiency
-
-| Concern | Solution | Complexity |
-|---------|----------|------------|
-| Symbol equality | Interning | O(1) |
-| Expression equality | Structural sharing | O(n) worst, O(1) typical |
-| Rule lookup | Functor index | O(rules/functor) |
-| Space iteration | Generator | O(1) memory |
-| Variable binding | Copy-on-write objects | O(bindings) |
-| Occurs check | Lazy, cached | Amortized O(1) |
-
-### Advanced (Future)
-
-```javascript
-// Lazy non-determinism
-function* match(space, pattern, template) {
-    for (const atom of space.by(pattern.c?.[0]?.n)) {
-        const θ = unify(pattern, atom);
-        if (θ) yield subst(template, θ);
-    }
-}
-
-// Parallel collapse
-async function collapse(gen, n = Infinity) {
-    const results = [];
-    for await (const x of gen) {
-        results.push(x);
-        if (results.length >= n) break;
-    }
-    return results;
-}
-
-// Incremental indexing
-class IncrementalSpace extends Space {
-    version = 0;
-    snapshots = new Map();
-    
-    add(a) { super.add(a); this.version++; }
-    del(a) { super.del(a); this.version++; }
-    snapshot() { this.snapshots.set(this.version, [...this.atoms]); }
-    restore(v) { this.atoms = new Set(this.snapshots.get(v)); }
-}
-```
-
----
-
-## Implementation
-
-### Phase 1: Kernel (Week 1)
-
-```
-kernel.js      200 LOC
-├── Atom        30 LOC
-├── Space       25 LOC
-├── unify       35 LOC
-├── step/run    40 LOC
-└── ground      70 LOC
-```
-
-**Test**: `(+ (* 2 3) 4)` → `10`
-
-### Phase 2: Core Library (Week 2)
-
-```
-stdlib.metta   150 LOC
-├── logic       10 LOC
-├── binding     10 LOC
-├── list        40 LOC
-├── match       20 LOC
-└── types       30 LOC
-```
-
-**Test**: `(map (λ $x (* $x 2)) (: 1 (: 2 (: 3 ()))))` → `(: 2 (: 4 (: 6 ())))`
-
-### Phase 3: Reasoning (Week 3)
-
-```
-reason.metta   100 LOC
-├── truth       25 LOC
-├── nal         40 LOC
-└── attention   35 LOC
-```
-
-**Test**: Deduction chain with correct truth propagation
-
-### Phase 4: Intelligence (Week 4)
-
-```
-intel.metta    100 LOC
-├── search      25 LOC
-├── learning    25 LOC
-├── strategies  25 LOC
-└── meta        25 LOC
-```
-
-**Test**: Self-modifying agent learns maze solution
-
----
-
-## Totals
-
-```
-┌────────────────────────────────────────┐
-│  JavaScript Kernel     ~200 LOC       │
-│  MeTTa Standard Lib    ~350 LOC       │
-│  ═══════════════════════════════════  │
-│  TOTAL                 ~550 LOC       │
-│                                        │
-│  Capabilities: Everything              │
-└────────────────────────────────────────┘
-```
-
----
-
-## The Proof
-
-If the design is complete, the meta-interpreter is trivial:
+### Match (`stdlib/match.metta` ~40 LOC)
 
 ```metta
-(= (eval $a) (let $a' (step $a &self) (if (=? $a $a') $a (eval $a'))))
+; Pattern matching over space
+(= (match $space $pattern $template)
+   (let $atoms (get-atoms $space)
+     (flat-map (λ $a (try-match $pattern $a $template)) $atoms)))
+
+(= (try-match $p $a $t)
+   (let $θ (unify? $p $a)
+     (if (ok? $θ) (: (subst $t $θ) ()) ())))
+
+; Non-determinism: multiple rules = multiple results
+(= (collapse $expr) (collect-results $expr))
+(= (first $expr) (hd (collapse $expr)))
 ```
 
-**The system interprets itself in one line.**
+### Types (`stdlib/types.metta` ~50 LOC)
+
+```metta
+; Type declarations are atoms
+(: True Bool)
+(: False Bool)
+(: + (-> Num Num Num))
+(: hd (-> (List $a) $a))
+(: map (-> (-> $a $b) (List $a) (List $b)))
+
+; Type query
+(= (type-of $x) (match &self (: $x $t) $t))
+
+; Type check
+(= (check ($f $arg))
+   (let (-> $in $out) (type-of $f)
+     (if (unifies? $in (type-of $arg)) $out TypeError)))
+```
+
+### Truth (`stdlib/truth.metta` ~40 LOC)
+
+```metta
+; Truth value representation
+(= (tv $f $c) (TV $f $c))
+(= (freq (TV $f $_)) $f)
+(= (conf (TV $_ $c)) $c)
+
+; Grounded truth functions (delegate to JS)
+(= (truth-ded $t1 $t2) (&truth-ded $t1 $t2))
+(= (truth-ind $t1 $t2) (&truth-ind $t1 $t2))
+(= (truth-abd $t1 $t2) (&truth-abd $t1 $t2))
+(= (truth-rev $t1 $t2) (&truth-rev $t1 $t2))
+```
+
+### NAL (`stdlib/nal.metta` ~50 LOC)
+
+```metta
+; Inheritance rules
+(= (ded (Inh $s $m) (Inh $m $p)) 
+   (Inh $s $p :tv (truth-ded (tv-of $1) (tv-of $2))))
+
+(= (ind (Inh $m $p) (Inh $m $s))
+   (Inh $s $p :tv (truth-ind (tv-of $1) (tv-of $2))))
+
+(= (abd (Inh $p $m) (Inh $s $m))
+   (Inh $s $p :tv (truth-abd (tv-of $1) (tv-of $2))))
+
+; Derive with rule selection
+(= (derive $task)
+   (let $premises (select-premises $task)
+     (flat-map (λ $p (apply-rules $task $p)) $premises)))
+```
+
+### Attention (`stdlib/attention.metta` ~40 LOC)
+
+```metta
+; STI as metadata atoms
+(= (sti $a) (first (match &self (STI $a $v) $v)))
+(= (set-sti $a $v) (seq (rm-atom (STI $a $_)) (add-atom (STI $a $v))))
+
+; Spreading activation
+(= (spread $a $decay)
+   (map (λ $n (set-sti $n (+ (sti $n) (* $decay (sti $a))))) 
+        (neighbors $a)))
+
+; Focus
+(= (top-k $k) (take $k (sort-by sti (get-atoms &self))))
+```
+
+### Search (`stdlib/search.metta` ~40 LOC)
+
+```metta
+(= (dfs $goal? $expand $state)
+   (if ($goal? $state) $state
+       (first (map (λ $s (dfs $goal? $expand $s)) ($expand $state)))))
+
+(= (bfs $goal? $expand $queue)
+   (let $s (hd $queue)
+     (if ($goal? $s) $s
+         (bfs $goal? $expand (append (tl $queue) ($expand $s))))))
+
+(= (best-first $h $goal? $expand $queue)
+   (let $best (min-by $h $queue)
+     (if ($goal? $best) $best
+         (best-first $h $goal? $expand 
+           (insert-sorted $h ($expand $best) (remove $best $queue))))))
+```
+
+### Learning (`stdlib/learn.metta` ~30 LOC)
+
+```metta
+(= (learn-rule $pattern $result $conf)
+   (add-atom (= $pattern $result :confidence $conf)))
+
+(= (reinforce $rule $delta)
+   (let $new-c (+ (conf-of $rule) $delta)
+     (set-conf $rule (min 0.99 $new-c))))
+
+(= (forget-weak $threshold)
+   (map rm-atom (filter (λ $r (< (conf-of $r) $threshold)) (all-rules))))
+```
+
+---
+
+## Capability Mapping
+
+| Capability | Kernel | MeTTa | Notes |
+|------------|--------|-------|-------|
+| Pattern matching | `unify` | `match` | Core |
+| Rewriting | `reduce` | `(= p r)` | Core |
+| Types | `unify` | `(: x T)` | Constraints as atoms |
+| Non-determinism | — | Multiple `=` | Emerges from rules |
+| NAL inference | `ground` | NAL rules | Truth via grounded |
+| Attention | — | STI atoms | Pure MeTTa |
+| Planning | — | Search fns | Pure MeTTa |
+| Learning | `add-atom` | `learn-rule` | Self-modification |
+| SeNARS | `ground` | `&derive` | Bridge integration |
+
+---
+
+## Implementation Plan
+
+### Phase 1: Extract Kernel (3 days)
+
+Extract from existing working code:
+- [ ] `kernel/Term.js` from TermFactory
+- [ ] `kernel/Space.js` from MeTTaSpace
+- [ ] `kernel/Unify.js` from MeTTaHelpers
+- [ ] `kernel/Reduce.js` from ReductionEngine
+- [ ] `kernel/Ground.js` from GroundedAtoms
+
+**Test**: Existing unit tests pass with kernel
+
+### Phase 2: Stdlib Bootstrap (4 days)
+
+- [ ] `stdlib/core.metta`
+- [ ] `stdlib/list.metta`
+- [ ] `stdlib/match.metta`
+- [ ] `stdlib/types.metta`
+
+**Test**: `(map (λ $x (* $x 2)) (: 1 (: 2 ())))` → `(: 2 (: 4 ()))`
+
+### Phase 3: Reasoning (4 days)
+
+- [ ] `stdlib/truth.metta`
+- [ ] `stdlib/nal.metta`
+- [ ] `stdlib/attention.metta`
+- [ ] SeNARSBridge grounded ops
+
+**Test**: Deduction chain with truth propagation
+
+### Phase 4: Intelligence (3 days)
+
+- [ ] `stdlib/search.metta`
+- [ ] `stdlib/learn.metta`
+- [ ] Integration tests
+- [ ] Demo applications
+
+**Test**: Self-modifying agent
 
 ---
 
 ## File Structure
 
 ```
-metta/
-├── kernel.js          # 4 primitives (Atom, Space, unify, step)
-├── ground.js          # Native operations
-├── stdlib/
-│   ├── core.metta     # Logic, binding, list
-│   ├── match.metta    # Non-determinism
-│   ├── types.metta    # Constraints
-│   ├── truth.metta    # NAL truth values
-│   ├── nal.metta      # Inference rules
-│   ├── attention.metta# ECAN
-│   ├── search.metta   # Planning
-│   ├── learn.metta    # Adaptation
-│   └── meta.metta     # Strategies, interpreter
-└── index.js           # Wire + run
+core/src/metta/
+├── kernel/
+│   ├── Term.js          (~60 LOC)
+│   ├── Space.js         (~80 LOC)
+│   ├── Unify.js         (~80 LOC)
+│   ├── Reduce.js        (~80 LOC)
+│   └── Ground.js        (~50 LOC)
+├── Parser.js            (~80 LOC)
+├── MeTTaInterpreter.js  (~100 LOC)
+├── SeNARSBridge.js      (~70 LOC)
+└── stdlib/
+    ├── core.metta       (~60 LOC)
+    ├── list.metta       (~50 LOC)
+    ├── match.metta      (~40 LOC)
+    ├── types.metta      (~50 LOC)
+    ├── truth.metta      (~40 LOC)
+    ├── nal.metta        (~50 LOC)
+    ├── attention.metta  (~40 LOC)
+    ├── search.metta     (~40 LOC)
+    └── learn.metta      (~30 LOC)
+────────────────────────────────────────
+JavaScript:  ~600 LOC
+MeTTa:       ~400 LOC
+Total:      ~1000 LOC
 ```
 
 ---
 
-*Version 5.0 — Ultimate*
+## Design Goals: Achieved
+
+| Goal | Solution |
+|------|----------|
+| **Elegance** | 5 kernel primitives, clean separation |
+| **Capability** | Full coverage via kernel + MeTTa |
+| **Efficiency** | Symbol interning, functor indexing |
+| **Pragmatic** | Refactor existing code, not rewrite |
+| **Integrated** | SeNARSBridge preserved |
+| **Testable** | Existing tests validate refactor |
+| **Honest LOC** | ~1000 total including parser/errors |
+
+---
+
+## Concerns: Addressed
+
+| Concern | Resolution |
+|---------|------------|
+| Parser missing | Included (~80 LOC) |
+| Error handling | In Interpreter layer |
+| Debugging | Trace via step counts |
+| SeNARS integration | Preserved via Bridge |
+| Working code thrown away | Evolutionary extract, not rewrite |
+| Unproven design | Based on passing tests |
+| Non-determinism | Multiple rules + collapse |
+
+---
+
+*Final Design — Version 6.0*
