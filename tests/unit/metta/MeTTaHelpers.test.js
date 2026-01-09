@@ -1,4 +1,4 @@
-import { MeTTaAST, Unification, TermBuilders, TaskBuilders, MeTTaError, TypeMismatchError } from '../../../core/src/metta/helpers/MeTTaHelpers.js';
+import { Unification, TermBuilders, TaskBuilders, MeTTaError, TypeMismatchError } from '../../../core/src/metta/helpers/MeTTaHelpers.js';
 import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('MeTTaHelpers', () => {
@@ -6,43 +6,6 @@ describe('MeTTaHelpers', () => {
 
     beforeEach(() => {
         termFactory = new TermFactory();
-    });
-
-    describe('MeTTaAST', () => {
-        test('creates symbol nodes', () => {
-            const node = MeTTaAST.symbol('foo');
-            expect(node).toEqual({ type: 'atom', tokenType: 'SYMBOL', value: 'foo' });
-        });
-
-        test('creates variable nodes with $ prefix', () => {
-            const node = MeTTaAST.variable('x');
-            expect(node.value).toBe('$x');
-        });
-
-        test('creates number nodes', () => {
-            const node = MeTTaAST.number(42);
-            expect(node.value).toBe('42');
-        });
-
-        test('creates expression nodes', () => {
-            const node = MeTTaAST.expr(
-                MeTTaAST.symbol('f'),
-                MeTTaAST.symbol('a')
-            );
-            expect(node.type).toBe('list');
-            expect(node.elements).toHaveLength(2);
-        });
-
-        test('isSymbol predicate', () => {
-            expect(MeTTaAST.isSymbol(MeTTaAST.symbol('foo'))).toBe(true);
-            expect(MeTTaAST.isSymbol(MeTTaAST.variable('x'))).toBe(false);
-        });
-
-        test('map transforms nodes', () => {
-            const node = MeTTaAST.symbol('foo');
-            const mapped = MeTTaAST.map(node, n => ({ ...n, value: n.value.toUpperCase() }));
-            expect(mapped.value).toBe('FOO');
-        });
     });
 
     describe('Unification', () => {

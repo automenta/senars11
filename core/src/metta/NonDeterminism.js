@@ -1,163 +1,68 @@
-/**
- * NonDeterminism.js - MeTTa non-deterministic evaluation
- * Supports superpose, collapse, and multi-value returns
- */
-
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 
-/**
- * NonDeterminism - Handles non-deterministic computations
- * Implements superpose (multi-value) and collapse (choice)
- */
 export class NonDeterminism extends BaseMeTTaComponent {
     constructor(config = {}, eventBus = null, termFactory = null) {
         super(config, 'NonDeterminism', eventBus, termFactory);
         this.rng = config.rng ?? Math.random;
     }
 
-    /**
-     * Create a superposition (all possible values)
-     * @param {...any} values - Values to superpose
-     * @returns {Object} Superposition object
-     */
     superpose(...values) {
         return this.trackOperation('superpose', () => {
             const vals = values.flat();
-            const result = {
+            this.emitMeTTaEvent('superposition-created', { count: vals.length });
+            return {
                 type: 'superposition',
                 values: vals,
                 toString: () => `(superpose ${vals.map(v => v?.toString?.() ?? v).join(' ')})`
             };
-            this.emitMeTTaEvent('superposition-created', { count: vals.length });
-            return result;
         });
     }
 
-    /**
-     * Check if value is a superposition
-     * @param {*} value - Value to check
-     * @returns {boolean}
-     */
-    isSuperposition(value) {
-        return value?.type === 'superposition';
-    }
+    isSuperposition(value) { return value?.type === 'superposition'; }
+    _getValues(value) { return this.isSuperposition(value) ? value.values : [value]; }
 
-    /**
-     * Get values array from superposition or single value
-     * @param {*} value - Superposition or regular value
-     * @returns {Array} Values array
-     * @private
-     */
-    _getValues(value) {
-        return this.isSuperposition(value) ? value.values : [value];
-    }
-
-    /**
-     * Collapse superposition to single value (non-deterministic choice)
-     * @param {Object|*} superposition - Superposition or regular value
-     * @returns {*} Single value
-     */
     collapse(superposition) {
         return this.trackOperation('collapse', () => {
-            if (!this.isSuperposition(superposition)) {
-                return superposition;
-            }
-
+            if (!this.isSuperposition(superposition)) return superposition;
             const values = superposition.values;
-            if (values.length === 0) return null; // Or Empty?
-
+            if (values.length === 0) return null;
             const idx = Math.floor(this.rng() * values.length);
-            const selected = values[idx];
-
-            this.emitMeTTaEvent('superposition-collapsed', {
-                totalValues: values.length,
-                selectedIndex: idx
-            });
-
-            return selected;
+            this.emitMeTTaEvent('superposition-collapsed', { totalValues: values.length, selectedIndex: idx });
+            return values[idx];
         });
     }
 
-    /**
-     * Collapse all superpositions (deterministic - returns first)
-     * @param {Object|*} superposition - Superposition or regular value
-     * @returns {*} First value
-     */
-    collapseFirst(superposition) {
-        return this._getValues(superposition)[0];
-    }
+    collapseFirst(superposition) { return this._getValues(superposition)[0]; }
+    collapseAll(superposition) { return this._getValues(superposition); }
 
-    /**
-     * Collapse all superpositions (deterministic - returns all)
-     * @param {Object|*} superposition - Superposition or regular value
-     * @returns {Array} All values
-     */
-    collapseAll(superposition) {
-        return this._getValues(superposition);
-    }
-
-    /**
-     * Map function over superposition
-     * @param {Object|*} superposition - Superposition or regular value
-     * @param {Function} fn - Function to apply
-     * @returns {Object|*} Mapped superposition or value
-     */
     mapSuperpose(superposition, fn) {
         return this.trackOperation('mapSuperpose', () => {
-            const mappedValues = this._getValues(superposition).flatMap(v => {
-                const result = fn(v);
-                return this._getValues(result);
-            });
-            return mappedValues.length === 1 ? mappedValues[0] : this.superpose(...mappedValues);
+            const mapped = this._getValues(superposition).flatMap(v => this._getValues(fn(v)));
+            return mapped.length === 1 ? mapped[0] : this.superpose(...mapped);
         });
     }
 
-    /**
-     * Filter superposition values
-     * @param {Object|*} superposition - Superposition or regular value
-     * @param {Function} predicate - Filter predicate
-     * @returns {Object|*} Filtered superposition
-     */
     filterSuperpose(superposition, predicate) {
         return this.trackOperation('filterSuperpose', () => {
-            const values = this._getValues(superposition);
-            const filtered = values.filter(predicate);
-
-            return filtered.length === 0 ? null :
-                filtered.length === 1 ? filtered[0] :
-                    this.superpose(...filtered);
+            const filtered = this._getValues(superposition).filter(predicate);
+            return filtered.length === 0 ? null : filtered.length === 1 ? filtered[0] : this.superpose(...filtered);
         });
     }
 
-    /**
-     * Bind operation: evaluate pattern for each value
-     * Used for pattern matching over superpositions
-     * @param {Object|*} superposition - Superposition or regular value
-     * @param {Function} bindFn - Function returning results for each value
-     * @returns {Object|*} Result superposition
-     */
     bind(superposition, bindFn) {
         return this.trackOperation('bind', () => {
             const results = this._getValues(superposition).flatMap(val => this._getValues(bindFn(val)));
-            if (results.length === 0) return null;
-            return results.length === 1 ? results[0] : this.superpose(...results);
+            return results.length === 0 ? null : results.length === 1 ? results[0] : this.superpose(...results);
         });
     }
 
-    /**
-     * Combine two superpositions (cartesian product)
-     * @param {Object|*} s1 - First superposition
-     * @param {Object|*} s2 - Second superposition
-     * @param {Function} combineFn - Function to combine values
-     * @returns {Object|*} Combined superposition
-     */
     combine(s1, s2, combineFn) {
         return this.trackOperation('combine', () => {
             const vals1 = this._getValues(s1);
             const vals2 = this._getValues(s2);
-
             const results = vals1.flatMap(v1 => vals2.map(v2 => combineFn(v1, v2)));
             return results.length === 1 ? results[0] : this.superpose(...results);
         });
     }
 }
+

@@ -1,8 +1,3 @@
-/**
- * MeTTaInterpreter.js - Complete MeTTa execution environment
- * Integrates all MeTTa subsystems for full interpreter functionality
- */
-
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TermBuilders } from './helpers/MeTTaHelpers.js';
 import { COMPLETE_STDLIB_MAPPINGS, BUILTIN_OPERATIONS } from './helpers/MeTTaLib.js';
@@ -17,16 +12,11 @@ import { GroundedAtoms } from './GroundedAtoms.js';
 import { StateManager } from './StateManager.js';
 import { TermFactory } from '../term/TermFactory.js';
 
-/**
- * MeTTaInterpreter - Complete MeTTa execution environment
- * Provides load, run, evaluate, and query operations
- */
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(memory, config = {}, eventBus = null) {
         const termFactory = config.termFactory ?? new TermFactory();
         super(config, 'MeTTaInterpreter', eventBus, termFactory);
 
-        // Initialize subsystems
         this.parser = new MeTTaParser(this.termFactory, {
             mappings: { ...COMPLETE_STDLIB_MAPPINGS, ...config.customMappings }
         });
@@ -40,11 +30,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.groundedAtoms = new GroundedAtoms(config.functorRegistry, config, eventBus, this.termFactory);
         this.stateManager = new StateManager(config, eventBus, this.termFactory);
 
-        // Link components
-        Object.assign(this.space, {
-            groundedAtoms: this.groundedAtoms,
-            stateManager: this.stateManager
-        });
+        Object.assign(this.space, { groundedAtoms: this.groundedAtoms, stateManager: this.stateManager });
         this.groundedAtoms.setSpace('default', this.space);
 
         this._registerStdLib();
@@ -56,48 +42,24 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.emitMeTTaEvent('interpreter-initialized', {});
     }
 
-    /**
-     * Register standard library rules from MeTTaLib
-     * @private
-     */
     _registerStdLib() {
-        // Register arithmetic operations as reduction rules
-        const { arithmetic } = BUILTIN_OPERATIONS;
-        for (const [op, fn] of Object.entries(arithmetic)) {
-            // Rule: (= (op $a $b) (fn $a $b))
+        for (const [op, fn] of Object.entries(BUILTIN_OPERATIONS.arithmetic)) {
             this.space.addRule(
-                TermBuilders.functor(this.termFactory, this.termFactory.atomic(op),
-                    this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
+                TermBuilders.functor(this.termFactory, this.termFactory.atomic(op), this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
                 (bindings) => {
-                    const a = Number(bindings['$a'].name);
-                    const b = Number(bindings['$b'].name);
+                    const [a, b] = [Number(bindings['$a'].name), Number(bindings['$b'].name)];
                     return this.termFactory.atomic(String(fn(a, b)));
                 }
             );
         }
     }
 
-    /**
-     * Load MeTTa program into space
-     * @param {string} mettaCode - MeTTa source code
-     * @returns {Array<Task>} - Parsed tasks
-     */
     load(mettaCode) {
         return this.trackOperation('load', () => {
             const tasks = this.parser.parseMeTTa(mettaCode);
+            const expanded = tasks.map(task => ({ ...task, term: this.macroExpander.expand(task.term) }));
 
-            // Expand macros and transform terms
-            const expanded = tasks.map(task => ({
-                ...task,
-                term: this.macroExpander.expand(task.term)
-            }));
-
-            // Optional type checking
-            if (this.config.typeChecking) {
-                expanded.forEach(({ term }) => this._typeCheck(term));
-            }
-
-            // Add to space
+            if (this.config.typeChecking) expanded.forEach(({ term }) => this._typeCheck(term));
             expanded.forEach(({ term }) => this.space.addAtom(term));
 
             this.emitMeTTaEvent('program-loaded', { taskCount: tasks.length });
@@ -105,15 +67,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         });
     }
 
-    /**
-     * Execute ! expressions
-     * @param {string} mettaCode - MeTTa source with ! goals
-     * @returns {Array} - Evaluation results
-     */
     run(mettaCode) {
         return this.trackOperation('run', () => {
-            const tasks = this.parser.parseMeTTa(mettaCode);
-            const results = tasks
+            const results = this.parser.parseMeTTa(mettaCode)
                 .filter(t => t.punctuation === '!')
                 .map(t => this.evaluate(t.term));
 
@@ -122,11 +78,6 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         });
     }
 
-    /**
-     * Evaluate expression
-     * @param {Term} term - Term to evaluate
-     * @returns {Term} - Result
-     */
     evaluate(term) {
         return this.trackOperation('evaluate', () => {
             const expanded = this.macroExpander.expand(term);
@@ -135,39 +86,17 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         });
     }
 
-    /**
-     * Query with pattern matching
-     * @param {Term|string} pattern - Pattern to match
-     * @param {Term|string} template - Result template
-     * @returns {Array<Term>} - Results
-     */
     query(pattern, template) {
         return this.trackOperation('query', () => {
             const parse = (val) => typeof val === 'string' ? this.parser.parseExpression(val) : val;
-            return this.matchEngine.executeMatch(
-                this.space,
-                parse(pattern),
-                parse(template)
-            );
+            return this.matchEngine.executeMatch(this.space, parse(pattern), parse(template));
         });
     }
 
-    /**
-     * Run a program and return the first result (convenience method)
-     * @param {string} program - MeTTa program code
-     * @returns {Term|null} - First result term or null
-     */
     evalOne(program) {
         return this.run(program)[0] ?? null;
     }
 
-    /**
-     * Load a program and then execute a query (convenience method)
-     * @param {string} program - MeTTa program code to load
-     * @param {string} queryStr - MeTTa query expression
-     * @param {string} [templateStr] - Result template
-     * @returns {Array<Term>} - Query results
-     */
     loadAndQuery(program, queryStr, templateStr) {
         this.load(program);
         const queryTerm = this.parser.parseExpression(queryStr);
@@ -175,32 +104,16 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         return this.query(queryTerm, templateTerm);
     }
 
-    /**
-     * Execute match operation (alias for query)
-     * @param {Term} pattern - Pattern
-     * @param {Term} template - Template
-     * @returns {Array<Term>}
-     */
     match(pattern, template) {
         return this.query(pattern, template);
     }
 
-    /**
-     * Type check term
-     * @param {Term} term - Term to check
-     * @private
-     */
     _typeCheck(term) {
-        if (term.operator === '-->') {
-            const [subject, type] = term.components;
-            this.typeSystem.checkTypeAnnotation(subject, type.name);
+        if (term.operator === '-->' && term.components.length >= 2) {
+            this.typeSystem.checkTypeAnnotation(term.components[0], term.components[1].name);
         }
     }
 
-    /**
-     * Get comprehensive stats
-     * @returns {Object}
-     */
     getStats() {
         return {
             ...super.getStats(),

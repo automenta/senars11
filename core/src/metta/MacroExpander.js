@@ -1,14 +1,5 @@
-/**
- * MacroExpander.js - MeTTa macro expansion system
- * Pattern-based macro expansion before evaluation
- */
-
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 
-/**
- * MacroExpander - Macro expansion via pattern matching
- * Expands macros before evaluation
- */
 export class MacroExpander extends BaseMeTTaComponent {
     constructor(config = {}, eventBus = null, termFactory = null, matchEngine = null) {
         super(config, 'MacroExpander', eventBus, termFactory);
@@ -17,12 +8,6 @@ export class MacroExpander extends BaseMeTTaComponent {
         this.maxDepth = config.maxMacroDepth ?? 100;
     }
 
-    /**
-     * Define a macro
-     * @param {string} name - Macro name
-     * @param {Term} pattern - Macro pattern
-     * @param {Term} expansion - Macro expansion
-     */
     defineMacro(name, pattern, expansion) {
         this.trackOperation('defineMacro', () => {
             this.macros.set(name, { pattern, expansion });
@@ -30,98 +15,45 @@ export class MacroExpander extends BaseMeTTaComponent {
         });
     }
 
-    /**
-     * Check if macro is defined
-     * @param {string} name - Macro name
-     * @returns {boolean}
-     */
-    hasMacro(name) {
-        return this.macros.has(name);
-    }
+    hasMacro(name) { return this.macros.has(name); }
 
-    /**
-     * Expand macros in term
-     * @param {Term} term - Term to expand
-     * @param {number} depth - Current expansion depth
-     * @returns {Term} - Expanded term
-     */
     expand(term, depth = 0) {
-        // Option to skip tracking for performance in deep recursion?
         return this.trackOperation('expand', () => {
             if (depth >= this.maxDepth) {
                 this.logWarn('Max macro expansion depth reached', { term: term.toString() });
                 return term;
             }
 
-            // 1. Try expand top-level
             const expanded = this._expandOnce(term);
-
-            // 2. If changed, recurse on result (tail recursion logic)
             if (expanded !== term) {
-                this.emitMeTTaEvent('macro-expanded', {
-                    original: term.toString(),
-                    expanded: expanded.toString()
-                });
+                this.emitMeTTaEvent('macro-expanded', { original: term.toString(), expanded: expanded.toString() });
                 return this.expand(expanded, depth + 1);
             }
 
-            // 3. If atomic or no components, done
-            if (!term.operator || !term.components?.length) {
-                return term;
-            }
+            if (!term.operator || !term.components?.length) return term;
 
-            // 4. Recurse into components
             const expandedComponents = term.components.map(c => this.expand(c, depth));
             const changed = expandedComponents.some((c, i) => c !== term.components[i]);
-
             return changed ? this.termFactory.create(term.operator, expandedComponents) : term;
         });
     }
 
-    /**
-     * Single expansion step
-     * @param {Term} term - Term to expand
-     * @returns {Term} - Expanded term or original if no match
-     * @private
-     */
     _expandOnce(term) {
-        // Must be an expression with at least one component (the macro name)
         if (!term.operator || !term.components?.length) return term;
-
         const macroName = term.components[0]?.name;
-        // Optimization: Quick check before map lookup
         if (!macroName || !this.macros.has(macroName)) return term;
 
         const { pattern, expansion } = this.macros.get(macroName);
         const bindings = this.matchEngine?.unify(pattern, term);
-
         return bindings ? this.matchEngine.substitute(expansion, bindings) : term;
     }
 
-    /**
-     * Clear all macros
-     */
     clearMacros() {
         this.macros.clear();
         this.emitMeTTaEvent('macros-cleared', {});
     }
 
-    /**
-     * Get macro count
-     * @returns {number}
-     */
-    getMacroCount() {
-        return this.macros.size;
-    }
-
-    /**
-     * Get stats
-     * @returns {Object}
-     */
-    getStats() {
-        return {
-            ...super.getStats(),
-            macroCount: this.macros.size
-        };
-    }
+    getMacroCount() { return this.macros.size; }
+    getStats() { return { ...super.getStats(), macroCount: this.macros.size }; }
 }
+
