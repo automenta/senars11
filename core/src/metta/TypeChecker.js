@@ -103,7 +103,7 @@ export class TypeChecker extends BaseMeTTaComponent {
         }
 
         // Atomic term
-        if (!term.operator && !term.components) {
+        if (!term.operator) {
             // Infer base type
             if (!isNaN(Number(term.name))) {
                 return { type: TypeConstructors.Number, constraints: [] };

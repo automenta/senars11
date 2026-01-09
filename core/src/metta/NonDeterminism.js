@@ -111,6 +111,7 @@ export class NonDeterminism extends BaseMeTTaComponent {
                 return this._getValues(result);
             });
 
+            if (mappedValues.length === 1) return mappedValues[0];
             return this.superpose(...mappedValues);
         });
     }
