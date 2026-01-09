@@ -161,50 +161,18 @@ export const TermBuilders = {
     intSet: (tf, ...terms) => tf.setInt(...terms)
 };
 
-// ===== Reduction Helpers =====
+// ===== Task Construction Helpers =====
 
-export const Reduction = {
-    // Check if expression is in normal form (fully reduced)
-    isReduced: (expr) => {
-        if (!expr) return true;
-        if (!expr.operator) return true; // Atomic
-        if (expr.operator === '^') return false; // Functor call not reduced
-        // Check components
-        return expr.components?.every(c => Reduction.isReduced(c)) ?? true;
-    },
+export const TaskBuilders = {
+    // Create SeNARS task
+    task: (term, punctuation = '.', truth = { frequency: 0.9, confidence: 0.9 }) => ({
+        term,
+        punctuation,
+        truth
+    }),
 
-    // Apply reduction rule if pattern matches
-    reduce: (expr, pattern, result, bindings = {}) => {
-        const unified = Unification.unify(pattern, expr, bindings);
-        if (unified) {
-            return { reduced: Unification.subst(result, unified), applied: true };
-        }
-        return { reduced: expr, applied: false };
-    },
-
-    // Reduce to normal form with step limit
-    normalize: (expr, rules, maxSteps = 1000) => {
-        let current = expr;
-        let steps = 0;
-
-        while (steps < maxSteps) {
-            let applied = false;
-
-            for (const { pattern, result } of rules) {
-                const { reduced, applied: ruleApplied } = Reduction.reduce(current, pattern, result);
-                if (ruleApplied) {
-                    current = reduced;
-                    applied = true;
-                    break;
-                }
-            }
-
-            if (!applied) break;
-            steps++;
-        }
-
-        return { result: current, steps };
-    }
+    // Default truth value
+    defaultTruth: () => ({ frequency: 0.9, confidence: 0.9 })
 };
 
 // ===== Error Classes =====

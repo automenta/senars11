@@ -23,25 +23,12 @@ function freshTypeVar() {
  * Type constructors
  */
 const TypeConstructors = {
-    // Function type: (-> A B)
     Arrow: (from, to) => ({ kind: 'Arrow', from, to }),
-
-    // List type: (List A)
     List: (elemType) => ({ kind: 'List', elemType }),
-
-    // Maybe type: (Maybe A)
     Maybe: (elemType) => ({ kind: 'Maybe', elemType }),
-
-    // Either type: (Either A B)
     Either: (left, right) => ({ kind: 'Either', left, right }),
-
-    // Dependent type: (Vector n)
     Vector: (length) => ({ kind: 'Vector', length }),
-
-    // Polymorphic type: (∀ a Type)
     Forall: (varName, type) => ({ kind: 'Forall', var: varName, type }),
-
-    // Base types
     Number: { kind: 'Number' },
     String: { kind: 'String' },
     Bool: { kind: 'Bool' },
@@ -173,46 +160,33 @@ export class TypeChecker extends BaseMeTTaComponent {
      * @returns {Map|null} Updated substitution or null if unification fails
      */
     unify(t1, t2, subst = new Map()) {
-        // Apply current substitution
         t1 = this.apply(subst, t1);
         t2 = this.apply(subst, t2);
 
-        // Same type
         if (this.typeEquals(t1, t2)) return subst;
 
-        // Type variable
         if (t1.kind === 'TypeVar') {
-            if (this.occursIn(t1.id, t2)) return null; // Occurs check
-            subst.set(t1.id, t2);
-            return subst;
+            return this.occursIn(t1.id, t2) ? null : subst.set(t1.id, t2);
         }
-
         if (t2.kind === 'TypeVar') {
-            if (this.occursIn(t2.id, t1)) return null;
-            subst.set(t2.id, t1);
-            return subst;
+            return this.occursIn(t2.id, t1) ? null : subst.set(t2.id, t1);
         }
 
-        // Arrow types
         if (t1.kind === 'Arrow' && t2.kind === 'Arrow') {
             const s1 = this.unify(t1.from, t2.from, subst);
-            if (!s1) return null;
-            return this.unify(t1.to, t2.to, s1);
+            return s1 ? this.unify(t1.to, t2.to, s1) : null;
         }
 
-        // List/Maybe types
         if ((t1.kind === 'List' && t2.kind === 'List') || (t1.kind === 'Maybe' && t2.kind === 'Maybe')) {
             return this.unify(t1.elemType, t2.elemType, subst);
         }
 
-        // Either types
         if (t1.kind === 'Either' && t2.kind === 'Either') {
             const s1 = this.unify(t1.left, t2.left, subst);
-            if (!s1) return null;
-            return this.unify(t1.right, t2.right, s1);
+            return s1 ? this.unify(t1.right, t2.right, s1) : null;
         }
 
-        return null; // Unification failed
+        return null;
     }
 
     /**
@@ -283,23 +257,10 @@ export class TypeChecker extends BaseMeTTaComponent {
      */
     occursIn(varId, type) {
         if (!type) return false;
-
-        if (type.kind === 'TypeVar') {
-            return type.id === varId;
-        }
-
-        if (type.kind === 'Arrow') {
-            return this.occursIn(varId, type.from) || this.occursIn(varId, type.to);
-        }
-
-        if (type.kind === 'List' || type.kind === 'Maybe') {
-            return this.occursIn(varId, type.elemType);
-        }
-
-        if (type.kind === 'Either') {
-            return this.occursIn(varId, type.left) || this.occursIn(varId, type.right);
-        }
-
+        if (type.kind === 'TypeVar') return type.id === varId;
+        if (type.kind === 'Arrow') return this.occursIn(varId, type.from) || this.occursIn(varId, type.to);
+        if (['List', 'Maybe'].includes(type.kind)) return this.occursIn(varId, type.elemType);
+        if (type.kind === 'Either') return this.occursIn(varId, type.left) || this.occursIn(varId, type.right);
         return false;
     }
 

@@ -4,6 +4,7 @@
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
+import { TaskBuilders } from './helpers/MeTTaHelpers.js';
 
 /**
  * SeNARSBridge - Bidirectional interoperability layer
@@ -26,11 +27,7 @@ export class SeNARSBridge extends BaseMeTTaComponent {
         return this.trackOperation('mettaToNars', () => {
             // Note: Task and Truth classes should be imported at module level if needed frequently
             // For now, using dynamic import pattern if classes are available
-            const task = {
-                term: mettaTerm,
-                punctuation,
-                truth: { frequency: 0.9, confidence: 0.9 }
-            };
+            const task = TaskBuilders.task(mettaTerm, punctuation);
 
             this.emitMeTTaEvent('metta-to-nars', {
                 term: mettaTerm.toString()

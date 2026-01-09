@@ -4,6 +4,7 @@
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
+import { TaskBuilders } from './helpers/MeTTaHelpers.js';
 
 /**
  * MeTTaSpace - Atomspace-compatible interface for SeNARS
@@ -14,6 +15,7 @@ export class MeTTaSpace extends BaseMeTTaComponent {
         super({}, 'MeTTaSpace', null, termFactory);
         this.memory = memory;
         this.atoms = new Set(); // Atom storage
+        this.rules = []; // Reduction rules
         this.groundedAtoms = null; // Set externally
         this.stateManager = null; // Set externally
     }
@@ -28,11 +30,7 @@ export class MeTTaSpace extends BaseMeTTaComponent {
 
             // Also add to SeNARS memory if available (using simple object pattern)
             if (this.memory?.addTask) {
-                const task = {
-                    term,
-                    punctuation: '.',
-                    truth: { frequency: 0.9, confidence: 0.9 }
-                };
+                const task = TaskBuilders.task(term);
                 this.memory.addTask(task);
             }
 
@@ -84,7 +82,28 @@ export class MeTTaSpace extends BaseMeTTaComponent {
      */
     clear() {
         this.atoms.clear();
+        this.rules = [];
         this.emitMeTTaEvent('space-cleared', {});
+    }
+
+    /**
+     * Add reduction rule
+     * @param {Term} pattern - Pattern to match
+     * @param {Term|Function} result - Result
+     */
+    addRule(pattern, result) {
+        this.trackOperation('addRule', () => {
+            this.rules.push({ pattern, result });
+            this.emitMeTTaEvent('rule-added', { pattern: pattern.toString() });
+        });
+    }
+
+    /**
+     * Get all rules
+     * @returns {Array} - Rules
+     */
+    getRules() {
+        return this.rules;
     }
 
     /**
@@ -103,7 +122,8 @@ export class MeTTaSpace extends BaseMeTTaComponent {
     getStats() {
         return {
             ...super.getStats(),
-            atomCount: this.atoms.size
+            atomCount: this.atoms.size,
+            ruleCount: this.rules.length
         };
     }
 }

@@ -1,4 +1,4 @@
-import { MeTTaAST, Unification, TermBuilders, Reduction, MeTTaError, TypeMismatchError } from '../../../core/src/metta/helpers/MeTTaHelpers.js';
+import { MeTTaAST, Unification, TermBuilders, TaskBuilders, MeTTaError, TypeMismatchError } from '../../../core/src/metta/helpers/MeTTaHelpers.js';
 import { TermFactory } from '../../../core/src/term/TermFactory.js';
 
 describe('MeTTaHelpers', () => {
@@ -150,32 +150,23 @@ describe('MeTTaHelpers', () => {
         });
     });
 
-    describe('Reduction', () => {
-        test('isReduced identifies reduced terms', () => {
-            const reduced = termFactory.atomic('foo');
-            const unreduced = termFactory.predicate(
-                termFactory.atomic('f'),
-                termFactory.product(termFactory.atomic('x'))
-            );
+    describe('TaskBuilders', () => {
+        test('creates SeNARS task', () => {
+            const term = termFactory.atomic('foo');
+            const task = TaskBuilders.task(term);
 
-            expect(Reduction.isReduced(reduced)).toBe(true);
-            expect(Reduction.isReduced(unreduced)).toBe(false);
+            expect(task.term).toBe(term);
+            expect(task.punctuation).toBe('.');
+            expect(task.truth.frequency).toBe(0.9);
         });
 
-        test('reduce applies matching rule', () => {
-            const pattern = termFactory.predicate(
-                termFactory.atomic('f'),
-                termFactory.product(termFactory.atomic('$x'))
-            );
-            const result = termFactory.atomic('$x');
-            const expr = termFactory.predicate(
-                termFactory.atomic('f'),
-                termFactory.product(termFactory.atomic('a'))
-            );
+        test('creates task with custom truth', () => {
+            const term = termFactory.atomic('foo');
+            const truth = { frequency: 0.5, confidence: 0.5 };
+            const task = TaskBuilders.task(term, '?', truth);
 
-            const { reduced, applied } = Reduction.reduce(expr, pattern, result);
-            expect(applied).toBe(true);
-            expect(reduced.name).toBe('a');
+            expect(task.punctuation).toBe('?');
+            expect(task.truth).toBe(truth);
         });
     });
 

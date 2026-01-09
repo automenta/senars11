@@ -43,7 +43,9 @@ export class GroundedAtoms extends BaseMeTTaComponent {
             '&not': (a) => boolTerm((a.name ?? a) !== 'True')
         };
 
-        Object.entries(operations).forEach(([name, fn]) => this.register(name, fn));
+        for (const [name, fn] of Object.entries(operations)) {
+            this.register(name, fn);
+        }
     }
 
     /**

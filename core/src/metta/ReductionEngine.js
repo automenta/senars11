@@ -4,7 +4,7 @@
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
-import { Reduction, ReductionError } from './helpers/MeTTaHelpers.js';
+import { ReductionError } from './helpers/MeTTaHelpers.js';
 
 /**
  * ReductionEngine - Pattern matching reduction engine
@@ -14,22 +14,7 @@ export class ReductionEngine extends BaseMeTTaComponent {
     constructor(config = {}, eventBus = null, termFactory = null, matchEngine = null) {
         super(config, 'ReductionEngine', eventBus, termFactory);
         this.matchEngine = matchEngine;
-        this.reductionRules = [];
         this.maxSteps = config.maxReductionSteps || 1000;
-    }
-
-    /**
-     * Add reduction rule: (= pattern result)
-     * @param {Term} pattern - Pattern to match
-     * @param {Term|Function} result - Result term or function (bindings) => term
-     */
-    addRule(pattern, result) {
-        this.trackOperation('addRule', () => {
-            this.reductionRules.push({ pattern, result });
-            this.emitMeTTaEvent('rule-added', {
-                ruleCount: this.reductionRules.length
-            });
-        });
     }
 
     /**
@@ -40,8 +25,9 @@ export class ReductionEngine extends BaseMeTTaComponent {
       */
     reduceStep(expr, space) {
         return this.trackOperation('reduceStep', () => {
-            // Try each reduction rule
-            for (const { pattern, result } of this.reductionRules) {
+            // Try each reduction rule from space
+            const rules = space?.getRules ? space.getRules() : [];
+            for (const { pattern, result } of rules) {
                 const bindings = this.matchEngine?.unify(pattern, expr);
                 if (!bindings) continue;
 
@@ -134,29 +120,12 @@ export class ReductionEngine extends BaseMeTTaComponent {
     }
 
     /**
-     * Clear all rules
-     */
-    clearRules() {
-        this.reductionRules = [];
-        this.emitMeTTaEvent('rules-cleared', {});
-    }
-
-    /**
-     * Get rule count
-     * @returns {number}
-     */
-    getRuleCount() {
-        return this.reductionRules.length;
-    }
-
-    /**
      * Get stats
      * @returns {Object}
      */
     getStats() {
         return {
-            ...super.getStats(),
-            ruleCount: this.reductionRules.length
+            ...super.getStats()
         };
     }
 }

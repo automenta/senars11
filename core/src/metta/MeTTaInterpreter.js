@@ -5,6 +5,7 @@
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TermBuilders } from './helpers/MeTTaHelpers.js';
+import { COMPLETE_STDLIB_MAPPINGS } from './helpers/MeTTaLib.js';
 import { MeTTaParser } from '../parser/MeTTaParser.js';
 import { MeTTaSpace } from './MeTTaSpace.js';
 import { MatchEngine } from './MatchEngine.js';
@@ -16,73 +17,7 @@ import { GroundedAtoms } from './GroundedAtoms.js';
 import { StateManager } from './StateManager.js';
 import { TermFactory } from '../term/TermFactory.js';
 
-/**
- * Complete stdlib mappings for MeTTa
- */
 
-// Helper to create simple functor mapping
-const makeFunctor = (name) => (tf, args) => TermBuilders.functor(tf, tf.atomic(name), ...args);
-
-export const COMPLETE_STDLIB_MAPPINGS = {
-    // === Atomspace Operations ===
-    'match': makeFunctor('match'),
-    'bind!': makeFunctor('bind!'),
-    'add-atom': makeFunctor('add-atom'),
-    'remove-atom': makeFunctor('remove-atom'),
-    'get-atoms': makeFunctor('get-atoms'),
-
-    // === State Management ===
-    'new-state': makeFunctor('new-state'),
-    'get-state': makeFunctor('get-state'),
-    'change-state!': makeFunctor('change-state!'),
-
-    // === Type Operations ===
-    ':': (tf, args) => TermBuilders.typed(tf, args[0], args[1]),
-    'get-type': makeFunctor('get-type'),
-    'get-metatype': makeFunctor('get-metatype'),
-
-    // === Non-Determinism ===
-    'superpose': (tf, args) => tf.disjunction(...args),
-    'collapse': makeFunctor('collapse'),
-    'sequential': (tf, args) => tf.sequence(...args),
-
-    // === Logic ===
-    'and': (tf, args) => TermBuilders.and(tf, ...args),
-    'or': (tf, args) => TermBuilders.or(tf, ...args),
-    'not': (tf, args) => TermBuilders.not(tf, args[0]),
-    'implies': (tf, args) => TermBuilders.implies(tf, args[0], args[1]),
-    '->': (tf, args) => TermBuilders.implies(tf, args[0], args[1]),
-
-    // === Comparison ===
-    '==': (tf, args) => TermBuilders.eq(tf, args[0], args[1]),
-    '<': makeFunctor('<'),
-    '>': makeFunctor('>'),
-    '<=': makeFunctor('<='),
-    '>=': makeFunctor('>='),
-
-    // === Arithmetic ===
-    '+': makeFunctor('+'),
-    '-': makeFunctor('-'),
-    '*': makeFunctor('*'),
-    '/': makeFunctor('/'),
-    '%': makeFunctor('%'),
-
-    // === Control Flow ===
-    'if': makeFunctor('if'),
-    'let': makeFunctor('let'),
-    'let*': makeFunctor('let*'),
-    'case': makeFunctor('case'),
-
-    // === Lists ===
-    'cons': makeFunctor('cons'),
-    'car': makeFunctor('car'),
-    'cdr': makeFunctor('cdr'),
-
-    // === Reflection ===
-    'quote': (tf, args) => args[0],
-    'eval': makeFunctor('eval'),
-    'pragma!': makeFunctor('pragma!')
-};
 
 /**
  * MeTTaInterpreter - Complete MeTTa execution environment
@@ -126,14 +61,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     }
 
     _registerBuiltinRules() {
-        const arithmeticOps = [
-            ['+', (a, b) => a + b],
-            ['-', (a, b) => a - b],
-            ['*', (a, b) => a * b]
-        ];
+        const arithmeticOps = {
+            '+': (a, b) => a + b,
+            '-': (a, b) => a - b,
+            '*': (a, b) => a * b
+        };
 
-        arithmeticOps.forEach(([op, fn]) => {
-            this.reductionEngine.addRule(
+        for (const [op, fn] of Object.entries(arithmeticOps)) {
+            this.space.addRule(
                 TermBuilders.functor(this.termFactory, this.termFactory.atomic(op),
                     this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
                 (bindings) => {
@@ -142,7 +77,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                     return this.termFactory.atomic(String(fn(a, b)));
                 }
             );
-        });
+        }
     }
 
     /**
