@@ -97,8 +97,8 @@ export class TypeChecker extends BaseMeTTaComponent {
      */
     generate(term, context) {
         // Variable
-        if (term.name && term.name.startsWith('$')) {
-            const varType = context.get(term.name) || freshTypeVar();
+        if (term.name?.startsWith('$')) {
+            const varType = context.get(term.name) ?? freshTypeVar();
             return { type: varType, constraints: [] };
         }
 
@@ -116,7 +116,7 @@ export class TypeChecker extends BaseMeTTaComponent {
             }
 
             // Look up in context
-            const varType = context.get(term.name) || TypeConstructors.Atom;
+            const varType = context.get(term.name) ?? TypeConstructors.Atom;
             return { type: varType, constraints: [] };
         }
 
@@ -252,7 +252,7 @@ export class TypeChecker extends BaseMeTTaComponent {
         if (!type) return type;
 
         if (type.kind === 'TypeVar') {
-            return subst.get(type.id) || type;
+            return subst.get(type.id) ?? type;
         }
 
         if (type.kind === 'Arrow') {

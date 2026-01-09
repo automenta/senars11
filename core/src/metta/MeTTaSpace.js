@@ -26,16 +26,13 @@ export class MeTTaSpace extends BaseMeTTaComponent {
         return this.trackOperation('addAtom', () => {
             this.atoms.add(term);
 
-            // Also add to SeNARS memory if available
-            if (this.memory) {
-                // Convert to task and add
-                const { Task } = require('../task/Task.js');
-                const { Truth } = require('../truth/Truth.js');
-                const task = new Task({
+            // Also add to SeNARS memory if available (using simple object pattern)
+            if (this.memory?.addTask) {
+                const task = {
                     term,
                     punctuation: '.',
-                    truth: new Truth(0.9, 0.9)
-                });
+                    truth: { frequency: 0.9, confidence: 0.9 }
+                };
                 this.memory.addTask(task);
             }
 

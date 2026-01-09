@@ -19,27 +19,31 @@ import { TermFactory } from '../term/TermFactory.js';
 /**
  * Complete stdlib mappings for MeTTa
  */
+
+// Helper to create simple functor mapping
+const makeFunctor = (name) => (tf, args) => TermBuilders.functor(tf, tf.atomic(name), ...args);
+
 export const COMPLETE_STDLIB_MAPPINGS = {
     // === Atomspace Operations ===
-    'match': (tf, args) => TermBuilders.functor(tf, tf.atomic('match'), ...args),
-    'bind!': (tf, args) => TermBuilders.functor(tf, tf.atomic('bind!'), ...args),
-    'add-atom': (tf, args) => TermBuilders.functor(tf, tf.atomic('add-atom'), ...args),
-    'remove-atom': (tf, args) => TermBuilders.functor(tf, tf.atomic('remove-atom'), ...args),
-    'get-atoms': (tf, args) => TermBuilders.functor(tf, tf.atomic('get-atoms'), ...args),
+    'match': makeFunctor('match'),
+    'bind!': makeFunctor('bind!'),
+    'add-atom': makeFunctor('add-atom'),
+    'remove-atom': makeFunctor('remove-atom'),
+    'get-atoms': makeFunctor('get-atoms'),
 
     // === State Management ===
-    'new-state': (tf, args) => TermBuilders.functor(tf, tf.atomic('new-state'), ...args),
-    'get-state': (tf, args) => TermBuilders.functor(tf, tf.atomic('get-state'), ...args),
-    'change-state!': (tf, args) => TermBuilders.functor(tf, tf.atomic('change-state!'), ...args),
+    'new-state': makeFunctor('new-state'),
+    'get-state': makeFunctor('get-state'),
+    'change-state!': makeFunctor('change-state!'),
 
     // === Type Operations ===
     ':': (tf, args) => TermBuilders.typed(tf, args[0], args[1]),
-    'get-type': (tf, args) => TermBuilders.functor(tf, tf.atomic('get-type'), ...args),
-    'get-metatype': (tf, args) => TermBuilders.functor(tf, tf.atomic('get-metatype'), ...args),
+    'get-type': makeFunctor('get-type'),
+    'get-metatype': makeFunctor('get-metatype'),
 
     // === Non-Determinism ===
     'superpose': (tf, args) => tf.disjunction(...args),
-    'collapse': (tf, args) => TermBuilders.functor(tf, tf.atomic('collapse'), ...args),
+    'collapse': makeFunctor('collapse'),
     'sequential': (tf, args) => tf.sequence(...args),
 
     // === Logic ===
@@ -51,33 +55,33 @@ export const COMPLETE_STDLIB_MAPPINGS = {
 
     // === Comparison ===
     '==': (tf, args) => TermBuilders.eq(tf, args[0], args[1]),
-    '<': (tf, args) => TermBuilders.functor(tf, tf.atomic('<'), ...args),
-    '>': (tf, args) => TermBuilders.functor(tf, tf.atomic('>'), ...args),
-    '<=': (tf, args) => TermBuilders.functor(tf, tf.atomic('<='), ...args),
-    '>=': (tf, args) => TermBuilders.functor(tf, tf.atomic('>='), ...args),
+    '<': makeFunctor('<'),
+    '>': makeFunctor('>'),
+    '<=': makeFunctor('<='),
+    '>=': makeFunctor('>='),
 
     // === Arithmetic ===
-    '+': (tf, args) => TermBuilders.functor(tf, tf.atomic('+'), ...args),
-    '-': (tf, args) => TermBuilders.functor(tf, tf.atomic('-'), ...args),
-    '*': (tf, args) => TermBuilders.functor(tf, tf.atomic('*'), ...args),
-    '/': (tf, args) => TermBuilders.functor(tf, tf.atomic('/'), ...args),
-    '%': (tf, args) => TermBuilders.functor(tf, tf.atomic('%'), ...args),
+    '+': makeFunctor('+'),
+    '-': makeFunctor('-'),
+    '*': makeFunctor('*'),
+    '/': makeFunctor('/'),
+    '%': makeFunctor('%'),
 
     // === Control Flow ===
-    'if': (tf, args) => TermBuilders.functor(tf, tf.atomic('if'), ...args),
-    'let': (tf, args) => TermBuilders.functor(tf, tf.atomic('let'), ...args),
-    'let*': (tf, args) => TermBuilders.functor(tf, tf.atomic('let*'), ...args),
-    'case': (tf, args) => TermBuilders.functor(tf, tf.atomic('case'), ...args),
+    'if': makeFunctor('if'),
+    'let': makeFunctor('let'),
+    'let*': makeFunctor('let*'),
+    'case': makeFunctor('case'),
 
     // === Lists ===
-    'cons': (tf, args) => TermBuilders.functor(tf, tf.atomic('cons'), ...args),
-    'car': (tf, args) => TermBuilders.functor(tf, tf.atomic('car'), ...args),
-    'cdr': (tf, args) => TermBuilders.functor(tf, tf.atomic('cdr'), ...args),
+    'cons': makeFunctor('cons'),
+    'car': makeFunctor('car'),
+    'cdr': makeFunctor('cdr'),
 
     // === Reflection ===
     'quote': (tf, args) => args[0],
-    'eval': (tf, args) => TermBuilders.functor(tf, tf.atomic('eval'), ...args),
-    'pragma!': (tf, args) => TermBuilders.functor(tf, tf.atomic('pragma!'), ...args)
+    'eval': makeFunctor('eval'),
+    'pragma!': makeFunctor('pragma!')
 };
 
 /**
