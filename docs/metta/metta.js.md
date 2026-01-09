@@ -33,15 +33,16 @@
 
 ### 2.1 Unified Architecture
 
+**Conceptual MeTTa Architecture:**
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Interpreter                       │
+│                 MeTTaInterpreter                     │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────┐ │
 │  │ Parser  │→│  Space  │→│ Reducer │→│ Result │ │
 │  └─────────┘  └─────────┘  └─────────┘  └────────┘ │
 │       ↓            ↓            ↓                   │
 │  ┌─────────────────────────────────────────────┐   │
-│  │              Unification Engine              │   │
+│  │            MatchEngine (Unification)         │   │
 │  └─────────────────────────────────────────────┘   │
 │       ↓            ↓            ↓                   │
 │  ┌─────────┐  ┌─────────┐  ┌─────────────────┐     │
@@ -50,31 +51,166 @@
 └─────────────────────────────────────────────────────┘
 ```
 
+**Integration with SeNARS:**
+```
+┌─────────────────────────────────────────────────────┐
+│                    SeNARS System                     │
+│  ┌──────────────┐         ┌─────────────────────┐  │
+│  │    Memory    │←───────→│  MeTTaInterpreter   │  │
+│  │  (Atomspace) │         │  (Pattern Rewriting)│  │
+│  └──────────────┘         └─────────────────────┘  │
+│         ↕                           ↕               │
+│  ┌──────────────┐         ┌─────────────────────┐  │
+│  │   Reasoner   │←───────→│   SeNARSBridge      │  │
+│  │  (NAL/NARS)  │         │  (Bidirectional)    │  │
+│  └──────────────┘         └─────────────────────┘  │
+│         ↕                           ↕               │
+│  ┌──────────────────────────────────────────────┐  │
+│  │        BaseMeTTaComponent Pattern            │  │
+│  │  (Metrics, Events, Logging, TermFactory)     │  │
+│  └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
 ### 2.2 Module Structure
 
+> **Note**: This specification shows conceptual organization. Actual implementation in `core/src/metta/` uses SeNARS `Term` objects and `BaseMeTTaComponent` pattern.
+
+**Current Implementation:**
 ```
 core/src/metta/
-├── Atom.js           # Unified atom representation
-├── Space.js          # Knowledge storage
-├── Unify.js          # Pattern matching & substitution
-├── Reduce.js         # Evaluation engine
-├── Nondet.js         # Superposition/collapse
-├── Types.js          # Gradual typing
-├── Grounded.js       # Native function registry
-├── Parser.js         # S-expression parser
-├── Interpreter.js    # Orchestration
-└── index.js          # Public API
+├── MeTTaInterpreter.js      # Main orchestration & public API
+├── MeTTaSpace.js            # Atomspace adapter (wraps SeNARS Memory)
+├── MatchEngine.js           # Pattern matching & unification
+├── ReductionEngine.js       # Evaluation engine
+├── NonDeterminism.js        # Superposition/collapse
+├── TypeSystem.js            # Type checking & inference
+├── TypeChecker.js           # Type validation
+├── GroundedAtoms.js         # Native function registry
+├── SeNARSBridge.js          # Bidirectional MeTTa ↔ NARS
+├── MacroExpander.js         # Macro system
+├── StateManager.js          # State management
+└── helpers/
+    ├── BaseMeTTaComponent.js   # Metrics, events, logging base class
+    └── MeTTaHelpers.js         # Unification & reduction utilities
 ```
+
+**Conceptual Modules** (used in this spec for clarity):
+```
+Atom → Term (via TermFactory)
+Space → MeTTaSpace (SeNARS Memory adapter)
+Unify → MatchEngine + helpers/MeTTaHelpers.js
+Reduce → ReductionEngine
+Nondet → NonDeterminism
+Types → TypeSystem + TypeChecker
+Grounded → GroundedAtoms
+Parser → (integrated in MeTTaInterpreter)
+Interpreter → MeTTaInterpreter
+```
+
+### 2.3 BaseMeTTaComponent Pattern
+
+All MeTTa components extend `BaseMeTTaComponent` (which extends SeNARS `BaseComponent`):
+
+**Inheritance Hierarchy:**
+```
+BaseComponent (SeNARS)
+    ↓
+BaseMeTTaComponent
+    ↓
+├── MeTTaInterpreter
+├── MeTTaSpace
+├── MatchEngine
+├── ReductionEngine
+├── NonDeterminism
+├── TypeSystem
+├── GroundedAtoms
+└── SeNARSBridge
+```
+
+**Provides All Components:**
+
+```javascript
+class BaseMeTTaComponent extends BaseComponent {
+  constructor(config, name, eventBus, termFactory) {
+    super(config, name, eventBus);
+    this.termFactory = termFactory;  // Create SeNARS Terms
+    this._mettaMetrics = new Map();
+  }
+  
+  // Automatic operation tracking
+  trackOperation(opName, fn) {
+    const start = Date.now();
+    try {
+      const result = fn();
+      this._updateMetrics(opName, Date.now() - start);
+      return result;
+    } catch (error) {
+      this._recordError(opName);
+      this.emitMeTTaEvent('operation-error', { opName, error: error.message });
+      throw error;
+    }
+  }
+  
+  // MeTTa-namespaced events
+  emitMeTTaEvent(eventName, data) {
+    this.emitEvent(`metta:${eventName}`, {
+      component: this._name,
+      timestamp: Date.now(),
+      ...data
+    });
+  }
+  
+  // Access to metrics
+  getMeTTaMetrics() { /* ... */ }
+  getStats() { /* ... */ }
+}
+```
+
+**Usage Example:**
+
+```javascript
+class MatchEngine extends BaseMeTTaComponent {
+  constructor(config, eventBus, termFactory) {
+    super(config, 'MatchEngine', eventBus, termFactory);
+  }
+  
+  unify(pattern, term, bindings = {}) {
+    return this.trackOperation('unify', () => {
+      // Automatic timing and error handling
+      const result = Unification.unify(pattern, term, bindings);
+      
+      if (result) {
+        this.emitMeTTaEvent('unification-success', {
+          bindingCount: Object.keys(result).length
+        });
+      }
+      
+      return result;
+    });
+  }
+}
+```
+
+**Key Benefits:**
+- **Metrics**: Automatic operation timing and counting
+- **Events**: Standardized event emission for observability
+- **Logging**: Structured logging with component context
+- **Error Handling**: Consistent error tracking and reporting
+- **TermFactory**: Access to SeNARS Term creation
 
 ---
 
-## 3. Atom Representation
+## 3. Term Representation
 
-### 3.1 Single Unified Atom Class
+> **Conceptual vs Actual**: This specification uses a conceptual `Atom` class for clarity. Actual implementation uses SeNARS `Term` via `TermFactory`.
 
-All atoms share one representation with discriminated variants:
+### 3.1 Conceptual Atom Class (For Specification Clarity)
+
+The specification describes atoms with a unified representation:
 
 ```javascript
+// CONCEPTUAL - Used in this spec for clarity
 class Atom {
   constructor(kind, value, children = null) {
     this.kind = kind;       // 'symbol' | 'variable' | 'expression' | 'grounded'
@@ -108,10 +244,83 @@ class Atom {
 }
 ```
 
-### 3.2 Atom Factories
+### 3.2 Actual Implementation (TermFactory)
+
+The actual implementation uses SeNARS `Term` objects via `TermFactory`:
 
 ```javascript
-// Convenient creation
+// ACTUAL IMPLEMENTATION - Uses SeNARS Terms
+class MeTTaComponent extends BaseMeTTaComponent {
+  constructor(config, eventBus, termFactory) {
+    super(config, 'ComponentName', eventBus, termFactory);
+    // this.termFactory is now available
+  }
+  
+  createTerms() {
+    // Atomic terms (symbols)
+    const symbol = this.termFactory.atomic('foo');
+    
+    // Variables ($-prefixed)
+    const variable = this.termFactory.variable('$x');
+    
+    // Compound terms (expressions)
+    const expr = this.termFactory.compound('^', [
+      this.termFactory.atomic('greet'),
+      this.termFactory.variable('$name')
+    ]);
+    
+    // Operators determine term type
+    // '^' = application
+    // '=' = definition
+    // ':' = type declaration
+  }
+}
+```
+
+### 3.3 Conceptual vs Actual Mappings
+
+| Conceptual (Spec) | Actual (Implementation) | Notes |
+|-------------------|-------------------------|-------|
+| `Atom.symbol('foo')` | `termFactory.atomic('foo')` | Creates atomic term |
+| `Atom.variable('$x')` | `termFactory.variable('$x')` | Creates variable |
+| `Atom.expr(a, b, c)` | `termFactory.compound('^', [a, b, c])` | Creates compound with operator |
+| `atom.isSymbol` | `term.operator === null && !term.isVariable` | Check atomic |
+| `atom.isVariable` | `term.isVariable` | Check variable |
+| `atom.isExpression` | `term.operator !== null` | Check compound |
+| `atom.head()` | `term.components[0]` | First element |
+| `atom.tail()` | `term.components.slice(1)` | Rest of elements |
+
+### 3.4 Example: Creating MeTTa Terms
+
+**Conceptual (Spec):**
+```javascript
+const rule = Atom.expr(
+  Atom.symbol('='),
+  Atom.expr(Atom.symbol('greet'), Atom.variable('$name')),
+  Atom.expr(Atom.symbol('Hello'), Atom.variable('$name'))
+);
+```
+
+**Actual (Implementation):**
+```javascript
+const rule = termFactory.compound('=', [
+  termFactory.compound('greet', [termFactory.variable('$name')]),
+  termFactory.compound('Hello', [termFactory.variable('$name')])
+]);
+```
+
+**Or simply:**
+```javascript
+// Use MeTTaInterpreter.load() which parses MeTTa syntax
+metta.load('(= (greet $name) (Hello $name))');
+```
+
+### 3.5 Atom Factories (Conceptual Convenience)
+
+For clarity in examples, the spec uses these shortcuts:
+
+```javascript
+// Conceptual convenience (not in actual implementation)
 const A = {
   sym: Atom.symbol,
   var: Atom.variable,
@@ -124,48 +333,213 @@ const A = {
   Empty: Atom.symbol('Empty'),
   Type:  Atom.symbol('Type')
 };
+
+// Example usage in spec
+const truthAtom = A.True;
+const listExpr = A.expr(A.sym('cons'), A.var('$x'), A.var('$xs'));
 ```
+
+**In actual code**, these would be:
+
+```javascript
+const truthAtom = termFactory.atomic('True');
+const listExpr = termFactory.compound('cons', [
+  termFactory.variable('$x'),
+  termFactory.variable('$xs')
+]);
 
 ---
 
-## 4. Space (Atomspace)
+## 4. MeTTaSpace: Atomspace Adapter
+
+> **Key Concept**: `MeTTaSpace` wraps SeNARS `Memory` to provide atomspace-compatible interface while syncing with NARS reasoning.
 
 ### 4.1 Interface
 
 ```javascript
-class Space {
-  constructor() {
-    this.atoms = new Set();
-    this.rules = [];  // (= pattern result) pairs
+class MeTTaSpace extends BaseMeTTaComponent {
+  constructor(memory, termFactory) {
+    super({}, 'MeTTaSpace', null, termFactory);
+    this.memory = memory;      // SeNARS Memory instance
+    this.atoms = new Set();    // MeTTa-specific atom storage
+    this.rules = [];           // (= pattern result) pairs
+    this.groundedAtoms = null; // Set externally by interpreter
+    this.stateManager = null;  // Set externally if needed
   }
   
   // Core operations
-  add(atom)        { this.atoms.add(atom); }
-  remove(atom)     { this.atoms.delete(atom); }
-  has(atom)        { return this.atoms.has(atom); }
-  all()            { return [...this.atoms]; }
-  clear()          { this.atoms.clear(); this.rules = []; }
+  addAtom(term) {
+    return this.trackOperation('addAtom', () => {
+      this.atoms.add(term);
+      
+      // Sync to SeNARS memory
+      if (this.memory?.addTask) {
+        const task = {
+          term,
+          punctuation: '.',
+          truth: { frequency: 0.9, confidence: 0.9 }
+        };
+        this.memory.addTask(task);
+      }
+      
+      this.emitMeTTaEvent('atom-added', {
+        atom: term.toString(),
+        totalAtoms: this.atoms.size
+      });
+    });
+  }
+  
+  removeAtom(term) {
+    return this.trackOperation('removeAtom', () => {
+      const removed = this.atoms.delete(term);
+      
+      if (removed) {
+        this.emitMeTTaEvent('atom-removed', {
+          atom: term.toString(),
+          totalAtoms: this.atoms.size
+        });
+      }
+      
+      return removed;
+    });
+  }
+  
+  hasAtom(term)      { return this.atoms.has(term); }
+  getAtoms()         { return Array.from(this.atoms); }
+  getAtomCount()     { return this.atoms.size; }
+  clear()            { this.atoms.clear(); this.rules = []; }
   
   // Rule management
   addRule(pattern, result) { this.rules.push({ pattern, result }); }
   getRules()               { return this.rules; }
   
-  // Query
-  *match(pattern)  { /* yield matching atoms with bindings */ }
+  // Query (uses MatchEngine internally)
+  *match(pattern) {
+    for (const atom of this.atoms) {
+      const bindings = unify(pattern, atom);
+      if (bindings) {
+        yield { atom, bindings };
+      }
+    }
+  }
+  
+  // Stats
+  getStats() {
+    return {
+      ...super.getStats(),
+      atomCount: this.atoms.size,
+      ruleCount: this.rules.length
+    };
+  }
 }
 ```
 
-### 4.2 Notes
+### 4.2 SeNARS Memory Integration
 
-- No separate "truth values" — use atoms like `(tv 0.9 0.8)` if needed
-- Rules stored in-space (self-modifying by design)
-- Simple `Set` for atoms; optimize later with indices if needed
+**Bidirectional Sync:**
+
+```javascript
+// MeTTa → NARS: When MeTTa adds atom, sync to NARS memory
+mettaSpace.addAtom(termFactory.compound('parent', [
+  termFactory.atomic('Alice'),
+  termFactory.atomic('Bob')
+]));
+
+// NARS → MeTTa: Use SeNARSBridge to import beliefs
+const bridge = new SeNARSBridge(reasoner, mettaInterpreter);
+const mettaTerms = bridge.exportFromSeNARS();
+mettaTerms.forEach(term => mettaSpace.addAtom(term));
+```
+
+**Hybrid Reasoning:**
+
+```javascript
+// Use MeTTa for pattern matching, NARS for inference
+class HybridQuery {
+  constructor(metta, nars) {
+    this.metta = metta;
+    this.nars = nars;
+  }
+  
+  query(pattern) {
+    // Try MeTTa pattern matching first (fast)
+    const mettaResults = [...this.metta.space.match(pattern)];
+    
+    // If no results, use NARS inference (slower but more powerful)
+    if (mettaResults.length === 0 && this.nars) {
+      const narsResults = this.nars.derive(pattern);
+      return narsResults.map(r => ({ atom: r.term, bindings: {} }));
+    }
+    
+    return mettaResults;
+  }
+}
+```
+
+### 4.3 Notes
+
+- **No separate truth values**: Use atoms like `(tv 0.9 0.8)` if needed (see PLN extension)
+- **Rules stored in-space**: Self-modifying by design (MeTTa philosophy)
+- **Simple `Set` for atoms**: Optimize later with indices if needed (performance deferred)
+- **SeNARS integration**: MeTTa atoms are tasks in NARS Memory, sharing unified representation
 
 ---
 
-## 5. Unification Engine
+## 5. Unification Engine (MatchEngine)
 
-### 5.1 Core Algorithm
+> **Implementation**: Unification logic in `helpers/MeTTaHelpers.js`, wrapped by `MatchEngine` class for metrics and events.
+
+### 5.1 MatchEngine Class
+
+```javascript
+class MatchEngine extends BaseMeTTaComponent {
+  constructor(config, eventBus, termFactory) {
+    super(config, 'MatchEngine', eventBus, termFactory);
+  }
+  
+  // Unify pattern with term
+  unify(pattern, term, bindings = {}) {
+    return this.trackOperation('unify', () => {
+      const result = Unification.unify(pattern, term, bindings);
+      
+      if (result) {
+        this.emitMeTTaEvent('unification-success', {
+          bindingCount: Object.keys(result).length
+        });
+      }
+      
+      return result;
+    });
+  }
+  
+  // Substitute variables in template
+  substitute(template, bindings) {
+    return this.trackOperation('substitute', () => {
+      return Unification.subst(template, bindings, this.termFactory);
+    });
+  }
+  
+  // Execute match query
+  executeMatch(space, pattern, template) {
+    return this.trackOperation('executeMatch', () => {
+      const atoms = space.getAtoms();
+      const results = atoms.reduce((acc, atom) => {
+        const bindings = this.unify(pattern, atom);
+        return bindings ? [...acc, this.substitute(template, bindings)] : acc;
+      }, []);
+      
+      this.emitMeTTaEvent('match-query-executed', {
+        atomsChecked: atoms.length,
+        resultsFound: results.length
+      });
+      
+      return results;
+    });
+  }
+}
+```
+
+### 5.2 Core Unification Algorithm (from helpers)
 
 ```javascript
 // Unify two atoms, return bindings or null
@@ -559,58 +933,205 @@ class Reducer {
 
 ## 7. Nondeterminism
 
-### 7.1 Clean Generator-Based Design
+> **Implementation**: Uses object-based superpositions (not generators) for compatibility and simplicity. Generators remain a future optimization option.
+
+### 7.1 Object-Based Design
 
 ```javascript
-class Nondet {
-  // Create superposition (yields all values)
-  *superpose(atoms) {
-    for (const atom of atoms) {
-      yield atom;
-    }
+class NonDeterminism extends BaseMeTTaComponent {
+  constructor(config, eventBus, termFactory) {
+    super(config, 'NonDeterminism', eventBus, termFactory);
+    this.rng = config.rng ?? Math.random;
   }
   
-  // Collapse to array of all results
-  collapseAll(generator) {
-    return [...generator];
+  // Create superposition (all possible values)
+  superpose(...values) {
+    return this.trackOperation('superpose', () => {
+      const result = {
+        type: 'superposition',
+        values: values.flat(), // Flatten nested arrays
+        toString() {
+          return `(superpose ${this.values.map(v => v.toString ? v.toString() : v).join(' ')})`;
+        }
+      };
+      
+      this.emitMeTTaEvent('superposition-created', {
+        count: result.values.length
+      });
+      
+      return result;
+    });
   }
   
-  // Collapse to first result
-  collapseFirst(generator) {
-    return generator.next().value;
+  // Check if value is superposition
+  isSuperposition(value) {
+    return value?.type === 'superposition';
   }
   
-  // Collapse to random result
-  collapseRandom(generator) {
-    const all = this.collapseAll(generator);
-    return all[Math.floor(Math.random() * all.length)];
-  }
-  
-  // Bind: flatMap over nondeterministic results
-  *bind(generator, fn) {
-    for (const value of generator) {
-      yield* fn(value);
-    }
-  }
-  
-  // Combine: cartesian product
-  *combine(gen1, gen2, combineFn) {
-    const vals2 = [...gen2];
-    for (const v1 of gen1) {
-      for (const v2 of vals2) {
-        yield combineFn(v1, v2);
+  // Collapse to single value (non-deterministic choice)
+  collapse(superposition) {
+    return this.trackOperation('collapse', () => {
+      if (!this.isSuperposition(superposition)) {
+        return superposition;
       }
+      
+      const idx = Math.floor(this.rng() * superposition.values.length);
+      const selected = superposition.values[idx];
+      
+      this.emitMeTTaEvent('superposition-collapsed', {
+        totalValues: superposition.values.length,
+        selectedIndex: idx
+      });
+      
+      return selected;
+    });
+  }
+  
+  // Collapse to first value (deterministic)
+  collapseFirst(superposition) {
+    if (!this.isSuperposition(superposition)) {
+      return superposition;
     }
+    return superposition.values[0];
+  }
+  
+  // Collapse to all values (deterministic)
+  collapseAll(superposition) {
+    if (!this.isSuperposition(superposition)) {
+      return [superposition];
+    }
+    return superposition.values;
+  }
+  
+  // Map function over superposition
+  mapSuperpose(superposition, fn) {
+    return this.trackOperation('mapSuperpose', () => {
+      if (!this.isSuperposition(superposition)) {
+        return fn(superposition);
+      }
+      
+      const mappedValues = superposition.values.flatMap(v => {
+        const result = fn(v);
+        return this.isSuperposition(result) ? result.values : result;
+      });
+      
+      return this.superpose(...mappedValues);
+    });
+  }
+  
+  // Filter superposition values
+  filterSuperpose(superposition, predicate) {
+    return this.trackOperation('filterSuperpose', () => {
+      if (!this.isSuperposition(superposition)) {
+        return predicate(superposition) ? superposition : null;
+      }
+      
+      const filtered = superposition.values.filter(predicate);
+      
+      return filtered.length === 0 ? null :
+             filtered.length === 1 ? filtered[0] :
+             this.superpose(...filtered);
+    });
+  }
+  
+  // Bind operation (monadic bind)
+  bind(superposition, bindFn) {
+    return this.trackOperation('bind', () => {
+      if (!this.isSuperposition(superposition)) {
+        return bindFn(superposition);
+      }
+      
+      const results = superposition.values.flatMap(val => {
+        const result = bindFn(val);
+        return this.isSuperposition(result) ? result.values : result;
+      });
+      
+      if (results.length === 0) return null;
+      if (results.length === 1) return results[0];
+      return this.superpose(...results);
+    });
+  }
+  
+  // Combine (cartesian product)
+  combine(s1, s2, combineFn) {
+    return this.trackOperation('combine', () => {
+      const vals1 = this.isSuperposition(s1) ? s1.values : [s1];
+      const vals2 = this.isSuperposition(s2) ? s2.values : [s2];
+      
+      const results = vals1.flatMap(v1 =>
+        vals2.map(v2 => combineFn(v1, v2))
+      );
+      
+      return results.length === 1 ? results[0] : this.superpose(...results);
+    });
   }
 }
 ```
 
-### 7.2 Lazy by Default
+### 7.2 Usage Examples
 
-Using generators means nondeterminism is lazy:
-- Only compute values when needed
-- Memory efficient for large superpositions
-- Natural fit with JavaScript iteration
+```metta
+; Create superposition
+(superpose red green blue)  ; All three values exist
+
+; Collapse to one (non-deterministic)
+(collapse (superpose 1 2 3))  ; → 1 or 2 or 3 (random)
+
+; Collapse all (deterministic)
+(collapse-all (superpose a b c))  ; → [a, b, c]
+```
+
+**JavaScript:**
+
+```javascript
+// Create superposition
+const colors = nondet.superpose(
+  termFactory.atomic('red'),
+  termFactory.atomic('green'),
+  termFactory.atomic('blue')
+);
+
+// Random collapse
+const chosen = nondet.collapse(colors);
+
+// Get all values
+const allColors = nondet.collapseAll(colors);
+// → [Term('red'), Term('green'), Term('blue')]
+
+// Map over superposition
+const upperColors = nondet.mapSuperpose(colors, c => 
+  termFactory.atomic(c.name.toUpperCase())
+);
+
+// Filter superposition
+const notRed = nondet.filterSuperpose(colors, c => 
+  c.name !== 'red'
+);
+```
+
+### 7.3 Memory Efficiency
+
+Object-based approach provides:
+- **Simplicity**: Easy to implement and debug
+- **Compatibility**: Works with existing Term objects
+- **Eager evaluation**: All values computed upfront (fine for small sets)
+
+**Future optimization** (generators for large/infinite spaces):
+
+```javascript
+// FUTURE - Not currently implemented
+*superposeGen(values) {
+  for (const v of values) yield v;
+}
+
+// Would enable lazy infinite sequences:
+*naturalNumbers() {
+  let n = 0;
+  while (true) yield termFactory.atomic(String(n++));
+}
+```
+
+**Current approach sufficient for prototype** - optimize later if needed.
 
 ---
 
