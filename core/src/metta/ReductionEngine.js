@@ -5,7 +5,7 @@ export class ReductionEngine extends BaseMeTTaComponent {
     constructor(config = {}, eventBus = null, termFactory = null, matchEngine = null) {
         super(config, 'ReductionEngine', eventBus, termFactory);
         this.matchEngine = matchEngine;
-        this.maxSteps = config.maxReductionSteps || 1000;
+        this.maxSteps = config.maxReductionSteps ?? 1000;
     }
 
     reduceStep(expr, space) {
@@ -20,10 +20,7 @@ export class ReductionEngine extends BaseMeTTaComponent {
                 return { reduced, applied: true };
             }
 
-            if (this._isGroundedCall(expr)) {
-                return this._evalGroundedSafely(expr, space);
-            }
-
+            if (this._isGroundedCall(expr)) return this._evalGroundedSafely(expr, space);
             return { reduced: expr, applied: false };
         });
     }
@@ -67,4 +64,3 @@ export class ReductionEngine extends BaseMeTTaComponent {
         }
     }
 }
-

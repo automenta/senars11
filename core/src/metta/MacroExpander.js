@@ -56,4 +56,3 @@ export class MacroExpander extends BaseMeTTaComponent {
     getMacroCount() { return this.macros.size; }
     getStats() { return { ...super.getStats(), macroCount: this.macros.size }; }
 }
-

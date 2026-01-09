@@ -1,16 +1,19 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TermBuilders } from './helpers/MeTTaHelpers.js';
-import { COMPLETE_STDLIB_MAPPINGS, BUILTIN_OPERATIONS } from './helpers/MeTTaLib.js';
-import { MeTTaParser } from '../parser/MeTTaParser.js';
-import { MeTTaSpace } from './MeTTaSpace.js';
-import { MatchEngine } from './MatchEngine.js';
-import { MacroExpander } from './MacroExpander.js';
-import { TypeSystem } from './TypeSystem.js';
-import { ReductionEngine } from './ReductionEngine.js';
-import { NonDeterminism } from './NonDeterminism.js';
+import { BUILTIN_OPERATIONS, COMPLETE_STDLIB_MAPPINGS } from './helpers/MeTTaLib.js';
+
 import { GroundedAtoms } from './GroundedAtoms.js';
+import { MacroExpander } from './MacroExpander.js';
+import { MatchEngine } from './MatchEngine.js';
+import { MeTTaSpace } from './MeTTaSpace.js';
+import { NonDeterminism } from './NonDeterminism.js';
+import { ReductionEngine } from './ReductionEngine.js';
 import { StateManager } from './StateManager.js';
+import { TypeSystem } from './TypeSystem.js';
+
+import { MeTTaParser } from '../parser/MeTTaParser.js';
 import { TermFactory } from '../term/TermFactory.js';
+
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(memory, config = {}, eventBus = null) {

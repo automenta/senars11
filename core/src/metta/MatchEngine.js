@@ -21,7 +21,7 @@ export class MatchEngine extends BaseMeTTaComponent {
     executeMatch(space, pattern, template) {
         return this.trackOperation('executeMatch', () => {
             const atoms = space.getAtoms?.() ?? [];
-            if (atoms.length === 0) return [];
+            if (!atoms.length) return [];
 
             const results = atoms.flatMap(atom => {
                 const bindings = this.unify(pattern, atom);
@@ -37,4 +37,3 @@ export class MatchEngine extends BaseMeTTaComponent {
         return this.trackOperation('matchAll', () => Unification.matchAll(patterns, terms));
     }
 }
-

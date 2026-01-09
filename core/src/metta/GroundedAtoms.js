@@ -57,4 +57,3 @@ export class GroundedAtoms extends BaseMeTTaComponent {
     setSpace(name, space) { this.spaces.set(name, space); }
     getStats() { return { ...super.getStats(), groundedCount: this.grounded.size, spaceCount: this.spaces.size }; }
 }
-

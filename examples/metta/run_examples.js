@@ -4,14 +4,16 @@
  * Loads and executes all .metta example files
  */
 
-import { MeTTaInterpreter } from '../../core/src/metta/MeTTaInterpreter.js';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { MeTTaInterpreter } from '../../core/src/metta/MeTTaInterpreter.js';
+import { TermFactory } from '../../core/src/term/TermFactory.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 
 // Initialize interpreter
 const termFactory = new TermFactory();

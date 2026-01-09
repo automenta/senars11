@@ -1,5 +1,6 @@
-import { Unification, TermBuilders, TaskBuilders, MeTTaError, TypeMismatchError } from '../../../core/src/metta/helpers/MeTTaHelpers.js';
+import { MeTTaError, TaskBuilders, TermBuilders, TypeMismatchError, Unification } from '../../../core/src/metta/helpers/MeTTaHelpers.js';
 import { TermFactory } from '../../../core/src/term/TermFactory.js';
+
 
 describe('MeTTaHelpers', () => {
     let termFactory;

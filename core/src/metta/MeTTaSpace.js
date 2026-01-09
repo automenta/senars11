@@ -7,16 +7,14 @@ export class MeTTaSpace extends BaseMeTTaComponent {
         this.memory = memory;
         this.atoms = new Set();
         this.rules = [];
-        this.groundedAtoms = null; // Set externally
-        this.stateManager = null; // Set externally
+        this.groundedAtoms = null;
+        this.stateManager = null;
     }
 
     addAtom(term) {
         return this.trackOperation('addAtom', () => {
             this.atoms.add(term);
-            if (this.memory?.addTask) {
-                this.memory.addTask(TaskBuilders.task(term));
-            }
+            this.memory?.addTask?.(TaskBuilders.task(term));
             this.emitMeTTaEvent('atom-added', { atom: term.toString(), totalAtoms: this.atoms.size });
         });
     }
@@ -24,9 +22,7 @@ export class MeTTaSpace extends BaseMeTTaComponent {
     removeAtom(term) {
         return this.trackOperation('removeAtom', () => {
             const removed = this.atoms.delete(term);
-            if (removed) {
-                this.emitMeTTaEvent('atom-removed', { atom: term.toString(), totalAtoms: this.atoms.size });
-            }
+            if (removed) this.emitMeTTaEvent('atom-removed', { atom: term.toString(), totalAtoms: this.atoms.size });
             return removed;
         });
     }
@@ -58,3 +54,4 @@ export class MeTTaSpace extends BaseMeTTaComponent {
         };
     }
 }
+

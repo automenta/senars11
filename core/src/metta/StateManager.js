@@ -48,4 +48,3 @@ export class StateManager extends BaseMeTTaComponent {
 
     getStats() { return { ...super.getStats(), stateCount: this.states.size }; }
 }
-

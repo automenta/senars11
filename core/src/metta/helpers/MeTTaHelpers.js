@@ -106,4 +106,3 @@ export class ReductionError extends MeTTaError {
         this.expr = expr;
     }
 }
-

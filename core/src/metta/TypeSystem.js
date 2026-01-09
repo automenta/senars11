@@ -80,4 +80,3 @@ export class TypeSystem extends BaseMeTTaComponent {
     clearCache() { this.typeCache.clear(); }
     getStats() { return { ...super.getStats(), typeRules: this.typeRules.size, cacheSize: this.typeCache.size }; }
 }
-

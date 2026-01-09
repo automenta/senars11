@@ -69,12 +69,12 @@ Each mode showcases a different LM rule:
 
 ⚡ LM RULE FIRED: narsese-translation
    ├─ Prompt: Translate "Cats are mammals" → Narsese
-   ├─ LM Output: <cat --> mammal>.
+   ├─ LM Output: (cat --> mammal).
    └─ 💡 NEW TASK: (cat --> mammal). <1.0, 0.9>
 
 ⚡ LM RULE FIRED: concept-elaboration
    ├─ Prompt: What properties does "cat" have?
-   ├─ LM Output: <cat --> [furry]>. <cat --> animal>.
+   ├─ LM Output: (cat --> [furry]). (cat --> animal).
    └─ 💡 NEW TASKS: 
         (cat --> [furry]). <0.9, 0.8>
         (cat --> animal). <0.9, 0.8>
