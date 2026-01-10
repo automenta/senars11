@@ -170,14 +170,19 @@ describe('Kernel Ground', () => {
 
     describe('I/O operations', () => {
         test('&print outputs to console', () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+            // Mock console.log manually since jest global is not available
+            const originalLog = console.log;
+            let logOutput = '';
+            console.log = (msg) => { logOutput = msg; };
 
-            const result = ground.execute('&print', Term.sym('Hello'), Term.sym('World'));
+            try {
+                const result = ground.execute('&print', Term.sym('Hello'), Term.sym('World'));
 
-            expect(consoleSpy).toHaveBeenCalledWith('Hello World');
-            expect(result.name).toBe('Null');
-
-            consoleSpy.mockRestore();
+                expect(logOutput).toBe('Hello World');
+                expect(result.name).toBe('Null');
+            } finally {
+                console.log = originalLog;
+            }
         });
 
         test('&now returns timestamp', () => {

@@ -91,12 +91,20 @@ export class Space {
         this.rules.push(rule);
 
         // Also index the rule by its pattern's functor if it's an expression
-        if (isExpression(pattern) && isSymbol(pattern.operator)) {
-            const functorName = pattern.operator.name;
-            if (!this.functorIndex.has(functorName)) {
-                this.functorIndex.set(functorName, []);
+        if (isExpression(pattern)) {
+            let functorName = null;
+            if (typeof pattern.operator === 'string') {
+                functorName = pattern.operator;
+            } else if (isSymbol(pattern.operator)) {
+                functorName = pattern.operator.name;
             }
-            this.functorIndex.get(functorName).push(rule);
+
+            if (functorName) {
+                if (!this.functorIndex.has(functorName)) {
+                    this.functorIndex.set(functorName, []);
+                }
+                this.functorIndex.get(functorName).push(rule);
+            }
         }
 
         return this;
@@ -118,10 +126,18 @@ export class Space {
     rulesFor(functor) {
         this.stats.indexedLookups++;
 
+        if (typeof functor === 'string') {
+            return this.functorIndex.get(functor) || [];
+        }
+
         if (isSymbol(functor)) {
             return this.functorIndex.get(functor.name) || [];
-        } else if (isExpression(functor) && isSymbol(functor.operator)) {
-            return this.functorIndex.get(functor.operator.name) || [];
+        } else if (isExpression(functor)) {
+            if (typeof functor.operator === 'string') {
+                return this.functorIndex.get(functor.operator) || [];
+            } else if (isSymbol(functor.operator)) {
+                return this.functorIndex.get(functor.operator.name) || [];
+            }
         }
 
         // If functor is not a symbol, return all rules
@@ -135,12 +151,20 @@ export class Space {
      */
     _indexAtom(atom) {
         // Only index atoms (not rules) in the functor index
-        if (isExpression(atom) && isSymbol(atom.operator)) {
-            const functorName = atom.operator.name;
-            if (!this.functorIndex.has(functorName)) {
-                this.functorIndex.set(functorName, []);
+        if (isExpression(atom)) {
+            let functorName = null;
+            if (typeof atom.operator === 'string') {
+                functorName = atom.operator;
+            } else if (isSymbol(atom.operator)) {
+                functorName = atom.operator.name;
             }
-            this.functorIndex.get(functorName).push(atom);
+
+            if (functorName) {
+                if (!this.functorIndex.has(functorName)) {
+                    this.functorIndex.set(functorName, []);
+                }
+                this.functorIndex.get(functorName).push(atom);
+            }
         }
     }
 
@@ -150,15 +174,23 @@ export class Space {
      * @param {Object} atom - Atom to deindex
      */
     _deindexAtom(atom) {
-        if (isExpression(atom) && isSymbol(atom.operator)) {
-            const functorName = atom.operator.name;
-            if (this.functorIndex.has(functorName)) {
-                const items = this.functorIndex.get(functorName);
-                const index = items.indexOf(atom);
-                if (index !== -1) {
-                    items.splice(index, 1);
-                    if (items.length === 0) {
-                        this.functorIndex.delete(functorName);
+        if (isExpression(atom)) {
+            let functorName = null;
+            if (typeof atom.operator === 'string') {
+                functorName = atom.operator;
+            } else if (isSymbol(atom.operator)) {
+                functorName = atom.operator.name;
+            }
+
+            if (functorName) {
+                if (this.functorIndex.has(functorName)) {
+                    const items = this.functorIndex.get(functorName);
+                    const index = items.indexOf(atom);
+                    if (index !== -1) {
+                        items.splice(index, 1);
+                        if (items.length === 0) {
+                            this.functorIndex.delete(functorName);
+                        }
                     }
                 }
             }

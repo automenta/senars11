@@ -7,6 +7,8 @@ import { Space } from './kernel/Space.js';
 import { Ground } from './kernel/Ground.js';
 import { step, reduce, match } from './kernel/Reduce.js';
 import { Parser } from './Parser.js';
+import { Unify } from './kernel/Unify.js';
+import { Term } from './kernel/Term.js';
 
 export class MeTTaInterpreter {
     constructor() {
@@ -14,8 +16,61 @@ export class MeTTaInterpreter {
         this.ground = new Ground();
         this.parser = new Parser();
         
+        // Register advanced grounded operations
+        this.registerAdvancedOps();
+
         // Load standard library
         this.loadStdlib();
+    }
+
+    registerAdvancedOps() {
+        // &subst: Substitution (variable, value, template) -> result
+        // or (template, bindings_map) - but bindings as map is not easy in MeTTa.
+        // Let's implement (substitute variable value template)
+        this.ground.register('&subst', (variable, value, template) => {
+            const bindings = {};
+            if (variable.name) {
+                bindings[variable.name] = value;
+            }
+            return Unify.subst(template, bindings);
+        });
+
+        // &match: Match (space, pattern, template)
+        this.ground.register('&match', (space, pattern, template) => {
+            // If space is &self, use this.space
+            let targetSpace = this.space;
+            // TODO: support other spaces
+
+            const results = match(targetSpace, pattern, template);
+            // Listify results
+            const listify = (arr) => {
+                if (arr.length === 0) return Term.sym('()');
+                return Term.exp(':', [arr[0], listify(arr.slice(1))]);
+            };
+            return listify(results);
+        });
+
+        // &query: Query (pattern, template) -> results
+        // Similar to match but implicit space (or different semantics?)
+        // In MeTTa, `match` is `(match space pattern template)`.
+        this.ground.register('&query', (pattern, template) => {
+            const results = match(this.space, pattern, template);
+            const listify = (arr) => {
+                if (arr.length === 0) return Term.sym('()');
+                return Term.exp(':', [arr[0], listify(arr.slice(1))]);
+            };
+            return listify(results);
+        });
+
+        // &type-of: Get type
+        this.ground.register('&type-of', (atom) => {
+            // Search for (: atom $type)
+            const pattern = Term.exp(':', [atom, Term.var('type')]);
+            const template = Term.var('type');
+            const results = match(this.space, pattern, template);
+            if (results.length > 0) return results[0];
+            return Term.sym('Atom'); // Default type
+        });
     }
 
     /**
@@ -47,20 +102,43 @@ export class MeTTaInterpreter {
             '(= (if False $t $e) $e)',
             
             // Let binding
+            // (= (let $x $v $body) ((lambda $x $body) $v))
             '(= (let $x $v $body) ((lambda $x $body) $v))',
             
-            // Lambda (simplified)
-            '(= ((lambda $x $body) $v) (substitute $x $v $body))',
+            // Lambda (simplified) using &subst
+            // (= ((lambda $x $body) $v) (substitute $x $v $body))
+            '(= ((lambda $x $body) $v) (^ &subst $x $v $body))',
             
             // Equality
             '(= (equal $x $x) True)',
-            '(= (equal $x $y) False :- (not (unifiable $x $y)))'
+            '(= (equal $x $y) False :- (not (unifiable $x $y)))',
+
+            // Grounded Operations Mapping
+            '(= (+ $a $b) (^ &+ $a $b))',
+            '(= (+ $a $b $c) (^ &+ $a $b $c))',
+            '(= (- $a $b) (^ &- $a $b))',
+            '(= (- $a) (^ &- $a))',
+            '(= (* $a $b) (^ &* $a $b))',
+            '(= (* $a $b $c) (^ &* $a $b $c))',
+            '(= (/ $a $b) (^ &/ $a $b))',
+            '(= (< $a $b) (^ &< $a $b))',
+            '(= (> $a $b) (^ &> $a $b))',
+            '(= (== $a $b) (^ &== $a $b))',
+            '(= (% $a $b) (^ &% $a $b))',
+            '(= (and $a $b) (^ &and $a $b))',
+            '(= (or $a $b) (^ &or $a $b))',
+            '(= (not $a) (^ &not $a))'
         ];
         
         for (const rule of coreLib) {
             const parsed = this.parser.parse(rule);
             if (parsed) {
-                this.space.add(parsed);
+                // Check if it's a rule definition (= pattern result)
+                if (parsed.operator === '=' && parsed.components.length === 2) {
+                    this.space.addRule(parsed.components[0], parsed.components[1]);
+                } else {
+                    this.space.add(parsed);
+                }
             }
         }
     }
@@ -92,13 +170,23 @@ export class MeTTaInterpreter {
             
             // Filter
             '(= (filter $pred ()) ())',
-            '(= (filter $pred (: $h $t)) (if ($pred $h) (: $h (filter $pred $t)) (filter $pred $t)))'
+            '(= (filter $pred (: $h $t)) (if ($pred $h) (: $h (filter $pred $t)) (filter $pred $t)))',
+
+            // Reverse
+            '(= (reverse $l) (reverse-acc $l ()))',
+            '(= (reverse-acc () $acc) $acc)',
+            '(= (reverse-acc (: $h $t) $acc) (reverse-acc $t (: $h $acc)))'
         ];
         
         for (const rule of listLib) {
             const parsed = this.parser.parse(rule);
             if (parsed) {
-                this.space.add(parsed);
+                // Check if it's a rule definition (= pattern result)
+                if (parsed.operator === '=' && parsed.components.length === 2) {
+                    this.space.addRule(parsed.components[0], parsed.components[1]);
+                } else {
+                    this.space.add(parsed);
+                }
             }
         }
     }
@@ -108,17 +196,24 @@ export class MeTTaInterpreter {
      */
     loadMatchStdlib() {
         // Pattern matching rules would go here
-        // For now, we'll add basic match functionality
         const matchLib = [
             // Basic match structure
-            // Note: Actual implementation would require more complex matching logic
-            '(= (match $space $pattern $template) (query $space $pattern $template))'
+            // (= (match $space $pattern $template) (query $space $pattern $template))
+            '(= (match $space $pattern $template) (^ &match $space $pattern $template))',
+
+            // Exists check
+            '(= (exists? $s $p) (not (empty? (match $s $p $p))))'
         ];
         
         for (const rule of matchLib) {
             const parsed = this.parser.parse(rule);
             if (parsed) {
-                this.space.add(parsed);
+                // Check if it's a rule definition (= pattern result)
+                if (parsed.operator === '=' && parsed.components.length === 2) {
+                    this.space.addRule(parsed.components[0], parsed.components[1]);
+                } else {
+                    this.space.add(parsed);
+                }
             }
         }
     }
@@ -134,13 +229,19 @@ export class MeTTaInterpreter {
             '(= (: == (-> a a Boolean)) True)',
             
             // Type checking
-            '(= (type-of $x) (lookup-type $x))'
+            // (= (type-of $x) (lookup-type $x))
+            '(= (type-of $x) (^ &type-of $x))'
         ];
         
         for (const rule of typesLib) {
             const parsed = this.parser.parse(rule);
             if (parsed) {
-                this.space.add(parsed);
+                // Check if it's a rule definition (= pattern result)
+                if (parsed.operator === '=' && parsed.components.length === 2) {
+                    this.space.addRule(parsed.components[0], parsed.components[1]);
+                } else {
+                    this.space.add(parsed);
+                }
             }
         }
     }
@@ -281,7 +382,12 @@ export class MeTTaInterpreter {
         const expressions = this.parser.parseProgram(code);
         
         for (const expr of expressions) {
-            this.space.add(expr);
+            // Check if it's a rule definition (= pattern result)
+            if (expr.operator === '=' && expr.components.length === 2) {
+                this.space.addRule(expr.components[0], expr.components[1]);
+            } else {
+                this.space.add(expr);
+            }
         }
     }
 

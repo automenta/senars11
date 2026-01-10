@@ -17,6 +17,7 @@ export class Parser {
      */
     parse(str) {
         const tokens = this.tokenizer.tokenize(str);
+        if (tokens.length === 0) return null;
         const parser = new InternalParser(tokens);
         return parser.parse();
     }
@@ -30,6 +31,11 @@ export class Parser {
         const tokens = this.tokenizer.tokenize(str);
         const parser = new InternalParser(tokens);
         return parser.parseProgram();
+    }
+
+    // Legacy method support
+    parseExpression(str) {
+        return this.parse(str);
     }
 }
 
@@ -102,9 +108,9 @@ class InternalParser {
         
         if (token === '(') {
             return this.parseExpression();
-        } else if (token.startsWith('?')) {
+        } else if (token.startsWith('$')) { // Changed ? to $ for variables
             this.pos++;
-            return var_(token.substring(1));
+            return var_(token);
         } else {
             this.pos++;
             return sym(token);
@@ -118,13 +124,19 @@ class InternalParser {
         
         this.pos++; // Skip '('
         
+        // Handle empty list ()
+        if (this.tokens[this.pos] === ')') {
+            this.pos++;
+            return sym('()');
+        }
+
         const components = [];
         
         while (this.pos < this.tokens.length && this.tokens[this.pos] !== ')') {
             if (this.tokens[this.pos] === '(') {
                 components.push(this.parseExpression());
-            } else if (this.tokens[this.pos].startsWith('?')) {
-                components.push(var_(this.tokens[this.pos].substring(1)));
+            } else if (this.tokens[this.pos].startsWith('$')) { // Changed ? to $
+                components.push(var_(this.tokens[this.pos]));
                 this.pos++;
             } else {
                 components.push(sym(this.tokens[this.pos]));
@@ -138,23 +150,34 @@ class InternalParser {
         
         this.pos++; // Skip ')'
         
-        return exp(components);
+        // Check if we have an operator (first component) and arguments
+        if (components.length > 0) {
+            const operator = components[0];
+            const args = components.slice(1);
+
+            if (operator.type === 'atom' && operator.operator === null) {
+                // It is a symbol (or variable)
+                return exp(operator.name, args);
+            } else {
+                 // Head is not a simple symbol/atom.
+                 return exp(operator, args);
+            }
+        }
+
+        // Fallback for empty list (should be handled earlier)
+        return sym('()');
     }
 
     parseProgram() {
         const expressions = [];
         
         while (this.pos < this.tokens.length) {
-            // Skip whitespace/punctuation that's not part of an expression
-            while (this.pos < this.tokens.length && 
-                   this.tokens[this.pos] !== '(' && 
-                   !this.tokens[this.pos].startsWith('?') &&
-                   this.tokens[this.pos] !== ')') {
-                this.pos++;
-            }
-            
-            if (this.pos < this.tokens.length && this.tokens[this.pos] !== ')') {
+            const token = this.tokens[this.pos];
+            // Basic validity check for start of expression
+            if (token === '(' || token.startsWith('$') || token.length > 0) {
                 expressions.push(this.parse());
+            } else {
+                this.pos++;
             }
         }
         
