@@ -9,11 +9,14 @@ export class Space {
     constructor() {
         // Main storage for atoms
         this.atoms = new Set();
-        
+
+        // Storage for rules (rewrite rules)
+        this.rules = [];
+
         // Functor index for efficient rule lookup
         // Maps functor names to sets of matching rules
         this.functorIndex = new Map();
-        
+
         // Stats for performance monitoring
         this.stats = {
             adds: 0,
@@ -29,6 +32,10 @@ export class Space {
      * @returns {Space} This space for chaining
      */
     add(atom) {
+        if (!atom) {
+            throw new Error("Cannot add null/undefined atom");
+        }
+
         if (!this.atoms.has(atom)) {
             this.atoms.add(atom);
             this._indexAtom(atom);
@@ -70,21 +77,55 @@ export class Space {
     }
 
     /**
+     * Add a rewrite rule to the space
+     * @param {Object} pattern - Pattern to match
+     * @param {Object|Function} result - Result to return (either a term or a function that takes bindings and returns a term)
+     * @returns {Space} This space for chaining
+     */
+    addRule(pattern, result) {
+        if (!pattern) {
+            throw new Error("Pattern cannot be null or undefined");
+        }
+
+        const rule = { pattern, result };
+        this.rules.push(rule);
+
+        // Also index the rule by its pattern's functor if it's an expression
+        if (isExpression(pattern) && isSymbol(pattern.operator)) {
+            const functorName = pattern.operator.name;
+            if (!this.functorIndex.has(functorName)) {
+                this.functorIndex.set(functorName, []);
+            }
+            this.functorIndex.get(functorName).push(rule);
+        }
+
+        return this;
+    }
+
+    /**
+     * Get all rules in the space
+     * @returns {Array} Array of rules
+     */
+    getRules() {
+        return [...this.rules];
+    }
+
+    /**
      * Get rules for a specific functor/operator
      * @param {string|Object} functor - Functor name or atom
      * @returns {Array} Matching rules
      */
     rulesFor(functor) {
         this.stats.indexedLookups++;
-        
+
         if (isSymbol(functor)) {
             return this.functorIndex.get(functor.name) || [];
         } else if (isExpression(functor) && isSymbol(functor.operator)) {
             return this.functorIndex.get(functor.operator.name) || [];
         }
-        
-        // If functor is not a symbol, return all atoms
-        return this.all();
+
+        // If functor is not a symbol, return all rules
+        return [...this.rules];
     }
 
     /**
@@ -93,6 +134,7 @@ export class Space {
      * @param {Object} atom - Atom to index
      */
     _indexAtom(atom) {
+        // Only index atoms (not rules) in the functor index
         if (isExpression(atom) && isSymbol(atom.operator)) {
             const functorName = atom.operator.name;
             if (!this.functorIndex.has(functorName)) {
@@ -111,11 +153,11 @@ export class Space {
         if (isExpression(atom) && isSymbol(atom.operator)) {
             const functorName = atom.operator.name;
             if (this.functorIndex.has(functorName)) {
-                const rules = this.functorIndex.get(functorName);
-                const index = rules.indexOf(atom);
+                const items = this.functorIndex.get(functorName);
+                const index = items.indexOf(atom);
                 if (index !== -1) {
-                    rules.splice(index, 1);
-                    if (rules.length === 0) {
+                    items.splice(index, 1);
+                    if (items.length === 0) {
                         this.functorIndex.delete(functorName);
                     }
                 }
@@ -128,6 +170,7 @@ export class Space {
      */
     clear() {
         this.atoms.clear();
+        this.rules = [];
         this.functorIndex.clear();
         this.stats = {
             adds: 0,
@@ -153,7 +196,21 @@ export class Space {
         return {
             ...this.stats,
             atomCount: this.atoms.size,
-            functorCount: this.functorIndex.size
+            functorCount: this.functorIndex.size,
+            ruleCount: this.rules.length
+        };
+    }
+
+    /**
+     * Get space statistics (alias for getStats)
+     * @returns {Object} Statistics object
+     */
+    stats() {
+        const baseStats = this.getStats();
+        // Add indexedFunctors property as expected by tests
+        return {
+            ...baseStats,
+            indexedFunctors: this.functorIndex.size
         };
     }
 
@@ -164,7 +221,7 @@ export class Space {
      */
     query(pattern) {
         this.stats.queries++;
-        
+
         // For now, do a linear scan
         // In a full implementation, this would use more sophisticated indexing
         const results = [];

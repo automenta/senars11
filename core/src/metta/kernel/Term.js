@@ -21,73 +21,94 @@ export function sym(name) {
     if (symbolCache.has(name)) {
         return symbolCache.get(name);
     }
-    
+
     const atom = {
-        type: 'symbol',
+        type: 'atom',  // Changed to match test expectations
         name: name,
+        operator: null,
+        components: [],
         toString: () => name,
-        equals: (other) => other && other.type === 'symbol' && other.name === name
+        equals: (other) => other && other.type === 'atom' && other.name === name
     };
-    
+
     symbolCache.set(name, atom);
     return atom;
 }
 
 /**
  * Create an interned variable atom
- * @param {string} name - Variable name
+ * @param {string} name - Variable name (with or without $ prefix)
  * @returns {Object} Interned variable atom
  */
 export function var_(name) {
-    if (variableCache.has(name)) {
-        return variableCache.get(name);
+    // Remove $ prefix if present for internal storage
+    const cleanName = name.startsWith('$') ? name.substring(1) : name;
+    const fullName = `$${cleanName}`;
+
+    if (variableCache.has(fullName)) {
+        return variableCache.get(fullName);
     }
-    
+
     const atom = {
-        type: 'variable',
-        name: name,
-        toString: () => `?${name}`,
-        equals: (other) => other && other.type === 'variable' && other.name === name
+        type: 'atom',  // Changed to match test expectations
+        name: fullName,
+        operator: null,
+        components: [],
+        toString: () => fullName,
+        equals: (other) => other && other.type === 'atom' && other.name === fullName
     };
-    
-    variableCache.set(name, atom);
+
+    variableCache.set(fullName, atom);
     return atom;
 }
 
 /**
  * Create an interned expression atom
- * @param {Array} components - Expression components [operator, ...args]
+ * @param {string} operator - Operator name
+ * @param {Array} components - Expression components
  * @returns {Object} Interned expression atom
  */
-export function exp(components) {
+export function exp(operator, components) {
+    // Validate inputs
+    if (!operator || typeof operator !== 'string') {
+        throw new Error('Operator must be a non-empty string');
+    }
+    if (!Array.isArray(components)) {
+        throw new Error('Components must be an array');
+    }
+
     // Create a unique key for the expression
-    const key = JSON.stringify(components.map(c => c.toString ? c.toString() : c));
-    
+    const key = `${operator},${components.map(c => c.toString ? c.toString() : c).join(',')}`;
+
     if (expressionCache.has(key)) {
         return expressionCache.get(key);
     }
-    
+
+    // Create canonical name
+    const canonicalName = `(${operator}, ${components.map(c => c.name || c).join(', ')})`;
+
     const atom = {
-        type: 'expression',
-        components: components,
-        operator: components[0],
-        args: components.slice(1),
-        toString: () => `(${components.map(c => c.toString ? c.toString() : c).join(' ')})`,
+        type: 'compound',  // Changed to match test expectations
+        name: canonicalName,
+        operator: operator,
+        components: Object.freeze([...components]), // Freeze to match test expectations
+        toString: () => canonicalName,
         equals: function(other) {
-            if (!other || other.type !== 'expression' || other.components.length !== this.components.length) {
+            if (!other || other.type !== 'compound' || other.operator !== this.operator ||
+                other.components.length !== this.components.length) {
                 return false;
             }
-            
+
             for (let i = 0; i < this.components.length; i++) {
                 if (!this.components[i].equals(other.components[i])) {
                     return false;
                 }
             }
-            
+
             return true;
         }
     };
-    
+
     expressionCache.set(key, atom);
     return atom;
 }
@@ -99,6 +120,7 @@ export function exp(components) {
  * @returns {boolean} True if atoms are structurally equal
  */
 export function equals(a, b) {
+    if (a == null && b == null) return false;  // Special case: null equals null is false
     if (a === b) return true;
     if (!a || !b) return false;
     if (a.equals) return a.equals(b);
@@ -112,14 +134,18 @@ export function equals(a, b) {
  */
 export function clone(atom) {
     if (!atom) return atom;
-    
+
     switch (atom.type) {
-        case 'symbol':
-            return sym(atom.name);
-        case 'variable':
-            return var_(atom.name);
-        case 'expression':
-            return exp(atom.components.map(clone));
+        case 'atom':
+            if (atom.operator === null) {
+                // This is a symbol
+                return sym(atom.name);
+            } else {
+                // This is a variable
+                return var_(atom.name);
+            }
+        case 'compound':
+            return exp(atom.operator, atom.components.map(clone));
         default:
             return atom;
     }
@@ -131,7 +157,8 @@ export function clone(atom) {
  * @returns {boolean} True if atom is a variable
  */
 export function isVariable(atom) {
-    return atom && atom.type === 'variable';
+    if (!atom) return false;  // Handle null input
+    return atom.type === 'atom' && atom.name && typeof atom.name === 'string' && atom.name.startsWith('$');
 }
 
 /**
@@ -140,7 +167,7 @@ export function isVariable(atom) {
  * @returns {boolean} True if atom is a symbol
  */
 export function isSymbol(atom) {
-    return atom && atom.type === 'symbol';
+    return atom && atom.type === 'atom' && atom.operator === null && atom.name && typeof atom.name === 'string' && !atom.name.startsWith('$');
 }
 
 /**
@@ -149,5 +176,24 @@ export function isSymbol(atom) {
  * @returns {boolean} True if atom is an expression
  */
 export function isExpression(atom) {
-    return atom && atom.type === 'expression';
+    return atom && atom.type === 'compound';
 }
+
+// Export a Term object that matches the expected API in tests
+export const Term = {
+    sym: sym,
+    var: var_,
+    exp: exp,
+    equals: equals,
+    clone: clone,
+    isVar: isVariable,
+    isSymbol: isSymbol,
+    isExpression: isExpression,
+
+    // Additional helper for test compatibility
+    clearSymbolTable: () => {
+        symbolCache.clear();
+        variableCache.clear();
+        expressionCache.clear();
+    }
+};
