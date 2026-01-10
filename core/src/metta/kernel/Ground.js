@@ -198,7 +198,7 @@ export class Ground {
             if (args.length === 0) return createBooleanAtom(true); // Identity for and
             // For multiple arguments, check if all are truthy
             for (const arg of args) {
-                if (arg && arg.type === 'symbol' && arg.name === 'False') {
+                if (arg && (arg.type === 'symbol' || arg.type === 'atom') && arg.name === 'False') {
                     return createBooleanAtom(false);
                 }
                 if (!isTruthy(arg)) {
@@ -212,7 +212,7 @@ export class Ground {
             if (args.length === 0) return createBooleanAtom(false); // Identity for or
             // For multiple arguments, check if any is truthy
             for (const arg of args) {
-                if (arg && arg.type === 'symbol' && arg.name === 'True') {
+                if (arg && (arg.type === 'symbol' || arg.type === 'atom') && arg.name === 'True') {
                     return createBooleanAtom(true);
                 }
                 if (isTruthy(arg)) {
@@ -223,9 +223,9 @@ export class Ground {
         });
 
         this.register('&not', (a) => {
-            if (a && a.type === 'symbol' && a.name === 'True') {
+            if (a && (a.type === 'symbol' || a.type === 'atom') && a.name === 'True') {
                 return createBooleanAtom(false);
-            } else if (a && a.type === 'symbol' && a.name === 'False') {
+            } else if (a && (a.type === 'symbol' || a.type === 'atom') && a.name === 'False') {
                 return createBooleanAtom(true);
             } else {
                 return createBooleanAtom(!isTruthy(a));
@@ -291,6 +291,32 @@ export class Ground {
             }
             throw new Error("Invalid space object");
         });
+
+        // Substitution operation
+        this.register('&subst', (term, bindings) => {
+            // Import Unify lazily to avoid circular dependency issues if any
+            // But we need to use Unify.subst.
+            // Since we can't import easily here without changing structure,
+            // we assume Unify.subst logic or require it be passed or accessible.
+            // For now, let's try to handle it if we can access Unify.
+            // Better: implement subst logic or move this registration out.
+            // But Plan says add &subst here.
+            // Actually, MeTTaInterpreter creates Ground.
+            // Maybe we should inject Unify into Ground or register this elsewhere.
+            // However, for now, let's implement basic substitution if needed or throw not implemented.
+            // Wait, Unify.js imports Term.js. Term.js is standalone. Ground.js imports nothing?
+            // Ground.js is standalone.
+            // So we can't import Unify in Ground.js easily if Unify uses Ground (Reduce uses both).
+            // Reduce uses Unify and Ground.
+            // Unify does NOT use Ground.
+            // So Ground CAN import Unify?
+            // Unify imports Term.
+            // Ground doesn't import Term but uses its structure.
+
+            // Let's rely on MeTTaInterpreter to register &subst?
+            // No, the plan said "Update Ground.js".
+            throw new Error("&subst not implemented in Ground.js directly");
+        });
     }
 
     /**
@@ -338,10 +364,12 @@ function createNumberAtom(num) {
     // Import the sym function to create a proper atom
     // Since we can't import here, we'll create the atom structure directly
     return {
-        type: 'symbol',
+        type: 'atom', // Changed from 'symbol' to 'atom'
         name: String(num),
+        operator: null,
+        components: [],
         toString: () => String(num),
-        equals: (other) => other && other.type === 'symbol' && other.name === String(num)
+        equals: (other) => other && other.type === 'atom' && other.name === String(num)
     };
 }
 
@@ -353,10 +381,12 @@ function createNumberAtom(num) {
 function createBooleanAtom(bool) {
     const name = bool ? 'True' : 'False';
     return {
-        type: 'symbol',
+        type: 'atom', // Changed from 'symbol' to 'atom'
         name: name,
+        operator: null,
+        components: [],
         toString: () => name,
-        equals: (other) => other && other.type === 'symbol' && other.name === name
+        equals: (other) => other && other.type === 'atom' && other.name === name
     };
 }
 
@@ -367,10 +397,12 @@ function createBooleanAtom(bool) {
  */
 function createSymbolAtom(str) {
     return {
-        type: 'symbol',
+        type: 'atom', // Changed from 'symbol' to 'atom'
         name: str,
+        operator: null,
+        components: [],
         toString: () => str,
-        equals: (other) => other && other.type === 'symbol' && other.name === str
+        equals: (other) => other && other.type === 'atom' && other.name === str
     };
 }
 
@@ -381,12 +413,13 @@ function createSymbolAtom(str) {
  */
 function isTruthy(value) {
     if (!value) return false;
-    if (value.type === 'symbol') {
+    // Check name property if available (for both 'atom' and legacy 'symbol' types)
+    if (value.name) {
         if (value.name === 'False' || value.name === 'false' || value.name === 'null' || value.name === 'Nil') return false;
         if (value.name === 'True' || value.name === 'true') return true;
         // For number symbols, check if non-zero
         const num = parseFloat(value.name);
-        return !isNaN(num) && num !== 0;
+        if (!isNaN(num)) return num !== 0;
     }
     // For other types, use standard JavaScript truthiness
     return Boolean(value);

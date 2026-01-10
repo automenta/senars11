@@ -64,38 +64,48 @@ export function var_(name) {
 
 /**
  * Create an interned expression atom
- * @param {string} operator - Operator name
+ * @param {Object|string} operator - Operator atom or string name
  * @param {Array} components - Expression components
  * @returns {Object} Interned expression atom
  */
 export function exp(operator, components) {
     // Validate inputs
-    if (!operator || typeof operator !== 'string') {
-        throw new Error('Operator must be a non-empty string');
+    if (!operator) {
+        throw new Error('Operator must be defined');
     }
     if (!Array.isArray(components)) {
         throw new Error('Components must be an array');
     }
 
+    const opString = typeof operator === 'string' ? operator : (operator.toString ? operator.toString() : String(operator));
+
     // Create a unique key for the expression
-    const key = `${operator},${components.map(c => c.toString ? c.toString() : c).join(',')}`;
+    const key = `${opString},${components.map(c => c.toString ? c.toString() : c).join(',')}`;
 
     if (expressionCache.has(key)) {
         return expressionCache.get(key);
     }
 
     // Create canonical name
-    const canonicalName = `(${operator}, ${components.map(c => c.name || c).join(', ')})`;
+    const canonicalName = `(${opString}, ${components.map(c => c.name || c).join(', ')})`;
 
     const atom = {
-        type: 'compound',  // Changed to match test expectations
+        type: 'compound',
         name: canonicalName,
         operator: operator,
-        components: Object.freeze([...components]), // Freeze to match test expectations
+        components: Object.freeze([...components]),
         toString: () => canonicalName,
         equals: function(other) {
-            if (!other || other.type !== 'compound' || other.operator !== this.operator ||
-                other.components.length !== this.components.length) {
+            if (!other || other.type !== 'compound' || other.components.length !== this.components.length) {
+                return false;
+            }
+
+            // Check operator equality
+            if (typeof this.operator === 'string' && typeof other.operator === 'string') {
+                if (this.operator !== other.operator) return false;
+            } else if (this.operator && this.operator.equals && other.operator && other.operator.equals) {
+                if (!this.operator.equals(other.operator)) return false;
+            } else if (this.operator !== other.operator) {
                 return false;
             }
 

@@ -39,19 +39,39 @@ export const Unify = {
 
         // Case 4: Both terms are expressions
         if (isExpression(boundTerm1) && isExpression(boundTerm2)) {
-            // Check if operators match (first component is the operator)
-            if (!boundTerm1.components[0].equals(boundTerm2.components[0])) {
-                return null;
+            let currentBindings = resultBindings;
+
+            // Unify operators if they are objects, or check strict equality if primitives
+            if (typeof boundTerm1.operator === 'object' || typeof boundTerm2.operator === 'object') {
+                // log(`Unifying operators: ${boundTerm1.operator} vs ${boundTerm2.operator}`);
+                // If one is object and other isn't, they don't match (unless implicit conversion logic exists, but let's be strict)
+                if (typeof boundTerm1.operator !== 'object' || typeof boundTerm2.operator !== 'object') {
+                    // log(`Operator type mismatch`);
+                    return null;
+                }
+                // Recursively unify operators
+                const opUnified = Unify.unify(boundTerm1.operator, boundTerm2.operator, currentBindings);
+                if (opUnified === null) {
+                    // log(`Operator unification failed`);
+                    return null;
+                }
+                currentBindings = opUnified;
+                // log(`Operator unified. Bindings: ${JSON.stringify(Object.keys(currentBindings))}`);
+            } else {
+                // Check if operators match (strings)
+                if (boundTerm1.operator !== boundTerm2.operator) {
+                    return null;
+                }
             }
 
-            // Check if number of arguments match (excluding operator)
+            // Check if number of arguments match
             if (boundTerm1.components.length !== boundTerm2.components.length) {
                 return null;
             }
 
-            // Recursively unify arguments (skip the operator at index 0)
-            let currentBindings = resultBindings;
-            for (let i = 1; i < boundTerm1.components.length; i++) {
+            // Recursively unify arguments
+            // Note: currentBindings might have been updated by operator unification
+            for (let i = 0; i < boundTerm1.components.length; i++) {
                 const unified = Unify.unify(boundTerm1.components[i], boundTerm2.components[i], currentBindings);
                 if (unified === null) {
                     return null;
@@ -59,6 +79,7 @@ export const Unify = {
                 currentBindings = unified;
             }
 
+            // log(`Unify success. Bindings: ${JSON.stringify(Object.keys(currentBindings))}`);
             return currentBindings;
         }
 
@@ -179,12 +200,37 @@ function substitute(term, bindings) {
     // If term is an expression, substitute in its components
     if (isExpression(term)) {
         const substitutedComponents = term.components.map(comp => substitute(comp, bindings));
+
+        // Also substitute in operator if it is an object
+        let substitutedOperator = term.operator;
+        let operatorChanged = false;
+        if (typeof term.operator === 'object' && term.operator !== null) {
+            substitutedOperator = substitute(term.operator, bindings);
+            if (substitutedOperator !== term.operator) {
+                operatorChanged = true;
+            }
+        }
+
+        // Optimize: if no components changed and operator unchanged, return original term
+        let componentsChanged = false;
+        for (let i = 0; i < term.components.length; i++) {
+            if (substitutedComponents[i] !== term.components[i]) {
+                componentsChanged = true;
+                break;
+            }
+        }
+
+        if (!componentsChanged && !operatorChanged) return term;
+
         // Create new expression with substituted components
+        const opString = typeof substitutedOperator === 'string' ? substitutedOperator : (substitutedOperator.toString ? substitutedOperator.toString() : String(substitutedOperator));
         return {
             ...term,
+            operator: substitutedOperator,
             components: substitutedComponents,
             // Update name if needed
-            name: `(${substitutedComponents[0].name}, ${substitutedComponents.slice(1).map(c => c.name || c).join(', ')})`
+            name: `(${opString}, ${substitutedComponents.map(c => c.name || c).join(', ')})`,
+            equals: term.equals // keep the equals function
         };
     }
 
@@ -210,4 +256,3 @@ function copyBindings(bindings) {
 function extendBindings(baseBindings, newBindings) {
     return {...baseBindings, ...newBindings};
 }
-

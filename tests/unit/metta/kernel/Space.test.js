@@ -166,10 +166,11 @@ describe('Kernel Space', () => {
             space.addRule(p1, Term.sym('r1'));
             space.addRule(p2, Term.sym('r2'));
 
-            const stats = space.stats();
+            const stats = space.getStats();
             expect(stats.atomCount).toBe(2);
             expect(stats.ruleCount).toBe(2);
-            expect(stats.indexedFunctors).toBe(2); // '+' and '-'
+            // getStats doesn't return indexedFunctors directly in some versions, but let's check functorCount
+            expect(stats.functorCount).toBe(2); // '+' and '-'
         });
     });
 
