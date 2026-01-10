@@ -35,6 +35,12 @@ export class MeTTaSpace extends BaseMeTTaComponent {
 
                 if (pattern && result) {
                     this.rules.push({ pattern, result });
+                    if (pattern.toString() === 'True' && result.toString() === 'True') {
+                        console.error("[DEBUG] SUSPICIOUS RULE FROM TERM:", term.toString());
+                        console.error("Pattern:", pattern);
+                        console.error("Result:", result);
+                    }
+                    console.log("[DEBUG] Registered Rule:", pattern.toString(), "->", result.toString());
                     this.emitMeTTaEvent('rule-registered', { pattern: pattern.toString() });
                 }
             }
@@ -63,6 +69,7 @@ export class MeTTaSpace extends BaseMeTTaComponent {
     addRule(pattern, result) {
         this.trackOperation('addRule', () => {
             this.rules.push({ pattern, result });
+            console.log(`[DEBUG] Explicit Rule Added: ${pattern.toString()}`);
             this.emitMeTTaEvent('rule-added', { pattern: pattern.toString() });
         });
     }

@@ -12,7 +12,8 @@ const __dirname = path.dirname(__filename);
 
 // Phase 1-2: core, list, match, types
 // Phase 3: truth, nal, attention, control
-const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'truth', 'nal', 'attention', 'control'];
+// Phase 4: search, learn
+const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'truth', 'nal', 'attention', 'control', 'search', 'learn'];
 
 export class StdlibLoader {
     constructor(interpreter, options = {}) {
@@ -26,6 +27,7 @@ export class StdlibLoader {
         const stats = { loaded: [], failed: [], atomsAdded: 0 };
 
         for (const moduleName of this.modules) {
+            console.log(`[DEBUG] Loading module: ${moduleName}`);
             try {
                 const result = this.loadModule(moduleName);
                 stats.loaded.push(moduleName);

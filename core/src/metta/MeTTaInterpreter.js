@@ -39,7 +39,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.matchEngine = config.matchEngine ?? new MatchEngine(config, eventBus, this.termFactory);
         this.macroExpander = config.macroExpander ?? new MacroExpander(config, eventBus, this.termFactory, this.matchEngine);
         this.typeSystem = config.typeSystem ?? new TypeSystem(config, eventBus, this.termFactory);
-        this.reductionEngine = config.reductionEngine ?? new ReductionEngine(config, eventBus, this.termFactory, this.matchEngine);
+        this.reductionEngine = config.reductionEngine ?? new ReductionEngine({ ...config, maxReductionSteps: 100000 }, eventBus, this.termFactory, this.matchEngine);
         this.nonDeterminism = config.nonDeterminism ?? new NonDeterminism(config, eventBus, this.termFactory);
         this.groundedAtoms = config.groundedAtoms ?? new GroundedAtoms(config.functorRegistry, config, eventBus, this.termFactory);
         this.stateManager = config.stateManager ?? new StateManager(config, eventBus, this.termFactory);
@@ -69,8 +69,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             this.space.addRule(
                 TermBuilders.functor(this.termFactory, this.termFactory.atomic(op), this.termFactory.atomic('$a'), this.termFactory.atomic('$b')),
                 (bindings) => {
-                    const [a, b] = [Number(bindings['$a'].name), Number(bindings['$b'].name)];
-                    return this.termFactory.atomic(String(fn(a, b)));
+                    try {
+                        const aTerm = bindings['$a'];
+                        const bTerm = bindings['$b'];
+                        if (!aTerm || !bTerm) return null;
+                        const [a, b] = [Number(aTerm.name), Number(bTerm.name)];
+                        if (isNaN(a) || isNaN(b)) return null;
+                        return this.termFactory.atomic(String(fn(a, b)));
+                    } catch (e) { return null; }
                 }
             );
         }
@@ -103,9 +109,18 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
     run(mettaCode) {
         return this.trackOperation('run', () => {
-            const results = this.parser.parseMeTTa(mettaCode)
-                .filter(t => t.punctuation === '!')
-                .map(t => this.evaluate(t.term));
+            const tasks = this.parser.parseMeTTa(mettaCode);
+            const results = [];
+
+            for (const task of tasks) {
+                if (task.punctuation === '!') {
+                    results.push(this.evaluate(task.term));
+                } else {
+                    const expanded = this.macroExpander.expand(task.term);
+                    if (this.config.typeChecking) this._typeCheck(expanded);
+                    this.space.addAtom(expanded);
+                }
+            }
 
             this.emitMeTTaEvent('program-executed', { resultCount: results.length });
             return results;

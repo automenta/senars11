@@ -11,11 +11,13 @@ export class GroundedAtoms extends BaseMeTTaComponent {
     }
 
     _registerBuiltins() {
+        console.log("[DEBUG] GroundedAtoms registering builtins...");
         this.register('&self', () => this.getCurrentSpace());
 
         for (const [op, fn] of Object.entries(BUILTIN_OPERATIONS.arithmetic)) {
             this.register(op, (...args) => {
                 const nums = args.map(arg => Number(arg?.name ?? arg));
+                console.log(`[DEBUG] Executing grounded ${op} with args:`, args.map(a => a.toString()), " -> ", nums);
                 return this.termFactory.atomic(String(fn(...nums)));
             });
         }
@@ -43,13 +45,17 @@ export class GroundedAtoms extends BaseMeTTaComponent {
     }
 
     execute(name, ...args) {
-        return this.trackOperation('execute', () => {
-            const normalized = this._normalizeName(name);
-            const executor = this.grounded.get(normalized);
-            if (!executor) throw new Error(`Grounded atom not found: ${normalized}`);
-            this.emitMeTTaEvent('grounded-executed', { name: normalized, argCount: args.length });
+        const normalized = this._normalizeName(name);
+        const executor = this.grounded.get(normalized);
+        // console.log(`[DEBUG] GroundedAtoms execution attempt: ${name} -> ${normalized}, found=${!!executor}`);
+        if (!executor) throw new Error(`Grounded atom not found: ${normalized}`);
+        this.emitMeTTaEvent('grounded-executed', { name: normalized, argCount: args.length });
+        try {
             return executor(...args);
-        });
+        } catch (e) {
+            console.error(`[DEBUG] Error executing grounded atom ${normalized}:`, e);
+            throw e;
+        }
     }
 
     has(name) { return this.grounded.has(this._normalizeName(name)); }

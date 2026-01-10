@@ -26,7 +26,7 @@
 
 ; Check if list is empty
 (= (empty? ()) True)
-(= (empty? (: $_ $_)) False)
+(= (empty? (: $h $t)) False)
 
 ; Check if atom is a list
 (= (list? ()) True)

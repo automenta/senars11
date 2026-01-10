@@ -6,10 +6,11 @@ import { TermCache } from './TermCache.js';
 
 export { Term };
 
-const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '*', '<->', '=', '||', '&&', '<~>', '{}', '[]']);
+const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '<->', '||', '&&', '<~>', '{}', '[]']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
 const RELATIONAL_OPERATORS = ['-->', '<->', '==>', '<=>'];
 const SET_OPERATORS = ['{}', '[]'];
+const IDEMPOTENT_OPERATORS = new Set(['&', '|', '||', '&&', '{}', '[]']);
 
 const CANONICAL_NAME_PATTERNS = {
     '--': (n) => `(--, ${n[0]})`,
@@ -52,6 +53,7 @@ export class TermFactory extends BaseComponent {
     }
 
     _createCompound(operator, components) {
+        // console.log("TermFactory._createCompound:", operator, components?.length);
         const { operator: op, components: comps } = this._normalizeTermData(operator, components);
 
         if (this._reflexiveMarker) {
@@ -236,6 +238,10 @@ export class TermFactory extends BaseComponent {
                 normalizedComponents = operator === '='
                     ? normalizedComponents.sort(this._compareTermsAlphabetically)
                     : this._normalizeCommutative(normalizedComponents);
+
+                if (IDEMPOTENT_OPERATORS.has(operator)) {
+                    normalizedComponents = this._removeRedundancy(normalizedComponents);
+                }
             }
         }
 
@@ -251,7 +257,7 @@ export class TermFactory extends BaseComponent {
     }
 
     _normalizeCommutative(comps) {
-        return this._removeRedundancy(comps.sort(this._compareTermsAlphabetically));
+        return comps.sort(this._compareTermsAlphabetically);
     }
 
     _compareTermsAlphabetically(termA, termB) {
@@ -267,14 +273,21 @@ export class TermFactory extends BaseComponent {
     _canonicalizeComponents(operator, components) {
         if (!operator) return components;
 
-        if (['<->', '<=>', '='].includes(operator)) return this._canonicalizeEquivalence(components);
+        if (['<->', '<=>'].includes(operator)) return this._canonicalizeEquivalence(components);
         if (operator === '-->') return this._canonicalizeImplication(components);
 
-        return COMMUTATIVE_OPERATORS.has(operator)
-            ? (operator === '='
+        if (COMMUTATIVE_OPERATORS.has(operator)) {
+            let comps = operator === '='
                 ? [...components].sort(this._compareTermsAlphabetically)
-                : this._removeRedundancy(this._normalizeCommutative([...components])))
-            : [...components];
+                : this._normalizeCommutative([...components]);
+
+            if (IDEMPOTENT_OPERATORS.has(operator)) {
+                comps = this._removeRedundancy(comps);
+            }
+            return comps;
+        }
+
+        return [...components];
     }
 
     _canonicalizeEquivalence(components) {

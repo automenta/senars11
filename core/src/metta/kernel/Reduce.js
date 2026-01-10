@@ -33,6 +33,8 @@ function step(atom, space, ground) {
                     ? result(bindings)
                     : Unify.subst(result, bindings);
 
+                if (reduced === null || reduced === undefined) continue;
+
                 return { reduced, applied: true };
             }
         }
