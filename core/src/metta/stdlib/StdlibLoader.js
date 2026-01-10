@@ -10,7 +10,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_MODULES = ['core', 'list', 'match', 'types'];
+// Phase 1-2: core, list, match, types
+// Phase 3: truth, nal, attention, control
+const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'truth', 'nal', 'attention', 'control'];
 
 export class StdlibLoader {
     constructor(interpreter, options = {}) {

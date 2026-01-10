@@ -15,6 +15,30 @@ export class MeTTaSpace extends BaseMeTTaComponent {
         return this.trackOperation('addAtom', () => {
             this.atoms.add(term);
             this.memory?.addTask?.(TaskBuilders.task(term));
+
+            // Auto-register equality/inference rules for the ReductionEngine
+            // Pattern: (= pattern result)
+            const op = term.operator ?? term.components?.[0]?.name;
+
+            if (op === '=' && term.components.length >= 2) {
+                let pattern, result;
+
+                if (term.operator === '=') {
+                    // Structurally typed rule
+                    pattern = term.components[0];
+                    result = term.components[1];
+                } else if (term.components[0]?.name === '=' && term.components.length >= 3) {
+                    // Expression-based rule: (= pattern result)
+                    pattern = term.components[1];
+                    result = term.components[2];
+                }
+
+                if (pattern && result) {
+                    this.rules.push({ pattern, result });
+                    this.emitMeTTaEvent('rule-registered', { pattern: pattern.toString() });
+                }
+            }
+
             this.emitMeTTaEvent('atom-added', { atom: term.toString(), totalAtoms: this.atoms.size });
         });
     }
