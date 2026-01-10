@@ -1,202 +1,164 @@
 /**
- * Minimal MeTTa Kernel - Unification and Substitution
- * 
- * Pattern matching with occurs check and variable substitution.
- * No dependencies on TermFactory - works directly with kernel terms.
+ * Unify.js - Pattern matching with occurs check
+ * Core unification algorithm for MeTTa
  */
+
+import { isVariable, isExpression, isSymbol, clone } from './Term.js';
 
 /**
- * Check if a term is a variable (name starts with $)
- * @param {object} term - Term to check
- * @returns {boolean} True if variable
+ * Unify two terms with variable bindings
+ * @param {Object} term1 - First term
+ * @param {Object} term2 - Second term
+ * @param {Map} bindings - Current bindings (optional)
+ * @returns {Map|null} Resulting bindings or null if unification fails
  */
-function isVar(term) {
-    return term && term.type === 'atom' && term.name.startsWith('$');
-}
-
-/**
- * Unify two terms, producing a substitution (bindings map)
- * @param {object} pattern - Pattern term
- * @param {object} term - Term to match against
- * @param {object} bindings - Existing variable bindings
- * @returns {object|null} Bindings map or null if unification fails
- */
-function unify(pattern, term, bindings = {}) {
-    // Apply current substitutions first
-    const p = subst(pattern, bindings);
-    const t = subst(term, bindings);
-
-    // Variable in pattern: bind it
-    if (isVar(p)) {
-        return unifyVariable(p, t, bindings);
+export function unify(term1, term2, bindings = new Map()) {
+    // Clone bindings to avoid modifying the original
+    const resultBindings = new Map(bindings);
+    
+    // Apply current bindings to both terms
+    const boundTerm1 = substitute(term1, resultBindings);
+    const boundTerm2 = substitute(term2, resultBindings);
+    
+    // Case 1: Both terms are identical
+    if (boundTerm1.equals && boundTerm1.equals(boundTerm2)) {
+        return resultBindings;
     }
-
-    // Variable in term: bind it  
-    if (isVar(t)) {
-        return unifyVariable(t, p, bindings);
+    
+    // Case 2: First term is a variable
+    if (isVariable(boundTerm1)) {
+        return bindVariable(boundTerm1, boundTerm2, resultBindings);
     }
-
-    // Both atomic: check equality
-    if (p.type === 'atom' && t.type === 'atom') {
-        return p.name === t.name ? bindings : null;
+    
+    // Case 3: Second term is a variable
+    if (isVariable(boundTerm2)) {
+        return bindVariable(boundTerm2, boundTerm1, resultBindings);
     }
-
-    // Both compound: check operator and recursively unify components
-    if (p.type === 'compound' && t.type === 'compound') {
-        if (p.operator !== t.operator) {
+    
+    // Case 4: Both terms are expressions
+    if (isExpression(boundTerm1) && isExpression(boundTerm2)) {
+        // Check if operators match
+        if (!boundTerm1.operator.equals(boundTerm2.operator)) {
             return null;
         }
-
-        if (p.components.length !== t.components.length) {
+        
+        // Check if number of arguments match
+        if (boundTerm1.args.length !== boundTerm2.args.length) {
             return null;
         }
-
-        let currentBindings = bindings;
-        for (let i = 0; i < p.components.length; i++) {
-            currentBindings = unify(p.components[i], t.components[i], currentBindings);
-            if (currentBindings === null) {
-                return null; // Unification failed
+        
+        // Recursively unify arguments
+        let currentBindings = resultBindings;
+        for (let i = 0; i < boundTerm1.args.length; i++) {
+            const unified = unify(boundTerm1.args[i], boundTerm2.args[i], currentBindings);
+            if (unified === null) {
+                return null;
             }
+            currentBindings = unified;
         }
-
+        
         return currentBindings;
     }
-
-    // Type mismatch: can't unify
+    
+    // Case 5: Terms are incompatible
     return null;
 }
 
 /**
- * Unify a variable with a term
- * @param {object} variable - Variable term
- * @param {object} term - Term to bind to
- * @param {object} bindings - Current bindings
- * @returns {object|null} Updated bindings or null
+ * Bind a variable to a term with occurs check
+ * @private
+ * @param {Object} variable - Variable to bind
+ * @param {Object} term - Term to bind to
+ * @param {Map} bindings - Current bindings
+ * @returns {Map|null} Updated bindings or null if fails
  */
-function unifyVariable(variable, term, bindings) {
-    const varName = variable.name;
-
-    // Variable already bound: unify its binding with term
-    if (bindings[varName]) {
-        return unify(bindings[varName], term, bindings);
-    }
-
-    // Term is a variable that's already bound: unify variable with term's binding
-    if (isVar(term) && bindings[term.name]) {
-        return unify(variable, bindings[term.name], bindings);
-    }
-
-    // Occurs check: prevent infinite structures
-    if (occursCheck(varName, term, bindings)) {
+function bindVariable(variable, term, bindings) {
+    // Occurs check: prevent circular references
+    if (occursCheck(variable, term, bindings)) {
         return null;
     }
-
-    // Create new binding
-    return { ...bindings, [varName]: term };
+    
+    // Create new bindings with the variable bound to the term
+    const newBindings = new Map(bindings);
+    newBindings.set(variable.name, term);
+    return newBindings;
 }
 
 /**
- * Check if variable occurs in term (prevents infinite structures)
- * @param {string} varName - Variable name
- * @param {object} term - Term to check
- * @param {object} bindings - Current bindings
+ * Check if a variable occurs in a term (with bindings applied)
+ * @private
+ * @param {Object} variable - Variable to check for
+ * @param {Object} term - Term to check in
+ * @param {Map} bindings - Current bindings
  * @returns {boolean} True if variable occurs in term
  */
-function occursCheck(varName, term, bindings) {
-    // Follow bindings
-    const resolved = isVar(term) && bindings[term.name]
-        ? bindings[term.name]
-        : term;
-
-    // Variable occurs in itself
-    if (isVar(resolved) && resolved.name === varName) {
+function occursCheck(variable, term, bindings) {
+    // Apply current bindings to term
+    const boundTerm = substitute(term, bindings);
+    
+    // If the term is the variable itself, it occurs
+    if (isVariable(boundTerm) && boundTerm.name === variable.name) {
         return true;
     }
-
-    // Recursively check components
-    if (resolved.type === 'compound') {
-        return resolved.components.some(comp => occursCheck(varName, comp, bindings));
+    
+    // If the term is an expression, check recursively
+    if (isExpression(boundTerm)) {
+        for (const arg of boundTerm.args) {
+            if (occursCheck(variable, arg, bindings)) {
+                return true;
+            }
+        }
     }
-
+    
     return false;
 }
 
 /**
- * Substitute variables in a term using bindings
- * @param {object} term - Term with variables
- * @param {object} bindings - Variable bindings
- * @returns {object} Term with variables substituted
+ * Substitute variables in a term with their bindings
+ * @param {Object} term - Term to substitute in
+ * @param {Map} bindings - Variable bindings
+ * @returns {Object} Term with substitutions applied
  */
-function subst(term, bindings) {
-    if (!term) {
-        return term;
-    }
-
-    // Variable: substitute if bound
-    if (isVar(term)) {
-        const varName = term.name;
-        if (bindings[varName]) {
-            // Recursively substitute in case binding contains variables
-            return subst(bindings[varName], bindings);
+export function substitute(term, bindings) {
+    if (!term) return term;
+    
+    // If term is a variable, try to substitute it
+    if (isVariable(term)) {
+        if (bindings.has(term.name)) {
+            return bindings.get(term.name);
         }
         return term;
     }
-
-    // Compound: recursively substitute in components
-    if (term.type === 'compound') {
-        let changed = false;
-        const newComponents = term.components.map(comp => {
-            const newComp = subst(comp, bindings);
-            if (newComp !== comp) {
-                changed = true;
-            }
-            return newComp;
-        });
-
-        if (changed) {
-            // Rebuild compound term with substituted components
-            // Import Term module to rebuild
-            const componentNames = newComponents.map(c => c.toString()).join(', ');
-            const name = `(${term.operator}, ${componentNames})`;
-
-            return Object.freeze({
-                type: 'compound',
-                name,
-                operator: term.operator,
-                components: Object.freeze(newComponents),
-                toString: () => name
-            });
-        }
+    
+    // If term is an expression, substitute in its components
+    if (isExpression(term)) {
+        const substitutedArgs = term.args.map(arg => substitute(arg, bindings));
+        return { ...term, args: substitutedArgs, components: [term.operator, ...substitutedArgs] };
     }
-
-    // Atomic: return as-is
+    
+    // For symbols or other terms, return as-is
     return term;
 }
 
 /**
- * Match all patterns against all terms, returning successful matches
- * @param {Array} patterns - Array of pattern terms
- * @param {Array} terms - Array of terms to match
- * @returns {Array} Array of {pattern, term, bindings} objects
+ * Create a copy of bindings
+ * @param {Map} bindings - Bindings to copy
+ * @returns {Map} Copy of bindings
  */
-function matchAll(patterns, terms) {
-    const matches = [];
-
-    for (const pattern of patterns) {
-        for (const term of terms) {
-            const bindings = unify(pattern, term);
-            if (bindings !== null) {
-                matches.push({ pattern, term, bindings });
-            }
-        }
-    }
-
-    return matches;
+export function copyBindings(bindings) {
+    return new Map(bindings);
 }
 
-export const Unify = {
-    isVar,
-    unify,
-    subst,
-    matchAll
-};
+/**
+ * Extend bindings with new mappings
+ * @param {Map} baseBindings - Base bindings
+ * @param {Map} newBindings - New bindings to add
+ * @returns {Map} Combined bindings
+ */
+export function extendBindings(baseBindings, newBindings) {
+    const combined = new Map(baseBindings);
+    for (const [key, value] of newBindings) {
+        combined.set(key, value);
+    }
+    return combined;
+}

@@ -1,305 +1,231 @@
-import { Term } from '../../term/Term.js';
-import { Truth } from '../../Truth.js';
+/**
+ * Ground.js - Native function registry
+ * Registry for grounded operations in MeTTa
+ */
 
 export class Ground {
-    /**
-     * @param {object} registry - Optional external registry
-     * @param {object} config - Configuration
-     * @param {object} senarsBridge - SeNARS Bridge instance (Phase 3)
-     */
-    constructor(registry = new Map(), config = {}, senarsBridge = null) {
-        this.registry = registry;
-        this.config = config;
-        this.senarsBridge = senarsBridge;
+    constructor() {
+        this.operations = new Map();
+        this._registerCoreOperations();
     }
 
     /**
      * Register a grounded operation
-     * @param {string} name - Operation name (e.g. "&+")
-     * @param {function} fn - Implementation function
+     * @param {string} name - Operation name
+     * @param {Function} fn - Function to execute
+     * @returns {Ground} This instance for chaining
      */
     register(name, fn) {
-        this.registry.set(name, fn);
+        this.operations.set(name, fn);
+        return this;
+    }
+
+    /**
+     * Check if operation exists
+     * @param {string} name - Operation name
+     * @returns {boolean} True if operation exists
+     */
+    has(name) {
+        return this.operations.has(name);
     }
 
     /**
      * Execute a grounded operation
      * @param {string} name - Operation name
-     * @param {...any} args - Arguments
-     * @returns {any} Result
+     * @param {Array} args - Arguments to pass to operation
+     * @returns {*} Result of operation execution
      */
-    execute(name, ...args) {
-        const fn = this.registry.get(name);
-        if (!fn) {
+    execute(name, args) {
+        if (!this.operations.has(name)) {
             throw new Error(`Unknown grounded operation: ${name}`);
         }
-        return fn(...args);
-    }
-
-    has(name) {
-        return this.registry.has(name);
-    }
-
-    clear() {
-        this.registry.clear();
+        
+        const op = this.operations.get(name);
+        return op(...args);
     }
 
     /**
-     * Register built-in operations
+     * Get all registered operation names
+     * @returns {Array} Array of operation names
      */
-    registerBuiltins() {
-        this._registerArithmetic();
-        this._registerLogic();
-        this._registerIO();
-        this._registerTruthValues();
-        this._registerAttention();
-        this._registerIntrospection();
+    getOperations() {
+        return Array.from(this.operations.keys());
     }
 
-    _registerArithmetic() {
-        this.register('&+', (...args) => {
-            const sum = args.reduce((acc, a) => acc + extractNumber(a), 0);
-            return Term.sym(String(sum));
+    /**
+     * Register core operations
+     * @private
+     */
+    _registerCoreOperations() {
+        // Arithmetic operations
+        this.register('+', (a, b) => {
+            const numA = atomToNumber(a);
+            const numB = atomToNumber(b);
+            if (numA !== null && numB !== null) {
+                return createNumberAtom(numA + numB);
+            }
+            throw new Error(`Invalid arguments for +: ${a}, ${b}`);
         });
 
-        this.register('&-', (...args) => {
-            if (args.length === 0) return Term.sym('0');
-            if (args.length === 1) return Term.sym(String(-extractNumber(args[0])));
-            const first = extractNumber(args[0]);
-            const rest = args.slice(1).reduce((acc, a) => acc + extractNumber(a), 0);
-            return Term.sym(String(first - rest));
+        this.register('-', (a, b) => {
+            const numA = atomToNumber(a);
+            const numB = atomToNumber(b);
+            if (numA !== null && numB !== null) {
+                return createNumberAtom(numA - numB);
+            }
+            throw new Error(`Invalid arguments for -: ${a}, ${b}`);
         });
 
-        this.register('&*', (...args) => {
-            const prod = args.reduce((acc, a) => acc * extractNumber(a), 1);
-            return Term.sym(String(prod));
+        this.register('*', (a, b) => {
+            const numA = atomToNumber(a);
+            const numB = atomToNumber(b);
+            if (numA !== null && numB !== null) {
+                return createNumberAtom(numA * numB);
+            }
+            throw new Error(`Invalid arguments for *: ${a}, ${b}`);
         });
 
-        this.register('&/', (...args) => {
-            if (args.length < 2) throw new Error('Division requires at least 2 arguments');
-            const output = args.slice(1).reduce((acc, a) => acc / extractNumber(a), extractNumber(args[0]));
-            return Term.sym(String(output));
+        this.register('/', (a, b) => {
+            const numA = atomToNumber(a);
+            const numB = atomToNumber(b);
+            if (numA !== null && numB !== null) {
+                if (numB === 0) throw new Error("Division by zero");
+                return createNumberAtom(numA / numB);
+            }
+            throw new Error(`Invalid arguments for /: ${a}, ${b}`);
         });
 
-        this.register('&>', (a, b) => {
-            return extractNumber(a) > extractNumber(b) ? Term.sym('True') : Term.sym('False');
+        // Comparison operations
+        this.register('==', (a, b) => {
+            if (a && a.equals) return a.equals(b);
+            return a === b;
         });
 
-        this.register('&<', (a, b) => {
-            return extractNumber(a) < extractNumber(b) ? Term.sym('True') : Term.sym('False');
+        this.register('!=', (a, b) => {
+            if (a && a.equals) return !a.equals(b);
+            return a !== b;
         });
 
-        this.register('&==', (a, b) => {
-            const name1 = a?.name ?? String(a);
-            const name2 = b?.name ?? String(b);
-            return name1 === name2 ? Term.sym('True') : Term.sym('False');
-        });
-    }
-
-    _registerLogic() {
-        this.register('&not', (a) => {
-            const isTrue = (a?.name ?? String(a)) === 'True';
-            return isTrue ? Term.sym('False') : Term.sym('True');
+        this.register('<', (a, b) => {
+            if (typeof a === 'number' && typeof b === 'number') {
+                return a < b;
+            }
+            throw new Error(`Invalid arguments for <: ${a}, ${b}`);
         });
 
-        this.register('&and', (...args) => {
-            const allTrue = args.every(a => (a?.name ?? String(a)) === 'True');
-            return allTrue ? Term.sym('True') : Term.sym('False');
+        this.register('>', (a, b) => {
+            if (typeof a === 'number' && typeof b === 'number') {
+                return a > b;
+            }
+            throw new Error(`Invalid arguments for >: ${a}, ${b}`);
         });
 
-        this.register('&or', (...args) => {
-            const anyTrue = args.some(a => (a?.name ?? String(a)) === 'True');
-            return anyTrue ? Term.sym('True') : Term.sym('False');
-        });
-    }
-
-    _registerIO() {
-        this.register('&print', (...args) => {
-            const output = args.map(a => a?.toString?.() ?? String(a)).join(' ');
-            console.log(output);
-            return Term.sym('Null');
+        this.register('<=', (a, b) => {
+            if (typeof a === 'number' && typeof b === 'number') {
+                return a <= b;
+            }
+            throw new Error(`Invalid arguments for <=: ${a}, ${b}`);
         });
 
-        this.register('&now', () => {
-            return Term.sym(String(Date.now()));
-        });
-    }
-
-    _registerTruthValues() {
-        this.register('&truth-ded', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.deduction(t1, t2);
-            return makeTruthTerm(result);
+        this.register('>=', (a, b) => {
+            if (typeof a === 'number' && typeof b === 'number') {
+                return a >= b;
+            }
+            throw new Error(`Invalid arguments for >=: ${a}, ${b}`);
         });
 
-        this.register('&truth-ind', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.induction(t1, t2);
-            return makeTruthTerm(result);
+        // Logical operations
+        this.register('and', (a, b) => Boolean(a && b));
+        this.register('or', (a, b) => Boolean(a || b));
+        this.register('not', (a) => !Boolean(a));
+
+        // List operations
+        this.register('first', (lst) => {
+            if (Array.isArray(lst) && lst.length > 0) return lst[0];
+            return null;
         });
 
-        this.register('&truth-abd', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.abduction(t1, t2);
-            return makeTruthTerm(result);
+        this.register('rest', (lst) => {
+            if (Array.isArray(lst) && lst.length > 0) return lst.slice(1);
+            return [];
         });
 
-        this.register('&truth-rev', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.revision(t1, t2);
-            return makeTruthTerm(result);
+        this.register('empty?', (lst) => Array.isArray(lst) && lst.length === 0);
+
+        // String operations
+        this.register('str-concat', (a, b) => String(a) + String(b));
+        this.register('to-string', (a) => String(a));
+
+        // I/O operations
+        this.register('print', (...args) => {
+            console.log(...args);
+            return args.length === 1 ? args[0] : args;
         });
 
-        this.register('&truth-neg', (tv) => {
-            const t = extractTruthValue(tv);
-            const result = Truth.negation(t);
-            return makeTruthTerm(result);
+        this.register('println', (...args) => {
+            console.log(...args);
+            return null; // Return nothing for println
         });
 
-        this.register('&truth-conv', (tv) => {
-            const t = extractTruthValue(tv);
-            const result = Truth.conversion(t);
-            return makeTruthTerm(result);
+        // Space operations
+        this.register('add-atom', (space, atom) => {
+            if (space && typeof space.add === 'function') {
+                space.add(atom);
+                return atom;
+            }
+            throw new Error("Invalid space object");
         });
 
-        this.register('&truth-comp', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.comparison(t1, t2);
-            return makeTruthTerm(result);
+        this.register('rm-atom', (space, atom) => {
+            if (space && typeof space.remove === 'function') {
+                return space.remove(atom);
+            }
+            throw new Error("Invalid space object");
         });
 
-        this.register('&truth-ana', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.analogy(t1, t2);
-            return makeTruthTerm(result);
-        });
-
-        this.register('&truth-int', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.intersection(t1, t2);
-            return makeTruthTerm(result);
-        });
-
-        this.register('&truth-union', (tv1, tv2) => {
-            const t1 = extractTruthValue(tv1);
-            const t2 = extractTruthValue(tv2);
-            const result = Truth.union(t1, t2);
-            return makeTruthTerm(result);
+        this.register('get-atoms', (space) => {
+            if (space && typeof space.all === 'function') {
+                return space.all();
+            }
+            throw new Error("Invalid space object");
         });
     }
 
-    _registerAttention() {
-        this.register('&get-sti', (atom) => {
-            if (this.senarsBridge) {
-                const sti = this.senarsBridge.getConceptSTI(atom);
-                return Term.sym(String(sti ?? 0));
-            }
-            return Term.sym('0');
-        });
-
-        this.register('&set-sti', (atom, value) => {
-            if (this.senarsBridge) {
-                const val = extractNumber(value);
-                this.senarsBridge.setConceptSTI(atom, val);
-                return Term.sym('Ok');
-            }
-            return Term.sym('Error');
-        });
-
-        this.register('&get-lti', (atom) => {
-            if (this.senarsBridge) {
-                const lti = this.senarsBridge.getConceptLTI(atom);
-                return Term.sym(String(lti ?? 0));
-            }
-            return Term.sym('0');
-        });
-
-        this.register('&set-lti', (atom, value) => {
-            if (this.senarsBridge) {
-                const val = extractNumber(value);
-                this.senarsBridge.setConceptLTI(atom, val);
-                return Term.sym('Ok');
-            }
-            return Term.sym('Error');
-        });
-
-        this.register('&get-related', (atom) => {
-            if (this.senarsBridge) {
-                const related = this.senarsBridge.getRelatedConcepts(atom);
-                return Term.exp(related);
-            }
-            return Term.exp([]);
-        });
-
-        this.register('&top-by-sti', (n) => {
-            if (this.senarsBridge) {
-                const num = extractNumber(n);
-                const top = this.senarsBridge.getTopBySTI(num);
-                return Term.exp(top);
-            }
-            return Term.exp([]);
-        });
-    }
-
-    _registerIntrospection() {
-        this.register('&system-stats', () => {
-            if (!this.senarsBridge) return Term.exp([Term.sym('stats'), Term.sym('unavailable')]);
-
-            const stats = this.senarsBridge.getSystemStats();
-            return Term.exp([
-                Term.sym('stats'),
-                Term.exp([Term.sym('atoms'), Term.sym(String(stats.atomCount ?? 0))]),
-                Term.exp([Term.sym('avg-sti'), Term.sym(String(stats.avgSTI ?? 0))]),
-                Term.exp([Term.sym('memory-mb'), Term.sym(String(stats.memoryMB ?? 0))])
-            ]);
-        });
-
-        this.register('&nars-derive', (task, premise) => {
-            if (!this.senarsBridge) return Term.sym('Error');
-            return this.senarsBridge.executeNARSDerivation(task, premise) ?? Term.sym('Empty');
-        });
+    /**
+     * Clear all operations
+     */
+    clear() {
+        this.operations.clear();
+        this._registerCoreOperations();
     }
 }
 
 /**
- * Extract numeric value from a term
+ * Convert a MeTTa atom to a JavaScript number
+ * @param {Object} atom - MeTTa atom
+ * @returns {number|null} JavaScript number or null if conversion fails
  */
-function extractNumber(term) {
-    const value = term?.name ?? String(term);
-    const num = Number(value);
-    if (isNaN(num)) throw new Error(`Expected number, got: ${value}`);
+function atomToNumber(atom) {
+    if (!atom) return null;
+
+    // If atom is already a number, return it
+    if (typeof atom === 'number') return atom;
+
+    // If atom has a name property (like symbols), try to parse it
+    if (atom.name) {
+        const num = parseFloat(atom.name);
+        return isNaN(num) ? null : num;
+    }
+
+    return null;
+}
+
+/**
+ * Create a MeTTa number atom from a JavaScript number
+ * @param {number} num - JavaScript number
+ * @returns {Object} MeTTa symbol atom representing the number
+ */
+function createNumberAtom(num) {
+    // For now, return the raw number; the caller should handle conversion to atom
     return num;
-}
-
-/**
- * Extract Truth object from MeTTa term
- */
-function extractTruthValue(term) {
-    if (term instanceof Truth) return term;
-    if (term?.operator === 'TV' && term?.components?.length === 2) {
-        const f = extractNumber(term.components[0]);
-        const c = extractNumber(term.components[1]);
-        return new Truth(f, c);
-    }
-    if (term?.f !== undefined && term?.c !== undefined) return new Truth(term.f, term.c);
-    return new Truth(1.0, 0.9);
-}
-
-/**
- * Convert Truth object to MeTTa term
- */
-function makeTruthTerm(truth) {
-    if (!truth) return Term.sym('Empty');
-    return Term.exp([
-        Term.sym('TV'),
-        Term.sym(String(truth.frequency.toFixed(2))),
-        Term.sym(String(truth.confidence.toFixed(2)))
-    ]);
 }

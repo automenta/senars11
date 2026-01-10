@@ -1,47 +1,108 @@
-; MeTTa Standard Library - Search Module
-; Search algorithms for state space exploration
-; ~50 LOC
+; Search algorithms in MeTTa
 
-; ===== Depth-First Search =====
+; Depth-First Search
+(= (dfs $goal $state $visited)
+   (if ($goal $state) 
+       $state
+       (let $successors (successors $state)
+         (dfs-helper $goal $successors $visited $state))))
 
-; dfs: find a state satisfying goal predicate starting from state
-; (dfs $goal $state) -> $state or False
-(= (dfs $goal $state)
-   (if ($goal $state) $state
-       (first-success (map (dfs $goal) (successors $state)))))
+(= (dfs-helper $goal $states $visited $parent)
+   (match $states
+      (: $state $rest)
+      (if (member $state $visited)
+          (dfs-helper $goal $rest $visited $parent)
+          (let $result (dfs $goal $state (: $state $visited))
+            (if (not (equal $result ())) 
+                $result
+                (dfs-helper $goal $rest (: $state $visited) $parent))))
+      ()))
 
-; first-success: return first non-False result from list
-(= (first-success ()) False)
-(= (first-success (: $h $t))
-   (let $res $h
-     (if (== $res False) (first-success $t) $res)))
+; Breadth-First Search
+(= (bfs $goal $start)
+   (bfs-loop $goal (: $start ()) ()))
 
+; Helper for BFS loop
+(= (bfs-loop $goal $queue $visited)
+   (match $queue
+      (: $state $rest)
+      (if ($goal $state)
+          $state
+          (if (member $state $visited)
+              (bfs-loop $goal $rest $visited)
+              (let $new-queue (append $rest (successors $state))
+                (bfs-loop $goal $new-queue (: $state $visited)))))
+      ()))
 
-; ===== A* Search =====
+; A* Search Algorithm
+(= (astar $goal $start $heuristic)
+   (astar-loop $goal (: (cons $start 0)) () $heuristic))
 
-; astar: find best state using heuristic
-; (astar $goal $heuristic $frontier) -> $state or False
-(= (astar $goal $heuristic $frontier)
-   (if (empty? $frontier) False
-       (let $best (min-by $heuristic $frontier)
-         (if ($goal $best) $best
-             (astar $goal $heuristic
-                    (add-all (remove-one $best $frontier) (successors $best)))))))
+; A* loop helper
+(= (astar-loop $goal $frontier $visited $heuristic)
+   (if (empty? $frontier)
+       ()
+       (let $current (best-node $frontier $heuristic)
+         (let $node (car $current)
+           (if ($goal $node)
+               $node
+               (if (member $node $visited)
+                   (astar-loop $goal (remove-best $frontier) $visited $heuristic)
+                   (let $new-frontier (expand-frontier $current (successors $node) $heuristic)
+                     (astar-loop $goal $new-frontier (: $node $visited) $heuristic))))))))
 
-; ===== Helpers =====
+; Find the best node based on heuristic
+(= (best-node (: $node $cost) $heuristic)
+   $node)
 
-; min-by: find element that minimizes function f
-; min-by: find element that minimizes function f
-(= (min-by $f (: $h $t))
-   (if (empty? $t) $h
-       (let $best-tail (min-by $f $t)
-         (if (< ($f $h) ($f $best-tail)) $h $best-tail))))
+(= (best-node (: $node $cost $rest) $heuristic)
+   (let $best-rest (best-node $rest $heuristic)
+     (if (< (+ $cost ($heuristic $node)) (+ (cost-of $best-rest) ($heuristic $best-rest)))
+         $node
+         $best-rest)))
 
-; remove-one: remove first occurrence of element from list
-(= (remove-one $x ()) ())
-(= (remove-one $x (: $h $t))
-   (if (== $x $h) $t (: $h (remove-one $x $t))))
+; Expand frontier with new nodes
+(= (expand-frontier $current $successors $heuristic)
+   (fold (lambda ($frontier $succ)
+           (cons (cons $succ (+ (cdr $current) 1)) $frontier))
+         $successors
+         $current))
 
-; add-all: add all elements from list2 to list1 (prepend)
-(= (add-all $l ()) $l)
-(= (add-all $l (: $h $t)) (add-all (: $h $l) $t))
+; Helper functions
+(= (member $x ())
+   False)
+
+(= (member $x (: $h $t))
+   (if (equal $x $h) 
+       True 
+       (member $x $t)))
+
+(= (empty? ())
+   True)
+
+(= (empty? $x)
+   False)
+
+(= (append () $ys)
+   $ys)
+
+(= (append (: $x $xs) $ys)
+   (: $x (append $xs $ys)))
+
+(= (cost-of (cons $node $cost))
+   $cost)
+
+(= (car (cons $a $b))
+   $a)
+
+(= (cdr (cons $a $b))
+   $b)
+
+(= (not True)
+   False)
+
+(= (not False)
+   True)
+
+(= (remove-best (: $head $tail))
+   $tail)

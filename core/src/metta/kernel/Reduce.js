@@ -1,115 +1,185 @@
 /**
- * Minimal MeTTa Kernel - Reduction Engine
- * 
- * Single-step and full reduction for term rewriting.
- * Uses space rules and grounded operations.
+ * Reduce.js - Single-step rewriting and full reduction
+ * Core evaluation engine for MeTTa
  */
 
-import { Unify } from './Unify.js';
+import { isExpression, isSymbol } from './Term.js';
+import { unify, substitute } from './Unify.js';
 
 /**
- * Perform a single reduction step
- * @param {object} atom - Term to reduce
- * @param {object} space - Space containing rules
- * @param {object} ground - Grounded operations registry
- * @returns {object} {reduced: term, applied: boolean}
+ * Perform a single reduction step on an atom
+ * @param {Object} atom - Atom to reduce
+ * @param {Space} space - Space containing rules
+ * @param {Object} ground - Grounded operations registry
+ * @returns {Object|null} Reduced atom or null if no reduction possible
  */
-function step(atom, space, ground) {
-    if (!atom) {
-        return { reduced: atom, applied: false };
+export function step(atom, space, ground) {
+    // If atom is not an expression, it's already reduced
+    if (!isExpression(atom)) {
+        return atom;
     }
+    
+    // Check if this is a grounded operation
+    if (isSymbol(atom.operator) && ground.has(atom.operator.name)) {
+        // First, try to reduce all arguments to their simplest form
+        let reducedArgs = [];
+        let allReduced = true;
 
-    // Try pattern-based rules first
-    if (atom.operator) {
-        // Use functor index for fast lookup
-        const rules = space.rulesFor(atom.operator);
+        for (const arg of atom.args) {
+            const reducedArg = step(arg, space, ground); // Use step to reduce the argument
+            // If the argument is not fully reduced (still an expression), we can't apply the operation yet
+            if (isExpression(reducedArg) && reducedArg !== arg) {
+                // If the argument reduced to a different expression, we need to continue reducing
+                return exp([atom.operator, ...atom.args.slice(0, reducedArgs.length), reducedArg, ...atom.args.slice(reducedArgs.length + 1)]);
+            }
+            reducedArgs.push(reducedArg);
+        }
 
-        for (const { pattern, result } of rules) {
-            const bindings = Unify.unify(pattern, atom);
+        // Check if all arguments are now in a form that the grounded operation can handle
+        // (e.g., numbers for arithmetic operations)
+        const canExecute = reducedArgs.every(arg =>
+            isSymbol(arg) && !isNaN(parseFloat(arg.name)) // Numeric symbols
+        );
 
-            if (bindings !== null) {
-                // Rule matched! Apply it
-                const reduced = typeof result === 'function'
-                    ? result(bindings)
-                    : Unify.subst(result, bindings);
-
-                if (reduced === null || reduced === undefined) continue;
-
-                return { reduced, applied: true };
+        if (canExecute && ground.has(atom.operator.name)) {
+            // Convert symbolic numbers to actual numbers for the operation
+            const numericArgs = reducedArgs.map(arg => parseFloat(arg.name));
+            const result = ground.execute(atom.operator.name, numericArgs);
+            // If the result is a primitive (number/string), convert it to an atom
+            if (typeof result === 'number') {
+                return { type: 'symbol', name: String(result), toString: () => String(result), equals: (other) => other && other.type === 'symbol' && other.name === String(result) };
+            } else if (typeof result === 'string') {
+                return { type: 'symbol', name: result, toString: () => result, equals: (other) => other && other.type === 'symbol' && other.name === result };
+            } else if (typeof result === 'boolean') {
+                return { type: 'symbol', name: result ? 'True' : 'False', toString: () => result ? 'True' : 'False', equals: (other) => other && other.type === 'symbol' && other.name === (result ? 'True' : 'False') };
+            }
+            return result;
+        } else {
+            // If we can't execute yet, return the expression with reduced arguments
+            return exp([atom.operator, ...reducedArgs]);
+        }
+    }
+    
+    // Look for matching rules in the space
+    const rules = space.rulesFor(atom);
+    
+    for (const rule of rules) {
+        if (isExpression(rule) && isSymbol(rule.operator) && rule.operator.name === '=') {
+            // Rule format: (= pattern result)
+            if (rule.args.length >= 2) {
+                const pattern = rule.args[0];
+                const result = rule.args[1];
+                
+                // Try to unify the atom with the pattern
+                const bindings = unify(atom, pattern);
+                
+                if (bindings !== null) {
+                    // Apply bindings to the result
+                    return substitute(result, bindings);
+                }
             }
         }
     }
-
-    // Try grounded atom execution
-    if (isGroundedCall(atom, ground)) {
-        try {
-            const name = atom.components[0].name;
-            const args = atom.components.slice(1);
-            const reduced = ground.execute(name, ...args);
-            return { reduced, applied: true };
-        } catch (error) {
-            // Grounded execution failed - return unchanged
-            return { reduced: atom, applied: false };
-        }
-    }
-
-    // No reduction possible
-    return { reduced: atom, applied: false };
+    
+    // If no reduction is possible, return the original atom
+    return atom;
 }
 
 /**
- * Reduce a term to normal form (or until limit reached)
- * @param {object} atom - Term to reduce
- * @param {object} space - Space containing rules
- * @param {object} ground - Grounded operations
- * @param {number} limit - Maximum reduction steps (default 1000)
- * @returns {object} Fully reduced term
+ * Perform full reduction of an atom
+ * @param {Object} atom - Atom to reduce
+ * @param {Space} space - Space containing rules
+ * @param {Object} ground - Grounded operations registry
+ * @param {number} limit - Maximum reduction steps (default: 1000)
+ * @returns {Object} Fully reduced atom
  */
-function reduce(atom, space, ground, limit = 1000) {
+export function reduce(atom, space, ground, limit = 1000) {
     let current = atom;
     let steps = 0;
-
+    
     while (steps < limit) {
-        const { reduced, applied } = step(current, space, ground);
-
-        if (!applied) {
-            // Reached normal form
+        const next = step(current, space, ground);
+        
+        // If no change occurred, reduction is complete
+        if (next.equals && next.equals(current)) {
             return current;
         }
-
-        current = reduced;
+        
+        current = next;
         steps++;
     }
-
-    // Max steps exceeded
-    throw new Error(`Max reduction steps (${limit}) exceeded for: ${atom.toString()}`);
+    
+    // If we hit the limit, return the current state
+    console.warn(`Reduction hit step limit of ${limit}`);
+    return current;
 }
 
 /**
- * Check if term is a grounded operation call
- * Pattern: (^ &op-name args...)
- * @param {object} term - Term to check  
- * @param {object} ground - Ground registry
- * @returns {boolean} True if grounded call
+ * Perform non-deterministic reduction (returns all possible results)
+ * @param {Object} atom - Atom to reduce
+ * @param {Space} space - Space containing rules
+ * @param {Object} ground - Grounded operations registry
+ * @param {number} limit - Maximum reduction steps (default: 100)
+ * @returns {Array} Array of possible reduced atoms
  */
-function isGroundedCall(term, ground) {
-    if (!term || term.type !== 'compound') {
-        return false;
-    }
-
-    // Check for grounded call pattern: (^ &name ...)
-    if (term.operator === '^' && term.components.length > 0) {
-        const firstComp = term.components[0];
-        if (firstComp && firstComp.type === 'atom') {
-            return ground.has(firstComp.name);
+export function reduceND(atom, space, ground, limit = 100) {
+    const results = new Set();
+    const visited = new Set();
+    const queue = [{ atom, steps: 0 }];
+    
+    while (queue.length > 0) {
+        const { atom: current, steps } = queue.shift();
+        
+        if (steps >= limit) {
+            results.add(current);
+            continue;
         }
+        
+        // Avoid infinite loops
+        const currentStr = current.toString();
+        if (visited.has(currentStr)) {
+            continue;
+        }
+        visited.add(currentStr);
+        
+        // Try to reduce the current atom
+        const reduced = step(current, space, ground);
+        
+        // If reduction didn't change the atom, we're done
+        if (reduced.equals && reduced.equals(current)) {
+            results.add(reduced);
+            continue;
+        }
+        
+        // Add the reduced atom to results and continue exploring
+        results.add(reduced);
+        queue.push({ atom: reduced, steps: steps + 1 });
     }
-
-    return false;
+    
+    return Array.from(results);
 }
 
-export const Reduce = {
-    step,
-    reduce,
-    isGroundedCall
-};
+/**
+ * Match pattern against space and return substitutions
+ * @param {Object} space - Space to match against
+ * @param {Object} pattern - Pattern to match
+ * @param {Object} template - Template to substitute
+ * @returns {Array} Array of substituted templates
+ */
+export function match(space, pattern, template) {
+    const results = [];
+    
+    // Get candidates from functor index
+    const candidates = space.rulesFor(pattern);
+    
+    for (const candidate of candidates) {
+        const bindings = unify(pattern, candidate);
+        
+        if (bindings !== null) {
+            const substituted = substitute(template, bindings);
+            results.push(substituted);
+        }
+    }
+    
+    return results;
+}

@@ -1,47 +1,64 @@
 /**
- * Minimal MeTTa Kernel - Space Management
- * 
- * Manages atoms and rules with functor indexing for fast lookups.
- * No event emission, no memory coupling - pure space operations.
+ * Space.js - Set of atoms with functor indexing
+ * Core storage and retrieval mechanism for MeTTa programs
  */
 
-/**
- * Space manages a collection of atoms and rewrite rules
- */
+import { isExpression, isSymbol } from './Term.js';
+
 export class Space {
     constructor() {
+        // Main storage for atoms
         this.atoms = new Set();
-        this.rules = [];
-        this.functorIndex = new Map(); // Maps operator -> rules with that operator
+        
+        // Functor index for efficient rule lookup
+        // Maps functor names to sets of matching rules
+        this.functorIndex = new Map();
+        
+        // Stats for performance monitoring
+        this.stats = {
+            adds: 0,
+            removes: 0,
+            queries: 0,
+            indexedLookups: 0
+        };
     }
 
     /**
      * Add an atom to the space
-     * @param {object} term - Term to add
+     * @param {Object} atom - Atom to add
+     * @returns {Space} This space for chaining
      */
-    add(term) {
-        if (!term) {
-            throw new Error('Space.add: term is required');
+    add(atom) {
+        if (!this.atoms.has(atom)) {
+            this.atoms.add(atom);
+            this._indexAtom(atom);
+            this.stats.adds++;
         }
-        this.atoms.add(term);
+        return this;
     }
 
     /**
      * Remove an atom from the space
-     * @param {object} term - Term to remove
-     * @returns {boolean} True if term was removed
+     * @param {Object} atom - Atom to remove
+     * @returns {boolean} True if atom was removed
      */
-    remove(term) {
-        return this.atoms.delete(term);
+    remove(atom) {
+        if (this.atoms.has(atom)) {
+            this.atoms.delete(atom);
+            this._deindexAtom(atom);
+            this.stats.removes++;
+            return true;
+        }
+        return false;
     }
 
     /**
      * Check if space contains an atom
-     * @param {object} term - Term to check
-     * @returns {boolean} True if term exists in space
+     * @param {Object} atom - Atom to check
+     * @returns {boolean} True if atom is in space
      */
-    has(term) {
-        return this.atoms.has(term);
+    has(atom) {
+        return this.atoms.has(atom);
     }
 
     /**
@@ -53,75 +70,110 @@ export class Space {
     }
 
     /**
-     * Get the number of atoms in the space
-     * @returns {number} Atom count
+     * Get rules for a specific functor/operator
+     * @param {string|Object} functor - Functor name or atom
+     * @returns {Array} Matching rules
+     */
+    rulesFor(functor) {
+        this.stats.indexedLookups++;
+        
+        if (isSymbol(functor)) {
+            return this.functorIndex.get(functor.name) || [];
+        } else if (isExpression(functor) && isSymbol(functor.operator)) {
+            return this.functorIndex.get(functor.operator.name) || [];
+        }
+        
+        // If functor is not a symbol, return all atoms
+        return this.all();
+    }
+
+    /**
+     * Index an atom for faster lookup
+     * @private
+     * @param {Object} atom - Atom to index
+     */
+    _indexAtom(atom) {
+        if (isExpression(atom) && isSymbol(atom.operator)) {
+            const functorName = atom.operator.name;
+            if (!this.functorIndex.has(functorName)) {
+                this.functorIndex.set(functorName, []);
+            }
+            this.functorIndex.get(functorName).push(atom);
+        }
+    }
+
+    /**
+     * Remove atom from index
+     * @private
+     * @param {Object} atom - Atom to deindex
+     */
+    _deindexAtom(atom) {
+        if (isExpression(atom) && isSymbol(atom.operator)) {
+            const functorName = atom.operator.name;
+            if (this.functorIndex.has(functorName)) {
+                const rules = this.functorIndex.get(functorName);
+                const index = rules.indexOf(atom);
+                if (index !== -1) {
+                    rules.splice(index, 1);
+                    if (rules.length === 0) {
+                        this.functorIndex.delete(functorName);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear all atoms from the space
+     */
+    clear() {
+        this.atoms.clear();
+        this.functorIndex.clear();
+        this.stats = {
+            adds: 0,
+            removes: 0,
+            queries: 0,
+            indexedLookups: 0
+        };
+    }
+
+    /**
+     * Size of the space
+     * @returns {number} Number of atoms in space
      */
     size() {
         return this.atoms.size;
     }
 
     /**
-     * Clear all atoms and rules from the space
-     */
-    clear() {
-        this.atoms.clear();
-        this.rules = [];
-        this.functorIndex.clear();
-    }
-
-    /**
-     * Add a rewrite rule (pattern -> result)
-     * @param {object} pattern - Pattern to match
-     * @param {object|function} result - Result term or function
-     */
-    addRule(pattern, result) {
-        if (!pattern) {
-            throw new Error('Space.addRule: pattern is required');
-        }
-
-        const rule = { pattern, result };
-        this.rules.push(rule);
-
-        // Index by functor for fast lookup
-        if (pattern.operator) {
-            if (!this.functorIndex.has(pattern.operator)) {
-                this.functorIndex.set(pattern.operator, []);
-            }
-            this.functorIndex.get(pattern.operator).push(rule);
-        }
-    }
-
-    /**
-     * Get all rules (unindexed access)
-     * @returns {Array} All rules
-     */
-    getRules() {
-        return this.rules;
-    }
-
-    /**
-     * Get rules that match a specific operator (functor)
-     * Uses the functor index for O(1) lookup
-     * @param {string} operator - Operator to match
-     * @returns {Array} Rules with matching operator
-     */
-    rulesFor(operator) {
-        if (!operator) {
-            // Return all rules if no operator specified
-            return this.rules;
-        }
-        return this.functorIndex.get(operator) || [];
-    }
-
-    /**
      * Get statistics about the space
-     * @returns {object} Stats object
+     * @returns {Object} Statistics object
      */
-    stats() {
+    getStats() {
         return {
+            ...this.stats,
             atomCount: this.atoms.size,
-            ruleCount: this.rules.length,
-            indexedFunctors: this.functorIndex.size
+            functorCount: this.functorIndex.size
         };
+    }
+
+    /**
+     * Query space with a pattern
+     * @param {Object} pattern - Pattern to match
+     * @returns {Array} Matching atoms
+     */
+    query(pattern) {
+        this.stats.queries++;
+        
+        // For now, do a linear scan
+        // In a full implementation, this would use more sophisticated indexing
+        const results = [];
+        for (const atom of this.atoms) {
+            // Simple structural match for now
+            if (atom.equals && atom.equals(pattern)) {
+                results.push(atom);
+            }
+        }
+        return results;
     }
 }
