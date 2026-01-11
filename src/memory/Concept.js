@@ -193,6 +193,11 @@ export class Concept extends BaseComponent {
         return this._beliefs.contains(task) || this._goals.contains(task) || this._questions.contains(task);
     }
 
+    hasSemanticallyEquivalentTask(task) {
+        const storage = this._getStorage(task.type);
+        return !!storage.find(t => t.equals(task));
+    }
+
     getAllTasks() {
         const allTasks = [
             ...this._beliefs.getItemsInPriorityOrder(),

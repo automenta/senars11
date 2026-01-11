@@ -1,6 +1,6 @@
 import {Task} from './Task.js';
 import {Truth} from '../Truth.js';
-import {collectTasksFromAllConcepts} from '../memory/MemoryUtils.js';
+import {collectTasksFromAllConcepts, iterateTasksInAllConcepts} from '../memory/MemoryUtils.js';
 import {BaseComponent} from '../util/BaseComponent.js';
 import {Statistics} from '../util/Statistics.js';
 
@@ -162,14 +162,13 @@ export class TaskManager extends BaseComponent {
             newestTask: 0
         };
 
-        collectTasksFromAllConcepts(this._memory, task => {
+        iterateTasksInAllConcepts(this._memory, task => {
             stats.tasksByType[task.type]++;
             stats.priorityDistribution[this._getPriorityBucket(task.budget.priority)]++;
             stats.priorities.push(task.budget.priority);
             stats.creationTimes.push(task.stamp.creationTime);
             stats.oldestTask = Math.min(stats.oldestTask, task.stamp.creationTime);
             stats.newestTask = Math.max(stats.newestTask, task.stamp.creationTime);
-            return true;
         });
 
         const totalTasks = Object.values(stats.tasksByType).reduce((sum, count) => sum + count, 0);

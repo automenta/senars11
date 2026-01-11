@@ -15,11 +15,11 @@ export const freeze = Object.freeze;
 export const deepFreeze = (obj) => {
     if (obj === null || typeof obj !== 'object') return obj;
 
-    Object.getOwnPropertyNames(obj).forEach(prop => {
+    for (const prop of Object.getOwnPropertyNames(obj)) {
         if (obj[prop] !== null && typeof obj[prop] === 'object') {
             deepFreeze(obj[prop]);
         }
-    });
+    }
 
     return freeze(obj);
 };

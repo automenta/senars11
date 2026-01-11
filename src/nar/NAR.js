@@ -830,15 +830,7 @@ export class NAR extends BaseComponent {
     // Check if a semantically equivalent task already exists in memory
     _isTaskDuplicate(task) {
         const existingConcept = this._memory.getConcept(task.term);
-        if (existingConcept) {
-            const storage = existingConcept._getStorage(task.type);
-            for (const [existingTask] of storage._items) {
-                if (task.equals(existingTask)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return existingConcept ? existingConcept.hasSemanticallyEquivalentTask(task) : false;
     }
 
     // Internal method to input an already-constructed Task object following the same
