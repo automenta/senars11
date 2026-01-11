@@ -3,7 +3,7 @@
  * Core evaluation engine for MeTTa
  */
 
-import { isExpression, isSymbol, exp } from './Term.js';
+import { isExpression, isSymbol, exp, sym } from './Term.js';
 import { Unify } from './Unify.js';
 
 /**
@@ -20,7 +20,9 @@ export function step(atom, space, ground) {
     }
 
     // Check if this is a grounded operation call (using ^ operator)
-    if (isExpression(atom) && atom.operator === '^') {
+    const isGroundedOp = atom.operator === '^' || (atom.operator && atom.operator.name === '^');
+
+    if (isExpression(atom) && isGroundedOp) {
         // Format: (^ &operation arg1 arg2 ...)
         if (atom.components && atom.components.length >= 1) {
             const opSymbol = atom.components[0];
@@ -30,9 +32,13 @@ export function step(atom, space, ground) {
                     // Extract arguments (skip the operation symbol)
                     const args = atom.components.slice(1);
 
+                // Reduce arguments before passing to grounded operation
+                // This ensures operations like &+ or &empty? receive reduced values
+                const reducedArgs = args.map(arg => reduce(arg, space, ground));
+
                     try {
                         // Execute the grounded operation
-                        const result = ground.execute(opSymbol.name, ...args);
+                    const result = ground.execute(opSymbol.name, ...reducedArgs);
                         return { reduced: result, applied: true };
                     } catch (error) {
                         // If execution fails, return original atom
@@ -89,13 +95,15 @@ export function reduce(atom, space, ground, limit = 1000) {
     while (steps < limit) {
         const { reduced, applied } = step(current, space, ground);
 
-        if (applied && (!reduced.equals || !reduced.equals(current))) {
+        if (applied) {
+            // Even if the result is the same (e.g. (= (loop x) (loop x))),
+            // we count it as a step to catch infinite loops
             current = reduced;
             steps++;
             continue;
         }
 
-        // If top-level didn't reduce (or didn't change), try reducing components
+        // If top-level didn't reduce, try reducing components
         if (isExpression(current)) {
             const newComponents = current.components.map(c => reduce(c, space, ground, Math.max(1, limit - steps)));
 
@@ -136,7 +144,9 @@ export function isGroundedCall(atom, ground) {
     }
 
     // Check if it's a call using ^ operator with grounded operation
-    if (atom.operator === '^' && atom.components && atom.components.length > 0) {
+    const isGroundedOp = atom.operator === '^' || (atom.operator && atom.operator.name === '^');
+
+    if (isGroundedOp && atom.components && atom.components.length > 0) {
         const opSymbol = atom.components[0];
         if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
             return ground.has(opSymbol.name);
@@ -201,13 +211,11 @@ export function reduceND(atom, space, ground, limit = 100) {
 export function match(space, pattern, template) {
     const results = [];
 
-    // Get candidates from functor index
-    const candidates = space.rulesFor(pattern);
+    // Use space.all() to ensure we check all atoms AND rules (which are reconstructed as atoms by space.all())
+    // This allows matching against rule structures like (= (human $x) True)
+    const candidates = space.all();
 
     for (const candidate of candidates) {
-        // Skip rules (we only want atoms)
-        if (candidate.pattern) continue;
-
         const bindings = Unify.unify(pattern, candidate);
 
         if (bindings !== null) {

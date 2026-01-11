@@ -77,6 +77,11 @@ export function exp(operator, components) {
         throw new Error('Components must be an array');
     }
 
+    // Normalize operator to atom if it's a string
+    if (typeof operator === 'string') {
+        operator = sym(operator);
+    }
+
     const opString = typeof operator === 'string' ? operator : (operator.toString ? operator.toString() : String(operator));
 
     // Create a unique key for the expression
@@ -101,13 +106,20 @@ export function exp(operator, components) {
             }
 
             // Check operator equality
+            let match = false;
             if (typeof this.operator === 'string' && typeof other.operator === 'string') {
-                if (this.operator !== other.operator) return false;
+                if (this.operator === other.operator) match = true;
             } else if (this.operator && this.operator.equals && other.operator && other.operator.equals) {
-                if (!this.operator.equals(other.operator)) return false;
-            } else if (this.operator !== other.operator) {
-                return false;
+                if (this.operator.equals(other.operator)) match = true;
+            } else if (this.operator && this.operator.name && typeof other.operator === 'string') {
+                if (this.operator.name === other.operator) match = true;
+            } else if (typeof this.operator === 'string' && other.operator && other.operator.name) {
+                if (this.operator === other.operator.name) match = true;
+            } else if (this.operator === other.operator) {
+                match = true;
             }
+
+            if (!match) return false;
 
             for (let i = 0; i < this.components.length; i++) {
                 if (!this.components[i].equals(other.components[i])) {
