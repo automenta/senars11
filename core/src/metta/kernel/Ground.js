@@ -3,6 +3,8 @@
  * Registry for grounded operations in MeTTa
  */
 
+import { sym } from './Term.js';
+
 export class Ground {
     constructor() {
         this.operations = new Map();
@@ -78,7 +80,7 @@ export class Ground {
     _registerCoreOperations() {
         // Arithmetic operations
         this.register('&+', (...args) => {
-            if (args.length === 0) return createNumberAtom(0);
+            if (args.length === 0) return sym('0');
             if (args.length === 1) return args[0]; // Identity for single argument
 
             // For multiple arguments, sum them all
@@ -90,18 +92,18 @@ export class Ground {
                 }
                 sum += num;
             }
-            return createNumberAtom(sum);
+            return sym(String(sum));
         });
 
         this.register('&-', (...args) => {
-            if (args.length === 0) return createNumberAtom(0);
+            if (args.length === 0) return sym('0');
             if (args.length === 1) {
                 // Unary minus: negate the single argument
                 const num = atomToNumber(args[0]);
                 if (num === null) {
                     throw new Error(`Invalid arguments for -: ${args.map(a => a.name || a).join(', ')}`);
                 }
-                return createNumberAtom(-num);
+                return sym(String(-num));
             }
 
             // Binary minus: subtract second from first
@@ -111,14 +113,14 @@ export class Ground {
                 if (numA === null || numB === null) {
                     throw new Error(`Non-numeric input for -: ${args.map(a => a.name || a).join(', ')} (expected number)`);
                 }
-                return createNumberAtom(numA - numB);
+                return sym(String(numA - numB));
             }
 
             throw new Error(`Non-numeric input for -: ${args.map(a => a.name || a).join(', ')}`);
         });
 
         this.register('&*', (...args) => {
-            if (args.length === 0) return createNumberAtom(1);
+            if (args.length === 0) return sym('1');
             if (args.length === 1) return args[0]; // Identity for single argument
 
             // For multiple arguments, multiply them all
@@ -130,18 +132,18 @@ export class Ground {
                 }
                 product *= num;
             }
-            return createNumberAtom(product);
+            return sym(String(product));
         });
 
         this.register('&/', (...args) => {
-            if (args.length === 0) return createNumberAtom(1);
+            if (args.length === 0) return sym('1');
             if (args.length === 1) {
                 // Unary division: 1 / arg
                 const num = atomToNumber(args[0]);
                 if (num === null || num === 0) {
                     throw new Error("Division by zero");
                 }
-                return createNumberAtom(1 / num);
+                return sym(String(1 / num));
             }
 
             // Binary division: divide first by second
@@ -152,7 +154,7 @@ export class Ground {
                     throw new Error(`Non-numeric input for /: ${args.map(a => a.name || a).join(', ')} (expected number)`);
                 }
                 if (numB === 0) throw new Error("Division by zero");
-                return createNumberAtom(numA / numB);
+                return sym(String(numA / numB));
             }
 
             throw new Error(`Non-numeric input for /: ${args.map(a => a.name || a).join(', ')}`);
@@ -168,7 +170,7 @@ export class Ground {
             if (numA === null || numB === null) {
                 throw new Error("Modulo requires numeric arguments");
             }
-            return createNumberAtom(numA % numB);
+            return sym(String(numA % numB));
         });
 
 
@@ -286,16 +288,8 @@ export class Ground {
         // I/O operations
         this.register('&print', (...args) => {
             const stringArgs = args.map(arg => arg && arg.name ? arg.name : String(arg));
-            // In a real system we might write to a buffer, but for CLI output we keep this or remove for clean libs
-            // The instructions say remove logs. We'll comment it out or assume it's debug log.
-            // But wait, &print IS SUPPOSED TO PRINT.
-            // "Remove console.log statements" usually refers to [DEBUG] logs.
-            // However, the prompt specifically says "Remove console.log in &empty? and print (keep print implementation but clean up if debug)".
-            // The &print implementation IS console.log. Leaving it is fine if it acts as stdout.
-            // But &empty? definitely has a DEBUG log.
-            // I will remove the &empty? log.
             console.log(stringArgs.join(' '));
-            return args.length === 1 ? args[0] : createSymbolAtom('Null');
+            return args.length === 1 ? args[0] : sym('Null');
         });
 
         this.register('&println', (...args) => {
@@ -306,7 +300,7 @@ export class Ground {
 
         // Time operation
         this.register('&now', () => {
-            return createNumberAtom(Date.now());
+            return sym(String(Date.now()));
         });
 
         // Space operations
@@ -317,8 +311,6 @@ export class Ground {
             }
             // Fallback if space is not the first argument but maybe implied? No, explicit passing required.
             if (atom === undefined && space && space.type === 'atom') {
-                // Trying to add to implicit space? We don't have access to context here easily without binding.
-                // Assuming explicit (add-atom &self atom)
                 throw new Error("Missing space argument or invalid atom");
             }
             throw new Error("Invalid space object");
@@ -336,16 +328,14 @@ export class Ground {
                 const atoms = space.all();
                 // Convert JS array to MeTTa list (: h (: t ...))
                 const listify = (arr) => {
-                    if (arr.length === 0) return createSymbolAtom('()');
-                    // We need to import exp/sym or create structure manually
-                    // Since we can't import easily, we construct manually matching Term.exp
+                    if (arr.length === 0) return sym('()');
                     return {
                         type: 'compound',
-                        name: `(: ${arr[0].name} ...)`, // Simplified name
-                        operator: createSymbolAtom(':'),
+                        name: `(: ${arr[0].name} ...)`,
+                        operator: sym(':'),
                         components: [arr[0], listify(arr.slice(1))],
                         toString: () => `(: ${arr[0]} ${listify(arr.slice(1))})`,
-                        equals: (other) => false // Simplified for now
+                        equals: (other) => false
                     };
                 };
                 return listify(atoms);
@@ -354,18 +344,11 @@ export class Ground {
         });
 
         // Introspection Primitives (Phase 3)
-        // Note: These usually require access to the concept registry or similar, which Ground.js doesn't have directly.
-        // However, we can mock them or store them if they are just properties of atoms in this Space implementation.
-        // Or we can register them as stubs that SeNARSBridge or MeTTaInterpreter overrides/populates.
-        // For now, let's implement simple property storage on the atom objects themselves (if they are objects) or a side map.
-        // Since atoms are often re-created, a side map (WeakMap) or similar is better, but atoms are value objects.
-        // If we want system-wide STI, we need a registry.
-        // For this "Minimal Kernel", let's use a static map for demonstration if no external registry is provided.
         const stiMap = new Map();
 
         this.register('&get-sti', (atom) => {
             const key = atom.toString();
-            return createNumberAtom(stiMap.get(key) || 0);
+            return sym(String(stiMap.get(key) || 0));
         });
 
         this.register('&set-sti', (atom, value) => {
@@ -375,12 +358,10 @@ export class Ground {
                 stiMap.set(key, num);
                 return value;
             }
-            return createNumberAtom(0);
+            return sym('0');
         });
 
         this.register('&system-stats', () => {
-            // Return some basic stats
-            // In a real system this would query the memory/profiler
             return {
                 type: 'atom',
                 name: 'Stats',
@@ -425,38 +406,8 @@ function atomToNumber(atom) {
     return null;
 }
 
-function createNumberAtom(num) {
-    return {
-        type: 'atom',
-        name: String(num),
-        operator: null,
-        components: [],
-        toString: () => String(num),
-        equals: (other) => other && other.type === 'atom' && other.name === String(num)
-    };
-}
-
 function createBooleanAtom(bool) {
-    const name = bool ? 'True' : 'False';
-    return {
-        type: 'atom',
-        name: name,
-        operator: null,
-        components: [],
-        toString: () => name,
-        equals: (other) => other && other.type === 'atom' && other.name === name
-    };
-}
-
-function createSymbolAtom(str) {
-    return {
-        type: 'atom',
-        name: str,
-        operator: null,
-        components: [],
-        toString: () => str,
-        equals: (other) => other && other.type === 'atom' && other.name === str
-    };
+    return sym(bool ? 'True' : 'False');
 }
 
 function isTruthy(value) {

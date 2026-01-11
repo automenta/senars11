@@ -100,7 +100,7 @@ export function exp(operator, components) {
         operator: operator,
         components: Object.freeze([...components]),
         toString: () => canonicalName,
-        equals: function(other) {
+        equals: function (other) {
             if (!other || other.type !== 'compound' || other.components.length !== this.components.length) {
                 return false;
             }
@@ -180,7 +180,7 @@ export function clone(atom) {
  */
 export function isVariable(atom) {
     if (!atom) return false;  // Handle null input
-    return atom.type === 'atom' && atom.name && typeof atom.name === 'string' && atom.name.startsWith('$');
+    return atom.type === 'atom' && atom.name && typeof atom.name === 'string' && (atom.name.startsWith('$') || atom.name.startsWith('?'));
 }
 
 /**
@@ -189,7 +189,7 @@ export function isVariable(atom) {
  * @returns {boolean} True if atom is a symbol
  */
 export function isSymbol(atom) {
-    return atom && atom.type === 'atom' && atom.operator === null && atom.name && typeof atom.name === 'string' && !atom.name.startsWith('$');
+    return atom && atom.type === 'atom' && atom.operator === null && atom.name && typeof atom.name === 'string' && !atom.name.startsWith('$') && !atom.name.startsWith('?');
 }
 
 /**
@@ -208,8 +208,10 @@ export function isExpression(atom) {
  */
 export function isList(atom) {
     if (!isExpression(atom)) return false;
-    // Check operator ':'
-    return atom.operator && atom.operator.name === ':' && atom.components.length === 2;
+    // Check operator ':' (handle both Symbol object and string)
+    const op = atom.operator;
+    const opName = typeof op === 'string' ? op : op?.name;
+    return opName === ':' && atom.components.length === 2;
 }
 
 /**

@@ -27,7 +27,7 @@ describe('MeTTa-Reason Integration', () => {
 
     // This test is more of a unit test for the adapter logic before full integration
     test('MeTTaRuleAdapter applies rule', async () => {
-        const interpreter = new MeTTaInterpreter({}, { termFactory });
+        const interpreter = new MeTTaInterpreter({ termFactory });
 
         // Define rule: (=> (Human $x) (Mortal $x))
         const p1 = termFactory.variable('$x');

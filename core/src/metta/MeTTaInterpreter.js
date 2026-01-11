@@ -14,6 +14,9 @@ import { objToBindingsAtom, bindingsAtomToObj } from './BindingsConverter.js';
 
 export class MeTTaInterpreter {
     constructor(options = {}) {
+        this.config = options;
+        this.termFactory = options.termFactory;
+
         this.space = new Space();
         this.ground = new Ground();
         this.parser = new Parser();
@@ -163,7 +166,8 @@ export class MeTTaInterpreter {
      * @returns {*} Result of evaluation
      */
     evaluate(expr) {
-        return reduce(expr, this.space, this.ground);
+        const limit = this.config.maxReductionSteps || 10000;
+        return reduce(expr, this.space, this.ground, limit);
     }
 
     /**

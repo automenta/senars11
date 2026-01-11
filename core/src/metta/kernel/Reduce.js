@@ -13,7 +13,7 @@ import { Unify } from './Unify.js';
  * @param {Object} ground - Grounded operations registry
  * @returns {Object} Object with reduced atom and applied flag
  */
-export function step(atom, space, ground) {
+export function step(atom, space, ground, limit = 10000) {
     // If atom is not an expression, it's already reduced
     if (!isExpression(atom)) {
         return { reduced: atom, applied: false };
@@ -39,7 +39,8 @@ export function step(atom, space, ground) {
                         reducedArgs = args;
                     } else {
                         // This ensures operations like &+ or &empty? receive reduced values
-                        reducedArgs = args.map(arg => reduce(arg, space, ground));
+                        // Propagate limit (default 10000 if undefined) to recursive calls
+                        reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
                     }
 
                     try {
@@ -129,7 +130,7 @@ export function reduce(atom, space, ground, limit = 10000) {
             // Step 1: Reduce top-level until stable or limit reached
             let current = frame.term;
             while (ctx.steps < ctx.limit) {
-                const { reduced, applied } = step(current, space, ground);
+                const { reduced, applied } = step(current, space, ground, limit);
                 if (applied) {
                     current = reduced;
                     ctx.steps++;
@@ -270,7 +271,7 @@ export function reduceND(atom, space, ground, limit = 100) {
         visited.add(currentStr);
 
         // Try to reduce the current atom
-        const { reduced, applied } = step(current, space, ground);
+        const { reduced, applied } = step(current, space, ground, limit);
 
         // If reduction didn't change the atom, we're done
         if (!applied || (reduced.equals && reduced.equals(current))) {
