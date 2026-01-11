@@ -3,7 +3,7 @@
  * Core evaluation engine for MeTTa
  */
 
-import { isExpression, isSymbol, exp, sym } from './Term.js';
+import { isExpression, isSymbol, exp, sym, isList, flattenList, constructList } from './Term.js';
 import { Unify } from './Unify.js';
 
 /**
@@ -105,22 +105,39 @@ export function reduce(atom, space, ground, limit = 1000) {
 
         // If top-level didn't reduce, try reducing components
         if (isExpression(current)) {
-            const newComponents = current.components.map(c => reduce(c, space, ground, Math.max(1, limit - steps)));
+            // OPTIMIZATION: Iterative reduction for lists to avoid stack overflow
+            if (isList(current)) {
+                const { elements, tail } = flattenList(current);
+                const reducedElements = elements.map(c => reduce(c, space, ground, Math.max(1, limit - steps)));
+                const reducedTail = reduce(tail, space, ground, Math.max(1, limit - steps));
 
-            // Check if any component changed
-            let changed = false;
-            for (let i = 0; i < newComponents.length; i++) {
-                if (!newComponents[i].equals(current.components[i])) {
-                    changed = true;
-                    break;
+                // Reconstruct list
+                const newCurrent = constructList(reducedElements, reducedTail);
+
+                if (!newCurrent.equals(current)) {
+                    current = newCurrent;
+                    steps++;
+                    continue;
                 }
-            }
+            } else {
+                // Normal expression reduction
+                const newComponents = current.components.map(c => reduce(c, space, ground, Math.max(1, limit - steps)));
 
-            if (changed) {
-                current = exp(current.operator, newComponents);
-                steps++;
-                // After component reduction, try reducing top-level again
-                continue;
+                // Check if any component changed
+                let changed = false;
+                for (let i = 0; i < newComponents.length; i++) {
+                    if (!newComponents[i].equals(current.components[i])) {
+                        changed = true;
+                        break;
+                    }
+                }
+
+                if (changed) {
+                    current = exp(current.operator, newComponents);
+                    steps++;
+                    // After component reduction, try reducing top-level again
+                    continue;
+                }
             }
         }
 

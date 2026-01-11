@@ -201,6 +201,46 @@ export function isExpression(atom) {
     return atom && atom.type === 'compound';
 }
 
+// === List Optimization Utilities ===
+
+/**
+ * Check if atom is a List (Cons) expression (: head tail)
+ */
+export function isList(atom) {
+    if (!isExpression(atom)) return false;
+    // Check operator ':'
+    return atom.operator && atom.operator.name === ':' && atom.components.length === 2;
+}
+
+/**
+ * Flatten a Cons list into an array of elements + tail
+ * @param {Object} list - The list atom
+ * @returns {Object} { elements: Array, tail: Atom }
+ */
+export function flattenList(list) {
+    const elements = [];
+    let curr = list;
+    while (isList(curr)) {
+        elements.push(curr.components[0]);
+        curr = curr.components[1];
+    }
+    return { elements, tail: curr };
+}
+
+/**
+ * Reconstruct a Cons list from elements and tail
+ * @param {Array} elements - Array of atoms
+ * @param {Object} tail - Tail atom
+ * @returns {Object} Cons list atom
+ */
+export function constructList(elements, tail) {
+    let res = tail;
+    for (let i = elements.length - 1; i >= 0; i--) {
+        res = exp(sym(':'), [elements[i], res]);
+    }
+    return res;
+}
+
 // Export a Term object that matches the expected API in tests
 export const Term = {
     sym: sym,
@@ -211,6 +251,11 @@ export const Term = {
     isVar: isVariable,
     isSymbol: isSymbol,
     isExpression: isExpression,
+
+    // List utils
+    isList,
+    flattenList,
+    constructList,
 
     // Additional helper for test compatibility
     clearSymbolTable: () => {
