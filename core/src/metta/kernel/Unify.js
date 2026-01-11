@@ -99,6 +99,9 @@ function occursCheck(variable, term, bindings) {
     return false;
 }
 
+
+
+
 function substitute(term, bindings, visited = new Set()) {
     if (!term) return term;
 
@@ -112,8 +115,7 @@ function substitute(term, bindings, visited = new Set()) {
                 if (value === term) break;
                 if (chainCount++ > 100) break;
             }
-            if (value === undefined) return term;
-            return value;
+            return value === undefined ? term : value;
         }
         return term;
     }
@@ -157,75 +159,30 @@ function substitute(term, bindings, visited = new Set()) {
 
 // Helper: Iterative substitution to prevent stack overflow
 function iterativeSubstitute(rootTerm, bindings, visited) {
-    const stack = [{ term: rootTerm, processed: false, parent: null, index: -1 }];
-    const resultStack = []; // Stores substituted terms
+    const stack = [{ term: rootTerm, processed: false }];
+    const resultStack = [];
 
     while (stack.length > 0) {
         const frame = stack[stack.length - 1];
         const { term, processed } = frame;
 
-        if (term && typeof term === 'object') {
-            if (visited.has(term)) {
-                stack.pop();
-                resultStack.push(term); // Return original if cyclic (or handle differently?)
-                continue;
-            }
-            // Do not add to visited yet? If we add now, children will see it.
-            // Yes, we want to detect cycles in CHILDREN referring to PARENT.
-            // But iterative approach visits children in loop.
-            // If we add to visited, we must remove when done?
-            // No, for substitution, if we see same term again in same path...
-            // But `visited` here is passed from `substitute`.
-            // Ideally we want to avoid infinite expansion.
-            // If we see term T, and we are substituting T...
-            // If T contains T?
-            // Recursive substitution handles DAGs fine (memoization needed for speed, visited for cycles).
-            // If we use visited for PATH, we need to remove on exit.
-            // BUT `substitute` passes `new Set(visited)` to children!
-            // So `visited` IS path-scoped.
-            // So we just add to `visited` (local copy).
-            // Wait, `iterativeSubstitute` receives `visited`.
-            // We should NOT modify `visited` passed by caller if we want path-scoping, unless caller passed a fresh set.
-            // `substitute` passes `new Set(visited)` when branching.
-            // So `visited` in `iterativeSubstitute` IS local to this branch.
-            // So we can mutate it?
-            // But `iterativeSubstitute` uses a stack. It's one branch.
-            // Wait, `stack` implies we are traversing down.
-            // So we can just add to `visited`.
-            // BUT we need to remove when we pop?
-            // Or just use `visited` as "seen in this path".
-        }
-
         if (processed) {
             stack.pop();
             if (term && typeof term === 'object') visited.delete(term);
 
-            // Reconstruct the term from results
-            if (isVariable(term)) {
-                // Should have been handled before pushing, but if here:
-                // It was handled in !processed block and pushed to resultStack
-                continue;
-            }
-
             if (isExpression(term)) {
-                // If it's a list, we handled it separately (recursive substitute) but we are here if it fell through or is deep.
-                // We need to pop components from resultStack.
                 const numComponents = term.components.length;
                 const newComponents = new Array(numComponents);
-                // Pop in reverse order
                 for (let i = numComponents - 1; i >= 0; i--) {
                     newComponents[i] = resultStack.pop();
                 }
 
-                // Handle operator
                 let newOperator = term.operator;
                 if (typeof term.operator === 'object' && term.operator !== null) {
                     newOperator = resultStack.pop();
                 }
 
-                // Check for changes
-                let changed = false;
-                if (newOperator !== term.operator) changed = true;
+                let changed = (newOperator !== term.operator);
                 if (!changed) {
                     for (let i = 0; i < numComponents; i++) {
                         if (newComponents[i] !== term.components[i]) {
@@ -243,25 +200,31 @@ function iterativeSubstitute(rootTerm, bindings, visited) {
                     const newTerm = {
                         ...term,
                         operator: newOperator,
-                        components: newComponents,
+                        components: Object.freeze(newComponents),
                         name: newName,
-                        equals: term.equals,
                         toString: () => newName
                     };
                     resultStack.push(newTerm);
                 }
+            } else if (isVariable(term)) {
+                // Handled in processed=false
             } else {
-                // Primitive/Symbol
                 resultStack.push(term);
             }
             continue;
         }
 
-        // Processing (First visit)
+        // First visit
         frame.processed = true;
-        if (term && typeof term === 'object') visited.add(term);
+        if (term && typeof term === 'object') {
+            if (visited.has(term)) {
+                stack.pop();
+                resultStack.push(term);
+                continue;
+            }
+            visited.add(term);
+        }
 
-        // Handle Variables immediately
         if (isVariable(term)) {
             if (bindings.hasOwnProperty(term.name)) {
                 let value = bindings[term.name];
@@ -275,26 +238,24 @@ function iterativeSubstitute(rootTerm, bindings, visited) {
             } else {
                 resultStack.push(term);
             }
-            // Pop the frame since we are done with this variable
             stack.pop();
+            if (term && typeof term === 'object') visited.delete(term);
             continue;
         }
 
         if (isExpression(term)) {
-            // Push components to stack (reverse order so they are processed left-to-right)
             for (let i = term.components.length - 1; i >= 0; i--) {
                 stack.push({ term: term.components[i], processed: false });
             }
-            // Push operator if it needs substitution
             if (typeof term.operator === 'object' && term.operator !== null) {
                 stack.push({ term: term.operator, processed: false });
             }
         } else {
-            // Symbol or other atom
             resultStack.push(term);
             stack.pop();
+            if (term && typeof term === 'object') visited.delete(term);
         }
     }
 
-    return resultStack[0];
+    return resultStack[resultStack.length - 1];
 }

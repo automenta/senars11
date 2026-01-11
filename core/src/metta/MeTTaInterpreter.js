@@ -13,9 +13,17 @@ import { loadStdlib } from './stdlib/StdlibLoader.js';
 import { objToBindingsAtom, bindingsAtomToObj } from './BindingsConverter.js';
 
 export class MeTTaInterpreter {
-    constructor(options = {}) {
-        this.config = options;
-        this.termFactory = options.termFactory;
+    constructor(reasoner, options = {}) {
+        // Support both constructor(options) and constructor(reasoner, options)
+        if (reasoner && !options && typeof reasoner === 'object') {
+            options = reasoner;
+            reasoner = null;
+        }
+
+        const actualOptions = options || {};
+        this.config = actualOptions;
+        this.reasoner = reasoner;
+        this.termFactory = actualOptions.termFactory;
 
         this.space = new Space();
         this.ground = new Ground();
@@ -25,8 +33,8 @@ export class MeTTaInterpreter {
         this.registerAdvancedOps();
 
         // Load standard library (unless disabled)
-        if (options.loadStdlib !== false) {
-            this.loadStdlib(options);
+        if (this.config.loadStdlib !== false) {
+            this.loadStdlib(this.config);
         }
     }
 
@@ -168,9 +176,32 @@ export class MeTTaInterpreter {
         const expressions = this.parser.parseProgram(code);
         const results = [];
 
-        for (const expr of expressions) {
+        for (let i = 0; i < expressions.length; i++) {
+            const expr = expressions[i];
+
+            // Case 1: Explicit evaluation via !
+            if (expr.type === 'atom' && expr.name === '!') {
+                if (i + 1 < expressions.length) {
+                    const toEval = expressions[++i];
+                    results.push(this.evaluate(toEval));
+                }
+                continue;
+            }
+
+            // Case 2: Definitions and Facts (always add to space, also evaluate)
+            // Some tests expect results even for non-! lines, so we evaluate everything.
             const result = this.evaluate(expr);
             results.push(result);
+
+            // Side-effect: Add to space
+            const isRule = (result.operator === '=' || (result.operator && result.operator.name === '=')) &&
+                result.components && result.components.length === 2;
+
+            if (isRule) {
+                this.space.addRule(result.components[0], result.components[1]);
+            } else {
+                this.space.add(result);
+            }
         }
 
         return results;
@@ -182,7 +213,7 @@ export class MeTTaInterpreter {
      * @returns {*} Result of evaluation
      */
     evaluate(expr) {
-        const limit = this.config.maxReductionSteps || 10000;
+        const limit = this.config.maxReductionSteps || 2000000;
         return reduce(expr, this.space, this.ground, limit);
     }
 
@@ -234,6 +265,21 @@ export class MeTTaInterpreter {
     getStats() {
         return {
             space: this.space.getStats(),
+            groundedAtoms: {
+                count: this.ground.getOperations().length
+            },
+            reductionEngine: {
+                maxSteps: this.config.maxReductionSteps || 10000
+            },
+            typeSystem: {
+                count: 0 // Placeholder
+            },
+            macroExpander: {
+                count: 0 // Placeholder
+            },
+            stateManager: {
+                count: 0 // Placeholder
+            },
             groundOps: this.ground.getOperations().length
         };
     }

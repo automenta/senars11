@@ -22,47 +22,34 @@ export function step(atom, space, ground, limit = 10000) {
     // Check if this is a grounded operation call (using ^ operator)
     const isGroundedOp = atom.operator === '^' || (atom.operator && atom.operator.name === '^');
 
-    if (isExpression(atom) && isGroundedOp) {
-        // ...
-    }
-
-
-    // Format: (^ &operation arg1 arg2 ...)
-    if (atom.components && atom.components.length >= 1) {
-        const opSymbol = atom.components[0];
-        // Check if opSymbol is a symbol atom starting with &
-        if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
-            if (ground.has(opSymbol.name)) {
-                // Extract arguments (skip the operation symbol)
-                const args = atom.components.slice(1);
-
-                // Reduce arguments before passing to grounded operation
-                // UNLESS the operation is marked as lazy
-                let reducedArgs;
-                if (ground.isLazy(opSymbol.name)) {
-                    reducedArgs = args;
-                } else {
-                    // This ensures operations like &+ or &empty? receive reduced values
-                    // Propagate limit (default 10000 if undefined) to recursive calls
-                    reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
-                }
-
-                try {
-                    // Execute the grounded operation
-                    const result = ground.execute(opSymbol.name, ...reducedArgs);
-                    return { reduced: result, applied: true };
-                } catch (error) {
-                    // If execution fails, return original atom
-                    return { reduced: atom, applied: false };
+    if (isGroundedOp) {
+        // Format: (^ &operation arg1 arg2 ...)
+        if (atom.components && atom.components.length >= 1) {
+            const opSymbol = atom.components[0];
+            if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
+                if (ground.has(opSymbol.name)) {
+                    const args = atom.components.slice(1);
+                    let reducedArgs;
+                    if (ground.isLazy(opSymbol.name)) {
+                        reducedArgs = args;
+                    } else {
+                        reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
+                    }
+                    try {
+                        const result = ground.execute(opSymbol.name, ...reducedArgs);
+                        return { reduced: result, applied: true };
+                    } catch (error) {
+                        return { reduced: atom, applied: false };
+                    }
                 }
             }
         }
     }
 
-    // Support direct grounded calls: (&op arg1 ...)
-    if (atom.operator && (typeof atom.operator === 'string' || atom.operator.name)) {
-        const opName = typeof atom.operator === 'string' ? atom.operator : atom.operator.name;
-        if (opName && opName.startsWith('&') && ground.has(opName)) {
+    // Generic grounded calls: (&op arg1 ...)
+    if (atom.operator && atom.operator.name && atom.operator.name.startsWith('&')) {
+        const opName = atom.operator.name;
+        if (ground.has(opName)) {
             const args = atom.components;
             let reducedArgs;
             if (ground.isLazy(opName)) {
@@ -79,37 +66,28 @@ export function step(atom, space, ground, limit = 10000) {
         }
     }
 
-
     // Look for matching rules in the space
-    // We use rulesFor to leverage indexing
     const rules = space.rulesFor(atom);
 
     for (const rule of rules) {
-        // Ensure it is a rule (has pattern), not just an indexed atom
         if (!rule.pattern) continue;
 
-        // Rule format: { pattern, result }
-        // Try to unify the atom with the pattern
-        // Note: unify(pattern, term) -> pattern variables bound to term values
         const bindings = Unify.unify(rule.pattern, atom);
 
         if (bindings !== null) {
-            // Apply bindings to the result
             if (typeof rule.result === 'function') {
-                // If result is a function, call it with bindings
                 const result = rule.result(bindings);
                 return { reduced: result, applied: true };
             } else {
-                // If result is a term, substitute bindings
                 const substituted = Unify.subst(rule.result, bindings);
                 return { reduced: substituted, applied: true };
             }
         }
     }
 
-    // If no reduction is possible, return the original atom
     return { reduced: atom, applied: false };
 }
+
 
 /**
  * Perform full reduction of an atom using an iterative approach to avoid stack overflow

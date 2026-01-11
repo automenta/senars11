@@ -81,7 +81,7 @@ export class Space {
         const rulesAsAtoms = this.rules
             .filter(rule => typeof rule.result !== 'function') // Only return symbolic rules
             .map(rule => {
-                 return exp(sym('='), [rule.pattern, rule.result]);
+                return exp(sym('='), [rule.pattern, rule.result]);
             });
 
         return [...atoms, ...rulesAsAtoms];
@@ -228,6 +228,14 @@ export class Space {
      * @returns {number} Number of atoms in space
      */
     size() {
+        return this.atoms.size;
+    }
+
+    /**
+     * Get the count of atoms in the space (alias for size)
+     * @returns {number} Atom count
+     */
+    getAtomCount() {
         return this.atoms.size;
     }
 
