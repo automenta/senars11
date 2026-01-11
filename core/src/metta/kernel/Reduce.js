@@ -23,38 +23,62 @@ export function step(atom, space, ground, limit = 10000) {
     const isGroundedOp = atom.operator === '^' || (atom.operator && atom.operator.name === '^');
 
     if (isExpression(atom) && isGroundedOp) {
-        // Format: (^ &operation arg1 arg2 ...)
-        if (atom.components && atom.components.length >= 1) {
-            const opSymbol = atom.components[0];
-            // Check if opSymbol is a symbol atom starting with &
-            if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
-                if (ground.has(opSymbol.name)) {
-                    // Extract arguments (skip the operation symbol)
-                    const args = atom.components.slice(1);
+        // ...
+    }
 
-                    // Reduce arguments before passing to grounded operation
-                    // UNLESS the operation is marked as lazy
-                    let reducedArgs;
-                    if (ground.isLazy(opSymbol.name)) {
-                        reducedArgs = args;
-                    } else {
-                        // This ensures operations like &+ or &empty? receive reduced values
-                        // Propagate limit (default 10000 if undefined) to recursive calls
-                        reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
-                    }
 
-                    try {
-                        // Execute the grounded operation
-                        const result = ground.execute(opSymbol.name, ...reducedArgs);
-                        return { reduced: result, applied: true };
-                    } catch (error) {
-                        // If execution fails, return original atom
-                        return { reduced: atom, applied: false };
-                    }
+    // Format: (^ &operation arg1 arg2 ...)
+    if (atom.components && atom.components.length >= 1) {
+        const opSymbol = atom.components[0];
+        // Check if opSymbol is a symbol atom starting with &
+        if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
+            if (ground.has(opSymbol.name)) {
+                // Extract arguments (skip the operation symbol)
+                const args = atom.components.slice(1);
+
+                // Reduce arguments before passing to grounded operation
+                // UNLESS the operation is marked as lazy
+                let reducedArgs;
+                if (ground.isLazy(opSymbol.name)) {
+                    reducedArgs = args;
+                } else {
+                    // This ensures operations like &+ or &empty? receive reduced values
+                    // Propagate limit (default 10000 if undefined) to recursive calls
+                    reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
+                }
+
+                try {
+                    // Execute the grounded operation
+                    const result = ground.execute(opSymbol.name, ...reducedArgs);
+                    return { reduced: result, applied: true };
+                } catch (error) {
+                    // If execution fails, return original atom
+                    return { reduced: atom, applied: false };
                 }
             }
         }
     }
+
+    // Support direct grounded calls: (&op arg1 ...)
+    if (atom.operator && (typeof atom.operator === 'string' || atom.operator.name)) {
+        const opName = typeof atom.operator === 'string' ? atom.operator : atom.operator.name;
+        if (opName && opName.startsWith('&') && ground.has(opName)) {
+            const args = atom.components;
+            let reducedArgs;
+            if (ground.isLazy(opName)) {
+                reducedArgs = args;
+            } else {
+                reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
+            }
+            try {
+                const result = ground.execute(opName, ...reducedArgs);
+                return { reduced: result, applied: true };
+            } catch (error) {
+                return { reduced: atom, applied: false };
+            }
+        }
+    }
+
 
     // Look for matching rules in the space
     // We use rulesFor to leverage indexing

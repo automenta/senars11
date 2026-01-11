@@ -1,6 +1,6 @@
-import {getComponents, getOperator, getVariableName, isCompound, isVariable, termsEqual} from './TermUtils.js';
+import { getComponents, getOperator, getVariableName, isCompound, isVariable, termsEqual } from './TermUtils.js';
 
-const FAILURE = {success: false, substitution: {}};
+const FAILURE = { success: false, substitution: {} };
 
 export class Unifier {
     constructor(termFactory) {
@@ -13,7 +13,7 @@ export class Unifier {
 
         if (isVariable(t1)) return this._unifyVariable(t1, t2, substitution);
         if (isVariable(t2)) return this._unifyVariable(t2, t1, substitution);
-        if (termsEqual(t1, t2)) return {success: true, substitution};
+        if (termsEqual(t1, t2)) return { success: true, substitution };
 
         if (isCompound(t1) && isCompound(t2)) {
             const comps1 = getComponents(t1);
@@ -30,7 +30,7 @@ export class Unifier {
                 if (!result.success) return FAILURE;
                 currentSubstitution = result.substitution;
             }
-            return {success: true, substitution: currentSubstitution};
+            return { success: true, substitution: currentSubstitution };
         }
 
         return FAILURE;
@@ -54,11 +54,11 @@ export class Unifier {
                 if (!res.success) return FAILURE;
                 currentSub = res.substitution;
             }
-            return {success: true, substitution: currentSub};
+            return { success: true, substitution: currentSub };
         }
 
         return termsEqual(p, term)
-            ? {success: true, substitution}
+            ? { success: true, substitution }
             : FAILURE;
     }
 
@@ -80,7 +80,7 @@ export class Unifier {
 
         return {
             success: true,
-            substitution: {...substitution, [varName]: term}
+            substitution: { ...substitution, [varName]: term }
         };
     }
 
@@ -92,21 +92,24 @@ export class Unifier {
         return false;
     }
 
-    applySubstitution(term, substitution) {
+    applySubstitution(term, substitution, visited = new Set()) {
         if (!term) return term;
 
         if (isVariable(term)) {
             const varName = getVariableName(term);
-            return substitution[varName]
-                ? this.applySubstitution(substitution[varName], substitution)
-                : term;
+            if (substitution[varName]) {
+                if (visited.has(varName)) return term; // Cycle detected
+                visited.add(varName);
+                return this.applySubstitution(substitution[varName], substitution, visited);
+            }
+            return term;
         }
 
         if (isCompound(term)) {
             const components = getComponents(term);
             let changed = false;
             const newComponents = components.map(comp => {
-                const newComp = this.applySubstitution(comp, substitution);
+                const newComp = this.applySubstitution(comp, substitution, new Set(visited));
                 if (newComp !== comp) changed = true;
                 return newComp;
             });

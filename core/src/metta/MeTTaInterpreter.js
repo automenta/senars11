@@ -127,6 +127,22 @@ export class MeTTaInterpreter {
             this.space.remove(atom);
             return atom;
         });
+        // &println: Print arguments
+        this.ground.register('&println', (...args) => {
+            console.log(...args.map(a => a.toString ? a.toString() : a));
+            return Term.sym('()');
+        });
+
+        // &length: Get list length
+        this.ground.register('&length', (list) => {
+            if (!list || !list.components) return Term.sym('0');
+            // Assuming cons list (: h t)
+            const { flattenList, isList } = Term;
+            if (isList(list)) {
+                return Term.sym(flattenList(list).elements.length.toString());
+            }
+            return Term.sym('0');
+        });
     }
 
     /**

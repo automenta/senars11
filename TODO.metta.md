@@ -366,10 +366,8 @@ node -e "const m = new MeTTaInterpreter(); m.run('(&system-stats)');"
 ```bash
 # After Phase 4 completion - FULL VALIDATION
 npm test
-node demos/maze_solver.metta
-node demos/adaptive_reasoning.metta
-node demos/truth_chain.metta
-node benchmarks/reduction-speed.js
+node verify_demos.js
+
 echo "MVP COMPLETE "
 ```
 

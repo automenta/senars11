@@ -7,8 +7,8 @@ import { isVariable, isExpression, isSymbol, clone, isList, flattenList, constru
 
 // Export an object with the expected API for tests
 export const Unify = {
-    unify: function(term1, term2, bindings = {}) {
-        const resultBindings = {...bindings};
+    unify: function (term1, term2, bindings = {}) {
+        const resultBindings = { ...bindings };
         const boundTerm1 = substitute(term1, resultBindings);
         const boundTerm2 = substitute(term2, resultBindings);
 
@@ -58,7 +58,7 @@ export const Unify = {
 
     subst: substitute,
     isVar: isVariable,
-    matchAll: function(patterns, terms) {
+    matchAll: function (patterns, terms) {
         const matches = [];
         for (const pattern of patterns) {
             for (const term of terms) {
@@ -72,7 +72,7 @@ export const Unify = {
 
 function bindVariable(variable, term, bindings) {
     if (occursCheck(variable, term, bindings)) return null;
-    const newBindings = {...bindings};
+    const newBindings = { ...bindings };
     newBindings[variable.name] = term;
     return newBindings;
 }
@@ -99,7 +99,7 @@ function occursCheck(variable, term, bindings) {
     return false;
 }
 
-function substitute(term, bindings) {
+function substitute(term, bindings, visited = new Set()) {
     if (!term) return term;
 
     // Fast path for variables
@@ -125,9 +125,9 @@ function substitute(term, bindings) {
             // Iterative map
             const substElements = new Array(elements.length);
             for (let i = 0; i < elements.length; i++) {
-                substElements[i] = substitute(elements[i], bindings);
+                substElements[i] = substitute(elements[i], bindings, new Set(visited));
             }
-            const substTail = substitute(tail, bindings);
+            const substTail = substitute(tail, bindings, new Set(visited));
 
             let changed = false;
             if (substTail !== tail) changed = true;
@@ -150,13 +150,13 @@ function substitute(term, bindings) {
         // The issue in maze_solver seems to be deep nesting of filters/lists that are not detected as lists.
         // Let's implement a robust iterative substitution.
 
-        return iterativeSubstitute(term, bindings);
+        return iterativeSubstitute(term, bindings, visited);
     }
     return term;
 }
 
 // Helper: Iterative substitution to prevent stack overflow
-function iterativeSubstitute(rootTerm, bindings) {
+function iterativeSubstitute(rootTerm, bindings, visited) {
     const stack = [{ term: rootTerm, processed: false, parent: null, index: -1 }];
     const resultStack = []; // Stores substituted terms
 
@@ -164,8 +164,41 @@ function iterativeSubstitute(rootTerm, bindings) {
         const frame = stack[stack.length - 1];
         const { term, processed } = frame;
 
+        if (term && typeof term === 'object') {
+            if (visited.has(term)) {
+                stack.pop();
+                resultStack.push(term); // Return original if cyclic (or handle differently?)
+                continue;
+            }
+            // Do not add to visited yet? If we add now, children will see it.
+            // Yes, we want to detect cycles in CHILDREN referring to PARENT.
+            // But iterative approach visits children in loop.
+            // If we add to visited, we must remove when done?
+            // No, for substitution, if we see same term again in same path...
+            // But `visited` here is passed from `substitute`.
+            // Ideally we want to avoid infinite expansion.
+            // If we see term T, and we are substituting T...
+            // If T contains T?
+            // Recursive substitution handles DAGs fine (memoization needed for speed, visited for cycles).
+            // If we use visited for PATH, we need to remove on exit.
+            // BUT `substitute` passes `new Set(visited)` to children!
+            // So `visited` IS path-scoped.
+            // So we just add to `visited` (local copy).
+            // Wait, `iterativeSubstitute` receives `visited`.
+            // We should NOT modify `visited` passed by caller if we want path-scoping, unless caller passed a fresh set.
+            // `substitute` passes `new Set(visited)` when branching.
+            // So `visited` in `iterativeSubstitute` IS local to this branch.
+            // So we can mutate it?
+            // But `iterativeSubstitute` uses a stack. It's one branch.
+            // Wait, `stack` implies we are traversing down.
+            // So we can just add to `visited`.
+            // BUT we need to remove when we pop?
+            // Or just use `visited` as "seen in this path".
+        }
+
         if (processed) {
             stack.pop();
+            if (term && typeof term === 'object') visited.delete(term);
 
             // Reconstruct the term from results
             if (isVariable(term)) {
@@ -205,17 +238,17 @@ function iterativeSubstitute(rootTerm, bindings) {
                 if (!changed) {
                     resultStack.push(term);
                 } else {
-                     const opString = typeof newOperator === 'string' ? newOperator : (newOperator.toString ? newOperator.toString() : String(newOperator));
-                     const newName = `(${opString}, ${newComponents.map(c => c.name || c).join(', ')})`;
-                     const newTerm = {
+                    const opString = typeof newOperator === 'string' ? newOperator : (newOperator.toString ? newOperator.toString() : String(newOperator));
+                    const newName = `(${opString}, ${newComponents.map(c => c.name || c).join(', ')})`;
+                    const newTerm = {
                         ...term,
                         operator: newOperator,
                         components: newComponents,
                         name: newName,
                         equals: term.equals,
                         toString: () => newName
-                     };
-                     resultStack.push(newTerm);
+                    };
+                    resultStack.push(newTerm);
                 }
             } else {
                 // Primitive/Symbol
@@ -226,6 +259,7 @@ function iterativeSubstitute(rootTerm, bindings) {
 
         // Processing (First visit)
         frame.processed = true;
+        if (term && typeof term === 'object') visited.add(term);
 
         // Handle Variables immediately
         if (isVariable(term)) {
@@ -247,14 +281,14 @@ function iterativeSubstitute(rootTerm, bindings) {
         }
 
         if (isExpression(term)) {
-             // Push components to stack (reverse order so they are processed left-to-right)
-             for (let i = term.components.length - 1; i >= 0; i--) {
-                 stack.push({ term: term.components[i], processed: false });
-             }
-             // Push operator if it needs substitution
-             if (typeof term.operator === 'object' && term.operator !== null) {
-                 stack.push({ term: term.operator, processed: false });
-             }
+            // Push components to stack (reverse order so they are processed left-to-right)
+            for (let i = term.components.length - 1; i >= 0; i--) {
+                stack.push({ term: term.components[i], processed: false });
+            }
+            // Push operator if it needs substitution
+            if (typeof term.operator === 'object' && term.operator !== null) {
+                stack.push({ term: term.operator, processed: false });
+            }
         } else {
             // Symbol or other atom
             resultStack.push(term);

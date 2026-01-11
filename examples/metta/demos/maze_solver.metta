@@ -53,14 +53,14 @@
 (= (is-goal? $node) (== $node (goal-node)))
 
 ; Run A*
-(println "Starting Maze Solver...")
-(println "Start:" (start-node))
-(println "Goal:" (goal-node))
+(&println "Starting Maze Solver...")
+(&println "Start:" (start-node))
+(&println "Goal:" (goal-node))
 
 (= $path (astar is-goal? (start-node) heuristic))
 
-(println "Path found:")
-(println $path)
+(&println "Path found:")
+(&println $path)
 
-(println "Path length:" (length $path))
-(println "Maze solver completed.")
+(&println "Path length:" (&length $path))
+(&println "Maze solver completed.")
