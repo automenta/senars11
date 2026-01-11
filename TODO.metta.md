@@ -375,6 +375,56 @@ echo "MVP COMPLETE "
 
 ---
 
+### Phase 5: Stabilization & Functional Completion (Days 17-19)
+
+**Goal**: Resolve runtime issues, fill missing examples, and achieve "Functionally Complete" status.
+
+#### Tasks
+
+- [ ] **Debug Kernel Hangs**
+  - [ ] Isolate infinite loop (Space/Reduce/Unify)
+  - [ ] Fix `Reduce.js` cycle detection
+  - [ ] Fix `Unify.js` iterative substitution
+
+- [ ] **Fill Missing Examples**
+  - [ ] `examples/metta/basics/lists.metta` (Demonstrate cons, car, cdr, map)
+  - [ ] `examples/metta/basics/functions.metta` (Demonstrate lambda, let, closures)
+
+- [ ] **Verification & Validation**
+  - [ ] Pass `verify_kernel.js` (No hangs)
+  - [ ] Pass `npm test tests/unit/metta`
+  - [ ] Pass `npm test tests/integration/metta`
+  - [ ] Pass `node examples/metta/run_examples.js`
+
+**Success Criteria**:
+- [ ] All tests passed (green)
+- [ ] No regression in performance (check verify_kernel timings)
+- [ ] "Functionally Complete": Can run all Phase 1-4 capability demos
+
+**Time**: 3 days
+
+---
+
+### Phase 6: Extended Capabilities (Post-MVP)
+
+**Goal**: Advanced features inspired by OpenCog Hyperon.
+
+#### Tasks
+
+- [ ] **Distributed Space**
+  - [ ] Implement `RemoteSpace` adapter
+  - [ ] Sync protocol for multi-agent reasoning
+
+- [ ] **Advanced Types**
+  - [ ] Dependent types (already partially supported via rules)
+  - [ ] Gradual typing enforcement modes
+
+- [ ] **Performance Optimization**
+  - [ ] Indexing optimization in `Space.js`
+  - [ ] Memoization in `Reduce.js`
+
+---
+
 ## Migration Path
 
 ### Existing Code Mapping
