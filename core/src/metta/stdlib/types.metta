@@ -5,7 +5,7 @@
 ; ===== Type Declarations =====
 
 ; Type annotation syntax: (: $term $type)
-; Function types: (-\u003e $argType1 $argType2 ... $returnType)
+; Function types: (-> $argType1 $argType2 ... $returnType)
 
 ; Basic types
 (: Number Type)
@@ -17,21 +17,24 @@
 ; ===== Arithmetic Type Signatures =====
 
 ; Declare types for arithmetic operations
-(: + (-\u003e Number Number Number))
-(: - (-\u003e Number Number Number))
-(: * (-\u003e Number Number Number))
-(: / (-\u003e Number Number Number))
+(: + (-> Number Number Number))
+(: - (-> Number Number Number))
+(: * (-> Number Number Number))
+(: / (-> Number Number Number))
 
 ; Comparison operations
-(: \u003c (-\u003e Number Number Bool))
-(: \u003e (-\u003e Number Number Bool))
-(: == (-\u003e $a $a Bool))
+(: < (-> Number Number Bool))
+(: > (-> Number Number Bool))
+(: == (-> $a $a Bool))
 
 ; ===== Type Queries =====
 
 ; typeof: query the type of a term
 ; (typeof $x) → searches for (: $x $type) in the space
-(= (typeof $x) (match &self (: $x $t) $t))
+; Return the first match (or all matches as list if multiple?)
+; The tests expect a single Atom if one exists.
+; Since match returns a list, we take the head.
+(= (typeof $x) (car (match &self (: $x $t) $t)))
 
 ; has-type?: check if term has specific type
 (= (has-type? $x $type)

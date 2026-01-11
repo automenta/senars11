@@ -1,36 +1,20 @@
-import { Unifier } from '../../term/Unifier.js';
+import { Unify } from '../kernel/Unify.js';
+import { Term } from '../kernel/Term.js';
 
 export const Unification = {
-    isVar: (term) => term?.name?.startsWith('$') || term?.name?.startsWith('?'),
+    isVar: (term) => Unify.isVar(term),
 
-    subst: (term, bindings, termFactory = null) => {
-        // Delegate to Unifier for consistent substitution logic
-        // We use a minimal Unifier instance or the provided termFactory
-        const factory = termFactory || { create: (op, comps) => ({ operator: op, components: comps }) };
-        const unifier = new Unifier(factory);
-        return unifier.applySubstitution(term, bindings);
+    subst: (term, bindings) => {
+        return Unify.subst(term, bindings);
     },
 
     unify: (pattern, term, bindings = {}) => {
-        // Create a temporary Unifier - in a real app, this should be dependency-injected
-        // For helper functions, we can instantiate it on the fly or reuse a singleton if possible
-        // but here we just need the logic.
-        // We pass a minimal mock termFactory since Unifier only calls create when applying substitution for compound terms
-        // and we are just unifying here.
-        const unifier = new Unifier({
-            create: (op, comps) => ({ operator: op, components: comps, isCompound: true }) // Minimal mock
-        });
-
-        const result = unifier.unify(pattern, term, bindings);
-        return result.success ? result.substitution : null;
+        return Unify.unify(pattern, term, bindings);
     },
 
-    matchAll: (patterns, terms) => patterns.flatMap(pattern =>
-        terms.flatMap(term => {
-            const bindings = Unification.unify(pattern, term);
-            return bindings ? [{ pattern, term, bindings }] : [];
-        })
-    )
+    matchAll: (patterns, terms) => {
+        return Unify.matchAll(patterns, terms);
+    }
 };
 
 export const TermBuilders = {
