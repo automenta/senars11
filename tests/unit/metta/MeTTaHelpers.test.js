@@ -65,8 +65,8 @@ describe('MeTTaHelpers', () => {
             const bindings = { '$x': termFactory.atomic('42') };
 
             const result = Unification.subst(term, bindings);
-            // After substitution, components[1] should be the atomic term '42'
-            expect(result.components[1].name).toBe('42');
+            // After substitution, components[1] should be (* 42)
+            expect(result.components[1].name).toBe('(*, 42)');
         });
     });
 

@@ -36,7 +36,6 @@
 
 ; A* Search Algorithm
 ; Uses a list of pairs for the frontier: (: (: node cost) (: (: node2 cost2) ...))
-; Actually, standard list is (: head tail). So a list of pairs is (: (: n c) (: (: n2 c2) ()))
 
 (= (astar $goal $start $heuristic)
    (astar-loop $goal (: (: $start 0) ()) () $heuristic))
@@ -103,20 +102,13 @@
 (= (append () $ys) $ys)
 (= (append (: $x $xs) $ys) (: $x (append $xs $ys)))
 
-; Pair accessors (assuming (: a b) style pairs where b is atom, not list)
-; Wait, (: a b) is a list (a b).
-; If we want strict pairs, we use (pair a b) or just (: a (: b ())).
-; The code above uses (: $start 0) which is a list (start 0) -> exp(':', [start, 0]) ??
-; No, (: a b) is usually interpreted as cons.
-; If b is not a list, it's a dotted pair in Lisp.
-; In MeTTa stdlib list.metta, lists are (: h t).
-; So [1, 2] is (: 1 (: 2 ())).
-; So a pair (a, b) should be (: a (: b ())).
+; Merge (alias for append, used in some examples)
+(= (merge $a $b) (append $a $b))
 
+; Pair accessors
 (= (first (: $x $xs)) $x)
 (= (second (: $x (: $y $ys))) $y)
 
 ; Standard fold
 (= (fold $f $z ()) $z)
 (= (fold $f $z (: $h $t)) (fold $f ($f $z $h) $t))
-

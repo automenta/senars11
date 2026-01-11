@@ -3,7 +3,7 @@
  * Core unification algorithm for MeTTa
  */
 
-import { isVariable, isExpression, isSymbol, clone, isList, flattenList, constructList } from './Term.js';
+import { isVariable, isExpression, isSymbol, clone, isList, flattenList, constructList, exp } from './Term.js';
 
 // Export an object with the expected API for tests
 export const Unify = {
@@ -102,23 +102,33 @@ function occursCheck(variable, term, bindings) {
 function substitute(term, bindings) {
     if (!term) return term;
 
+    // Fast path for variables
     if (isVariable(term)) {
         if (bindings.hasOwnProperty(term.name)) {
             let value = bindings[term.name];
+            let chainCount = 0;
             while (isVariable(value) && bindings.hasOwnProperty(value.name)) {
                 value = bindings[value.name];
                 if (value === term) break;
+                if (chainCount++ > 100) break;
             }
+            if (value === undefined) return term;
             return value;
         }
         return term;
     }
 
     if (isExpression(term)) {
+        // Optimization for lists
         if (isList(term)) {
             const { elements, tail } = flattenList(term);
-            const substElements = elements.map(e => substitute(e, bindings));
+            // Iterative map
+            const substElements = new Array(elements.length);
+            for (let i = 0; i < elements.length; i++) {
+                substElements[i] = substitute(elements[i], bindings);
+            }
             const substTail = substitute(tail, bindings);
+
             let changed = false;
             if (substTail !== tail) changed = true;
             else {
@@ -133,32 +143,124 @@ function substitute(term, bindings) {
             return constructList(substElements, substTail);
         }
 
-        const substitutedComponents = term.components.map(comp => substitute(comp, bindings));
-        let substitutedOperator = term.operator;
-        let operatorChanged = false;
-        if (typeof term.operator === 'object' && term.operator !== null) {
-            substitutedOperator = substitute(term.operator, bindings);
-            if (substitutedOperator !== term.operator) operatorChanged = true;
-        }
+        // Iterative substitution for deep expressions (using stack to simulate recursion)
+        // Only trigger this for deep trees, otherwise recursion is faster/simpler.
+        // Actually, we can use a recursive structure with manual stack if depth is an issue.
+        // But for typical expression trees (not lists), depth is usually fine.
+        // The issue in maze_solver seems to be deep nesting of filters/lists that are not detected as lists.
+        // Let's implement a robust iterative substitution.
 
-        let componentsChanged = false;
-        for (let i = 0; i < term.components.length; i++) {
-            if (substitutedComponents[i] !== term.components[i]) {
-                componentsChanged = true;
-                break;
-            }
-        }
-
-        if (!componentsChanged && !operatorChanged) return term;
-
-        const opString = typeof substitutedOperator === 'string' ? substitutedOperator : (substitutedOperator.toString ? substitutedOperator.toString() : String(substitutedOperator));
-        return {
-            ...term,
-            operator: substitutedOperator,
-            components: substitutedComponents,
-            name: `(${opString}, ${substitutedComponents.map(c => c.name || c).join(', ')})`,
-            equals: term.equals
-        };
+        return iterativeSubstitute(term, bindings);
     }
     return term;
+}
+
+// Helper: Iterative substitution to prevent stack overflow
+function iterativeSubstitute(rootTerm, bindings) {
+    const stack = [{ term: rootTerm, processed: false, parent: null, index: -1 }];
+    const resultStack = []; // Stores substituted terms
+
+    while (stack.length > 0) {
+        const frame = stack[stack.length - 1];
+        const { term, processed } = frame;
+
+        if (processed) {
+            stack.pop();
+
+            // Reconstruct the term from results
+            if (isVariable(term)) {
+                // Should have been handled before pushing, but if here:
+                // It was handled in !processed block and pushed to resultStack
+                continue;
+            }
+
+            if (isExpression(term)) {
+                // If it's a list, we handled it separately (recursive substitute) but we are here if it fell through or is deep.
+                // We need to pop components from resultStack.
+                const numComponents = term.components.length;
+                const newComponents = new Array(numComponents);
+                // Pop in reverse order
+                for (let i = numComponents - 1; i >= 0; i--) {
+                    newComponents[i] = resultStack.pop();
+                }
+
+                // Handle operator
+                let newOperator = term.operator;
+                if (typeof term.operator === 'object' && term.operator !== null) {
+                    newOperator = resultStack.pop();
+                }
+
+                // Check for changes
+                let changed = false;
+                if (newOperator !== term.operator) changed = true;
+                if (!changed) {
+                    for (let i = 0; i < numComponents; i++) {
+                        if (newComponents[i] !== term.components[i]) {
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!changed) {
+                    resultStack.push(term);
+                } else {
+                     const opString = typeof newOperator === 'string' ? newOperator : (newOperator.toString ? newOperator.toString() : String(newOperator));
+                     const newName = `(${opString}, ${newComponents.map(c => c.name || c).join(', ')})`;
+                     const newTerm = {
+                        ...term,
+                        operator: newOperator,
+                        components: newComponents,
+                        name: newName,
+                        equals: term.equals,
+                        toString: () => newName
+                     };
+                     resultStack.push(newTerm);
+                }
+            } else {
+                // Primitive/Symbol
+                resultStack.push(term);
+            }
+            continue;
+        }
+
+        // Processing (First visit)
+        frame.processed = true;
+
+        // Handle Variables immediately
+        if (isVariable(term)) {
+            if (bindings.hasOwnProperty(term.name)) {
+                let value = bindings[term.name];
+                let chainCount = 0;
+                while (isVariable(value) && bindings.hasOwnProperty(value.name)) {
+                    value = bindings[value.name];
+                    if (value === term) break;
+                    if (chainCount++ > 100) break;
+                }
+                resultStack.push(value === undefined ? term : value);
+            } else {
+                resultStack.push(term);
+            }
+            // Pop the frame since we are done with this variable
+            stack.pop();
+            continue;
+        }
+
+        if (isExpression(term)) {
+             // Push components to stack (reverse order so they are processed left-to-right)
+             for (let i = term.components.length - 1; i >= 0; i--) {
+                 stack.push({ term: term.components[i], processed: false });
+             }
+             // Push operator if it needs substitution
+             if (typeof term.operator === 'object' && term.operator !== null) {
+                 stack.push({ term: term.operator, processed: false });
+             }
+        } else {
+            // Symbol or other atom
+            resultStack.push(term);
+            stack.pop();
+        }
+    }
+
+    return resultStack[0];
 }
