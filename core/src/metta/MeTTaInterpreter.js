@@ -17,7 +17,7 @@ export class MeTTaInterpreter {
         this.space = new Space();
         this.ground = new Ground();
         this.parser = new Parser();
-        
+
         // Register advanced grounded operations
         this.registerAdvancedOps();
 
@@ -49,7 +49,7 @@ export class MeTTaInterpreter {
                 const bindings = bindingsAtomToObj(bindingsAtom);
                 return Unify.subst(template, bindings);
             }
-        });
+        }, { lazy: true });
 
         // &unify: Unify (pattern, term) -> bindings or False
         this.ground.register('&unify', (pattern, term) => {
@@ -79,7 +79,7 @@ export class MeTTaInterpreter {
                 return Term.exp(':', [arr[0], listify(arr.slice(1))]);
             };
             return listify(results);
-        });
+        }, { lazy: true });
 
         // &query: Query (pattern, template) -> results
         this.ground.register('&query', (pattern, template) => {
@@ -106,7 +106,7 @@ export class MeTTaInterpreter {
             // Assume spaceAtom is &self for now, or resolve it
             // TODO: Support multiple spaces
             const atoms = this.space.all();
-            
+
             // Convert JS array to MeTTa list (: h (: t ...))
             const listify = (arr) => {
                 if (arr.length === 0) return Term.sym('()');
@@ -150,12 +150,12 @@ export class MeTTaInterpreter {
     run(code) {
         const expressions = this.parser.parseProgram(code);
         const results = [];
-        
+
         for (const expr of expressions) {
             const result = this.evaluate(expr);
             results.push(result);
         }
-        
+
         return results;
     }
 
@@ -174,12 +174,12 @@ export class MeTTaInterpreter {
      */
     load(code) {
         const expressions = this.parser.parseProgram(code);
-        
+
         for (const expr of expressions) {
             // Check if it's a rule definition (= pattern result)
             // Handle both string operator (legacy) and atom operator (new parser)
             const isRule = (expr.operator === '=' || (expr.operator && expr.operator.name === '=')) &&
-                           expr.components && expr.components.length === 2;
+                expr.components && expr.components.length === 2;
 
             if (isRule) {
                 this.space.addRule(expr.components[0], expr.components[1]);
@@ -201,11 +201,11 @@ export class MeTTaInterpreter {
         if (typeof pattern === 'string') {
             pattern = this.parser.parse(pattern);
         }
-        
+
         if (typeof template === 'string') {
             template = this.parser.parse(template);
         }
-        
+
         return match(this.space, pattern, template);
     }
 

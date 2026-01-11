@@ -33,9 +33,14 @@ export function step(atom, space, ground) {
                     const args = atom.components.slice(1);
 
                     // Reduce arguments before passing to grounded operation
-                    // This ensures operations like &+ or &empty? receive reduced values
-                    // Note: This calls reduce() recursively, but typically depth is shallow for args.
-                    const reducedArgs = args.map(arg => reduce(arg, space, ground));
+                    // UNLESS the operation is marked as lazy
+                    let reducedArgs;
+                    if (ground.isLazy(opSymbol.name)) {
+                        reducedArgs = args;
+                    } else {
+                        // This ensures operations like &+ or &empty? receive reduced values
+                        reducedArgs = args.map(arg => reduce(arg, space, ground));
+                    }
 
                     try {
                         // Execute the grounded operation

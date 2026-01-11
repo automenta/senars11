@@ -13,12 +13,13 @@ export class Ground {
      * Register a grounded operation
      * @param {string} name - Operation name
      * @param {Function} fn - Function to execute
+     * @param {Object} options - Options { lazy: boolean }
      * @returns {Ground} This instance for chaining
      */
-    register(name, fn) {
+    register(name, fn, options = {}) {
         // Normalize name to include & prefix if not present
         const normalizedName = name.startsWith('&') ? name : `&${name}`;
-        this.operations.set(normalizedName, fn);
+        this.operations.set(normalizedName, { fn, options });
         return this;
     }
 
@@ -31,6 +32,17 @@ export class Ground {
         // Normalize name to include & prefix if not present
         const normalizedName = name.startsWith('&') ? name : `&${name}`;
         return this.operations.has(normalizedName);
+    }
+
+    /**
+     * Check if operation is lazy (does not require argument reduction)
+     * @param {string} name - Operation name
+     * @returns {boolean} True if lazy
+     */
+    isLazy(name) {
+        const normalizedName = name.startsWith('&') ? name : `&${name}`;
+        const op = this.operations.get(normalizedName);
+        return op && op.options && op.options.lazy;
     }
 
     /**
@@ -48,7 +60,7 @@ export class Ground {
         }
 
         const op = this.operations.get(normalizedName);
-        return op(...args);
+        return op.fn(...args);
     }
 
     /**
@@ -150,8 +162,8 @@ export class Ground {
             const numA = atomToNumber(a);
             const numB = atomToNumber(b);
             if (numA !== null && numB !== null) {
-                 if (numB === 0) throw new Error("Modulo by zero");
-                 return createNumberAtom(numA % numB);
+                if (numB === 0) throw new Error("Modulo by zero");
+                return createNumberAtom(numA % numB);
             }
             throw new Error(`Non-numeric input for %: ${a.name || a}, ${b.name || b} (expected number)`);
         });
@@ -292,12 +304,12 @@ export class Ground {
                 space.add(atom);
                 return atom;
             }
-             // Fallback if space is not the first argument but maybe implied? No, explicit passing required.
-             if (atom === undefined && space && space.type === 'atom') {
-                 // Trying to add to implicit space? We don't have access to context here easily without binding.
-                 // Assuming explicit (add-atom &self atom)
-                 throw new Error("Missing space argument or invalid atom");
-             }
+            // Fallback if space is not the first argument but maybe implied? No, explicit passing required.
+            if (atom === undefined && space && space.type === 'atom') {
+                // Trying to add to implicit space? We don't have access to context here easily without binding.
+                // Assuming explicit (add-atom &self atom)
+                throw new Error("Missing space argument or invalid atom");
+            }
             throw new Error("Invalid space object");
         });
 
@@ -341,28 +353,28 @@ export class Ground {
         const stiMap = new Map();
 
         this.register('&get-sti', (atom) => {
-             const key = atom.toString();
-             return createNumberAtom(stiMap.get(key) || 0);
+            const key = atom.toString();
+            return createNumberAtom(stiMap.get(key) || 0);
         });
 
         this.register('&set-sti', (atom, value) => {
-             const key = atom.toString();
-             const num = atomToNumber(value);
-             if (num !== null) {
-                 stiMap.set(key, num);
-                 return value;
-             }
-             return createNumberAtom(0);
+            const key = atom.toString();
+            const num = atomToNumber(value);
+            if (num !== null) {
+                stiMap.set(key, num);
+                return value;
+            }
+            return createNumberAtom(0);
         });
 
         this.register('&system-stats', () => {
-             // Return some basic stats
-             // In a real system this would query the memory/profiler
-             return {
-                 type: 'atom',
-                 name: 'Stats',
-                 toString: () => `(Stats :sti-count ${stiMap.size})`
-             };
+            // Return some basic stats
+            // In a real system this would query the memory/profiler
+            return {
+                type: 'atom',
+                name: 'Stats',
+                toString: () => `(Stats :sti-count ${stiMap.size})`
+            };
         });
 
         // Placeholders for advanced ops that should be overridden by Interpreter
