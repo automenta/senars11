@@ -1,39 +1,66 @@
-/**
- * Fine-tunes the language model based on user preferences.
- *
- * This component uses the preferences collected by the PreferenceCollector to
- * update the weights of the language model. The goal is to train the model
- * to produce reasoning trajectories that are more aligned with user preferences.
- */
+import fs from 'fs';
+
 class RLFPLearner {
     constructor(agent) {
         this.agent = agent;
+        this.outputFile = 'rlfp_training_data.jsonl';
     }
 
     updateModel(preferences) {
-        const fineTuningData = this._prepareDataForFineTuning(preferences);
-        if (fineTuningData.length > 0) {
-            this.fineTune(fineTuningData);
+        const prefs = Array.isArray(preferences) ? preferences : [preferences];
+        const validPrefs = prefs.filter(p => p?.preference && p.preference !== 'SKIP');
+
+        if (!validPrefs.length) return;
+
+        console.log(`RLFPLearner: Processing ${validPrefs.length} preference(s)...`);
+
+        let count = 0;
+        for (const pref of validPrefs) {
+            const entry = this._prepareTrainingEntry(pref);
+            if (entry) {
+                this._appendToFile(entry);
+                count++;
+            }
         }
+
+        console.log(`RLFPLearner: Appended ${count} examples to ${this.outputFile}`);
     }
 
-    _prepareDataForFineTuning(preferences) {
-        return preferences.map(pref => {
-            const chosen = pref.preference === 'A' ? pref.trajectoryA : pref.trajectoryB;
-            const rejected = pref.preference === 'A' ? pref.trajectoryB : pref.trajectoryA;
-            return {
-                chosen: this._formatTrajectoryForTraining(chosen),
-                rejected: this._formatTrajectoryForTraining(rejected),
-            };
-        });
+    _prepareTrainingEntry(pref) {
+        const promptStep = pref.trajectoryA.find(s => s.type === 'llm_prompt');
+        const prompt = promptStep?.messages || "unknown_prompt";
+
+        const [chosen, rejected] = pref.preference === 'A'
+            ? [pref.trajectoryA, pref.trajectoryB]
+            : [pref.trajectoryB, pref.trajectoryA];
+
+        return {
+            timestamp: Date.now(),
+            prompt,
+            chosen: this._extractCompletion(chosen),
+            rejected: this._extractCompletion(rejected),
+            full_chosen_trajectory: chosen,
+            full_rejected_trajectory: rejected
+        };
     }
 
-    _formatTrajectoryForTraining(trajectory) {
-        return trajectory.map(step => step.llm_prompt || step.tool_call || '').join('\n');
+    _extractCompletion(trajectory) {
+        return trajectory
+            .filter(s => s.type !== 'llm_prompt')
+            .map(s => {
+                if (s.type === 'tool_call') return `<tool_call>${s.name}(${JSON.stringify(s.args)})</tool_call>`;
+                if (s.type === 'lm_response') return s.content;
+                return JSON.stringify(s);
+            })
+            .join('\n');
     }
 
-    fineTune(data) {
-        console.log('Fine-tuning model with data:', data);
+    _appendToFile(entry) {
+        try {
+            fs.appendFileSync(this.outputFile, JSON.stringify(entry) + '\n');
+        } catch (error) {
+            console.error(`RLFPLearner write error: ${error.message}`);
+        }
     }
 }
 

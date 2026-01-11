@@ -1,46 +1,79 @@
-/**
- * Collects user preferences on reasoning trajectories.
- *
- * This component is responsible for presenting pairs of reasoning trajectories to the user
- * and collecting their feedback on which trajectory they prefer. This feedback is used
- import fs from 'fs';
- * by the RLFPLearner to fine-tune the agent's language model.
- */
+import fs from 'fs';
+import inquirer from 'inquirer';
+
 class PreferenceCollector {
-    constructor(reader) {
+    constructor() {
         this.preferences = [];
-        this.reader = reader;
     }
 
     async collectPreference(pathA, pathB) {
-        const trajectoryA = await this.loadTrajectory(pathA);
-        const trajectoryB = await this.loadTrajectory(pathB);
+        let trajectoryA, trajectoryB;
+        try {
+            trajectoryA = await this.loadTrajectory(pathA);
+            trajectoryB = await this.loadTrajectory(pathB);
+        } catch (e) {
+            console.error("Error loading trajectories:", e.message);
+            return null;
+        }
 
-        console.log('--- Trajectory A ---');
-        console.log(this._formatTrajectoryForDisplay(trajectoryA));
-        console.log('--- Trajectory B ---');
-        console.log(this._formatTrajectoryForDisplay(trajectoryB));
+        console.log('\n==========================================');
+        console.log('=== Trajectory A ===');
+        console.log(this._formatTrajectory(trajectoryA));
+        console.log('\n=== Trajectory B ===');
+        console.log(this._formatTrajectory(trajectoryB));
+        console.log('==========================================\n');
 
-        const preference = await this._getUserInput('Which trajectory is better? (A/B): ');
-        const preferenceData = {trajectoryA, trajectoryB, preference};
-        this.preferences.push(preferenceData);
-        return preferenceData;
+        const { preference } = await inquirer.prompt([{
+            type: 'list',
+            name: 'preference',
+            message: 'Which trajectory do you prefer?',
+            choices: [
+                {name: 'Trajectory A', value: 'A'},
+                {name: 'Trajectory B', value: 'B'},
+                {name: 'Skip / Neither', value: 'SKIP'}
+            ]
+        }]);
+
+        if (preference === 'SKIP') return null;
+
+        const data = {
+            trajectoryA,
+            trajectoryB,
+            preference,
+            timestamp: Date.now(),
+            files: {A: pathA, B: pathB}
+        };
+
+        this.preferences.push(data);
+        return data;
     }
 
-    async loadTrajectory(filePath) {
-        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    async loadTrajectory(path) {
+        return JSON.parse(fs.readFileSync(path, 'utf-8'));
     }
 
-    _formatTrajectoryForDisplay(trajectory) {
-        return trajectory.map(step => `[${step.type}] ${JSON.stringify(step)}`).join('\n');
+    _formatTrajectory(traj) {
+        if (!Array.isArray(traj)) return "Invalid trajectory";
+
+        return traj.map(step => {
+            const ts = step.timestamp ? new Date(step.timestamp).toISOString().split('T')[1].split('.')[0] : '';
+            let content = JSON.stringify(step);
+
+            if (step.type === 'llm_prompt') {
+                const msg = step.messages?.[0]?.content || step.messages || '';
+                const txt = typeof msg === 'string' ? msg.slice(0, 100) : JSON.stringify(msg);
+                content = `LLM Prompt: "${txt.replace(/\n/g, ' ')}..."`;
+            } else if (step.type === 'tool_call') {
+                content = `Tool: ${step.name}(${JSON.stringify(step.args)})`;
+            } else if (step.type === 'lm_response') {
+                 content = `Response: ${JSON.stringify(step.content || step)}`;
+            }
+            return `${ts} [${step.type}] ${content}`;
+        }).join('\n');
     }
 
-    _getUserInput(prompt) {
-        return new Promise(resolve => {
-            this.reader.question(prompt, answer => {
-                resolve(answer.trim().toUpperCase());
-            });
-        });
+    savePreferences(path) {
+        fs.writeFileSync(path, JSON.stringify(this.preferences, null, 2));
     }
 }
 

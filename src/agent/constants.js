@@ -19,5 +19,6 @@ export const AGENT_EVENTS = {
     AGENT_ACTION: 'agent.action',
     AGENT_DECISION: 'agent.decision',
     LLM_PROMPT: 'llm.prompt',
+    LLM_RESPONSE: 'llm.response',
     TOOL_CALL: 'tool.call'
 };
