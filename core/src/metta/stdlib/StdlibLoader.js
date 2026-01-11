@@ -27,7 +27,7 @@ export class StdlibLoader {
         const stats = { loaded: [], failed: [], atomsAdded: 0 };
 
         for (const moduleName of this.modules) {
-            console.log(`[DEBUG] Loading module: ${moduleName}`);
+            // console.log(`[DEBUG] Loading module: ${moduleName}`);
             try {
                 const result = this.loadModule(moduleName);
                 stats.loaded.push(moduleName);

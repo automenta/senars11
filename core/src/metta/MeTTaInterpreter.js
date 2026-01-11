@@ -69,9 +69,7 @@ export class MeTTaInterpreter {
             // If space argument is provided and looks like a space (has query method), use it?
             // For now, we only support implicit &self or ignoring the first arg if it denotes self
 
-            console.log("[DEBUG] &match called. Pattern:", pattern.toString(), "Template:", template.toString());
             const results = match(targetSpace, pattern, template);
-            console.log("[DEBUG] &match results:", results.length);
 
             // Listify results
             const listify = (arr) => {

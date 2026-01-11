@@ -1,5 +1,4 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
-import { TaskBuilders } from './helpers/MeTTaHelpers.js';
 import { MeTTaRuleAdapter } from './helpers/MeTTaRuleAdapter.js';
 
 export class SeNARSBridge extends BaseMeTTaComponent {
@@ -11,7 +10,12 @@ export class SeNARSBridge extends BaseMeTTaComponent {
 
     mettaToNars(mettaTerm, punctuation = '.') {
         return this.trackOperation('mettaToNars', () => {
-            const task = TaskBuilders.task(mettaTerm, punctuation);
+            // Inline TaskBuilders.task logic
+            const task = {
+                term: mettaTerm,
+                punctuation,
+                truth: { frequency: 0.9, confidence: 0.9 }
+            };
             this.emitMeTTaEvent('metta-to-nars', { term: mettaTerm.toString() });
             return task;
         });

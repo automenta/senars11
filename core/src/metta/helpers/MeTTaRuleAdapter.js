@@ -1,5 +1,5 @@
 import { Rule } from '../../reason/Rule.js';
-import { Unification } from './MeTTaHelpers.js';
+import { Unify } from '../kernel/Unify.js';
 
 export class MeTTaRuleAdapter extends Rule {
     constructor(ruleTerm, interpreter, config = {}) {
@@ -26,7 +26,7 @@ export class MeTTaRuleAdapter extends Rule {
             : p1Term;
 
         // Match
-        const validBindings = Unification.unify(condition, inputTerm, {});
+        const validBindings = Unify.unify(condition, inputTerm, {});
         if (!validBindings) return [];
 
         // Apply substitution to generate result
