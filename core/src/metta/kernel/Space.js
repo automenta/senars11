@@ -75,18 +75,14 @@ export class Space {
     all() {
         const atoms = Array.from(this.atoms);
         // Reconstruct rules as atoms (= pattern result)
-        // We need to import exp/sym, but since this is kernel, maybe pass factory or use structure?
-        // We can't easily import exp here without circular dep potential or changing Term.js?
-        // Term.js is leaf. Space.js imports Term.js? Yes.
-        // So we can use exp/sym.
+        // We ensure `exp` and `sym` are available.
 
-        // Dynamic import or assume exp imported at top
-        // Checking imports... "import { isExpression, isSymbol } from './Term.js';"
-        // Need to add exp to imports.
-
-        const rulesAsAtoms = this.rules.map(rule => {
-             return exp(sym('='), [rule.pattern, rule.result]);
-        });
+        // Fix: rules.map needs to check if result is a function
+        const rulesAsAtoms = this.rules
+            .filter(rule => typeof rule.result !== 'function') // Only return symbolic rules
+            .map(rule => {
+                 return exp(sym('='), [rule.pattern, rule.result]);
+            });
 
         return [...atoms, ...rulesAsAtoms];
     }

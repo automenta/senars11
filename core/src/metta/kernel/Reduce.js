@@ -32,13 +32,14 @@ export function step(atom, space, ground) {
                     // Extract arguments (skip the operation symbol)
                     const args = atom.components.slice(1);
 
-                // Reduce arguments before passing to grounded operation
-                // This ensures operations like &+ or &empty? receive reduced values
-                const reducedArgs = args.map(arg => reduce(arg, space, ground));
+                    // Reduce arguments before passing to grounded operation
+                    // This ensures operations like &+ or &empty? receive reduced values
+                    // Note: This calls reduce() recursively, but typically depth is shallow for args.
+                    const reducedArgs = args.map(arg => reduce(arg, space, ground));
 
                     try {
                         // Execute the grounded operation
-                    const result = ground.execute(opSymbol.name, ...reducedArgs);
+                        const result = ground.execute(opSymbol.name, ...reducedArgs);
                         return { reduced: result, applied: true };
                     } catch (error) {
                         // If execution fails, return original atom
@@ -81,72 +82,134 @@ export function step(atom, space, ground) {
 }
 
 /**
- * Perform full reduction of an atom
+ * Perform full reduction of an atom using an iterative approach to avoid stack overflow
  * @param {Object} atom - Atom to reduce
  * @param {Space} space - Space containing rules
  * @param {Object} ground - Grounded operations registry
- * @param {number} limit - Maximum reduction steps (default: 1000)
+ * @param {number} limit - Maximum reduction steps (default: 10000)
  * @returns {Object} Fully reduced atom
  */
-export function reduce(atom, space, ground, limit = 1000) {
-    let current = atom;
-    let steps = 0;
+export function reduce(atom, space, ground, limit = 10000) {
+    // Context for global state
+    const ctx = {
+        steps: 0,
+        limit: limit
+    };
 
-    while (steps < limit) {
-        const { reduced, applied } = step(current, space, ground);
+    // Stack frame structure:
+    // {
+    //   phase: 'EXPAND' | 'REBUILD',
+    //   term: Atom,
+    //   parent: Frame, (optional, linked list)
+    //   components: Array, (for REBUILD)
+    //   result: Atom (output)
+    //   index: number (for parent's components)
+    // }
 
-        if (applied) {
-            // Even if the result is the same (e.g. (= (loop x) (loop x))),
-            // we count it as a step to catch infinite loops
-            current = reduced;
-            steps++;
-            continue;
-        }
+    // We use an explicit array as stack.
 
-        // If top-level didn't reduce, try reducing components
-        if (isExpression(current)) {
-            // OPTIMIZATION: Iterative reduction for lists to avoid stack overflow
-            if (isList(current)) {
-                const { elements, tail } = flattenList(current);
-                const reducedElements = elements.map(c => reduce(c, space, ground, Math.max(1, limit - steps)));
-                const reducedTail = reduce(tail, space, ground, Math.max(1, limit - steps));
+    const rootFrame = {
+        phase: 'EXPAND',
+        term: atom,
+        components: null,
+        results: null,
+    };
 
-                // Reconstruct list
-                const newCurrent = constructList(reducedElements, reducedTail);
+    const stack = [rootFrame];
 
-                if (!newCurrent.equals(current)) {
-                    current = newCurrent;
-                    steps++;
+    while (stack.length > 0) {
+        const frame = stack[stack.length - 1]; // Peek
+
+        if (frame.phase === 'EXPAND') {
+            // Step 1: Reduce top-level until stable or limit reached
+            let current = frame.term;
+            while (ctx.steps < ctx.limit) {
+                const { reduced, applied } = step(current, space, ground);
+                if (applied) {
+                    current = reduced;
+                    ctx.steps++;
                     continue;
                 }
-            } else {
-                // Normal expression reduction
-                const newComponents = current.components.map(c => reduce(c, space, ground, Math.max(1, limit - steps)));
+                break; // Stable
+            }
+            frame.term = current;
 
-                // Check if any component changed
-                let changed = false;
-                for (let i = 0; i < newComponents.length; i++) {
+            // Check limits
+            if (ctx.steps >= ctx.limit) {
+                throw new Error(`Max reduction steps (${limit}) exceeded`);
+            }
+
+            // Step 2: Check if we need to reduce components
+            if (isExpression(current) && current.components.length > 0) {
+                // Switch to REBUILD phase
+                frame.phase = 'REBUILD';
+                frame.results = new Array(current.components.length);
+
+                // Push children to stack (in reverse order so 0 is processed last on stack?
+                // Wait, stack is LIFO. If we push N, N-1, ... 0. Then 0 is popped first.
+                // Yes, we want to process left-to-right (0 first).
+                for (let i = current.components.length - 1; i >= 0; i--) {
+                    stack.push({
+                        phase: 'EXPAND',
+                        term: current.components[i],
+                        parent: frame,
+                        index: i
+                    });
+                }
+            } else {
+                // Done with this term
+                if (frame.parent) {
+                    frame.parent.results[frame.index] = current;
+                }
+                stack.pop();
+            }
+
+        } else if (frame.phase === 'REBUILD') {
+            // Components are reduced and stored in frame.results
+            const newComponents = frame.results;
+            const current = frame.term;
+
+            // Check if any component changed
+            let changed = false;
+            for (let i = 0; i < newComponents.length; i++) {
+                if (newComponents[i] !== current.components[i]) { // Identity comparison
+                    // For structural equality check (slower but correct for objects)
                     if (!newComponents[i].equals(current.components[i])) {
                         changed = true;
                         break;
                     }
                 }
+            }
 
-                if (changed) {
-                    current = exp(current.operator, newComponents);
-                    steps++;
-                    // After component reduction, try reducing top-level again
-                    continue;
+            if (changed) {
+                // Reconstruct term
+                const newTerm = exp(current.operator, newComponents);
+                ctx.steps++;
+                if (ctx.steps >= ctx.limit) {
+                    throw new Error(`Max reduction steps (${limit}) exceeded`);
                 }
+
+                // If changed, we must try reducing top-level again!
+                // Reset frame to EXPAND with new term
+                frame.phase = 'EXPAND';
+                frame.term = newTerm;
+                frame.results = null;
+                // Loop continues with this frame in EXPAND mode
+            } else {
+                // No change, we are done
+                if (frame.parent) {
+                    frame.parent.results[frame.index] = current;
+                } else {
+                    // Root frame done
+                    rootFrame.result = current;
+                }
+                stack.pop();
             }
         }
-
-        // No change at top level or components
-        return current;
     }
 
-    // If we hit the limit, throw an error
-    throw new Error(`Max reduction steps (${limit}) exceeded`);
+    // Root result should be populated if stack is empty
+    return rootFrame.result || rootFrame.term;
 }
 
 /**
