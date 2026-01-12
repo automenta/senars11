@@ -1,5 +1,5 @@
 import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { MeTTaInterpreter } from '../../core/src/metta/MeTTaInterpreter.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
 
 /**
  * Test utility functions for MeTTa tests

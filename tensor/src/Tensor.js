@@ -17,6 +17,10 @@ export class Tensor {
         return this.shape.reduce((a, b) => a * b, 1);
     }
 
+    get isTensor() {
+        return true;
+    }
+
     static fromJSON(json) {
         return new Tensor(json.data, {requiresGrad: json.requiresGrad ?? false});
     }

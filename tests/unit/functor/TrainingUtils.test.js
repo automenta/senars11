@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import {DataLoader, EarlyStopping, LRScheduler, MetricsTracker} from '../../../core/src/functor/TrainingUtils.js';
+import {DataLoader, EarlyStopping, LRScheduler, MetricsTracker} from '@senars/tensor/src/TrainingUtils.js';
 
 describe('TrainingUtils', () => {
     describe('DataLoader', () => {

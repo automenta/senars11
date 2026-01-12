@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { MeTTaInterpreter } from '../../../core/src/metta/MeTTaInterpreter.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

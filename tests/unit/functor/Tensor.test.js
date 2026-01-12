@@ -1,4 +1,4 @@
-import {Tensor} from '../../../core/src/functor/Tensor.js';
+import {Tensor} from '@senars/tensor/src/Tensor.js';
 
 describe('Tensor', () => {
     describe('construction', () => {

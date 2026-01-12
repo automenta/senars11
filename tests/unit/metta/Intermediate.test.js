@@ -1,11 +1,11 @@
-import { MeTTaInterpreter } from '../../../core/src/metta/MeTTaInterpreter.js';
-import { Term, sym, exp, var_ as v } from '../../../core/src/metta/kernel/Term.js';
-import { Unify } from '../../../core/src/metta/kernel/Unify.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import { Term, sym, exp, var_ as v } from '@senars/metta/src/kernel/Term.js';
+import { Unify } from '@senars/metta/src/kernel/Unify.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const stdlibDir = path.resolve(__dirname, '../../../core/src/metta/stdlib');
+const stdlibDir = path.resolve(__dirname, '../../../metta/src/stdlib');
 
 describe('Intermediate Tests (Let*, Closures)', () => {
     let interpreter;

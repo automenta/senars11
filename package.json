@@ -6,7 +6,9 @@
   "workspaces": [
     "core",
     "agent",
-    "ui"
+    "ui",
+    "tensor",
+    "metta"
   ],
   "bin": {
     "senars": "./scripts/cli/senars.js"

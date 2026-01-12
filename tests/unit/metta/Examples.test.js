@@ -1,10 +1,10 @@
-import { MeTTaInterpreter } from '../../../core/src/metta/MeTTaInterpreter.js';
-import { Term } from '../../../core/src/metta/kernel/Term.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import { Term } from '@senars/metta/src/kernel/Term.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const stdlibDir = path.resolve(__dirname, '../../../core/src/metta/stdlib');
+const stdlibDir = path.resolve(__dirname, '../../../metta/src/stdlib');
 
 describe('Examples to Unit Tests Promotion', () => {
     let interpreter;

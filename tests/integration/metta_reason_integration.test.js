@@ -1,6 +1,6 @@
 import { Reasoner } from '../../core/src/reason/Reasoner.js';
-import { MeTTaInterpreter } from '../../core/src/metta/MeTTaInterpreter.js';
-import { SeNARSBridge } from '../../core/src/metta/SeNARSBridge.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import { SeNARSBridge } from '@senars/metta/src/SeNARSBridge.js';
 import { TermFactory } from '../../core/src/term/TermFactory.js';
 import { Unifier } from '../../core/src/term/Unifier.js';
 
@@ -43,7 +43,7 @@ describe('MeTTa-Reason Integration', () => {
         // We know MeTTaRuleAdapter uses Unifier internally.
 
         // We need to properly import the class we just wrote
-        const { MeTTaRuleAdapter } = await import('../../core/src/metta/helpers/MeTTaRuleAdapter.js');
+        const { MeTTaRuleAdapter } = await import('@senars/metta/src/helpers/MeTTaRuleAdapter.js');
 
         const adapter = new MeTTaRuleAdapter(ruleTerm, interpreter);
 

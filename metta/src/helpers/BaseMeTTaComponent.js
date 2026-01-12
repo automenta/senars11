@@ -3,7 +3,7 @@
  * Extends SeNARS BaseComponent with MeTTa-specific functionality
  */
 
-import { BaseComponent } from '../../util/BaseComponent.js';
+import { BaseComponent } from '@senars/core/src/util/BaseComponent.js';
 
 /**
  * BaseMeTTaComponent - Base class for all MeTTa components
