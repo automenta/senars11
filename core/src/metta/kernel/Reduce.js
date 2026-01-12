@@ -140,9 +140,18 @@ export const reduce = (atom, space, ground, limit = 10000) => {
                 throw new Error(`Max reduction steps (${limit}) exceeded`);
             }
 
+            // Check if current is valid before proceeding
+            if (!current) {
+                if (frame.parent) {
+                    frame.parent.results[frame.index] = current;
+                }
+                stack.pop();
+                continue;
+            }
+
             // Check if we need to reduce components
-            const reduceOperator = isExpression(current.operator);
-            const hasComponents = isExpression(current) && current.components.length > 0;
+            const reduceOperator = current.operator && isExpression(current.operator);
+            const hasComponents = isExpression(current) && current.components && current.components.length > 0;
 
             if (reduceOperator || hasComponents) {
                 // Switch to REBUILD phase
@@ -150,18 +159,20 @@ export const reduce = (atom, space, ground, limit = 10000) => {
                 frame.reduceOperator = reduceOperator;
 
                 // Calculate total length needed
-                const compLen = current.components.length;
+                const compLen = hasComponents ? current.components.length : 0;
                 const totalLen = compLen + (reduceOperator ? 1 : 0);
                 frame.results = new Array(totalLen);
 
                 // Push components to stack in reverse order for correct processing
-                for (let i = compLen - 1; i >= 0; i--) {
-                    stack.push({
-                        phase: 'EXPAND',
-                        term: current.components[i],
-                        parent: frame,
-                        index: i + (reduceOperator ? 1 : 0)
-                    });
+                if (hasComponents) {
+                    for (let i = compLen - 1; i >= 0; i--) {
+                        stack.push({
+                            phase: 'EXPAND',
+                            term: current.components[i],
+                            parent: frame,
+                            index: i + (reduceOperator ? 1 : 0)
+                        });
+                    }
                 }
 
                 // Push operator if needed
