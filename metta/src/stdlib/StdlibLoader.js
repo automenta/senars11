@@ -4,6 +4,8 @@
  * Supports both Node.js (fs/path) and browser (virtual files)
  */
 
+import { createRequire } from 'module';
+
 const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'truth', 'nal', 'attention', 'control', 'search', 'learn'];
 
 export class StdlibLoader {
@@ -15,12 +17,12 @@ export class StdlibLoader {
         this.loadedModules = new Set();
     }
 
-    async load() {
+    load() {
         const stats = { loaded: [], failed: [], atomsAdded: 0 };
 
         for (const mod of this.modules) {
             try {
-                const res = await this.loadModule(mod);
+                const res = this.loadModule(mod);
                 stats.loaded.push(mod);
                 stats.atomsAdded += res.atomCount;
                 this.loadedModules.add(mod);
@@ -32,7 +34,7 @@ export class StdlibLoader {
         return stats;
     }
 
-    async loadModule(name) {
+    loadModule(name) {
         let content = '';
         const fileName = `${name}.metta`;
 
@@ -43,9 +45,10 @@ export class StdlibLoader {
         // 2. Fallback to Node.js fs if available
         else if (typeof process !== 'undefined' && process.versions?.node) {
             try {
-                const fs = await import('fs');
-                const path = await import('path');
-                const { fileURLToPath } = await import('url');
+                const require = createRequire(import.meta.url);
+                const fs = require('fs');
+                const path = require('path');
+                const { fileURLToPath } = require('url');
 
                 const currentDir = path.dirname(fileURLToPath(import.meta.url));
                 const stdlibDir = this.stdlibDir || currentDir;
@@ -74,7 +77,7 @@ export class StdlibLoader {
         return Array.from(this.loadedModules);
     }
 
-    async reload() {
+    reload() {
         this.loadedModules.clear();
         return this.load();
     }
