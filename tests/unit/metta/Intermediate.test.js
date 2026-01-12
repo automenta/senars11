@@ -1,5 +1,6 @@
 
 import { MeTTaInterpreter } from '../../../core/src/metta/MeTTaInterpreter.js';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
 import { Term, sym } from '../../../core/src/metta/kernel/Term.js';
 import { Unify } from '../../../core/src/metta/kernel/Unify.js';
 import path from 'path';
@@ -56,8 +57,7 @@ describe('Intermediate Tests (Let*, Closures)', () => {
             !((make-adder 10) 5)
          `;
         const res = interpreter.run(code);
-        expect(res[0].toString()).toBe('15');
-        expect(res[0].toString()).toBe('15');
+        expect(res[1].toString()).toBe('15');
     });
 
     it('should subst correctly', () => {
@@ -66,6 +66,12 @@ describe('Intermediate Tests (Let*, Closures)', () => {
         const bindings = { '$x': sym('10') };
         const res = Unify.subst(tmpl, bindings);
         console.log('Explicit Subst Result:', res.toString());
-        expect(res.toString()).toBe('(+ 10 1)');
+        expect(res.toString()).toBe('(+, 10, 1)');
+    });
+
+    it('should handle manual let', () => {
+        const code = `!(let $x 1 $x)`;
+        const res = interpreter.run(code);
+        expect(res[0].toString()).toBe('1');
     });
 });

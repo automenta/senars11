@@ -92,7 +92,7 @@ export function exp(operator, components) {
     }
 
     // Create canonical name
-    const canonicalName = `(${opString}, ${components.map(c => c.name || c).join(', ')})`;
+    const canonicalName = `(${opString} ${components.map(c => c.name || c).join(' ')})`;
 
     const atom = {
         type: 'compound',

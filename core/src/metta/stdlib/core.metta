@@ -7,6 +7,7 @@
 ; if: conditional evaluation
 ; (if True $then $else) → $then
 ; (if False $then $else) → $else
+(= (if $cond $then $else) (^ &if $cond $then $else))
 (= (if True $then $_) $then)
 (= (if False $_ $else) $else)
 
@@ -15,7 +16,7 @@
 ; let: bind a value to a variable in a body expression
 ; (let $x $value $body) → evaluate $body with $x bound to $value
 ; Implementation: Convert to lambda application
-(= (let $x $v $b) ((λ $x $b) $v))
+(= (let $x $v $b) (^ &let $x $v $b))
 
 ; Sequential let bindings (let*)
 ; (let* (($x $v1) ($y $v2)) $body) → nested lets

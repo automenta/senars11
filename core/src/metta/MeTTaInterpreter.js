@@ -49,23 +49,16 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     registerAdvancedOps() {
         const { sym } = Term;
 
-        // &subst: Substitution (variable, value, template) -> result
         this.ground.register('&subst', (a, b, c) => {
             // Case 1: (subst variable value template) - used by let/lambda
             if (c !== undefined) {
+                const variable = a;
                 const value = b;
                 const template = c;
-                throw new Error(`SUBST CALLED: ${JSON.stringify(variable)} ${JSON.stringify(value)} ${JSON.stringify(template)}`);
                 const bindings = {};
                 if (variable.name) {
                     bindings[variable.name] = value;
                 }
-                if (variable.name) {
-                    bindings[variable.name] = value;
-                } else {
-                    console.log("DEBUG: variable has no name", variable);
-                }
-                // console.log("DEBUG: subst bindings", bindings, "template", template);
                 return Unify.subst(template, bindings);
             }
             // Case 2: (subst template bindings) - used by match
@@ -76,6 +69,18 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                 const bindings = bindingsAtomToObj(bindingsAtom);
                 return Unify.subst(template, bindings);
             }
+        }, { lazy: true });
+
+        // &let: Let (variable, value, body) -> result
+        this.ground.register('&let', (variable, value, body) => {
+            const bindings = {};
+            if (variable.name) {
+                // console.error(`[DEBUG] &let binding: ${variable.name} -> ${value} in ${body}`);
+                bindings[variable.name] = value;
+            } else {
+                console.error(`[DEBUG] &let variable has no name:`, variable);
+            }
+            return Unify.subst(body, bindings);
         }, { lazy: true });
 
         // &unify: Unify (pattern, term) -> bindings or False
@@ -168,8 +173,8 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             return Term.sym('0');
         });
 
-        // if: Conditional (lazy)
-        this.ground.register('if', (cond, thenBranch, elseBranch) => {
+        // &if: Conditional (lazy)
+        this.ground.register('&if', (cond, thenBranch, elseBranch) => {
             // Reduce condition first
             const reducedCond = reduce(cond, this.space, this.ground);
 
@@ -185,8 +190,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             return Term.exp('if', [reducedCond, thenBranch, elseBranch]);
         }, { lazy: true });
 
-        // let*: Sequential binding (let* ((var val) ...) body)
-        this.ground.register('let*', (bindings, body) => {
+        // &let*: Sequential binding (let* ((var val) ...) body)
+        this.ground.register('&let*', (bindings, body) => {
+            process.stdout.write(`[DEBUG] &let* called with ${bindings.toString()} ${body.toString()}\n`);
             // Expect bindings to be a list (Expression or Cons)
             // We'll handle Expression list ((v1 val1) (v2 val2))
 
@@ -201,6 +207,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                 pairs = bindings.components;
             } else {
                 // Empty or invalid
+                console.error('[DEBUG] &let* invalid bindings');
                 return body;
             }
 
@@ -222,6 +229,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             } else {
                 // Invalid pair structure, skip or error? 
                 // For robustness, ignore
+                console.error('[DEBUG] &let* invalid pair', firstPair.toString());
                 return reduce(body, this.space, this.ground);
             }
 
@@ -242,7 +250,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             }
 
             const letTerm = Term.exp(sym('let'), [variable, value, recursiveLetStar]);
-
+            // console.error('[DEBUG] &let* expanded to', letTerm.toString());
             return reduce(letTerm, this.space, this.ground);
 
         }, { lazy: true });

@@ -82,6 +82,7 @@ export function step(atom, space, ground, limit = 10000) {
         const bindings = Unify.unify(rule.pattern, atom);
 
         if (bindings !== null) {
+            // console.log(`[DEBUG] Rule matched for ${atom}:`, rule.pattern.toString());
             if (typeof rule.result === 'function') {
                 const result = rule.result(bindings);
                 return { reduced: result, applied: true };
@@ -153,18 +154,39 @@ export function reduce(atom, space, ground, limit = 10000) {
             }
 
             // Step 2: Check if we need to reduce components
-            if (isExpression(current) && current.components.length > 0) {
+            // We must also reduce the operator if it is an expression (e.g. ((f x) y))
+            const reduceOperator = isExpression(current.operator);
+
+            if (reduceOperator || (isExpression(current) && current.components.length > 0)) {
                 // Switch to REBUILD phase
                 frame.phase = 'REBUILD';
-                frame.results = new Array(current.components.length);
+                frame.reduceOperator = reduceOperator;
 
-                // Push children to stack (right-to-left so 0 is top)
-                for (let i = current.components.length - 1; i >= 0; i--) {
+                const compLen = current.components.length;
+                const totalLen = compLen + (reduceOperator ? 1 : 0);
+                frame.results = new Array(totalLen);
+
+                // Push children to stack (right-to-left so top is processed last? Stack is LIFO. 
+                // We want to process operator first? Or order doesn't matter for independent reductions.
+                // Pushing right-to-left means index 0 is at top? No.
+                // stack.push(last). stack.push(first). pop() -> first.
+                // So push in reverse order of desired execution.
+
+                for (let i = compLen - 1; i >= 0; i--) {
                     stack.push({
                         phase: 'EXPAND',
                         term: current.components[i],
                         parent: frame,
-                        index: i
+                        index: i + (reduceOperator ? 1 : 0)
+                    });
+                }
+
+                if (reduceOperator) {
+                    stack.push({
+                        phase: 'EXPAND',
+                        term: current.operator,
+                        parent: frame,
+                        index: 0
                     });
                 }
             } else {
@@ -177,24 +199,37 @@ export function reduce(atom, space, ground, limit = 10000) {
 
         } else if (frame.phase === 'REBUILD') {
             // Components are reduced and stored in frame.results
-            const newComponents = frame.results;
             const current = frame.term;
+            const reduceOperator = frame.reduceOperator;
+            const newOperator = reduceOperator ? frame.results[0] : current.operator;
+            const newComponents = reduceOperator ? frame.results.slice(1) : frame.results;
 
             // Check if any component changed
             let changed = false;
-            for (let i = 0; i < newComponents.length; i++) {
-                if (newComponents[i] !== current.components[i]) { // Identity comparison
-                    // For structural equality check (slower but correct for objects)
-                    if (newComponents[i] && current.components[i] && (!newComponents[i].equals || !newComponents[i].equals(current.components[i]))) {
-                        changed = true;
-                        break;
+
+            // Check operator change
+            if (reduceOperator) {
+                if (newOperator !== current.operator && (!newOperator.equals || !newOperator.equals(current.operator))) {
+                    changed = true;
+                }
+            }
+
+            // Check components change
+            if (!changed) {
+                for (let i = 0; i < newComponents.length; i++) {
+                    if (newComponents[i] !== current.components[i]) { // Identity comparison
+                        // For structural equality check (slower but correct for objects)
+                        if (newComponents[i] && current.components[i] && (!newComponents[i].equals || !newComponents[i].equals(current.components[i]))) {
+                            changed = true;
+                            break;
+                        }
                     }
                 }
             }
 
             if (changed) {
                 // Reconstruct term
-                const newTerm = exp(current.operator, newComponents);
+                const newTerm = exp(newOperator, newComponents);
                 ctx.steps++;
                 if (ctx.steps >= ctx.limit) {
                     throw new Error(`Max reduction steps (${limit}) exceeded`);
