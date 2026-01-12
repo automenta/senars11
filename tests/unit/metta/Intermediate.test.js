@@ -66,7 +66,7 @@ describe('Intermediate Tests (Let*, Closures)', () => {
         const bindings = { '$x': sym('10') };
         const res = Unify.subst(tmpl, bindings);
         console.log('Explicit Subst Result:', res.toString());
-        expect(res.toString()).toBe('(+, 10, 1)');
+        expect(res.toString()).toBe('(+ 10 1)');
     });
 
     it('should handle manual let', () => {

@@ -196,7 +196,7 @@ function iterativeSubstitute(rootTerm, bindings, visited) {
                     resultStack.push(term);
                 } else {
                     const opString = typeof newOperator === 'string' ? newOperator : (newOperator.toString ? newOperator.toString() : String(newOperator));
-                    const newName = `(${opString}, ${newComponents.map(c => c.name || c).join(', ')})`;
+                    const newName = `(${opString} ${newComponents.map(c => c.name || c).join(' ')})`;
                     const newTerm = {
                         ...term,
                         operator: newOperator,

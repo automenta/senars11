@@ -218,6 +218,32 @@ describe('Kernel Reduce', () => {
 
             expect(result.name).toBe('49');
         });
+        test('reduces operator expression before application', () => {
+            // Rule: (make-op) -> inc
+            space.addRule(Term.exp('make-op', []), Term.sym('inc'));
+
+            // Rule: (inc $x) -> (+ $x 1)
+            space.addRule(
+                Term.exp('inc', [Term.var('x')]),
+                Term.exp('+', [Term.var('x'), Term.sym('1')])
+            );
+
+            // Rule: (+ $a $b) -> grounded addition
+            space.addRule(
+                Term.exp('+', [Term.var('a'), Term.var('b')]),
+                (bindings) => {
+                    const a = Number(bindings['$a'].name);
+                    const b = Number(bindings['$b'].name);
+                    return Term.sym(String(a + b));
+                }
+            );
+
+            // Query: ((make-op) 5) -> (inc 5) -> (+ 5 1) -> 6
+            const query = Term.exp(Term.exp('make-op', []), [Term.sym('5')]);
+            const result = Reduce.reduce(query, space, ground);
+
+            expect(result.name).toBe('6');
+        });
     });
 });
 

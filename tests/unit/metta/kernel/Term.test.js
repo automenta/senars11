@@ -68,8 +68,8 @@ describe('Kernel Term', () => {
             const b = Term.sym('2');
             const expr = Term.exp('+', [a, b]);
 
-            expect(expr.name).toBe('(+, 1, 2)');
-            expect(expr.toString()).toBe('(+, 1, 2)');
+            expect(expr.name).toBe('(+ 1 2)');
+            expect(expr.toString()).toBe('(+ 1 2)');
         });
 
         test('handles nested expressions', () => {
@@ -80,7 +80,7 @@ describe('Kernel Term', () => {
 
             expect(outer.operator.name).toBe('+');
             expect(outer.components[0]).toBe(inner);
-            expect(outer.name).toBe('(+, (*, x, y), z)');
+            expect(outer.name).toBe('(+ (* x y) z)');
         });
 
         test('throws on invalid operator', () => {

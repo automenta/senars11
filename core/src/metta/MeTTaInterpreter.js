@@ -75,12 +75,12 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.ground.register('&let', (variable, value, body) => {
             const bindings = {};
             if (variable.name) {
-                // console.error(`[DEBUG] &let binding: ${variable.name} -> ${value} in ${body}`);
                 bindings[variable.name] = value;
             } else {
-                console.error(`[DEBUG] &let variable has no name:`, variable);
+                // console.error(`[DEBUG] &let variable has no name:`, variable);
             }
-            return Unify.subst(body, bindings);
+            const result = Unify.subst(body, bindings);
+            return result;
         }, { lazy: true });
 
         // &unify: Unify (pattern, term) -> bindings or False
@@ -192,7 +192,6 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         // &let*: Sequential binding (let* ((var val) ...) body)
         this.ground.register('&let*', (bindings, body) => {
-            process.stdout.write(`[DEBUG] &let* called with ${bindings.toString()} ${body.toString()}\n`);
             // Expect bindings to be a list (Expression or Cons)
             // We'll handle Expression list ((v1 val1) (v2 val2))
 
@@ -202,12 +201,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             if (bindings.operator && bindings.operator.name === ':') {
                 // Cons list
                 pairs = flattenList(bindings).elements;
-            } else if (bindings.components) {
-                // Expression list
-                pairs = bindings.components;
+            } else if (bindings.type === 'compound') { // isExpression
+                // Expression list: treat operator as first element!
+                pairs = [bindings.operator, ...bindings.components];
+            } else if (bindings.name === '()') {
+                pairs = [];
             } else {
                 // Empty or invalid
-                console.error('[DEBUG] &let* invalid bindings');
+                console.error('[DEBUG] &let* invalid bindings', bindings);
                 return body;
             }
 
@@ -223,13 +224,27 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             // Extract var and val from firstPair
             // firstPair should be (var val)
             let variable, value;
-            if (firstPair.components && firstPair.components.length === 2) {
-                variable = firstPair.components[0];
-                value = firstPair.components[1];
+
+            if (firstPair.components && firstPair.components.length > 0) {
+                // Warning: In expression logic, operator might be the variable if list is (var val) and treated as op=var
+                // Or if it used : operator
+
+                if (firstPair.operator && firstPair.operator.name === ':') {
+                    variable = firstPair.components[0];
+                    value = firstPair.components[1];
+                } else {
+                    // Expression case: (var val)
+                    // If parsed as expression, operator is var, arg is val.
+                    // Parser.parse('(x 1)') -> exp(x, [1])
+                    variable = firstPair.operator;
+                    value = firstPair.components[0];
+                }
+
+                // Fallback/Validation
+                if (!variable || !value) {
+                    return body; // Fail gracefully
+                }
             } else {
-                // Invalid pair structure, skip or error? 
-                // For robustness, ignore
-                console.error('[DEBUG] &let* invalid pair', firstPair.toString());
                 return reduce(body, this.space, this.ground);
             }
 
@@ -250,7 +265,6 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             }
 
             const letTerm = Term.exp(sym('let'), [variable, value, recursiveLetStar]);
-            // console.error('[DEBUG] &let* expanded to', letTerm.toString());
             return reduce(letTerm, this.space, this.ground);
 
         }, { lazy: true });
