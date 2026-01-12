@@ -4,20 +4,20 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
-import { Parser } from './Parser.js';
-import { TypeChecker, TypeSystem } from './TypeSystem.js';
-import { TermFactory } from '@senars/core/src/term/TermFactory.js';
+import {BaseMeTTaComponent} from './helpers/BaseMeTTaComponent.js';
+import {Parser} from './Parser.js';
+import {TypeChecker, TypeSystem} from './TypeSystem.js';
+import {TermFactory} from '@senars/core/src/term/TermFactory.js';
 
-import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
-import { Ground } from './kernel/Ground.js';
-import { MemoizationCache } from './kernel/MemoizationCache.js';
-import { reduce, step, match } from './kernel/Reduce.js';
-import { Space } from './kernel/Space.js';
-import { Term } from './kernel/Term.js';
-import { Unify } from './kernel/Unify.js';
+import {objToBindingsAtom, bindingsAtomToObj} from './kernel/Bindings.js';
+import {Ground} from './kernel/Ground.js';
+import {MemoizationCache} from './kernel/MemoizationCache.js';
+import {reduce, step, match} from './kernel/Reduce.js';
+import {Space} from './kernel/Space.js';
+import {Term} from './kernel/Term.js';
+import {Unify} from './kernel/Unify.js';
 
-import { loadStdlib } from './stdlib/StdlibLoader.js';
+import {loadStdlib} from './stdlib/StdlibLoader.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
@@ -76,18 +76,18 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             if (c !== undefined) {
                 // (subst variable value template)
                 const [variable, value, template] = [a, b, c];
-                const bindings = variable.name ? { [variable.name]: value } : {};
+                const bindings = variable.name ? {[variable.name]: value} : {};
                 return Unify.subst(template, bindings);
             }
             // (subst template bindings)
             return Unify.subst(a, bindingsAtomToObj(b));
-        }, { lazy: true });
+        }, {lazy: true});
 
         // &let: Let (variable, value, body) -> result
         this.ground.register('&let', (variable, value, body) => {
-            const bindings = variable.name ? { [variable.name]: value } : {};
+            const bindings = variable.name ? {[variable.name]: value} : {};
             return Unify.subst(body, bindings);
-        }, { lazy: true });
+        }, {lazy: true});
 
         // &unify: Unify (pattern, term) -> bindings or False
         this.ground.register('&unify', (pattern, term) => {
@@ -99,7 +99,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.ground.register('&match', (space, pattern, template) => {
             const results = match(this.space, pattern, template);
             return this._listify(results);
-        }, { lazy: true });
+        }, {lazy: true});
 
         // &query: Query (pattern, template) -> results
         this.ground.register('&query', (pattern, template) => {
@@ -167,12 +167,12 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             if (reducedCond.name === 'True') return reduce(thenBranch, this.space, this.ground);
             if (reducedCond.name === 'False') return reduce(elseBranch, this.space, this.ground);
             return Term.exp('if', [reducedCond, thenBranch, elseBranch]);
-        }, { lazy: true });
+        }, {lazy: true});
 
         // &let*: Sequential binding (let* ((var val) ...) body)
         this.ground.register('&let*', (bindings, body) => {
             return this._handleLetStar(bindings, body);
-        }, { lazy: true });
+        }, {lazy: true});
     }
 
     _listify(arr) {
@@ -181,7 +181,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     }
 
     _handleLetStar(bindings, body) {
-        const { flattenList, sym, exp } = Term;
+        const {flattenList, sym, exp} = Term;
         let pairs = [];
 
         if (bindings.operator?.name === ':') {
@@ -257,7 +257,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     load(code) {
         const expressions = this.parser.parseProgram(code);
         expressions.forEach(expr => this._processExpression(expr, null));
-        return expressions.map(e => ({ term: e }));
+        return expressions.map(e => ({term: e}));
     }
 
     _processExpression(expr, results) {
@@ -314,8 +314,8 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     getStats() {
         return {
             space: this.space.getStats(),
-            groundedAtoms: { count: this.ground.getOperations().length },
-            reductionEngine: { maxSteps: this.config.maxReductionSteps || 10000 },
+            groundedAtoms: {count: this.ground.getOperations().length},
+            reductionEngine: {maxSteps: this.config.maxReductionSteps || 10000},
             typeSystem: {
                 count: this.typeSystem ? 1 : 0,
                 typeVariables: this.typeSystem?.nextTypeVarId || 0

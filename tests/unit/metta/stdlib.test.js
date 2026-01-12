@@ -3,7 +3,7 @@
  * Tests core.metta, list.metta, match.metta, and types.metta
  */
 
-import { MeTTaTestUtils } from '../../helpers/MeTTaTestUtils.js';
+import {MeTTaTestUtils} from '../../helpers/MeTTaTestUtils.js';
 
 describe('MeTTa Standard Library Tests', () => {
     let interpreter, termFactory;
@@ -11,7 +11,7 @@ describe('MeTTa Standard Library Tests', () => {
     beforeEach(() => {
         termFactory = MeTTaTestUtils.createTermFactory();
         // Create interpreter with stdlib loading enabled (default)
-        interpreter = MeTTaTestUtils.createInterpreter({ termFactory, loadStdlib: true });
+        interpreter = MeTTaTestUtils.createInterpreter({termFactory, loadStdlib: true});
     });
 
     describe('core.metta - Control Flow', () => {

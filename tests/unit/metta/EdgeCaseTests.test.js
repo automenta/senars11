@@ -1,10 +1,10 @@
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
 
 describe('MeTTa Edge Case Tests', () => {
     let interpreter, parse;
 
     beforeEach(() => {
-        interpreter = new MeTTaInterpreter({ loadStdlib: false });
+        interpreter = new MeTTaInterpreter({loadStdlib: false});
         parse = (code) => interpreter.parser.parse(code);
     });
 
@@ -14,7 +14,7 @@ describe('MeTTa Edge Case Tests', () => {
     });
 
     test('Termination: respects reduction step limits', () => {
-        const limited = new MeTTaInterpreter({ loadStdlib: false, maxReductionSteps: 5 });
+        const limited = new MeTTaInterpreter({loadStdlib: false, maxReductionSteps: 5});
         expect(limited.run('(^ &+ 2 3)')[0].name).toBe('5');
     });
 

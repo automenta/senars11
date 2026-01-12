@@ -6,16 +6,16 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
-import { MeTTaInterpreter } from '../../core/src/metta/MeTTaInterpreter.js';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { Term } from '../../core/src/metta/kernel/Term.js';
+import {MeTTaInterpreter} from '../../core/src/metta/MeTTaInterpreter.js';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Term} from '../../core/src/metta/kernel/Term.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const findMettaFiles = (dir) =>
-    fs.readdirSync(dir, { withFileTypes: true }).flatMap(item => {
+    fs.readdirSync(dir, {withFileTypes: true}).flatMap(item => {
         const fullPath = path.join(dir, item.name);
         return item.isDirectory() ? findMettaFiles(fullPath) :
             item.name.endsWith('.metta') ? [fullPath] : [];
@@ -42,10 +42,10 @@ const runFile = (filePath) => {
         console.timeEnd('Execution Time');
 
         results.forEach((result, i) => console.log(`${i + 1}. ${result?.toString() ?? 'null'}`));
-        return { success: true, file: filePath };
+        return {success: true, file: filePath};
     } catch (error) {
         console.error(`✗ Error: ${error.message}\n${error.stack}`);
-        return { success: false, file: filePath, error: error.message };
+        return {success: false, file: filePath, error: error.message};
     }
 };
 
@@ -61,6 +61,6 @@ console.log(`Total: ${files.length}\nSuccess: ${files.length - failed.length}\nF
 
 if (failed.length > 0) {
     console.log('\nFailed files:');
-    failed.forEach(({ file, error }) => console.log(`  - ${path.relative(__dirname, file)}: ${error}`));
+    failed.forEach(({file, error}) => console.log(`  - ${path.relative(__dirname, file)}: ${error}`));
     process.exit(1);
 }

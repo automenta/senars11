@@ -1,12 +1,12 @@
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
-import { SeNARSBridge } from '@senars/metta/src/SeNARSBridge.js';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
+import {SeNARSBridge} from '@senars/metta/src/SeNARSBridge.js';
 
 describe('MeTTa Integration Tests', () => {
     let interpreter;
 
     beforeEach(() => {
         // Disable stdlib loading to avoid file system issues in Jest
-        interpreter = new MeTTaInterpreter({ loadStdlib: false });
+        interpreter = new MeTTaInterpreter({loadStdlib: false});
     });
 
     describe('Basic Grounded Operations', () => {

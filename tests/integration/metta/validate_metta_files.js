@@ -7,7 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,7 +48,7 @@ for (const fullPath of demoFiles) {
         for (let i = 0; i < content.length; i++) {
             const char = content[i];
 
-            if (char === ';' && (i === 0 || content[i-1] !== '\\')) {
+            if (char === ';' && (i === 0 || content[i - 1] !== '\\')) {
                 inComment = true;
             } else if (char === '\n') {
                 inComment = false;
@@ -106,7 +106,7 @@ for (const fullPath of stdlibFiles) {
         for (let i = 0; i < content.length; i++) {
             const char = content[i];
 
-            if (char === ';' && (i === 0 || content[i-1] !== '\\')) {
+            if (char === ';' && (i === 0 || content[i - 1] !== '\\')) {
                 inComment = true;
             } else if (char === '\n') {
                 inComment = false;

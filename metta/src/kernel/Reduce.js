@@ -4,18 +4,18 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { isExpression, exp, isList } from './Term.js';
-import { Unify } from './Unify.js';
+import {isExpression, exp, isList} from './Term.js';
+import {Unify} from './Unify.js';
 
 /**
  * Perform a single reduction step on an atom
  */
 export const step = (atom, space, ground, limit = 10000, cache = null) => {
-    if (!isExpression(atom)) return { reduced: atom, applied: false };
+    if (!isExpression(atom)) return {reduced: atom, applied: false};
 
     // Check cache
     const cached = cache?.get(atom);
-    if (cached !== undefined) return { reduced: cached, applied: true };
+    if (cached !== undefined) return {reduced: cached, applied: true};
 
     const opName = atom.operator?.name;
 
@@ -49,29 +49,29 @@ export const step = (atom, space, ground, limit = 10000, cache = null) => {
                 ? rule.result(bindings)
                 : Unify.subst(rule.result, bindings);
             cache?.set(atom, result);
-            return { reduced: result, applied: true };
+            return {reduced: result, applied: true};
         }
     }
 
-    return { reduced: atom, applied: false };
+    return {reduced: atom, applied: false};
 };
 
 const executeGroundedOp = (atom, opName, space, ground, limit) => {
     const args = atom.components;
     try {
         const reducedArgs = ground.isLazy(opName) ? args : args.map(arg => reduce(arg, space, ground, limit));
-        return { reduced: ground.execute(opName, ...reducedArgs), applied: true };
+        return {reduced: ground.execute(opName, ...reducedArgs), applied: true};
     } catch {
-        return { reduced: atom, applied: false };
+        return {reduced: atom, applied: false};
     }
 };
 
 const executeGroundedOpWithArgs = (atom, opName, args, space, ground, limit) => {
     try {
         const reducedArgs = ground.isLazy(opName) ? args : args.map(arg => reduce(arg, space, ground, limit));
-        return { reduced: ground.execute(opName, ...reducedArgs), applied: true };
+        return {reduced: ground.execute(opName, ...reducedArgs), applied: true};
     } catch {
-        return { reduced: atom, applied: false };
+        return {reduced: atom, applied: false};
     }
 };
 
@@ -79,8 +79,8 @@ const executeGroundedOpWithArgs = (atom, opName, args, space, ground, limit) => 
  * Perform full reduction using TCO-optimized stack approach
  */
 export const reduce = (atom, space, ground, limit = 10000, cache = null) => {
-    const ctx = { steps: 0, limit };
-    const rootFrame = { phase: 'EXPAND', term: atom, results: null };
+    const ctx = {steps: 0, limit};
+    const rootFrame = {phase: 'EXPAND', term: atom, results: null};
     const stack = [rootFrame];
 
     while (stack.length > 0) {
@@ -91,7 +91,7 @@ export const reduce = (atom, space, ground, limit = 10000, cache = null) => {
 
             // Reduce top-level until stable
             while (ctx.steps < ctx.limit) {
-                const { reduced, applied } = step(current, space, ground, limit, cache);
+                const {reduced, applied} = step(current, space, ground, limit, cache);
                 if (applied) {
                     current = reduced;
                     ctx.steps++;
@@ -198,10 +198,10 @@ export const isGroundedCall = (atom, ground) => {
 export const reduceND = (atom, space, ground, limit = 100) => {
     const results = new Set();
     const visited = new Set();
-    const queue = [{ atom, steps: 0 }];
+    const queue = [{atom, steps: 0}];
 
     while (queue.length > 0) {
-        const { atom: current, steps } = queue.shift();
+        const {atom: current, steps} = queue.shift();
 
         if (steps >= limit) {
             results.add(current);
@@ -212,7 +212,7 @@ export const reduceND = (atom, space, ground, limit = 100) => {
         if (visited.has(currentStr)) continue;
         visited.add(currentStr);
 
-        const { reduced, applied } = step(current, space, ground, limit);
+        const {reduced, applied} = step(current, space, ground, limit);
 
         if (!applied || reduced.equals?.(current)) {
             results.add(reduced);
@@ -220,7 +220,7 @@ export const reduceND = (atom, space, ground, limit = 100) => {
         }
 
         results.add(reduced);
-        queue.push({ atom: reduced, steps: steps + 1 });
+        queue.push({atom: reduced, steps: steps + 1});
     }
 
     return Array.from(results);

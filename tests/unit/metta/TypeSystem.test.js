@@ -1,5 +1,4 @@
-
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
 
 describe('MeTTa Type System Tests', () => {
     let metta;

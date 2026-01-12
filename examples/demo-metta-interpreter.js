@@ -4,8 +4,8 @@
  * Demonstrates full MeTTa/Hyperon integration with SeNARS
  */
 
-import { MeTTaInterpreter } from '../core/src/metta/MeTTaInterpreter.js';
-import { TermFactory } from '../core/src/term/TermFactory.js';
+import {MeTTaInterpreter} from '../core/src/metta/MeTTaInterpreter.js';
+import {TermFactory} from '../core/src/term/TermFactory.js';
 
 console.log('='.repeat(70));
 console.log('MeTTa/Hyperon Interpreter Demo - Complete Integration');

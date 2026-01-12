@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { execFileSync } from 'child_process';
+import {fileURLToPath} from 'url';
+import {execFileSync} from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Find all .metta files
 const findMettaFiles = (dir) => {
-    const items = fs.readdirSync(dir, { withFileTypes: true });
+    const items = fs.readdirSync(dir, {withFileTypes: true});
     return items.flatMap(item => {
         const fullPath = path.join(dir, item.name);
         return item.isDirectory() ? findMettaFiles(fullPath) :

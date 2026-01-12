@@ -11,9 +11,9 @@
  *   npx senars serve       # Start MCP + WebSocket servers
  */
 
-import { spawn } from 'child_process';
+import {spawn} from 'child_process';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,7 +48,7 @@ function runDemo() {
 
     // Import and run the instant demo
     import('../../examples/instant-demo.js').then(async () => {
-        const { runAllDemos } = await import('../../examples/instant-demo.js');
+        const {runAllDemos} = await import('../../examples/instant-demo.js');
         await runAllDemos();
     }).catch(err => {
         console.error('❌ Error running demo:', err);

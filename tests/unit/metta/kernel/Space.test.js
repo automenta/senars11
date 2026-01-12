@@ -1,11 +1,14 @@
-import { Space } from '@senars/metta/src/kernel/Space.js';
-import { Term } from '@senars/metta/src/kernel/Term.js';
+import {Space} from '@senars/metta/src/kernel/Space.js';
+import {Term} from '@senars/metta/src/kernel/Term.js';
 
-const { sym, var: v, exp, clearSymbolTable } = Term;
+const {sym, var: v, exp, clearSymbolTable} = Term;
 
 describe('Kernel Space', () => {
     let space;
-    beforeEach(() => { clearSymbolTable(); space = new Space(); });
+    beforeEach(() => {
+        clearSymbolTable();
+        space = new Space();
+    });
 
     test('adds and retrieves atoms', () => {
         const atom = sym('A');

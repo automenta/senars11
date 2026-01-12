@@ -1,10 +1,10 @@
-import { MemoizationCache } from '@senars/metta/src/kernel/MemoizationCache.js';
+import {MemoizationCache} from '@senars/metta/src/kernel/MemoizationCache.js';
 
 describe('MemoizationCache', () => {
     // Mock Term objects (just plain objects for testing)
-    const t1 = { id: 1 };
-    const t2 = { id: 2 };
-    const t3 = { id: 3 };
+    const t1 = {id: 1};
+    const t2 = {id: 2};
+    const t3 = {id: 3};
     // const t4 = { id: 4 };
 
     test('Basic Set/Get', () => {

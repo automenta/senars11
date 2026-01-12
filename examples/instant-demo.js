@@ -1,15 +1,15 @@
 /**
  * examples/instant-demo.js
- * 
+ *
  * 3 compelling demos that showcase SeNARS value in under 60 seconds.
- * 
+ *
  * Demo Content (must be memorable):
  * 1. **Knowledge Discovery**: 5 facts → 3 non-obvious conclusions
  * 2. **Consistency Proof**: LLM contradicts, SeNARS doesn't
  * 3. **Memory Persistence**: Reload session, knowledge survives
  */
 
-import { SeNARS } from '../core/src/SeNARS.js';
+import {SeNARS} from '../core/src/SeNARS.js';
 
 async function runKnowledgeDiscoveryDemo() {
     console.log('🔍 Demo 1: Knowledge Discovery');

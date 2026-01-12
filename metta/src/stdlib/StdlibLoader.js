@@ -4,7 +4,7 @@
  * Supports both Node.js (fs/path) and browser (virtual files)
  */
 
-import { createRequire } from 'module';
+import {createRequire} from 'module';
 
 const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'truth', 'nal', 'attention', 'control', 'search', 'learn'];
 
@@ -18,7 +18,7 @@ export class StdlibLoader {
     }
 
     load() {
-        const stats = { loaded: [], failed: [], atomsAdded: 0 };
+        const stats = {loaded: [], failed: [], atomsAdded: 0};
 
         for (const mod of this.modules) {
             try {
@@ -27,7 +27,7 @@ export class StdlibLoader {
                 stats.atomsAdded += res.atomCount;
                 this.loadedModules.add(mod);
             } catch (err) {
-                stats.failed.push({ module: mod, error: err.message });
+                stats.failed.push({module: mod, error: err.message});
                 console.warn(`Failed to load stdlib '${mod}': ${err.message}`);
             }
         }
@@ -48,7 +48,7 @@ export class StdlibLoader {
                 const require = createRequire(import.meta.url);
                 const fs = require('fs');
                 const path = require('path');
-                const { fileURLToPath } = require('url');
+                const {fileURLToPath} = require('url');
 
                 const currentDir = path.dirname(fileURLToPath(import.meta.url));
                 const stdlibDir = this.stdlibDir || currentDir;
@@ -70,7 +70,7 @@ export class StdlibLoader {
         this.interpreter.load(content);
         const countAfter = this.interpreter.space?.size?.() ?? 0;
 
-        return { module: name, atomCount: countAfter - countBefore };
+        return {module: name, atomCount: countAfter - countBefore};
     }
 
     getLoadedModules() {

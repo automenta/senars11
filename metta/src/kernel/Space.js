@@ -4,14 +4,14 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { isExpression, isSymbol, exp, sym } from './Term.js';
+import {isExpression, isSymbol, exp, sym} from './Term.js';
 
 export class Space {
     constructor() {
         this.atoms = new Set();
         this.rules = [];
         this.functorIndex = new Map();
-        this._stats = { adds: 0, removes: 0, queries: 0, indexedLookups: 0 };
+        this._stats = {adds: 0, removes: 0, queries: 0, indexedLookups: 0};
     }
 
     add(atom) {
@@ -47,7 +47,7 @@ export class Space {
 
     addRule(pattern, result) {
         if (!pattern) throw new Error("Pattern cannot be null");
-        const rule = { pattern, result };
+        const rule = {pattern, result};
         this.rules.push(rule);
         this._indexItem(rule, pattern);
         return this;
@@ -94,7 +94,7 @@ export class Space {
         this.atoms.clear();
         this.rules = [];
         this.functorIndex.clear();
-        this._stats = { adds: 0, removes: 0, queries: 0, indexedLookups: 0 };
+        this._stats = {adds: 0, removes: 0, queries: 0, indexedLookups: 0};
     }
 
     // === Private ===

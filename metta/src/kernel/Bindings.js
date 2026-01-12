@@ -1,4 +1,4 @@
-import { Term } from './Term.js';
+import {Term} from './Term.js';
 
 export const objToBindingsAtom = (bindings = {}) =>
     Term.exp('Bindings', Object.entries(bindings).map(([k, v]) => Term.exp('Pair', [Term.var(k), v])));

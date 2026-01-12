@@ -3,21 +3,21 @@
 /**
  * ruminate.js - SeNARS Reasoning Trace Tool
  * Provides a transparent view into the SeNARS reasoning process
- * 
+ *
  * Usage: node examples/ruminate.js [options]
- * 
+ *
  * Examples:
  *   node examples/ruminate.js "Birds can fly" "Animals are living things"
  *   node examples/ruminate.js --model ollama --provider granite --time 10000 --events all
  *   node examples/ruminate.js --inputs "cat is an animal" "animals are mammals" --time 5000
  */
 
-import { NAR } from '../core/src/nar/NAR.js';
-import { LangChainProvider } from '../core/src/lm/LangChainProvider.js';
-import { TransformersJSProvider } from '../core/src/lm/TransformersJSProvider.js';
-import { createHypothesisGenerationRule } from '../core/src/reason/rules/lm/LMHypothesisGenerationRule.js';
-import { createConceptElaborationRule } from '../core/src/reason/rules/lm/LMConceptElaborationRule.js';
-import { createNarseseTranslationRule } from '../core/src/reason/rules/lm/LMNarseseTranslationRule.js';
+import {NAR} from '../core/src/nar/NAR.js';
+import {LangChainProvider} from '../core/src/lm/LangChainProvider.js';
+import {TransformersJSProvider} from '../core/src/lm/TransformersJSProvider.js';
+import {createHypothesisGenerationRule} from '../core/src/reason/rules/lm/LMHypothesisGenerationRule.js';
+import {createConceptElaborationRule} from '../core/src/reason/rules/lm/LMConceptElaborationRule.js';
+import {createNarseseTranslationRule} from '../core/src/reason/rules/lm/LMNarseseTranslationRule.js';
 
 // ANSI color codes for formatting
 const COLORS = {
@@ -39,16 +39,16 @@ const COLORS = {
 
 // Event type color mapping and emojis
 const EVENT_CONFIG = {
-    'NAR_INPUT': { color: COLORS.cyan, emoji: '📥', name: 'NAR IN' },
-    'TASK_ADDED': { color: COLORS.blue, emoji: '📋', name: 'TASK ADDED' },
-    'DERIVATION': { color: COLORS.magenta, emoji: '🧠', name: 'DERIVATION' },
-    'OUTPUT': { color: COLORS.green, emoji: '📤', name: 'OUTPUT' },
-    'LM_INPUT': { color: COLORS.yellow, emoji: '💭', name: 'LM IN' },
-    'LM_OUTPUT': { color: COLORS.bright + COLORS.yellow, emoji: '💬', name: 'LM OUT' },
-    'LM_ERROR': { color: COLORS.red, emoji: '❌', name: 'LM ERROR' },
-    'ERROR': { color: COLORS.red, emoji: '💥', name: 'ERROR' },
-    'INFO': { color: COLORS.white, emoji: 'ℹ️', name: 'INFO' },
-    'DEBUG': { color: COLORS.dim + COLORS.white, emoji: '🔍', name: 'DEBUG' }
+    'NAR_INPUT': {color: COLORS.cyan, emoji: '📥', name: 'NAR IN'},
+    'TASK_ADDED': {color: COLORS.blue, emoji: '📋', name: 'TASK ADDED'},
+    'DERIVATION': {color: COLORS.magenta, emoji: '🧠', name: 'DERIVATION'},
+    'OUTPUT': {color: COLORS.green, emoji: '📤', name: 'OUTPUT'},
+    'LM_INPUT': {color: COLORS.yellow, emoji: '💭', name: 'LM IN'},
+    'LM_OUTPUT': {color: COLORS.bright + COLORS.yellow, emoji: '💬', name: 'LM OUT'},
+    'LM_ERROR': {color: COLORS.red, emoji: '❌', name: 'LM ERROR'},
+    'ERROR': {color: COLORS.red, emoji: '💥', name: 'ERROR'},
+    'INFO': {color: COLORS.white, emoji: 'ℹ️', name: 'INFO'},
+    'DEBUG': {color: COLORS.dim + COLORS.white, emoji: '🔍', name: 'DEBUG'}
 };
 
 class ReasoningTrace {
@@ -91,13 +91,13 @@ class ReasoningTrace {
         if (this.options.logEvents === 'all') return true;
         if (Array.isArray(this.options.logEvents)) {
             return this.options.logEvents.includes(eventType) ||
-                   this.options.logEvents.includes('all');
+                this.options.logEvents.includes('all');
         }
         return true;
     }
 
     _printEvent(event) {
-        const config = EVENT_CONFIG[event.type] || { color: COLORS.white, emoji: '🔹', name: event.type };
+        const config = EVENT_CONFIG[event.type] || {color: COLORS.white, emoji: '🔹', name: event.type};
         const color = config.color;
         const emoji = config.emoji;
         const reset = this.options.colorize ? COLORS.reset : '';
@@ -122,7 +122,7 @@ class ReasoningTrace {
         }
 
         if (Object.keys(event).length > 4) { // More than time, type, data, timestamp
-            const extra = { ...event };
+            const extra = {...event};
             delete extra.time;
             delete extra.type;
             delete extra.data;
@@ -151,7 +151,7 @@ class ReasoningTrace {
 
         console.log(`\n${COLORS.bright}📈 Event Distribution:${COLORS.reset}`);
         Object.entries(eventCounts).forEach(([type, count]) => {
-            const config = EVENT_CONFIG[type] || { color: COLORS.white, emoji: '🔹', name: type };
+            const config = EVENT_CONFIG[type] || {color: COLORS.white, emoji: '🔹', name: type};
             console.log(`  ${this.options.colorize ? config.color : ''}${config.emoji} ${config.name}${COLORS.reset}: ${count}`);
         });
     }
@@ -166,7 +166,7 @@ class OllamaProvider extends LangChainProvider {
     async generateText(prompt, options = {}) {
         // Log LM input if trace is available
         if (this.trace) {
-            this.trace.log('LM_INPUT', prompt, { model: this.modelName, options });
+            this.trace.log('LM_INPUT', prompt, {model: this.modelName, options});
         }
 
         const startTime = Date.now();
@@ -176,7 +176,7 @@ class OllamaProvider extends LangChainProvider {
 
             // Log LM output if trace is available
             if (this.trace) {
-                this.trace.log('LM_OUTPUT', result, { duration_ms: duration, model: this.modelName });
+                this.trace.log('LM_OUTPUT', result, {duration_ms: duration, model: this.modelName});
             }
 
             return result;
@@ -186,7 +186,7 @@ class OllamaProvider extends LangChainProvider {
 
             // Log LM error if trace is available
             if (this.trace) {
-                this.trace.log('LM_ERROR', error.message, { duration_ms: duration, model: this.modelName });
+                this.trace.log('LM_ERROR', error.message, {duration_ms: duration, model: this.modelName});
             }
             throw error;
         }
@@ -217,7 +217,7 @@ class Ruminator {
 
         // Create NAR with LM integration
         this.nar = new NAR({
-            nar: { lm: { enabled: true } },
+            nar: {lm: {enabled: true}},
             lm: {
                 provider: this.options.provider,
                 modelName: this.options.model,
@@ -266,14 +266,14 @@ class Ruminator {
         this.nar.on('task_added', (task) => this.trace.log('TASK_ADDED', {
             term: task.term.toString(),
             punct: task.punctuation,
-            truth: task.truth ? { f: task.truth.frequency, c: task.truth.confidence } : null,
-            budget: task.budget ? { priority: task.budget.priority } : null
+            truth: task.truth ? {f: task.truth.frequency, c: task.truth.confidence} : null,
+            budget: task.budget ? {priority: task.budget.priority} : null
         }));
         this.nar.on('derivation', (task) => this.trace.log('DERIVATION', task.term.toString()));
         this.nar.on('output', (task) => this.trace.log('OUTPUT', {
             term: task.term.toString(),
             punct: task.punctuation,
-            truth: task.truth ? { f: task.truth.frequency, c: task.truth.confidence } : null
+            truth: task.truth ? {f: task.truth.frequency, c: task.truth.confidence} : null
         }));
 
         // Wait for initialization
@@ -288,7 +288,7 @@ class Ruminator {
     async _setupRules() {
         if (this.nar.streamReasoner && this.nar.streamReasoner.ruleProcessor) {
             const ruleExecutor = this.nar.streamReasoner.ruleProcessor.ruleExecutor;
-            
+
             const dependencies = {
                 lm: this.provider,
                 parser: this.nar._parser,
@@ -301,7 +301,7 @@ class Ruminator {
             ruleExecutor.register(createHypothesisGenerationRule(dependencies));
             ruleExecutor.register(createConceptElaborationRule(dependencies));
             ruleExecutor.register(createNarseseTranslationRule(dependencies));
-            
+
             console.log(`${COLORS.green}✅ Hybrid reasoning rules registered${COLORS.reset}`);
         }
     }
@@ -508,7 +508,7 @@ ${COLORS.underscore}Examples:${COLORS.reset}
 }
 
 async function main() {
-    const { options, inputs } = parseArgs();
+    const {options, inputs} = parseArgs();
 
     if (options.help) {
         showHelp();
@@ -528,12 +528,12 @@ async function main() {
     try {
         await ruminator.initialize();
         await ruminator.ruminate();
-        
+
         // Show final state
         console.log(`\n${COLORS.bright}📊 FINAL STATE:${COLORS.reset}`);
         const beliefs = ruminator.getBeliefs();
         console.log(`Total beliefs: ${beliefs.length}`);
-        
+
         if (beliefs.length > 0) {
             console.log('Recent beliefs:');
             beliefs.slice(-5).forEach((task, i) => {
@@ -553,4 +553,4 @@ if (process.argv[1] && process.argv[1].endsWith('ruminate.js')) {
     main().catch(console.error);
 }
 
-export { Ruminator, ReasoningTrace };
+export {Ruminator, ReasoningTrace};

@@ -1,4 +1,4 @@
-import { TermFactory, Term } from '../../../core/src/term/TermFactory.js';
+import {TermFactory, Term} from '../../../core/src/term/TermFactory.js';
 import * as TermUtils from '../../../core/src/term/TermUtils.js';
 
 describe('TermFactory', () => {

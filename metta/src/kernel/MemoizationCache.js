@@ -4,7 +4,10 @@
  */
 
 class DoublyLinkedList {
-    constructor() { this.head = this.tail = null; this.size = 0; }
+    constructor() {
+        this.head = this.tail = null;
+        this.size = 0;
+    }
 
     addToHead(node) {
         if (this.head === node) return;
@@ -31,7 +34,10 @@ class DoublyLinkedList {
         return node;
     }
 
-    clear() { this.head = this.tail = null; this.size = 0; }
+    clear() {
+        this.head = this.tail = null;
+        this.size = 0;
+    }
 }
 
 export class MemoizationCache {
@@ -40,7 +46,7 @@ export class MemoizationCache {
         this.map = new WeakMap();
         this.lru = new DoublyLinkedList();
         this.size = 0;
-        this.stats = { hits: 0, misses: 0, evictions: 0 };
+        this.stats = {hits: 0, misses: 0, evictions: 0};
     }
 
     get(term) {
@@ -70,7 +76,7 @@ export class MemoizationCache {
             }
             this.lru.addToHead(node);
         } else {
-            node = { value, prev: null, next: null, isEvicted: false };
+            node = {value, prev: null, next: null, isEvicted: false};
             this.map.set(term, node);
             this.lru.addToHead(node);
             this.size++;
@@ -102,6 +108,6 @@ export class MemoizationCache {
     }
 
     getStats() {
-        return { size: this.size, capacity: this.capacity, ...this.stats };
+        return {size: this.size, capacity: this.capacity, ...this.stats};
     }
 }

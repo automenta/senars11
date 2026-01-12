@@ -5,11 +5,18 @@
  */
 
 // Atom Caches
-const caches = { sym: new Map(), var: new Map(), exp: new Map() };
+const caches = {sym: new Map(), var: new Map(), exp: new Map()};
 
 export const sym = (name) => {
     if (caches.sym.has(name)) return caches.sym.get(name);
-    const atom = { type: 'atom', name, operator: null, components: [], toString: () => name, equals: o => o?.type === 'atom' && o.name === name };
+    const atom = {
+        type: 'atom',
+        name,
+        operator: null,
+        components: [],
+        toString: () => name,
+        equals: o => o?.type === 'atom' && o.name === name
+    };
     caches.sym.set(name, atom);
     return atom;
 };
@@ -18,7 +25,14 @@ export const var_ = (name) => {
     const n = name.replace(/^[\?\$]/, '');
     const fullName = `$${n}`;
     if (caches.var.has(fullName)) return caches.var.get(fullName);
-    const atom = { type: 'atom', name: fullName, operator: null, components: [], toString: () => fullName, equals: o => o?.type === 'atom' && o.name === fullName };
+    const atom = {
+        type: 'atom',
+        name: fullName,
+        operator: null,
+        components: [],
+        toString: () => fullName,
+        equals: o => o?.type === 'atom' && o.name === fullName
+    };
     caches.var.set(fullName, atom);
     return atom;
 };
@@ -71,7 +85,7 @@ export const flattenList = (list) => {
         elements.push(curr.components[0]);
         curr = curr.components[1];
     }
-    return { elements, tail: curr };
+    return {elements, tail: curr};
 };
 
 export const constructList = (elements, tail) => {

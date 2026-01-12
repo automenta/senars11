@@ -4,7 +4,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { sym, var_, exp } from './kernel/Term.js';
+import {sym, var_, exp} from './kernel/Term.js';
 
 export class Parser {
     constructor() {
@@ -35,7 +35,10 @@ class Tokenizer {
         let quoteChar = null;
         let inComment = false;
 
-        const push = () => { if (current.trim()) tokens.push(current.trim()); current = ''; };
+        const push = () => {
+            if (current.trim()) tokens.push(current.trim());
+            current = '';
+        };
 
         for (let i = 0; i < str.length; i++) {
             const char = str[i];

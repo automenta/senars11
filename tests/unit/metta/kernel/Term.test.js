@@ -1,6 +1,6 @@
-import { Term } from '@senars/metta/src/kernel/Term.js';
+import {Term} from '@senars/metta/src/kernel/Term.js';
 
-const { sym, var: v, exp, clearSymbolTable, equals, isVar, isSymbol, isExpression } = Term;
+const {sym, var: v, exp, clearSymbolTable, equals, isVar, isSymbol, isExpression} = Term;
 
 describe('Kernel Term', () => {
     beforeEach(() => clearSymbolTable());

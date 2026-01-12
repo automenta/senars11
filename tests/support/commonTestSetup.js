@@ -27,7 +27,8 @@ export const createTestInstanceHelper = (config = {}) => ({config: {...config}})
  */
 export const setupConsoleSilencing = (forceSilence = false) => {
     if (!process.env.SHOW_LOGS_IN_TESTS && !forceSilence) {
-        const noop = () => {};
+        const noop = () => {
+        };
         global.console = {
             ...console,
             log: noop,
@@ -59,7 +60,7 @@ export const getIsolatedPort = () => Math.floor(Math.random() * 1000) + 8000;
  * @param {Object} options.customGlobals - Custom global properties to set
  */
 export const commonTestSetup = (options = {}) => {
-    const { silenceConsole = true, setupGlobals = true, customGlobals = {} } = options;
+    const {silenceConsole = true, setupGlobals = true, customGlobals = {}} = options;
 
     // Set up test-specific configurations
     process.env.NODE_ENV = 'test';
@@ -78,7 +79,7 @@ export const commonTestSetup = (options = {}) => {
     // Setup global helpers
     if (setupGlobals) {
         global.createTestInstance = createTestInstanceHelper;
-        
+
         // Add custom globals
         Object.entries(customGlobals).forEach(([key, value]) => {
             global[key] = value;

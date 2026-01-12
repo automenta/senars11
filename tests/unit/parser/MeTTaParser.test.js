@@ -1,6 +1,6 @@
-import { MeTTaParser, parseMeTTaToNars, parseMeTTaExpression } from '../../../core/src/parser/MeTTaParser.js';
-import { TermFactory } from '../../../core/src/term/TermFactory.js';
-import { Term } from '../../../core/src/term/Term.js';
+import {MeTTaParser, parseMeTTaToNars, parseMeTTaExpression} from '../../../core/src/parser/MeTTaParser.js';
+import {TermFactory} from '../../../core/src/term/TermFactory.js';
+import {Term} from '../../../core/src/term/Term.js';
 
 describe('MeTTaParser', () => {
     let parser, termFactory;

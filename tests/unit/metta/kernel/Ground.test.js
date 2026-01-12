@@ -1,5 +1,5 @@
-import { Ground } from '@senars/metta/src/kernel/Ground.js';
-import { Term } from '@senars/metta/src/kernel/Term.js';
+import {Ground} from '@senars/metta/src/kernel/Ground.js';
+import {Term} from '@senars/metta/src/kernel/Term.js';
 
 describe('Kernel Ground', () => {
     let ground;
@@ -173,7 +173,9 @@ describe('Kernel Ground', () => {
             // Mock console.log manually since jest global is not available
             const originalLog = console.log;
             let logOutput = '';
-            console.log = (msg) => { logOutput = msg; };
+            console.log = (msg) => {
+                logOutput = msg;
+            };
 
             try {
                 const result = ground.execute('&print', Term.sym('Hello'), Term.sym('World'));

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import {fileURLToPath} from 'url';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +13,7 @@ const runDemo = async () => {
 
     try {
         // Load Stdlib default
-        const interpreter = new MeTTaInterpreter(null, { loadStdlib: true });
+        const interpreter = new MeTTaInterpreter(null, {loadStdlib: true});
 
         // Wait for stdlib? It's sync.
         console.log(`Space size: ${interpreter.space.getAtomCount()}`);
@@ -33,8 +33,8 @@ const runDemo = async () => {
             if (bindings) console.log("Bindings:", bindings);
         }
     }
-        
-        let code = fs.readFileSync(filePath, 'utf-8');
+
+    let code = fs.readFileSync(filePath, 'utf-8');
     // Remove import lines to avoid re-importing stdlib via metta
     // The file imports: core, list, search.
     // Interpreter loads: core, list, match, types, truth, nal, attention, control, search, learn.
@@ -45,10 +45,14 @@ const runDemo = async () => {
 
     console.log('Results:');
     results.forEach((res, i) => console.log(`${i + 1}. ${res}`));
-} catch (e) {
+}
+catch
+(e)
+{
     console.error(`FAILED: ${e.message}`);
     console.error(e.stack);
 }
-};
+}
+;
 
 runDemo();

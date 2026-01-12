@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import {fileURLToPath} from 'url';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
+
 console.log("PROCESS START - run_demos.js");
 
 const __filename = fileURLToPath(import.meta.url);

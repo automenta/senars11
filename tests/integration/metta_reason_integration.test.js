@@ -1,9 +1,8 @@
-import { Reasoner } from '../../core/src/reason/Reasoner.js';
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
-import { SeNARSBridge } from '@senars/metta/src/SeNARSBridge.js';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { Unifier } from '../../core/src/term/Unifier.js';
-
+import {Reasoner} from '../../core/src/reason/Reasoner.js';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
+import {SeNARSBridge} from '@senars/metta/src/SeNARSBridge.js';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Unifier} from '../../core/src/term/Unifier.js';
 
 
 describe('MeTTa-Reason Integration', () => {
@@ -27,7 +26,7 @@ describe('MeTTa-Reason Integration', () => {
 
     // This test is more of a unit test for the adapter logic before full integration
     test('MeTTaRuleAdapter applies rule', async () => {
-        const interpreter = new MeTTaInterpreter({ termFactory });
+        const interpreter = new MeTTaInterpreter({termFactory});
 
         // Define rule: (=> (Human $x) (Mortal $x))
         const p1 = termFactory.variable('$x');
@@ -43,7 +42,7 @@ describe('MeTTa-Reason Integration', () => {
         // We know MeTTaRuleAdapter uses Unifier internally.
 
         // We need to properly import the class we just wrote
-        const { MeTTaRuleAdapter } = await import('@senars/metta/src/helpers/MeTTaRuleAdapter.js');
+        const {MeTTaRuleAdapter} = await import('@senars/metta/src/helpers/MeTTaRuleAdapter.js');
 
         const adapter = new MeTTaRuleAdapter(ruleTerm, interpreter);
 
@@ -53,7 +52,7 @@ describe('MeTTa-Reason Integration', () => {
 
         const primaryPremise = {
             term: premiseTerm,
-            stamp: { id: 1, depth: 1 }
+            stamp: {id: 1, depth: 1}
         };
 
         const results = await adapter.applyAsync(primaryPremise, null, {});

@@ -3,7 +3,7 @@
  * Extends SeNARS BaseComponent with MeTTa-specific functionality
  */
 
-import { BaseComponent } from '@senars/core/src/util/BaseComponent.js';
+import {BaseComponent} from '@senars/core/src/util/BaseComponent.js';
 
 /**
  * BaseMeTTaComponent - Base class for all MeTTa components
@@ -38,7 +38,7 @@ export class BaseMeTTaComponent extends BaseComponent {
      * @private
      */
     _updateMetrics(metricKey, duration) {
-        const current = this._mettaMetrics.get(metricKey) ?? { count: 0, totalTime: 0, errors: 0 };
+        const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0};
         this._mettaMetrics.set(metricKey, {
             ...current,
             count: current.count + 1,
@@ -54,8 +54,8 @@ export class BaseMeTTaComponent extends BaseComponent {
      * @private
      */
     _recordError(metricKey) {
-        const current = this._mettaMetrics.get(metricKey) ?? { count: 0, totalTime: 0, errors: 0 };
-        this._mettaMetrics.set(metricKey, { ...current, errors: current.errors + 1 });
+        const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0};
+        this._mettaMetrics.set(metricKey, {...current, errors: current.errors + 1});
     }
 
     /**
@@ -75,14 +75,14 @@ export class BaseMeTTaComponent extends BaseComponent {
             this._updateMetrics(metricKey, duration);
 
             if (duration > (this.config.slowOpThreshold ?? 100)) {
-                this.emitMeTTaEvent('slow-operation', { opName, duration });
+                this.emitMeTTaEvent('slow-operation', {opName, duration});
             }
 
             return result;
         } catch (error) {
             this._recordError(metricKey);
-            this.logError(`${opName} failed`, { error: error.message, stack: error.stack });
-            this.emitMeTTaEvent('operation-error', { opName, error: error.message });
+            this.logError(`${opName} failed`, {error: error.message, stack: error.stack});
+            this.emitMeTTaEvent('operation-error', {opName, error: error.message});
             throw error;
         }
     }
@@ -103,8 +103,8 @@ export class BaseMeTTaComponent extends BaseComponent {
             return result;
         } catch (error) {
             this._recordError(metricKey);
-            this.logError(`${opName} failed`, { error: error.message });
-            this.emitMeTTaEvent('operation-error', { opName, error: error.message });
+            this.logError(`${opName} failed`, {error: error.message});
+            this.emitMeTTaEvent('operation-error', {opName, error: error.message});
             throw error;
         }
     }
@@ -115,7 +115,7 @@ export class BaseMeTTaComponent extends BaseComponent {
      */
     getMeTTaMetrics() {
         return Object.fromEntries(
-            Array.from(this._mettaMetrics, ([key, value]) => [key, { ...value }])
+            Array.from(this._mettaMetrics, ([key, value]) => [key, {...value}])
         );
     }
 

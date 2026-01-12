@@ -4,7 +4,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { sym, exp } from './Term.js';
+import {sym, exp} from './Term.js';
 
 export class Ground {
     constructor() {
@@ -15,7 +15,7 @@ export class Ground {
     // === Core API ===
 
     register(name, fn, options = {}) {
-        this.operations.set(this._normalize(name), { fn, options });
+        this.operations.set(this._normalize(name), {fn, options});
         return this;
     }
 
@@ -66,7 +66,9 @@ export class Ground {
 
         // Placeholders (overridden by Interpreter)
         ['&subst', '&match', '&type-of'].forEach(op =>
-            this.register(op, () => { throw new Error(`${op} should be provided by Interpreter`); })
+            this.register(op, () => {
+                throw new Error(`${op} should be provided by Interpreter`);
+            })
         );
     }
 
@@ -192,7 +194,10 @@ export class Ground {
     }
 
     _registerSpaceOps() {
-        this.register('&add-atom', (s, a) => { s.add(a); return a; });
+        this.register('&add-atom', (s, a) => {
+            s.add(a);
+            return a;
+        });
         this.register('&rm-atom', (s, a) => s.remove(a));
         this.register('&get-atoms', s => this._listify(s.all()));
     }

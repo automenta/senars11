@@ -1,7 +1,7 @@
-import { Unify } from '@senars/metta/src/kernel/Unify.js';
-import { Term } from '@senars/metta/src/kernel/Term.js';
+import {Unify} from '@senars/metta/src/kernel/Unify.js';
+import {Term} from '@senars/metta/src/kernel/Term.js';
 
-const { sym, var: v, exp, clearSymbolTable } = Term;
+const {sym, var: v, exp, clearSymbolTable} = Term;
 
 describe('Kernel Unify', () => {
     beforeEach(() => clearSymbolTable());
@@ -41,12 +41,12 @@ describe('Kernel Unify', () => {
         });
 
         test('uses existing bindings', () => {
-            const b = Unify.unify(v('x'), sym('val'), { '$x': sym('val') });
-            expect(b).toEqual({ '$x': sym('val') });
+            const b = Unify.unify(v('x'), sym('val'), {'$x': sym('val')});
+            expect(b).toEqual({'$x': sym('val')});
         });
 
         test('fails conflicting bindings', () => {
-            expect(Unify.unify(v('x'), sym('new'), { '$x': sym('old') })).toBeNull();
+            expect(Unify.unify(v('x'), sym('new'), {'$x': sym('old')})).toBeNull();
         });
 
         test('occurs check', () => {
@@ -56,11 +56,11 @@ describe('Kernel Unify', () => {
 
     describe('subst', () => {
         test('substitutes variable', () => {
-            expect(Unify.subst(v('x'), { '$x': sym('42') }).name).toBe('42');
+            expect(Unify.subst(v('x'), {'$x': sym('42')}).name).toBe('42');
         });
 
         test('substitutes compound', () => {
-            const r = Unify.subst(exp('+', [v('x'), sym('1')]), { '$x': sym('5') });
+            const r = Unify.subst(exp('+', [v('x'), sym('1')]), {'$x': sym('5')});
             expect(r.components[0].name).toBe('5');
             expect(r.components[1].name).toBe('1');
         });
@@ -73,7 +73,7 @@ describe('Kernel Unify', () => {
             // Based on `safeSubstitute` implementation (recursive on variable if bound), it should follow chain.
             // Wait, `safeSubstitute` recurses: `if (val !== undefined && val !== term) return safeSubstitute(val, bindings);`
             // So it should be transitive.
-            const r = Unify.subst(v('x'), { '$x': v('y'), '$y': sym('val') });
+            const r = Unify.subst(v('x'), {'$x': v('y'), '$y': sym('val')});
             expect(r.name).toBe('val');
         });
     });

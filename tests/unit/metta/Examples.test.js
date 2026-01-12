@@ -1,7 +1,7 @@
-import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
-import { Term } from '@senars/metta/src/kernel/Term.js';
+import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
+import {Term} from '@senars/metta/src/kernel/Term.js';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const stdlibDir = path.resolve(__dirname, '../../../metta/src/stdlib');

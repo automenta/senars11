@@ -3,11 +3,11 @@
  * Establishes performance benchmarks for core operations
  */
 
-import { NAR } from '../../core/src/nar/NAR.js';
-import { TermFactory } from '../../core/src/term/TermFactory.js';
-import { Reasoner } from '../../core/src/reason/Reasoner.js';
-import { Memory } from '../../core/src/memory/Memory.js';
-import { Task } from '../../core/src/task/Task.js';
+import {NAR} from '../../core/src/nar/NAR.js';
+import {TermFactory} from '../../core/src/term/TermFactory.js';
+import {Reasoner} from '../../core/src/reason/Reasoner.js';
+import {Memory} from '../../core/src/memory/Memory.js';
+import {Task} from '../../core/src/task/Task.js';
 
 class PerformanceBenchmark {
     constructor() {
@@ -74,7 +74,7 @@ async function runPerformanceBenchmarks() {
         const task = new Task({
             term,
             punctuation: '.',
-            budget: { priority: 0.5 }
+            budget: {priority: 0.5}
         });
         memory.addTask(task, Date.now());
     }
@@ -89,7 +89,7 @@ async function runPerformanceBenchmarks() {
     const ruleEngine = new Reasoner();
     await benchmark.runBenchmark('Rule Registration', (i) => {
         // Just time the creation of a simple object, since we don't have specific rules to benchmark
-        return { id: `rule_${i}`, name: `Benchmark Rule ${i}` };
+        return {id: `rule_${i}`, name: `Benchmark Rule ${i}`};
     }, 1000);
 
     // 4. Task Creation and Processing
@@ -99,7 +99,7 @@ async function runPerformanceBenchmarks() {
         return new Task({
             term,
             punctuation: '.',
-            budget: { priority: Math.random() }
+            budget: {priority: Math.random()}
         });
     }, 5000);
 
@@ -117,7 +117,7 @@ async function runPerformanceBenchmarks() {
 
     // 6. NAR Input Processing
     console.log('\n6. Benchmarking NAR Input Processing...');
-    const nar = new NAR({ lm: { enabled: false } });
+    const nar = new NAR({lm: {enabled: false}});
     await benchmark.runBenchmark('NAR Input Processing', async (i) => {
         // We'll time the parsing part without storing to avoid memory issues
         try {
@@ -125,7 +125,7 @@ async function runPerformanceBenchmarks() {
             return nar._parser.parse(input);
         } catch (e) {
             // If parsing fails, return a simple value
-            return { term: `term_${i}`, error: true };
+            return {term: `term_${i}`, error: true};
         }
     }, 1000);
 

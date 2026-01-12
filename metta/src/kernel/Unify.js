@@ -4,7 +4,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { isVariable, isExpression, isList, flattenList, constructList } from './Term.js';
+import {isVariable, isExpression, isList, flattenList, constructList} from './Term.js';
 
 const substitute = (term, bindings, visited = new Set()) => {
     if (!term) return term;
@@ -24,7 +24,7 @@ const substitute = (term, bindings, visited = new Set()) => {
 
     if (isExpression(term)) {
         if (isList(term)) {
-            const { elements, tail } = flattenList(term);
+            const {elements, tail} = flattenList(term);
             const subEls = elements.map(e => substitute(e, bindings, new Set(visited)));
             const subTail = substitute(tail, bindings, new Set(visited));
             if (subTail === tail && subEls.every((e, i) => e === elements[i])) return term;
@@ -59,7 +59,7 @@ const substitute = (term, bindings, visited = new Set()) => {
 // NOTE: Re-implementing simplified iterative substitution to be safe and use imported exp.
 // But we need to update the file import top.
 
-import { exp } from './Term.js';
+import {exp} from './Term.js';
 
 const safeSubstitute = (term, bindings) => {
     // Simplified recursive version. 
@@ -119,7 +119,7 @@ const unifyLists = (l1, l2, bindings) => {
 
 const bindVar = (v, t, bindings) => {
     if (occursCheck(v, t, bindings)) return null;
-    return { ...bindings, [v.name]: t };
+    return {...bindings, [v.name]: t};
 };
 
 const occursCheck = (v, t, bindings) => {
@@ -134,7 +134,7 @@ const occursCheck = (v, t, bindings) => {
 
 export const Unify = {
     unify: (t1, t2, bindings = {}) => {
-        const res = { ...bindings };
+        const res = {...bindings};
         const b1 = safeSubstitute(t1, res);
         const b2 = safeSubstitute(t2, res);
 
@@ -150,7 +150,7 @@ export const Unify = {
         const matches = [];
         patterns.forEach(pattern => terms.forEach(term => {
             const bindings = Unify.unify(pattern, term);
-            if (bindings) matches.push({ pattern, term, bindings });
+            if (bindings) matches.push({pattern, term, bindings});
         }));
         return matches;
     }

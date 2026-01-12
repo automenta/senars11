@@ -4,19 +4,19 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { Term } from './kernel/Term.js';
+import {Term} from './kernel/Term.js';
 
 export const TypeConstructors = {
-    Base: (name) => ({ kind: 'Base', name }),
-    Arrow: (from, to) => ({ kind: 'Arrow', from, to }),
-    List: (element) => ({ kind: 'List', element }),
-    Maybe: (type) => ({ kind: 'Maybe', type }),
-    Either: (left, right) => ({ kind: 'Either', left, right }),
-    Vector: (length) => ({ kind: 'Vector', length }),
-    Fin: (n) => ({ kind: 'Fin', n }),
-    TypeVar: (index) => ({ kind: 'TypeVar', index }),
-    Forall: (varName, type) => ({ kind: 'Forall', varName, type }),
-    TypeCtor: (name, params = []) => ({ kind: 'TypeCtor', name, params })
+    Base: (name) => ({kind: 'Base', name}),
+    Arrow: (from, to) => ({kind: 'Arrow', from, to}),
+    List: (element) => ({kind: 'List', element}),
+    Maybe: (type) => ({kind: 'Maybe', type}),
+    Either: (left, right) => ({kind: 'Either', left, right}),
+    Vector: (length) => ({kind: 'Vector', length}),
+    Fin: (n) => ({kind: 'Fin', n}),
+    TypeVar: (index) => ({kind: 'TypeVar', index}),
+    Forall: (varName, type) => ({kind: 'Forall', varName, type}),
+    TypeCtor: (name, params = []) => ({kind: 'TypeCtor', name, params})
 };
 
 // Base types
@@ -80,14 +80,18 @@ export class TypeSystem {
         if (t1.kind !== t2.kind) return false;
 
         switch (t1.kind) {
-            case 'Base': return t1.name === t2.name;
-            case 'Arrow': return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
-            case 'List': return this.unifyTypes(t1.element, t2.element);
+            case 'Base':
+                return t1.name === t2.name;
+            case 'Arrow':
+                return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
+            case 'List':
+                return this.unifyTypes(t1.element, t2.element);
             case 'TypeCtor':
                 return t1.name === t2.name &&
                     t1.params.length === t2.params.length &&
                     t1.params.every((p, i) => this.unifyTypes(p, t2.params[i]));
-            default: return false; // Simple structural equality for others handled by kind check above?
+            default:
+                return false; // Simple structural equality for others handled by kind check above?
         }
     }
 
@@ -129,7 +133,7 @@ export class TypeSystem {
                 });
             });
 
-            constraints.push({ type1: this.inferType(term, context), type2: resultType });
+            constraints.push({type1: this.inferType(term, context), type2: resultType});
         }
         return constraints;
     }
@@ -147,19 +151,29 @@ export class TypeSystem {
     typeToString(type) {
         if (!type) return 'Unknown';
         switch (type.kind) {
-            case 'Base': return type.name;
-            case 'Arrow': return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
-            case 'List': return `(List ${this.typeToString(type.element)})`;
-            case 'Maybe': return `(Maybe ${this.typeToString(type.type)})`;
-            case 'Either': return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
-            case 'Vector': return `(Vector ${type.length})`;
-            case 'Fin': return `(Fin ${type.n})`;
-            case 'TypeVar': return `t${type.index}`;
-            case 'Forall': return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
+            case 'Base':
+                return type.name;
+            case 'Arrow':
+                return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
+            case 'List':
+                return `(List ${this.typeToString(type.element)})`;
+            case 'Maybe':
+                return `(Maybe ${this.typeToString(type.type)})`;
+            case 'Either':
+                return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
+            case 'Vector':
+                return `(Vector ${type.length})`;
+            case 'Fin':
+                return `(Fin ${type.n})`;
+            case 'TypeVar':
+                return `t${type.index}`;
+            case 'Forall':
+                return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
             case 'TypeCtor':
                 const params = type.params.map(p => this.typeToString(p)).join(' ');
                 return `(${type.name}${params ? ' ' + params : ''})`;
-            default: return 'Unknown';
+            default:
+                return 'Unknown';
         }
     }
 }
