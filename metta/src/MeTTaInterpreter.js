@@ -55,10 +55,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             options.bridge.registerPrimitives(this.ground);
         }
 
+        // Standard library loading is now moved to async _initialize()
+    }
+
+    async _initialize() {
         // Load standard library (unless disabled)
         if (this.config.loadStdlib !== false) {
             try {
-                loadStdlib(this, this.config);
+                await loadStdlib(this, this.config);
             } catch (e) {
                 console.warn("Failed to load standard library:", e.message);
             }

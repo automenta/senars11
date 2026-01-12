@@ -1,5 +1,6 @@
-import crypto from 'crypto';
-import {freeze} from '../util/common.js';
+import { sha256 } from 'js-sha256';
+
+import { freeze } from '../util/common.js';
 
 export const TermType = Object.freeze({
     ATOM: 'atom',
@@ -110,12 +111,12 @@ export class Term {
     }
 
     static hash(str) {
-        return crypto.createHash('sha256').update(str).digest('hex');
+        return sha256(str);
     }
 
     static fromJSON(data) {
         if (!data) throw new Error('Term.fromJSON requires valid data object');
-        const {type, name, components = [], operator} = data;
+        const { type, name, components = [], operator } = data;
         return new Term(type, name, components, operator);
     }
 

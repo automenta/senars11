@@ -54,6 +54,7 @@
     "lint:patterns": "node scripts/utils/lint-patterns.js",
     "build": "npm run build:parser",
     "build:parser": "npx peggy --format es -o core/src/parser/peggy-parser.js core/src/parser/narsese.peggy",
+    "build:browser": "npx esbuild browser-test.js --bundle --format=iife --platform=browser --outfile=browser-bundle.js --log-level=info --external:inquirer --external:node:readline --external:node:util --external:fs --external:path --external:url --external:crypto --external:child_process --external:os",
     "slides:dev": "slidev slides.md",
     "slides:pdf": "slidev export slides.md"
   },

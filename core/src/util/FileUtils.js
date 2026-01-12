@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import {Logger} from './Logger.js';
+import { Logger } from './Logger.js';
 
 export class FileUtils {
     static readonlyExclusions = new Set([
@@ -45,7 +45,7 @@ export class FileUtils {
             }
             return JSON.parse(content);
         } catch (error) {
-            Logger.error(`Error parsing JSON from ${filePath}:`, {message: error.message});
+            Logger.error(`Error parsing JSON from ${filePath}:`, { message: error.message });
             return null;
         }
     }
@@ -65,17 +65,18 @@ export class FileUtils {
                 }
                 coverageDetail = JSON.parse(fileContent);
             } catch (parseError) {
-                Logger.error('Error parsing coverage-final.json:', {message: parseError.message});
+                Logger.error('Error parsing coverage-final.json:', { message: parseError.message });
                 return [];
             }
 
             const files = [];
-            for (const [filePath, coverage] of Object.entries(coverageDetail)) {
+            for (const [rawPath, coverage] of Object.entries(coverageDetail)) {
                 try {
-                    if (!filePath || typeof filePath !== 'string') {
+                    if (!rawPath || typeof rawPath !== 'string') {
                         continue; // Skip invalid file paths
                     }
 
+                    let filePath = rawPath;
                     if (filePath.startsWith('./')) {
                         filePath = path.resolve(filePath);
                     }
@@ -125,7 +126,7 @@ export class FileUtils {
                     });
                 } catch (fileError) {
                     // Skip this file if there's an error processing it
-                    if (verbose) Logger.warn(`Error processing coverage for ${filePath}:`, {message: fileError.message});
+                    if (verbose) Logger.warn(`Error processing coverage for ${filePath}:`, { message: fileError.message });
 
                 }
             }
@@ -142,7 +143,7 @@ export class FileUtils {
 
             return files.slice(0, TOP_N);
         } catch (error) {
-            Logger.error('Error in analyzeCoverageByFile:', {message: error.message});
+            Logger.error('Error in analyzeCoverageByFile:', { message: error.message });
             return [];
         }
     }

@@ -1,4 +1,4 @@
-import {BaseComponent} from '../util/BaseComponent.js';
+import { BaseComponent } from '../util/BaseComponent.js';
 
 export class ComponentManager extends BaseComponent {
     constructor(config = {}, eventBus = null, nar = null) {
@@ -11,6 +11,13 @@ export class ComponentManager extends BaseComponent {
     }
 
     async loadComponentsFromConfig(componentConfigs) {
+        // Dynamic loading from string paths is problematic in browser environments
+        // and causes issues with bundlers that crawl the filesystem.
+        if (typeof process === 'undefined' || !process.versions?.node) {
+            this.logInfo('ComponentManager.loadComponentsFromConfig: Skipping dynamic loading in non-Node environment');
+            return;
+        }
+
         for (const [name, config] of Object.entries(componentConfigs)) {
             if (!config.enabled) {
                 this.logDebug(`Component ${name} is disabled in config.`);
@@ -18,7 +25,9 @@ export class ComponentManager extends BaseComponent {
             }
 
             try {
-                const module = await import(`../${config.path}`);
+                // Hiding dynamic import from bundlers like esbuild to avoid static analysis issues
+                // This is strictly for the Node.js environment where these components exist on disk
+                const module = await eval(`import("../${config.path}")`);
                 const ComponentClass = module[config.class];
                 if (!ComponentClass) {
                     throw new Error(`Component class ${config.class} not found in ${config.path}`);
@@ -197,17 +206,17 @@ export class ComponentManager extends BaseComponent {
 
     async initializeAll() {
         const startupOrder = this.getStartupOrder();
-        return await this._executeLifecycleOperation('initialize', startupOrder, {metric: 'initializeCount'});
+        return await this._executeLifecycleOperation('initialize', startupOrder, { metric: 'initializeCount' });
     }
 
     async startAll() {
         const startupOrder = this.getStartupOrder();
-        return await this._executeLifecycleOperation('start', startupOrder, {metric: 'startCount'});
+        return await this._executeLifecycleOperation('start', startupOrder, { metric: 'startCount' });
     }
 
     async stopAll() {
         const shutdownOrder = this.getShutdownOrder();
-        return await this._executeLifecycleOperation('stop', shutdownOrder, {metric: 'stopCount'});
+        return await this._executeLifecycleOperation('stop', shutdownOrder, { metric: 'stopCount' });
     }
 
     async disposeAll() {

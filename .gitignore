@@ -34,3 +34,4 @@ test-results/
 *.jsonl
 trajectory_*.json
 preferences.json
+browser-bundle.js

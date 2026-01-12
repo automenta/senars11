@@ -1,24 +1,6 @@
-/**
- * @file src/tools/ToolIntegration.js
- * @description Integration layer between tools and reasoning core
- */
-
-import {ToolEngine} from './ToolEngine.js';
-import {ToolRegistry} from './ToolRegistry.js';
-import {BaseComponent} from '../util/BaseComponent.js';
-import {FileOperationsTool} from './FileOperationsTool.js';
-import {CommandExecutorTool} from './CommandExecutorTool.js';
-import {WebAutomationTool} from './WebAutomationTool.js';
-import {MediaProcessingTool} from './MediaProcessingTool.js';
-import {EmbeddingTool} from './EmbeddingTool.js';
-
-const TOOL_CLASSES = {
-    FileOperationsTool,
-    CommandExecutorTool,
-    WebAutomationTool,
-    MediaProcessingTool,
-    EmbeddingTool
-};
+import { ToolEngine } from './ToolEngine.js';
+import { ToolRegistry } from './ToolRegistry.js';
+import { BaseComponent } from '../util/BaseComponent.js';
 
 /**
  * Integration layer that connects tools to the reasoning core
@@ -59,13 +41,22 @@ export class ToolIntegration extends BaseComponent {
         try {
             const toolConfigs = this._getToolConfigs();
 
-            for (const {id, className, category, description} of toolConfigs) {
-                const toolClass = TOOL_CLASSES[className];
-                if (!toolClass) continue;
-
+            for (const { id, className, category, description } of toolConfigs) {
                 try {
+                    // Dynamic import to avoid bundling Node-specific tools in browser
+                    let toolClass;
+                    try {
+                        const module = await import(`./${className}.js`);
+                        toolClass = module[className];
+                    } catch (e) {
+                        this.logger.debug(`Could not import tool class ${className}: ${e.message}`);
+                        continue;
+                    }
+
+                    if (!toolClass) continue;
+
                     const tool = new toolClass();
-                    this.registry.registerTool(id, tool, {category, description});
+                    this.registry.registerTool(id, tool, { category, description });
                 } catch (toolError) {
                     this.logger.warn(`Failed to instantiate tool ${id}, skipping:`, toolError.message);
                 }
@@ -121,17 +112,17 @@ export class ToolIntegration extends BaseComponent {
     async executeTool(toolId, params, context = {}) {
         const startTime = Date.now();
         try {
-            const result = await this.engine.executeTool(toolId, params, {reasoningContext: context});
+            const result = await this.engine.executeTool(toolId, params, { reasoningContext: context });
             const executionTime = this._logToolUsage(toolId, params, result, startTime, context);
-            return {...result, executionTime};
+            return { ...result, executionTime };
         } catch (error) {
             this.logger.error(`Tool execution failed: ${toolId}`, {
                 error: error.message,
                 params: JSON.stringify(params).substring(0, 200)
             });
-            const errorResult = {success: false, error: error.message, toolId};
+            const errorResult = { success: false, error: error.message, toolId };
             const executionTime = this._logToolUsage(toolId, params, errorResult, startTime, context);
-            return {...errorResult, executionTime};
+            return { ...errorResult, executionTime };
         }
     }
 
@@ -185,12 +176,12 @@ export class ToolIntegration extends BaseComponent {
      * Get tool usage statistics
      */
     getUsageStats() {
-        const {totalCalls, successfulCalls} = this.toolUsageHistory.reduce(
+        const { totalCalls, successfulCalls } = this.toolUsageHistory.reduce(
             (acc, item) => ({
                 totalCalls: acc.totalCalls + 1,
                 successfulCalls: acc.successfulCalls + (item.result.success ? 1 : 0),
             }),
-            {totalCalls: 0, successfulCalls: 0}
+            { totalCalls: 0, successfulCalls: 0 }
         );
 
         return {

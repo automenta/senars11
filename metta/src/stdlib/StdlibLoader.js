@@ -1,29 +1,26 @@
 /**
  * MeTTa Standard Library Loader
  * Manages loading stdlib .metta files in dependency order
+ * Supports both Node.js (fs/path) and browser (virtual files)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'truth', 'nal', 'attention', 'control', 'search', 'learn'];
 
 export class StdlibLoader {
     constructor(interpreter, options = {}) {
         this.interpreter = interpreter;
-        this.stdlibDir = options.stdlibDir ?? __dirname;
-        this.modules = options.modules ?? DEFAULT_MODULES;
+        this.stdlibDir = options.stdlibDir || '';
+        this.modules = options.modules || DEFAULT_MODULES;
+        this.virtualFiles = options.virtualFiles || {}; // { 'core.metta': '...' }
         this.loadedModules = new Set();
     }
 
-    load() {
+    async load() {
         const stats = { loaded: [], failed: [], atomsAdded: 0 };
 
         for (const mod of this.modules) {
             try {
-                const res = this.loadModule(mod);
+                const res = await this.loadModule(mod);
                 stats.loaded.push(mod);
                 stats.atomsAdded += res.atomCount;
                 this.loadedModules.add(mod);
@@ -35,24 +32,49 @@ export class StdlibLoader {
         return stats;
     }
 
-    loadModule(name) {
-        const filePath = path.join(this.stdlibDir, `${name}.metta`);
-        if (!fs.existsSync(filePath)) throw new Error(`Stdlib module not found: ${filePath}`);
+    async loadModule(name) {
+        let content = '';
+        const fileName = `${name}.metta`;
 
-        const content = fs.readFileSync(filePath, 'utf-8');
+        // 1. Try virtual files first (browser-friendly)
+        if (this.virtualFiles[fileName]) {
+            content = this.virtualFiles[fileName];
+        }
+        // 2. Fallback to Node.js fs if available
+        else if (typeof process !== 'undefined' && process.versions?.node) {
+            try {
+                const fs = await import('fs');
+                const path = await import('path');
+                const { fileURLToPath } = await import('url');
+
+                const currentDir = path.dirname(fileURLToPath(import.meta.url));
+                const stdlibDir = this.stdlibDir || currentDir;
+                const filePath = path.join(stdlibDir, fileName);
+
+                if (fs.existsSync(filePath)) {
+                    content = fs.readFileSync(filePath, 'utf-8');
+                } else {
+                    throw new Error(`Stdlib module not found on disk: ${filePath}`);
+                }
+            } catch (e) {
+                throw new Error(`Failed to load '${name}' from filesystem: ${e.message}`);
+            }
+        } else {
+            throw new Error(`Stdlib module '${name}' not found in virtualFiles and filesystem is unavailable.`);
+        }
+
         const countBefore = this.interpreter.space?.size?.() ?? 0;
-
         this.interpreter.load(content);
-
         const countAfter = this.interpreter.space?.size?.() ?? 0;
-        return { module: name, atomCount: countAfter - countBefore, filePath };
+
+        return { module: name, atomCount: countAfter - countBefore };
     }
 
     getLoadedModules() {
         return Array.from(this.loadedModules);
     }
 
-    reload() {
+    async reload() {
         this.loadedModules.clear();
         return this.load();
     }

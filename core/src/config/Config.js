@@ -53,14 +53,14 @@ export const DEFAULT_CONFIG = {
 /**
  * Configuration validator
  */
-import {validateConfigWithDefaults} from './ConfigValidator.js';
+import { validateConfigWithDefaults } from './ConfigValidator.js';
 
 export const DEFAULT_CONFIG_CORE = Object.freeze({
     nar: {
-        tools: {enabled: true},
-        lm: {enabled: false},
-        reasoningAboutReasoning: {enabled: true},
-        debug: {pipeline: false}
+        tools: { enabled: true },
+        lm: { enabled: false },
+        reasoningAboutReasoning: { enabled: true },
+        debug: { pipeline: false }
     },
     lm: {
         provider: 'transformers',
@@ -73,19 +73,19 @@ export const DEFAULT_CONFIG_CORE = Object.freeze({
         defaultPath: './agent.json'
     },
     webSocket: {
-        port: parseInt(process.env.WS_PORT) || 8080,
-        host: process.env.WS_HOST || '0.0.0.0',
+        port: (typeof process !== 'undefined' && process.env?.WS_PORT) ? parseInt(process.env.WS_PORT) : 8080,
+        host: (typeof process !== 'undefined' && process.env?.WS_HOST) || '0.0.0.0',
         maxConnections: 20
     },
     ui: {
-        port: parseInt(process.env.PORT) || 5173,
+        port: (typeof process !== 'undefined' && process.env?.PORT) ? parseInt(process.env.PORT) : 5173,
         layout: 'default',
         dev: true
     }
 });
 
 export class Config {
-    static parse(argv = process.argv.slice(2)) {
+    static parse(argv = (typeof process !== 'undefined' ? process.argv.slice(2) : [])) {
         const config = structuredClone(DEFAULT_CONFIG_CORE);
 
         // Create a copy to avoid modifying original during processing
@@ -215,7 +215,7 @@ export class ConfigValidator {
             return validateConfigWithDefaults(userConfig || {});
         } catch (error) {
             // If validation fails, return defaults merged with user config
-            return {...DEFAULT_CONFIG, ...userConfig};
+            return { ...DEFAULT_CONFIG, ...userConfig };
         }
     }
 
@@ -231,17 +231,17 @@ export class ConfigValidator {
         };
 
         if (!source) return target;
-        const output = {...target};
+        const output = { ...target };
 
         if (isObject(target) && isObject(source)) {
             Object.keys(source).forEach(key => {
                 if (isObject(source[key])) {
                     if (!(key in target))
-                        Object.assign(output, {[key]: source[key]});
+                        Object.assign(output, { [key]: source[key] });
                     else
                         output[key] = ConfigValidator.deepMerge(target[key], source[key]);
                 } else {
-                    Object.assign(output, {[key]: source[key]});
+                    Object.assign(output, { [key]: source[key] });
                 }
             });
         }
