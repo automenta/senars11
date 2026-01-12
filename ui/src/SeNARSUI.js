@@ -41,11 +41,12 @@ export class SeNARSUI {
     }
 
     initialize() {
-        this.uiElements.refresh();
         this.graphManager.initialize(this.uiElements.get('graphContainer'));
 
-        new ActivityLogPanel('tracePanel');
-        this.metricsPanel = new SystemMetricsPanel('metricsPanel');
+        // Use correct IDs from Config (or hardcoded to match HTML/UIConfig)
+        // ui/src/config/UIConfig.js defines: tracePanel: 'trace-panel', metricsPanel: 'metrics-panel'
+        new ActivityLogPanel('trace-panel');
+        this.metricsPanel = new SystemMetricsPanel('metrics-panel');
         this.lmActivityIndicator = new LMActivityIndicator(this.uiElements.get('graphContainer'));
 
 
@@ -58,6 +59,15 @@ export class SeNARSUI {
             this.controlPanel
         );
         this.eventHandlers.setupEventListeners();
+
+        // High Contrast Mode Toggle
+        const contrastBtn = document.getElementById('btn-toggle-contrast');
+        if (contrastBtn) {
+            contrastBtn.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                this.graphManager.updateStyle();
+            });
+        }
 
         this._setupConnectionHandlers();
         this._setupWebSocketHandlers();
@@ -185,10 +195,21 @@ export class SeNARSUI {
     }
 
     _updateStatus(status) {
-        const el = document.getElementById('connectionStatus');
-        const indicator = document.getElementById('statusIndicator');
+        const el = document.getElementById('connection-status');
+        const indicator = document.getElementById('status-indicator');
+
+        // Update connection text
         if (el) el.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        if (indicator) indicator.className = `${status}`;
+
+        // Update indicator class
+        if (indicator) indicator.className = `status-indicator status-${status}`;
+
+        // Visual feedback for disconnected state (gray out)
+        if (status === 'disconnected' || status === 'error') {
+            document.body.classList.add('disconnected');
+        } else {
+            document.body.classList.remove('disconnected');
+        }
     }
 
     _handleTrace(msg) {

@@ -490,6 +490,15 @@ export class GraphManager {
     }
 
     /**
+     * Update the graph style (e.g., after toggling high-contrast mode)
+     */
+    updateStyle() {
+        if (this.cy) {
+            this.cy.style(Config.getGraphStyle());
+        }
+    }
+
+    /**
      * Update the graph details panel
      */
     updateGraphDetails(details) {
