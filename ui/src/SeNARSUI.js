@@ -1,22 +1,22 @@
-import {UIElements} from './ui/UIElements.js';
-import {WebSocketManager} from './connection/WebSocketManager.js';
-import {GraphManager} from './visualization/GraphManager.js';
-import {Logger} from './logging/Logger.js';
-import {CommandProcessor} from './command/CommandProcessor.js';
-import {DemoManager} from './demo/DemoManager.js';
-import {UIEventHandlers} from './ui/UIEventHandlers.js';
-import {MessageHandler} from '@senars/agent';
-import {capitalizeFirst} from './utils/Helpers.js';
-import {ControlPanel} from './ui/ControlPanel.js';
-import {SystemMetricsPanel} from './components/SystemMetricsPanel.js';
-import {ActivityLogPanel} from './components/ActivityLogPanel.js';
-import {LMActivityIndicator} from './components/LMActivityIndicator.js';
+import { UIElements } from './ui/UIElements.js';
+import { WebSocketManager } from './connection/WebSocketManager.js';
+import { GraphManager } from './visualization/GraphManager.js';
+import { Logger } from './logging/Logger.js';
+import { CommandProcessor } from './command/CommandProcessor.js';
+import { DemoManager } from './demo/DemoManager.js';
+import { UIEventHandlers } from './ui/UIEventHandlers.js';
+import { MessageHandler } from '@senars/agent';
+import { capitalizeFirst } from './utils/Helpers.js';
+import { ControlPanel } from './ui/ControlPanel.js';
+import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
+import { ActivityLogPanel } from './components/ActivityLogPanel.js';
+import { LMActivityIndicator } from './components/LMActivityIndicator.js';
 
 export class SeNARSUI {
-    constructor() {
+    constructor(connectionAdapter = null) {
         this.uiElements = new UIElements();
         this.logger = new Logger();
-        this.webSocketManager = new WebSocketManager();
+        this.webSocketManager = connectionAdapter || new WebSocketManager();
         this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger);
 
         this.graphManager = new GraphManager(this.uiElements.getAll(), {
@@ -52,8 +52,8 @@ export class SeNARSUI {
         this._setupWebSocketHandlers();
 
         document.addEventListener('senars:action', (e) => {
-            const {type, payload, context} = e.detail;
-            this.webSocketManager.sendMessage('activity.action', {type, payload, context, id: Date.now()});
+            const { type, payload, context } = e.detail;
+            this.webSocketManager.sendMessage('activity.action', { type, payload, context, id: Date.now() });
             this.logger.addLogEntry(`Action dispatched: ${type}`, 'info', '⚡');
         });
 
@@ -105,7 +105,7 @@ export class SeNARSUI {
 
             if (this._handleSpecializedMessages(message)) return;
 
-            const {content, type, icon} = this.messageHandler.processMessage(message);
+            const { content, type, icon } = this.messageHandler.processMessage(message);
 
             if (message.type === 'metrics.updated') {
                 this.metricsPanel.update(message.payload);
@@ -169,11 +169,9 @@ export class SeNARSUI {
     }
 
     _updateStatus(status) {
-        const {connectionStatus, statusIndicator} = this.uiElements.getAll();
+        const { connectionStatus, statusIndicator } = this.uiElements.getAll();
         connectionStatus && (connectionStatus.textContent = capitalizeFirst(status));
         statusIndicator && (statusIndicator.className = `status-indicator status-${status}`);
     }
 }
 
-
-document.addEventListener('DOMContentLoaded', () => new SeNARSUI());
