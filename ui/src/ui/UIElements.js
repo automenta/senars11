@@ -1,4 +1,4 @@
-import {Config} from '../config/Config.js';
+import { Config } from '../config/Config.js';
 
 /**
  * UIElements module to initialize and store DOM element references
@@ -54,5 +54,8 @@ export class UIElements {
      */
     getMultiple(keys) {
         return Object.fromEntries(keys.map(key => [key, this.get(key)]));
+    }
+    register(key, element) {
+        this.elements[key] = element;
     }
 }

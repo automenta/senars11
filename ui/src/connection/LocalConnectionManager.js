@@ -1,141 +1,129 @@
 import { ConnectionInterface } from './ConnectionInterface.js';
-import { MeTTaInterpreter } from '@senars/metta';
-import { Config } from '@senars/core';
-import { T } from '@senars/tensor/src/backends/NativeBackend.js'; // Ensure Tensor backend is available
+import { NAR } from '../../../core/src/nar/NAR.js'; // Adjust path if needed or use aliases
+import { MeTTaInterpreter } from '../../../metta/src/MeTTaInterpreter.js';
+import { Config } from '../../../core/src/config/Config.js';
+import { Logger } from '../logging/Logger.js';
 
 export class LocalConnectionManager extends ConnectionInterface {
     constructor() {
         super();
-        this.connectionStatus = 'disconnected';
         this.messageHandlers = new Map();
-        this.interpreter = null;
-        this.eventQueue = [];
-        this.isProcessingQueue = false;
-
-        // Mock virtual files for stdlib to prevent loading errors in browser
-        this.virtualFiles = {
-            'core': '(= (id $x) $x)',
-            'list': '',
-            'match': '',
-            'types': '',
-            'truth': '',
-            'nal': '',
-            'attention': '',
-            'control': '',
-            'search': '',
-            'learn': ''
-        };
+        this.logger = new Logger();
+        this.nar = null;
+        this.metta = null;
+        this.connectionStatus = 'disconnected';
     }
 
     async connect() {
         try {
-            console.log('Initializing Local MeTTa Environment...');
+            this.connectionStatus = 'connecting';
+            this.notifyStatusChange('connecting');
 
-            // Initialize Core Config
-            Config.parse([]);
+            // Initialize Core components
+            const config = Config.parse([]); // Use default config or inject
+            config.system = { ...config.system, enableLogging: false }; // Reduce noise?
 
-            // Initialize MeTTa Interpreter
-            this.interpreter = new MeTTaInterpreter({
-                virtualFiles: this.virtualFiles
+            // Initialize NAR
+            this.nar = new NAR(config);
+            await this.nar.initialize();
+
+            // Initialize MeTTa
+            this.metta = new MeTTaInterpreter(this.nar, config);
+            await this.metta.initialize();
+
+            // Hook into NAR output to dispatch events
+            this.nar.eventBus.on('*', (type, payload) => {
+                this.dispatchMessage({ type, payload, timestamp: Date.now() });
             });
-            await this.interpreter.initialize();
+
+            // Hook into MeTTa output if needed
+            // this.metta.eventBus.on...
 
             this.connectionStatus = 'connected';
+            this.logger.log('Connected to Local SeNARS', 'success', '💻');
             this.notifyStatusChange('connected');
 
-            // Simulate initial server events
-            this._dispatchLocalEvent('system.ready', { version: '1.0.0-local' });
+            // Simulate "Welcome" message found in server version
+            setTimeout(() => {
+                this.dispatchMessage({ type: 'agent/result', payload: { result: "Welcome to SeNARS Local Mode" } });
+            }, 100);
 
+            return true;
         } catch (error) {
-            console.error('Local initialization failed:', error);
+            console.error("Local connection failed", error);
             this.connectionStatus = 'error';
             this.notifyStatusChange('error');
+            return false;
         }
     }
 
     sendMessage(type, payload) {
         if (this.connectionStatus !== 'connected') {
-            console.warn('Cannot send message: not connected');
+            console.warn("LocalConnectionManager: Not connected. Message dropped:", type);
             return false;
         }
 
-        // Process message asynchronously to simulate network delay/decoupling
-        setTimeout(() => this._handleClientMessage(type, payload), 0);
+        // Handle standard messages
+        this.processLocalMessage(type, payload);
         return true;
     }
 
-    async _handleClientMessage(type, payload) {
+    async processLocalMessage(type, payload) {
         try {
             switch (type) {
-                case 'narseseInput':
                 case 'agent/input':
-                    await this._processInput(payload.input);
+                    await this.handleInput(payload);
                     break;
-                case 'command.execute':
-                    await this._executeCommand(payload.command, payload.args);
+                case 'control/reset':
+                    await this.handleReset();
                     break;
                 case 'control/step':
-                    // TODO: Implement stepping
+                    // this.nar.step() or similar
                     break;
-                case 'control/run':
-                    // TODO: Implement running
-                    break;
+                // Add other command handlers as needed
                 default:
-                    console.warn(`Local handler not implemented for: ${type}`);
+                    console.log("LocalConnectionManager: Unhandled message type", type);
             }
-        } catch (error) {
-            this._dispatchLocalEvent('error', { message: error.message });
-        }
-    }
-
-    async _processInput(input) {
-        if (!this.interpreter) return;
-
-        // Echo input back as "input" type message
-        this._dispatchLocalEvent('activity.input', { content: input, source: 'user' });
-
-        try {
-            const result = await this.interpreter.run(input);
-            // Dispatch result
-            const resultStr = result ? result.toString() : 'Done';
-            this._dispatchLocalEvent('agent/result', { result: resultStr });
-
-            // Attempt to visualize if it's a concept/term
-            // This is a simplification; mimicking server's rich parsing would require more logic
-            // For now, we just log the result.
-
         } catch (e) {
-            this._dispatchLocalEvent('lm:error', { error: e.message });
+            this.logger.log(`Local execution error: ${e.message}`, 'error', '🚨');
         }
     }
 
-    async _executeCommand(command, args) {
-        // Implement basic commands
-        if (command === 'goals') {
-            this._dispatchLocalEvent('agent/result', { result: 'Local goals: (not implemented)' });
-        } else if (command === 'beliefs') {
-            this._dispatchLocalEvent('agent/result', { result: 'Local beliefs: (not implemented)' });
+    async handleInput(payload) {
+        const text = payload.text || payload;
+        // Basic routing: if starts with '!', likely MeTTa, else Narsese? 
+        // Or send to NAR which has input processing.
+        // Assuming NAR.addInput(text) handles it.
+
+        if (this.nar) {
+            const result = await this.nar.addInput(text);
+            // Result might be returned immediately
+            // Typically NAR emits events for results
         }
-    }
 
-    _dispatchLocalEvent(type, payload) {
-        const message = {
-            type: type,
-            payload: payload,
-            timestamp: Date.now()
-        };
-
-        // Use the same dispatch logic as WebSocketManager
-        const specificHandlers = this.messageHandlers.get(type) ?? [];
-        const generalHandlers = this.messageHandlers.get('*') ?? [];
-
-        [...specificHandlers, ...generalHandlers].forEach(handler => {
+        // Also could try MeTTa run directly if it's metta code
+        if (this.metta && (text.startsWith('!') || text.startsWith('(') || text.startsWith('='))) {
             try {
-                handler(message);
+                const results = await this.metta.run(text);
+                if (results && results.length > 0) {
+                    this.dispatchMessage({
+                        type: 'agent/result',
+                        payload: { result: results.map(r => r.toString()).join('\n') }
+                    });
+                }
             } catch (e) {
-                console.error('Error in local message handler:', e);
+                this.dispatchMessage({ type: 'error', payload: { message: e.message } });
             }
-        });
+        }
+    }
+
+    async handleReset() {
+        if (this.nar) await this.nar.reset();
+        if (this.metta) {
+            this.metta = new MeTTaInterpreter(this.nar, this.nar.config); // Re-create?
+            await this.metta.initialize();
+        }
+        this.dispatchMessage({ type: 'system/reset', payload: {} });
     }
 
     subscribe(type, handler) {
@@ -155,17 +143,23 @@ export class LocalConnectionManager extends ConnectionInterface {
         }
     }
 
-    getConnectionStatus() {
-        return this.connectionStatus;
+    disconnect() {
+        this.connectionStatus = 'disconnected';
+        this.notifyStatusChange('disconnected');
+    }
+
+    // Helper to dispatch to internal subscribers (UI)
+    dispatchMessage(message) {
+        const handlers = this.messageHandlers.get(message.type) || [];
+        const generalHandlers = this.messageHandlers.get('*') || [];
+
+        [...handlers, ...generalHandlers].forEach(h => {
+            try { h(message); } catch (e) { console.error("Handler error", e); }
+        });
     }
 
     notifyStatusChange(status) {
         const handlers = this.messageHandlers.get('connection.status') || [];
-        handlers.forEach(handler => handler(status));
-    }
-
-    close() {
-        this.interpreter = null;
-        this.connectionStatus = 'disconnected';
+        handlers.forEach(h => h(status));
     }
 }

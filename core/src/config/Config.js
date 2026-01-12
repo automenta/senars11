@@ -73,20 +73,34 @@ export const DEFAULT_CONFIG_CORE = Object.freeze({
         defaultPath: './agent.json'
     },
     webSocket: {
-        port: (typeof process !== 'undefined' && process.env?.WS_PORT) ? parseInt(process.env.WS_PORT) : 8080,
-        host: (typeof process !== 'undefined' && process.env?.WS_HOST) || '0.0.0.0',
+        port: 8080,
+        host: '0.0.0.0',
         maxConnections: 20
     },
     ui: {
-        port: (typeof process !== 'undefined' && process.env?.PORT) ? parseInt(process.env.PORT) : 5173,
+        port: 5173,
         layout: 'default',
         dev: true
     }
 });
 
 export class Config {
-    static parse(argv = (typeof process !== 'undefined' ? process.argv.slice(2) : [])) {
+    static parse(argv) {
+        if (!argv) {
+            if (typeof process !== 'undefined' && process.argv) {
+                argv = process.argv.slice(2);
+            } else {
+                argv = [];
+            }
+        }
         const config = structuredClone(DEFAULT_CONFIG_CORE);
+
+        // Browser-safe defaults for environment variables
+        if (typeof process !== 'undefined' && process.env) {
+            if (process.env.WS_PORT) config.webSocket.port = parseInt(process.env.WS_PORT);
+            if (process.env.WS_HOST) config.webSocket.host = process.env.WS_HOST;
+            if (process.env.PORT) config.ui.port = parseInt(process.env.PORT);
+        }
 
         // Create a copy to avoid modifying original during processing
         const args = [...argv];

@@ -1,4 +1,3 @@
-import { sha256 } from 'js-sha256';
 
 import { freeze } from '../util/common.js';
 
@@ -111,7 +110,13 @@ export class Term {
     }
 
     static hash(str) {
-        return sha256(str);
+        // Simple FNV-1a hash for browser compatibility without external deps
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < str.length; i++) {
+            hash ^= str.charCodeAt(i);
+            hash = (hash * 0x01000193) >>> 0;
+        }
+        return hash.toString(16).padStart(8, '0');
     }
 
     static fromJSON(data) {

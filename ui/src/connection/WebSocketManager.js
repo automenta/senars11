@@ -172,6 +172,10 @@ export class WebSocketManager extends ConnectionInterface {
     }
 
 
+    disconnect() {
+        this.close();
+    }
+
     close() {
         this.ws?.close();
     }

@@ -68,6 +68,9 @@
   ],
   "author": "Developers",
   "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/plugin-syntax-import-meta": "^7.10.4",

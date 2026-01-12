@@ -1,43 +1,50 @@
 /**
- * Common interface for connection managers (WebSocket or Local)
+ * ConnectionInterface.js
+ * 
+ * Defines the contract for communication adapters (WebSocket or Local).
+ * Allows the UI to operate transparently regardless of the backend.
  */
+
 export class ConnectionInterface {
     /**
-     * Connect to the backend (server or local instance)
-     * @returns {Promise<void>}
+     * Establish connection to the backend
+     * @returns {Promise<boolean>}
      */
-    async connect() { }
+    async connect() {
+        throw new Error('Method not implemented');
+    }
 
     /**
      * Send a message to the backend
-     * @param {string} type - Message type
-     * @param {object} payload - Message payload
-     * @returns {boolean} - True if sent
+     * @param {string} type - Message type (e.g. 'agent/input')
+     * @param {Object} payload - Message data
      */
-    sendMessage(type, payload) { }
+    sendMessage(type, payload) {
+        throw new Error('Method not implemented');
+    }
 
     /**
-     * Subscribe to a message type
-     * @param {string} type - Message type or '*' for all
-     * @param {function} handler - Callback function
+     * Subscribe to backend events
+     * @param {string} event - Event name
+     * @param {Function} callback - Event handler
      */
-    subscribe(type, handler) { }
+    subscribe(event, callback) {
+        throw new Error('Method not implemented');
+    }
 
     /**
-     * Unsubscribe from a message type
-     * @param {string} type - Message type
-     * @param {function} handler - Callback function
+     * Unsubscribe from backend events
+     * @param {string} event - Event name
+     * @param {Function} callback - Event handler
      */
-    unsubscribe(type, handler) { }
+    unsubscribe(event, callback) {
+        throw new Error('Method not implemented');
+    }
 
     /**
-     * Get current connection status
-     * @returns {string} - 'connected', 'disconnected', 'error'
+     * Disconnect from the backend
      */
-    getConnectionStatus() { }
-
-    /**
-     * Close the connection
-     */
-    close() { }
+    disconnect() {
+        throw new Error('Method not implemented');
+    }
 }
