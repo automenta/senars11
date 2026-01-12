@@ -6,7 +6,7 @@ import { TermCache } from './TermCache.js';
 
 export { Term };
 
-const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '<->', '||', '&&', '<~>', '{}', '[]']);
+const COMMUTATIVE_OPERATORS = new Set(['&', '|', '+', '<->', '||', '&&', '<~>', '{}', '[]', '=', '<=>']);
 const ASSOCIATIVE_OPERATORS = new Set(['&', '|', '||', '&&']);
 const RELATIONAL_OPERATORS = ['-->', '<->', '==>', '<=>'];
 const SET_OPERATORS = ['{}', '[]'];
@@ -46,6 +46,8 @@ export class TermFactory extends BaseComponent {
         }
         if (!data) throw new Error('TermFactory.create: data is required');
 
+        if (data instanceof Term) return data;
+
         const isAtomic = typeof data === 'string' || (data.name && !data.components && !data.operator);
         return isAtomic
             ? this._getOrCreateAtomic(typeof data === 'string' ? data : data.name)
@@ -53,7 +55,6 @@ export class TermFactory extends BaseComponent {
     }
 
     _createCompound(operator, components) {
-        // console.log("TermFactory._createCompound:", operator, components?.length);
         const { operator: op, components: comps } = this._normalizeTermData(operator, components);
 
         if (this._reflexiveMarker) {
@@ -209,7 +210,7 @@ export class TermFactory extends BaseComponent {
             this._cognitiveDiversity.unregisterTerm(evictedKey);
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { term: term.serialize() });
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { termName: name });
         return term;
     }
 
