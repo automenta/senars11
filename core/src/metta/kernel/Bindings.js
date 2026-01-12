@@ -1,28 +1,16 @@
-
 import { Term } from './Term.js';
 
-export function objToBindingsAtom(bindings) {
-    const pairs = [];
-    for (const [key, value] of Object.entries(bindings)) {
-        pairs.push(Term.exp('Pair', [Term.var(key), value]));
-    }
-    // Return (Bindings (Pair $x val) ...)
-    // If empty, (Bindings)
-    return Term.exp('Bindings', pairs);
-}
+export const objToBindingsAtom = (bindings = {}) =>
+    Term.exp('Bindings', Object.entries(bindings).map(([k, v]) => Term.exp('Pair', [Term.var(k), v])));
 
-export function bindingsAtomToObj(bindingsAtom) {
+export const bindingsAtomToObj = (bindingsAtom) => {
     const bindings = {};
-    if (bindingsAtom.operator && bindingsAtom.operator.name === 'Bindings') {
-        for (const pair of bindingsAtom.components) {
-            if (pair.operator && pair.operator.name === 'Pair' && pair.components.length === 2) {
-                const variable = pair.components[0];
-                const value = pair.components[1];
-                if (variable.name) {
-                    bindings[variable.name] = value;
-                }
+    if (bindingsAtom?.operator?.name === 'Bindings') {
+        bindingsAtom.components.forEach(pair => {
+            if (pair?.operator?.name === 'Pair' && pair.components.length === 2 && pair.components[0].name) {
+                bindings[pair.components[0].name] = pair.components[1];
             }
-        }
+        });
     }
     return bindings;
-}
+};
