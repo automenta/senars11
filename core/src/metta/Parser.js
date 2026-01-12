@@ -88,7 +88,6 @@ class Tokenizer {
         if (currentToken.trim() !== '') {
             tokens.push(currentToken.trim());
         }
-        
         return tokens;
     }
 }
