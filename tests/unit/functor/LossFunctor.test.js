@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, test} from '@jest/globals';
-import {LossFunctor} from '../../../core/src/functor/LossFunctor.js';
-import {Tensor} from '../../../core/src/functor/Tensor.js';
-import {NativeBackend} from '../../../core/src/functor/backends/NativeBackend.js';
+import {LossFunctor} from '@senars/tensor/src/LossFunctor.js';
+import {Tensor} from '@senars/tensor/src/Tensor.js';
+import {NativeBackend} from '@senars/tensor/src/backends/NativeBackend.js';
 
 describe('LossFunctor', function () {
     let loss, backend;

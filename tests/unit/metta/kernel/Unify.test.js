@@ -1,5 +1,5 @@
-import { Unify } from '../../../../core/src/metta/kernel/Unify.js';
-import { Term } from '../../../../core/src/metta/kernel/Term.js';
+import { Unify } from '@senars/metta/src/kernel/Unify.js';
+import { Term } from '@senars/metta/src/kernel/Term.js';
 
 const { sym, var: v, exp, clearSymbolTable } = Term;
 

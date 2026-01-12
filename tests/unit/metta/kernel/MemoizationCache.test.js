@@ -1,4 +1,4 @@
-import { MemoizationCache } from '../../../../core/src/metta/kernel/MemoizationCache.js';
+import { MemoizationCache } from '@senars/metta/src/kernel/MemoizationCache.js';
 
 describe('MemoizationCache', () => {
     // Mock Term objects (just plain objects for testing)

@@ -1,5 +1,5 @@
-import { Space } from '../../../../core/src/metta/kernel/Space.js';
-import { Term } from '../../../../core/src/metta/kernel/Term.js';
+import { Space } from '@senars/metta/src/kernel/Space.js';
+import { Term } from '@senars/metta/src/kernel/Term.js';
 
 const { sym, var: v, exp, clearSymbolTable } = Term;
 

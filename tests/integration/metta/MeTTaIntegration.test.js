@@ -1,5 +1,5 @@
-import { MeTTaInterpreter } from '../../../core/src/metta/MeTTaInterpreter.js';
-import { SeNARSBridge } from '../../../core/src/metta/SeNARSBridge.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import { SeNARSBridge } from '@senars/metta/src/SeNARSBridge.js';
 
 describe('MeTTa Integration Tests', () => {
     let interpreter;

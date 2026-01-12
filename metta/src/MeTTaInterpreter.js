@@ -7,7 +7,7 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { Parser } from './Parser.js';
 import { TypeChecker, TypeSystem } from './TypeSystem.js';
-import { TermFactory } from '../term/TermFactory.js';
+import { TermFactory } from '@senars/core/src/term/TermFactory.js';
 
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';

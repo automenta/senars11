@@ -77,8 +77,8 @@ for (const fullPath of demoFiles) {
 console.log("\nValidating stdlib files...\n");
 
 const stdlibFiles = [
-    path.join(__dirname, '../../../../core/src/metta/stdlib/search.metta'),
-    path.join(__dirname, '../../../../core/src/metta/stdlib/learn.metta')
+    path.join(__dirname, '../../../metta/src/stdlib/search.metta'),
+    path.join(__dirname, '../../../metta/src/stdlib/learn.metta')
 ];
 
 for (const fullPath of stdlibFiles) {

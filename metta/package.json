@@ -1,0 +1,11 @@
+{
+  "name": "@senars/metta",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/MeTTaInterpreter.js",
+  "dependencies": {
+    "@senars/core": "^1.0.0"
+  },
+  "devDependencies": {
+  }
+}

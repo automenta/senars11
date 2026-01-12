@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, test} from '@jest/globals';
-import {TensorFunctor} from '../../../core/src/functor/TensorFunctor.js';
-import {Tensor} from '../../../core/src/functor/Tensor.js';
-import {NativeBackend} from '../../../core/src/functor/backends/NativeBackend.js';
+import {TensorFunctor} from '@senars/tensor/src/TensorFunctor.js';
+import {Tensor} from '@senars/tensor/src/Tensor.js';
+import {NativeBackend} from '@senars/tensor/src/backends/NativeBackend.js';
 
 describe('TensorFunctor', () => {
     let functor;

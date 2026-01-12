@@ -1,5 +1,5 @@
-import { Ground } from '../../../../core/src/metta/kernel/Ground.js';
-import { Term } from '../../../../core/src/metta/kernel/Term.js';
+import { Ground } from '@senars/metta/src/kernel/Ground.js';
+import { Term } from '@senars/metta/src/kernel/Term.js';
 
 describe('Kernel Ground', () => {
     let ground;

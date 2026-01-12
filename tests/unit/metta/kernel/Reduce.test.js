@@ -1,7 +1,7 @@
-import { step, reduce, isGroundedCall } from '../../../../core/src/metta/kernel/Reduce.js';
-import { Space } from '../../../../core/src/metta/kernel/Space.js';
-import { Ground } from '../../../../core/src/metta/kernel/Ground.js';
-import { Term } from '../../../../core/src/metta/kernel/Term.js';
+import { step, reduce, isGroundedCall } from '@senars/metta/src/kernel/Reduce.js';
+import { Space } from '@senars/metta/src/kernel/Space.js';
+import { Ground } from '@senars/metta/src/kernel/Ground.js';
+import { Term } from '@senars/metta/src/kernel/Term.js';
 
 describe('Kernel Reduce', () => {
     let space, ground;
