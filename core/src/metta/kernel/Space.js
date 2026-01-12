@@ -1,29 +1,17 @@
 /**
  * Space.js - Set of atoms with functor indexing
  * Core storage and retrieval mechanism for MeTTa programs
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import { isExpression, isSymbol, exp, sym } from './Term.js';
 
 export class Space {
     constructor() {
-        // Main storage for atoms
         this.atoms = new Set();
-
-        // Storage for rules (rewrite rules)
         this.rules = [];
-
-        // Functor index for efficient rule lookup
-        // Maps functor names to sets of matching rules
         this.functorIndex = new Map();
-
-        // Stats for performance monitoring
-        this.stats = {
-            adds: 0,
-            removes: 0,
-            queries: 0,
-            indexedLookups: 0
-        };
+        this.stats = { adds: 0, removes: 0, queries: 0, indexedLookups: 0 };
     }
 
     /**
@@ -32,9 +20,7 @@ export class Space {
      * @returns {Space} This space for chaining
      */
     add(atom) {
-        if (!atom) {
-            throw new Error("Cannot add null/undefined atom");
-        }
+        if (!atom) throw new Error("Cannot add null/undefined atom");
 
         if (!this.atoms.has(atom)) {
             this.atoms.add(atom);
@@ -74,15 +60,9 @@ export class Space {
      */
     all() {
         const atoms = Array.from(this.atoms);
-        // Reconstruct rules as atoms (= pattern result)
-        // We ensure `exp` and `sym` are available.
-
-        // Fix: rules.map needs to check if result is a function
         const rulesAsAtoms = this.rules
-            .filter(rule => typeof rule.result !== 'function') // Only return symbolic rules
-            .map(rule => {
-                return exp(sym('='), [rule.pattern, rule.result]);
-            });
+            .filter(rule => typeof rule.result !== 'function')
+            .map(rule => exp(sym('='), [rule.pattern, rule.result]));
 
         return [...atoms, ...rulesAsAtoms];
     }
@@ -94,22 +74,14 @@ export class Space {
      * @returns {Space} This space for chaining
      */
     addRule(pattern, result) {
-        if (!pattern) {
-            throw new Error("Pattern cannot be null or undefined");
-        }
+        if (!pattern) throw new Error("Pattern cannot be null or undefined");
 
         const rule = { pattern, result };
         this.rules.push(rule);
 
-        // Also index the rule by its pattern's functor if it's an expression
+        // Index the rule by its pattern's functor if it's an expression
         if (isExpression(pattern)) {
-            let functorName = null;
-            if (typeof pattern.operator === 'string') {
-                functorName = pattern.operator;
-            } else if (isSymbol(pattern.operator)) {
-                functorName = pattern.operator.name;
-            }
-
+            const functorName = this._getFunctorName(pattern.operator);
             if (functorName) {
                 if (!this.functorIndex.has(functorName)) {
                     this.functorIndex.set(functorName, []);
@@ -137,22 +109,24 @@ export class Space {
     rulesFor(functor) {
         this.stats.indexedLookups++;
 
-        if (typeof functor === 'string') {
-            return this.functorIndex.get(functor) || [];
-        }
+        const functorName = this._getFunctorName(functor);
+        return functorName ? this.functorIndex.get(functorName) || [] : [...this.rules];
+    }
 
-        if (isSymbol(functor)) {
-            return this.functorIndex.get(functor.name) || [];
-        } else if (isExpression(functor)) {
-            if (typeof functor.operator === 'string') {
-                return this.functorIndex.get(functor.operator) || [];
-            } else if (isSymbol(functor.operator)) {
-                return this.functorIndex.get(functor.operator.name) || [];
-            }
+    /**
+     * Get functor name from an atom or string
+     * @private
+     * @param {string|Object} functor - Functor to extract name from
+     * @returns {string|null} Functor name or null
+     */
+    _getFunctorName(functor) {
+        if (typeof functor === 'string') return functor;
+        if (isSymbol(functor)) return functor.name;
+        if (isExpression(functor)) {
+            if (typeof functor.operator === 'string') return functor.operator;
+            if (isSymbol(functor.operator)) return functor.operator.name;
         }
-
-        // If functor is not a symbol, return all rules
-        return [...this.rules];
+        return null;
     }
 
     /**
@@ -161,15 +135,8 @@ export class Space {
      * @param {Object} atom - Atom to index
      */
     _indexAtom(atom) {
-        // Only index atoms (not rules) in the functor index
         if (isExpression(atom)) {
-            let functorName = null;
-            if (typeof atom.operator === 'string') {
-                functorName = atom.operator;
-            } else if (isSymbol(atom.operator)) {
-                functorName = atom.operator.name;
-            }
-
+            const functorName = this._getFunctorName(atom.operator);
             if (functorName) {
                 if (!this.functorIndex.has(functorName)) {
                     this.functorIndex.set(functorName, []);
@@ -186,22 +153,14 @@ export class Space {
      */
     _deindexAtom(atom) {
         if (isExpression(atom)) {
-            let functorName = null;
-            if (typeof atom.operator === 'string') {
-                functorName = atom.operator;
-            } else if (isSymbol(atom.operator)) {
-                functorName = atom.operator.name;
-            }
-
-            if (functorName) {
-                if (this.functorIndex.has(functorName)) {
-                    const items = this.functorIndex.get(functorName);
-                    const index = items.indexOf(atom);
-                    if (index !== -1) {
-                        items.splice(index, 1);
-                        if (items.length === 0) {
-                            this.functorIndex.delete(functorName);
-                        }
+            const functorName = this._getFunctorName(atom.operator);
+            if (functorName && this.functorIndex.has(functorName)) {
+                const items = this.functorIndex.get(functorName);
+                const index = items.indexOf(atom);
+                if (index !== -1) {
+                    items.splice(index, 1);
+                    if (items.length === 0) {
+                        this.functorIndex.delete(functorName);
                     }
                 }
             }
@@ -215,12 +174,7 @@ export class Space {
         this.atoms.clear();
         this.rules = [];
         this.functorIndex.clear();
-        this.stats = {
-            adds: 0,
-            removes: 0,
-            queries: 0,
-            indexedLookups: 0
-        };
+        this.stats = { adds: 0, removes: 0, queries: 0, indexedLookups: 0 };
     }
 
     /**
@@ -248,7 +202,7 @@ export class Space {
             ...this.stats,
             atomCount: this.atoms.size,
             functorCount: this.functorIndex.size,
-            indexedFunctors: this.functorIndex.size, // Alias for tests
+            indexedFunctors: this.functorIndex.size,
             ruleCount: this.rules.length
         };
     }
@@ -258,8 +212,6 @@ export class Space {
      * @returns {Object} Statistics object
      */
     stats() {
-        // Just alias to getStats, but ensure indexedFunctors is present there or here
-        // The test expects stats() to return object with indexedFunctors
         return this.getStats();
     }
 
@@ -270,16 +222,6 @@ export class Space {
      */
     query(pattern) {
         this.stats.queries++;
-
-        // For now, do a linear scan
-        // In a full implementation, this would use more sophisticated indexing
-        const results = [];
-        for (const atom of this.atoms) {
-            // Simple structural match for now
-            if (atom.equals && atom.equals(pattern)) {
-                results.push(atom);
-            }
-        }
-        return results;
+        return Array.from(this.atoms).filter(atom => atom.equals?.(pattern));
     }
 }

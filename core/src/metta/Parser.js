@@ -1,6 +1,7 @@
 /**
  * Parser.js - String to Atom parser
  * Converts MeTTa source code strings to atom structures
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import { sym, var_, exp } from './kernel/Term.js';

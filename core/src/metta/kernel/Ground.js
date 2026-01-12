@@ -1,9 +1,10 @@
 /**
  * Ground.js - Native function registry
  * Registry for grounded operations in MeTTa
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { sym } from './Term.js';
+import { sym, exp } from './Term.js';
 
 export class Ground {
     constructor() {
@@ -11,226 +12,143 @@ export class Ground {
         this._registerCoreOperations();
     }
 
-    /**
-     * Register a grounded operation
-     * @param {string} name - Operation name
-     * @param {Function} fn - Function to execute
-     * @param {Object} options - Options { lazy: boolean }
-     * @returns {Ground} This instance for chaining
-     */
+    // === Core API ===
+
     register(name, fn, options = {}) {
-        // Normalize name to include & prefix if not present
         const normalizedName = name.startsWith('&') ? name : `&${name}`;
         this.operations.set(normalizedName, { fn, options });
         return this;
     }
 
-    /**
-     * Check if operation exists
-     * @param {string} name - Operation name
-     * @returns {boolean} True if operation exists
-     */
     has(name) {
-        // Normalize name to include & prefix if not present
         const normalizedName = name.startsWith('&') ? name : `&${name}`;
         return this.operations.has(normalizedName);
     }
 
-    /**
-     * Check if operation is lazy (does not require argument reduction)
-     * @param {string} name - Operation name
-     * @returns {boolean} True if lazy
-     */
     isLazy(name) {
         const normalizedName = name.startsWith('&') ? name : `&${name}`;
         const op = this.operations.get(normalizedName);
-        return op && op.options && op.options.lazy;
+        return !!op?.options?.lazy;
     }
 
-    /**
-     * Execute a grounded operation
-     * @param {string} name - Operation name
-     * @param {...*} args - Arguments to pass to operation
-     * @returns {*} Result of operation execution
-     */
     execute(name, ...args) {
-        // Normalize name to include & prefix if not present
         const normalizedName = name.startsWith('&') ? name : `&${name}`;
-
         if (!this.operations.has(normalizedName)) {
             throw new Error(`Operation ${name} not found`);
         }
-
-        const op = this.operations.get(normalizedName);
-        return op.fn(...args);
+        return this.operations.get(normalizedName).fn(...args);
     }
 
-    /**
-     * Get all registered operation names
-     * @returns {Array} Array of operation names
-     */
     getOperations() {
         return Array.from(this.operations.keys());
     }
 
-    /**
-     * Register core operations
-     * @private
-     */
+    // === Registration ===
+
     _registerCoreOperations() {
-        // Arithmetic operations
-        this.register('&+', (...args) => {
-            if (args.length === 0) return sym('0');
-            if (args.length === 1) return args[0]; // Identity for single argument
+        // Arithmetic: +, *, -, /, %
+        this._registerArithmeticOps();
 
-            // For multiple arguments, sum them all
-            let sum = 0;
-            for (const arg of args) {
-                const num = atomToNumber(arg);
-                if (num === null) {
-                    throw new Error(`Non-numeric input for +: ${args.map(a => a.name || a).join(', ')} (expected number)`);
-                }
-                sum += num;
+        // Comparison: ==, !=, <, >, <=, >=
+        this._registerComparisonOps();
+
+        // Logical: and, or, not
+        this._registerLogicalOps();
+
+        // List: first, rest, empty?
+        this._registerListOps();
+
+        // String: str-concat, to-string
+        this._registerStringOps();
+
+        // I/O: print, println
+        this._registerIOOps();
+
+        // Time: now
+        this.register('&now', () => sym(String(Date.now())));
+
+        // Space: add-atom, rm-atom, get-atoms
+        this._registerSpaceOps();
+
+        // Introspection: get-sti, set-sti, system-stats
+        this._registerIntrospectionOps();
+
+        // Type system operations
+        this._registerTypeOps();
+
+        // Interpreter overrides (placeholder)
+        this._registerPlaceholderOps();
+    }
+
+    // === Operation Groups ===
+
+    _registerArithmeticOps() {
+        // Generic arithmetic factory
+        const arithmeticFactory = (initial, op, identity) => (...args) => {
+            if (args.length === 0) return sym(String(initial));
+            if (args.length === 1) return args[0]; // Identity
+
+            let result = atomToNumber(args[0]);
+            if (result === null) throw new Error(`Non-numeric input: ${args[0]} (expected number)`);
+
+            for (let i = 1; i < args.length; i++) {
+                const num = atomToNumber(args[i]);
+                if (num === null) throw new Error(`Non-numeric input: ${args[i]?.name || args[i]} (expected number)`);
+                result = op(result, num);
             }
-            return sym(String(sum));
-        });
+            return sym(String(result));
+        };
 
-        this.register('&-', (...args) => {
-            if (args.length === 0) return sym('0');
-            if (args.length === 1) {
-                // Unary minus: negate the single argument
-                const num = atomToNumber(args[0]);
-                if (num === null) {
-                    throw new Error(`Invalid arguments for -: ${args.map(a => a.name || a).join(', ')}`);
-                }
-                return sym(String(-num));
-            }
-
-            // Binary minus: subtract second from first
-            if (args.length >= 2) {
-                const numA = atomToNumber(args[0]);
-                const numB = atomToNumber(args[1]);
-                if (numA === null || numB === null) {
-                    throw new Error(`Non-numeric input for -: ${args.map(a => a.name || a).join(', ')} (expected number)`);
-                }
-                return sym(String(numA - numB));
-            }
-
-            throw new Error(`Non-numeric input for -: ${args.map(a => a.name || a).join(', ')}`);
-        });
-
-        this.register('&*', (...args) => {
-            if (args.length === 0) return sym('1');
-            if (args.length === 1) return args[0]; // Identity for single argument
-
-            // For multiple arguments, multiply them all
-            let product = 1;
-            for (const arg of args) {
-                const num = atomToNumber(arg);
-                if (num === null) {
-                    throw new Error(`Non-numeric input for *: ${args.map(a => a.name || a).join(', ')} (expected number)`);
-                }
-                product *= num;
-            }
-            return sym(String(product));
-        });
-
-        this.register('&/', (...args) => {
-            if (args.length === 0) return sym('1');
-            if (args.length === 1) {
-                // Unary division: 1 / arg
-                const num = atomToNumber(args[0]);
-                if (num === null || num === 0) {
-                    throw new Error("Division by zero");
-                }
-                return sym(String(1 / num));
-            }
-
-            // Binary division: divide first by second
-            if (args.length >= 2) {
-                const numA = atomToNumber(args[0]);
-                const numB = atomToNumber(args[1]);
-                if (numA === null || numB === null) {
-                    throw new Error(`Non-numeric input for /: ${args.map(a => a.name || a).join(', ')} (expected number)`);
-                }
-                if (numB === 0) throw new Error("Division by zero");
-                return sym(String(numA / numB));
-            }
-
-            throw new Error(`Non-numeric input for /: ${args.map(a => a.name || a).join(', ')}`);
-        });
-
+        this.register('&+', arithmeticFactory(0, (a, b) => a + b));
+        this.register('&*', arithmeticFactory(1, (a, b) => a * b));
+        this.register('&-', this._createUnaryBinaryOp('-', (a, b) => a - b, 0));
+        this.register('&/', this._createUnaryBinaryOp('/', (a, b) => a / b, 1, true)); // division by zero check
         this.register('&%', (...args) => {
-            if (args.length !== 2) {
-                throw new Error("Modulo operator requires exactly 2 arguments");
+            if (args.length !== 2) throw new Error("Modulo requires 2 args");
+            const [a, b] = args.map(atomToNumber);
+            if (a === null || b === null) throw new Error("Modulo requires numbers");
+            return sym(String(a % b));
+        });
+    }
+
+    _createUnaryBinaryOp = (name, op, identity, checkZero = false) => {
+        return (...args) => {
+            if (args.length === 0) return sym(String(identity));
+            if (args.length === 1) {
+                const num = atomToNumber(args[0]);
+                if (num === null) throw new Error(`Invalid ${name} arg: ${args[0]}`);
+                return sym(String(op(identity === 0 ? 0 : 1/identity, num))); // For unary: op(0, x) or op(1, x)
             }
-            const numA = atomToNumber(args[0]);
-            const numB = atomToNumber(args[1]);
-
-            if (numA === null || numB === null) {
-                throw new Error("Modulo requires numeric arguments");
+            if (args.length >= 2) {
+                const [a, b] = args.slice(0, 2).map(atomToNumber);
+                if (a === null || b === null) throw new Error(`${name} requires numbers`);
+                if (checkZero && b === 0) throw new Error(`${name} by zero`);
+                return sym(String(op(a, b)));
             }
-            return sym(String(numA % numB));
-        });
+            throw new Error(`Invalid ${name} args: ${args}`);
+        };
+    }
 
+    _registerComparisonOps() {
+        const numCompare = op => (a, b) => {
+            const [numA, numB] = [atomToNumber(a), atomToNumber(b)];
+            if (numA === null || numB === null) throw new Error(`Non-numeric comparison: ${a}, ${b}`);
+            return createBooleanAtom(op(numA, numB));
+        };
 
-        // Comparison operations
-        this.register('&==', (a, b) => {
-            if (a && a.equals) return createBooleanAtom(a.equals(b));
-            return createBooleanAtom(a === b);
-        });
+        this.register('&==', (a, b) => createBooleanAtom(a?.equals ? a.equals(b) : a === b));
+        this.register('&!=', (a, b) => createBooleanAtom(!(a?.equals ? a.equals(b) : a === b)));
+        this.register('&<', numCompare((a, b) => a < b));
+        this.register('&>', numCompare((a, b) => a > b));
+        this.register('&<=', numCompare((a, b) => a <= b));
+        this.register('&>=', numCompare((a, b) => a >= b));
+    }
 
-        this.register('&!=', (a, b) => {
-            if (a && a.equals) return createBooleanAtom(!a.equals(b));
-            return createBooleanAtom(a !== b);
-        });
-
-        this.register('&<', (a, b) => {
-            const numA = atomToNumber(a);
-            const numB = atomToNumber(b);
-            if (numA !== null && numB !== null) {
-                return createBooleanAtom(numA < numB);
-            }
-            throw new Error(`Non-numeric input for <: ${a.name || a}, ${b.name || b} (expected number)`);
-        });
-
-        this.register('&>', (a, b) => {
-            const numA = atomToNumber(a);
-            const numB = atomToNumber(b);
-            if (numA !== null && numB !== null) {
-                return createBooleanAtom(numA > numB);
-            }
-            throw new Error(`Non-numeric input for >: ${a.name || a}, ${b.name || b} (expected number)`);
-        });
-
-        this.register('&<=', (a, b) => {
-            const numA = atomToNumber(a);
-            const numB = atomToNumber(b);
-            if (numA !== null && numB !== null) {
-                return createBooleanAtom(numA <= numB);
-            }
-            throw new Error(`Non-numeric input for <=: ${a.name || a}, ${b.name || b} (expected number)`);
-        });
-
-        this.register('&>=', (a, b) => {
-            const numA = atomToNumber(a);
-            const numB = atomToNumber(b);
-            if (numA !== null && numB !== null) {
-                return createBooleanAtom(numA >= numB);
-            }
-            throw new Error(`Non-numeric input for >=: ${a.name || a}, ${b.name || b} (expected number)`);
-        });
-
-        // Logical operations
+    _registerLogicalOps() {
         this.register('&and', (...args) => {
             if (args.length === 0) return createBooleanAtom(true);
             for (const arg of args) {
-                if (arg && (arg.type === 'symbol' || arg.type === 'atom') && arg.name === 'False') {
-                    return createBooleanAtom(false);
-                }
-                if (!isTruthy(arg)) {
-                    return createBooleanAtom(false);
-                }
+                if (arg?.name === 'False' || !isTruthy(arg)) return createBooleanAtom(false);
             }
             return createBooleanAtom(true);
         });
@@ -238,210 +156,167 @@ export class Ground {
         this.register('&or', (...args) => {
             if (args.length === 0) return createBooleanAtom(false);
             for (const arg of args) {
-                if (arg && (arg.type === 'symbol' || arg.type === 'atom') && arg.name === 'True') {
-                    return createBooleanAtom(true);
-                }
-                if (isTruthy(arg)) {
-                    return createBooleanAtom(true);
-                }
+                if (arg?.name === 'True' || isTruthy(arg)) return createBooleanAtom(true);
             }
             return createBooleanAtom(false);
         });
 
-        this.register('&not', (a) => {
-            if (a && (a.type === 'symbol' || a.type === 'atom') && a.name === 'True') {
-                return createBooleanAtom(false);
-            } else if (a && (a.type === 'symbol' || a.type === 'atom') && a.name === 'False') {
-                return createBooleanAtom(true);
-            } else {
-                return createBooleanAtom(!isTruthy(a));
-            }
-        });
+        this.register('&not', a => createBooleanAtom(!isTruthy(a)));
+    }
 
-        // List operations
-        this.register('&first', (lst) => {
+    _registerListOps() {
+        this.register('&first', lst => {
             if (!lst) return null;
-            if (Array.isArray(lst) && lst.length > 0) return lst[0];
-            // Handle Expression atoms
-            if (lst.components && lst.components.length > 0) return lst.components[0];
-            // Handle Cons atoms (should be handled by pattern matching, but for primitive safety)
-            if (lst.operator && lst.operator.name === ':') return lst.components[0];
-            return null;
+            return lst.components?.[0] ?? lst[0] ?? null;
         });
 
-        this.register('&rest', (lst) => {
+        this.register('&rest', lst => {
             if (!lst) return sym('()');
-            if (Array.isArray(lst) && lst.length > 0) return lst.slice(1);
-
-            // Handle Expression atoms
-            if (lst.components && lst.components.length > 0) {
-                const newComponents = lst.components.slice(1);
-                // Return as proper expression
-                // We need 'exp' from Term.js. 
-                // It is not imported! 
-                // Wait, we need to fix imports first.
-                return {
-                    type: 'expression',
-                    operator: lst.operator,
-                    components: newComponents,
-                    name: `(${newComponents.map(c => c.name || c).join(' ')})`,
-                    toString: () => `(${newComponents.map(c => c.name || c).join(' ')})`
-                };
+            if (Array.isArray(lst)) return lst.slice(1);
+            if (lst.components) {
+                return lst.components.length > 1
+                    ? exp(lst.operator, lst.components.slice(1))
+                    : sym('()');
             }
             return sym('()');
         });
 
-        this.register('&empty?', (lst) => {
-            let isEmpty = false;
-            if (Array.isArray(lst)) {
-                isEmpty = lst.length === 0;
-            } else if (lst && lst.type === 'atom' && lst.name === '()') {
-                isEmpty = true;
-            } else if (lst && lst.type === 'symbol' && lst.name === '()') {
-                isEmpty = true;
-            } else if (lst && lst.components && lst.components.length === 0) {
-                // Empty expression ()
-                isEmpty = true;
-            }
+        this.register('&empty?', lst => {
+            const isEmpty = Array.isArray(lst)
+                ? lst.length === 0
+                : lst?.name === '()' || (lst?.components && lst.components.length === 0);
             return createBooleanAtom(isEmpty);
         });
+    }
 
-        // String operations
+    _registerStringOps() {
         this.register('&str-concat', (a, b) => String(a) + String(b));
-        this.register('&to-string', (a) => String(a));
+        this.register('&to-string', a => String(a));
+    }
 
-        // I/O operations
+    _registerIOOps() {
         this.register('&print', (...args) => {
-            const stringArgs = args.map(arg => arg && arg.name ? arg.name : String(arg));
-            console.log(stringArgs.join(' '));
+            const output = args.map(arg => arg?.name ?? String(arg)).join(' ');
+            console.log(output);
             return args.length === 1 ? args[0] : sym('Null');
         });
 
         this.register('&println', (...args) => {
-            const stringArgs = args.map(arg => arg && arg.name ? arg.name : String(arg));
-            console.log(stringArgs.join(' '));
+            console.log(...args.map(arg => arg?.name ?? String(arg)));
             return null;
         });
+    }
 
-        // Time operation
-        this.register('&now', () => {
-            return sym(String(Date.now()));
-        });
-
-        // Space operations
+    _registerSpaceOps() {
         this.register('&add-atom', (space, atom) => {
-            if (space && typeof space.add === 'function') {
-                space.add(atom);
-                return atom;
-            }
-            // Fallback if space is not the first argument but maybe implied? No, explicit passing required.
-            if (atom === undefined && space && space.type === 'atom') {
-                throw new Error("Missing space argument or invalid atom");
-            }
-            throw new Error("Invalid space object");
+            if (typeof space?.add !== 'function') throw new Error("Invalid space");
+            space.add(atom);
+            return atom;
         });
 
         this.register('&rm-atom', (space, atom) => {
-            if (space && typeof space.remove === 'function') {
-                return space.remove(atom);
-            }
-            throw new Error("Invalid space object");
+            if (typeof space?.remove !== 'function') throw new Error("Invalid space");
+            return space.remove(atom);
         });
 
-        this.register('&get-atoms', (space) => {
-            if (space && typeof space.all === 'function') {
-                const atoms = space.all();
-                // Convert JS array to MeTTa list (: h (: t ...))
-                const listify = (arr) => {
-                    if (arr.length === 0) return sym('()');
-                    return {
-                        type: 'compound',
-                        name: `(: ${arr[0].name} ...)`,
-                        operator: sym(':'),
-                        components: [arr[0], listify(arr.slice(1))],
-                        toString: () => `(: ${arr[0]} ${listify(arr.slice(1))})`,
-                        equals: (other) => false
-                    };
-                };
-                return listify(atoms);
-            }
-            throw new Error("Invalid space object");
+        this.register('&get-atoms', space => {
+            if (typeof space?.all !== 'function') throw new Error("Invalid space");
+            return this._listify(space.all());
         });
-
-        // Introspection Primitives (Phase 3)
-        const stiMap = new Map();
-
-        this.register('&get-sti', (atom) => {
-            const key = atom.toString();
-            return sym(String(stiMap.get(key) || 0));
-        });
-
-        this.register('&set-sti', (atom, value) => {
-            const key = atom.toString();
-            const num = atomToNumber(value);
-            if (num !== null) {
-                stiMap.set(key, num);
-                return value;
-            }
-            return sym('0');
-        });
-
-        this.register('&system-stats', () => {
-            return {
-                type: 'atom',
-                name: 'Stats',
-                toString: () => `(Stats :sti-count ${stiMap.size})`
-            };
-        });
-
-        // Placeholders for advanced ops that should be overridden by Interpreter
-        this.register('&subst', (term, bindings) => { throw new Error("&subst should be provided by Interpreter"); });
-        this.register('&match', (space, pattern, template) => { throw new Error("&match should be provided by Interpreter"); });
-        this.register('&type-of', (atom) => { throw new Error("&type-of should be provided by Interpreter"); });
     }
 
-    /**
-     * Get list of all registered operations
-     * @returns {Array} Array of operation names
-     */
+    _registerIntrospectionOps() {
+        const stiMap = new Map();
+
+        this.register('&get-sti', atom => sym(String(stiMap.get(atom.toString()) || 0)));
+        this.register('&set-sti', (atom, value) => {
+            const num = atomToNumber(value);
+            if (num !== null) stiMap.set(atom.toString(), num);
+            return value;
+        });
+
+        this.register('&system-stats', () => ({
+            type: 'atom',
+            name: 'Stats',
+            toString: () => `(Stats :sti-count ${stiMap.size})`
+        }));
+    }
+
+    _registerTypeOps() {
+        // Type checking operations
+        this.register('&type-infer', (term, interpreter) => {
+            if (!interpreter?.typeChecker) return sym('Unknown');
+            try {
+                const type = interpreter.typeChecker.infer(term, {});
+                return sym(interpreter.typeChecker.typeToString(type));
+            } catch (e) {
+                return sym('Error');
+            }
+        });
+
+        this.register('&type-check', (term, expectedType, interpreter) => {
+            if (!interpreter?.typeChecker) return sym('False');
+            try {
+                const isValid = interpreter.typeChecker.check(term, expectedType, {});
+                return createBooleanAtom(isValid);
+            } catch (e) {
+                return createBooleanAtom(false);
+            }
+        });
+
+        this.register('&type-unify', (type1, type2, interpreter) => {
+            if (!interpreter?.typeChecker) return sym('None');
+            try {
+                const subst = interpreter.typeChecker.unify(type1, type2);
+                return subst ? sym('Success') : sym('Failure');
+            } catch (e) {
+                return sym('Error');
+            }
+        });
+    }
+
+    _registerPlaceholderOps() {
+        this.register('&subst', () => { throw new Error("&subst should be provided by Interpreter"); });
+        this.register('&match', () => { throw new Error("&match should be provided by Interpreter"); });
+        this.register('&type-of', () => { throw new Error("&type-of should be provided by Interpreter"); });
+    }
+
+    // === Helpers ===
+
+    _listify = (arr) => {
+        return arr.length === 0 ? sym('()') : exp(sym(':'), [arr[0], this._listify(arr.slice(1))]);
+    }
+
     list() {
         return Array.from(this.operations.keys());
     }
 
-    /**
-     * Clear all operations
-     */
     clear() {
         this.operations.clear();
     }
 }
 
-/**
- * Convert a MeTTa atom to a JavaScript number
- * @param {Object} atom - MeTTa atom
- * @returns {number|null} JavaScript number or null if conversion fails
- */
-function atomToNumber(atom) {
-    if (atom === null || atom === undefined) return null;
+// === Utilities ===
+
+const atomToNumber = atom => {
+    if (atom == null) return null;
     if (typeof atom === 'number') return atom;
     if (atom.name) {
         const num = parseFloat(atom.name);
         return isNaN(num) ? null : num;
     }
     return null;
-}
+};
 
-function createBooleanAtom(bool) {
-    return sym(bool ? 'True' : 'False');
-}
+const createBooleanAtom = bool => sym(bool ? 'True' : 'False');
 
-function isTruthy(value) {
+const isTruthy = value => {
     if (!value) return false;
     if (value.name) {
-        if (value.name === 'False' || value.name === 'false' || value.name === 'null' || value.name === 'Nil') return false;
-        if (value.name === 'True' || value.name === 'true') return true;
+        if (['False', 'false', 'null', 'Nil'].includes(value.name)) return false;
+        if (['True', 'true'].includes(value.name)) return true;
         const num = parseFloat(value.name);
-        if (!isNaN(num)) return num !== 0;
+        return !isNaN(num) ? num !== 0 : true;
     }
     return Boolean(value);
-}
+};

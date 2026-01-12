@@ -100,3 +100,10 @@
 (= (typeof-default $x $default)
    (let $t (typeof $x)
       (if (empty? $t) $default (car $t))))
+
+; ===== Type System Integration =====
+
+; Register type checking operations in the interpreter
+; These will be handled by the TypeChecker class
+(: type-check (-> $a $b Bool))
+(: infer-type (-> $a $b))

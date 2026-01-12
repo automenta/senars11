@@ -1,108 +1,13 @@
 /**
  * Unify.js - Pattern matching with occurs check
  * Core unification algorithm for MeTTa
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import { isVariable, isExpression, isSymbol, clone, isList, flattenList, constructList, exp } from './Term.js';
 
-// Export an object with the expected API for tests
-export const Unify = {
-    unify: function (term1, term2, bindings = {}) {
-        const resultBindings = { ...bindings };
-        const boundTerm1 = substitute(term1, resultBindings);
-        const boundTerm2 = substitute(term2, resultBindings);
-
-        if (boundTerm1.equals && boundTerm1.equals(boundTerm2)) return resultBindings;
-        if (isVariable(boundTerm1)) return bindVariable(boundTerm1, boundTerm2, resultBindings);
-        if (isVariable(boundTerm2)) return bindVariable(boundTerm2, boundTerm1, resultBindings);
-
-        if (isExpression(boundTerm1) && isExpression(boundTerm2)) {
-            let currentBindings = resultBindings;
-
-            if (isList(boundTerm1) && isList(boundTerm2)) {
-                const list1 = flattenList(boundTerm1);
-                const list2 = flattenList(boundTerm2);
-                const len = Math.min(list1.elements.length, list2.elements.length);
-                for (let i = 0; i < len; i++) {
-                    const unified = Unify.unify(list1.elements[i], list2.elements[i], currentBindings);
-                    if (unified === null) return null;
-                    currentBindings = unified;
-                }
-                let tail1 = list1.tail;
-                let tail2 = list2.tail;
-                if (list1.elements.length > len) tail1 = constructList(list1.elements.slice(len), list1.tail);
-                if (list2.elements.length > len) tail2 = constructList(list2.elements.slice(len), list2.tail);
-                return Unify.unify(tail1, tail2, currentBindings);
-            }
-
-            if (typeof boundTerm1.operator === 'object' || typeof boundTerm2.operator === 'object') {
-                if (typeof boundTerm1.operator !== 'object' || typeof boundTerm2.operator !== 'object') return null;
-                const opUnified = Unify.unify(boundTerm1.operator, boundTerm2.operator, currentBindings);
-                if (opUnified === null) return null;
-                currentBindings = opUnified;
-            } else {
-                if (boundTerm1.operator !== boundTerm2.operator) return null;
-            }
-
-            if (boundTerm1.components.length !== boundTerm2.components.length) return null;
-
-            for (let i = 0; i < boundTerm1.components.length; i++) {
-                const unified = Unify.unify(boundTerm1.components[i], boundTerm2.components[i], currentBindings);
-                if (unified === null) return null;
-                currentBindings = unified;
-            }
-            return currentBindings;
-        }
-        return null;
-    },
-
-    subst: substitute,
-    isVar: isVariable,
-    matchAll: function (patterns, terms) {
-        const matches = [];
-        for (const pattern of patterns) {
-            for (const term of terms) {
-                const bindings = Unify.unify(pattern, term);
-                if (bindings !== null) matches.push({ pattern, term, bindings });
-            }
-        }
-        return matches;
-    }
-};
-
-function bindVariable(variable, term, bindings) {
-    if (occursCheck(variable, term, bindings)) return null;
-    const newBindings = { ...bindings };
-    newBindings[variable.name] = term;
-    return newBindings;
-}
-
-function occursCheck(variable, term, bindings) {
-    const boundTerm = substitute(term, bindings);
-    if (isVariable(boundTerm) && boundTerm.name === variable.name) return true;
-    if (isExpression(boundTerm)) {
-        const stack = [boundTerm];
-        while (stack.length > 0) {
-            const t = stack.pop();
-            if (isVariable(t) && t.name === variable.name) return true;
-            if (isExpression(t)) {
-                if (isList(t)) {
-                    const { elements, tail } = flattenList(t);
-                    for (const el of elements) stack.push(el);
-                    stack.push(tail);
-                } else {
-                    for (const comp of t.components) stack.push(comp);
-                }
-            }
-        }
-    }
-    return false;
-}
-
-
-
-
-function substitute(term, bindings, visited = new Set()) {
+// Define substitute function first to avoid circular reference
+const substitute = (term, bindings, visited = new Set()) => {
     if (!term) return term;
 
     // Fast path for variables
@@ -145,20 +50,96 @@ function substitute(term, bindings, visited = new Set()) {
             return constructList(substElements, substTail);
         }
 
-        // Iterative substitution for deep expressions (using stack to simulate recursion)
-        // Only trigger this for deep trees, otherwise recursion is faster/simpler.
-        // Actually, we can use a recursive structure with manual stack if depth is an issue.
-        // But for typical expression trees (not lists), depth is usually fine.
-        // The issue in maze_solver seems to be deep nesting of filters/lists that are not detected as lists.
-        // Let's implement a robust iterative substitution.
-
+        // Iterative substitution to prevent stack overflow
         return iterativeSubstitute(term, bindings, visited);
     }
     return term;
-}
+};
+
+// === Internal Functions ===
+
+const unifyExpressions = (term1, term2, bindings) => {
+    let currentBindings = bindings;
+
+    // Special case: list unification
+    if (isList(term1) && isList(term2)) {
+        return unifyLists(term1, term2, currentBindings);
+    }
+
+    // Operator unification
+    if (typeof term1.operator === 'object' || typeof term2.operator === 'object') {
+        if (typeof term1.operator !== 'object' || typeof term2.operator !== 'object') return null;
+        const opUnified = Unify.unify(term1.operator, term2.operator, currentBindings);
+        if (opUnified === null) return null;
+        currentBindings = opUnified;
+    } else if (term1.operator !== term2.operator) {
+        return null;
+    }
+
+    // Component count check
+    if (term1.components.length !== term2.components.length) return null;
+
+    // Component unification
+    for (let i = 0; i < term1.components.length; i++) {
+        const unified = Unify.unify(term1.components[i], term2.components[i], currentBindings);
+        if (unified === null) return null;
+        currentBindings = unified;
+    }
+    return currentBindings;
+};
+
+const unifyLists = (list1, list2, bindings) => {
+    const flat1 = flattenList(list1);
+    const flat2 = flattenList(list2);
+    const len = Math.min(flat1.elements.length, flat2.elements.length);
+
+    let currentBindings = bindings;
+    for (let i = 0; i < len; i++) {
+        const unified = Unify.unify(flat1.elements[i], flat2.elements[i], currentBindings);
+        if (unified === null) return null;
+        currentBindings = unified;
+    }
+
+    const remaining1 = flat1.elements.slice(len);
+    const remaining2 = flat2.elements.slice(len);
+
+    const tail1 = remaining1.length > 0 ? constructList(remaining1, flat1.tail) : flat1.tail;
+    const tail2 = remaining2.length > 0 ? constructList(remaining2, flat2.tail) : flat2.tail;
+
+    return Unify.unify(tail1, tail2, currentBindings);
+};
+
+const bindVariable = (variable, term, bindings) => {
+    if (occursCheck(variable, term, bindings)) return null;
+    const newBindings = { ...bindings };
+    newBindings[variable.name] = term;
+    return newBindings;
+};
+
+const occursCheck = (variable, term, bindings) => {
+    const boundTerm = substitute(term, bindings);
+    if (isVariable(boundTerm) && boundTerm.name === variable.name) return true;
+    if (isExpression(boundTerm)) {
+        const stack = [boundTerm];
+        while (stack.length > 0) {
+            const t = stack.pop();
+            if (isVariable(t) && t.name === variable.name) return true;
+            if (isExpression(t)) {
+                if (isList(t)) {
+                    const { elements, tail } = flattenList(t);
+                    for (const el of elements) stack.push(el);
+                    stack.push(tail);
+                } else {
+                    for (const comp of t.components) stack.push(comp);
+                }
+            }
+        }
+    }
+    return false;
+};
 
 // Helper: Iterative substitution to prevent stack overflow
-function iterativeSubstitute(rootTerm, bindings, visited) {
+const iterativeSubstitute = (rootTerm, bindings, visited) => {
     const stack = [{ term: rootTerm, processed: false }];
     const resultStack = [];
 
@@ -258,4 +239,39 @@ function iterativeSubstitute(rootTerm, bindings, visited) {
     }
 
     return resultStack[resultStack.length - 1];
-}
+};
+
+// Export an object with the expected API for tests - define after functions are declared
+export const Unify = {
+    unify: (term1, term2, bindings = {}) => {
+        const resultBindings = { ...bindings };
+        const boundTerm1 = substitute(term1, resultBindings);
+        const boundTerm2 = substitute(term2, resultBindings);
+
+        // Structural equality check
+        if (boundTerm1.equals && boundTerm1.equals(boundTerm2)) return resultBindings;
+
+        // Variable binding cases
+        if (isVariable(boundTerm1)) return bindVariable(boundTerm1, boundTerm2, resultBindings);
+        if (isVariable(boundTerm2)) return bindVariable(boundTerm2, boundTerm1, resultBindings);
+
+        // Expression unification
+        if (isExpression(boundTerm1) && isExpression(boundTerm2)) {
+            return unifyExpressions(boundTerm1, boundTerm2, resultBindings);
+        }
+        return null;
+    },
+
+    subst: substitute,
+    isVar: isVariable,
+    matchAll: (patterns, terms) => {
+        const matches = [];
+        for (const pattern of patterns) {
+            for (const term of terms) {
+                const bindings = Unify.unify(pattern, term);
+                if (bindings !== null) matches.push({ pattern, term, bindings });
+            }
+        }
+        return matches;
+    }
+};

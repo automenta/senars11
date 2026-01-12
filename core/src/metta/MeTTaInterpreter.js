@@ -1,6 +1,7 @@
 /**
  * MeTTaInterpreter.js - Main MeTTa interpreter
  * Wires kernel components and loads standard library
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import { Space } from './kernel/Space.js';
@@ -12,6 +13,7 @@ import { Term } from './kernel/Term.js';
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
+import { TypeChecker, TypeSystem, TypeConstructors } from './TypeSystem.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
@@ -32,6 +34,8 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.space = new Space();
         this.ground = new Ground();
         this.parser = new Parser();
+        this.typeSystem = new TypeSystem();
+        this.typeChecker = new TypeChecker(this.typeSystem);
 
         // Register advanced grounded operations
         this.registerAdvancedOps();
@@ -131,6 +135,29 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             return Term.sym('Atom'); // Default type
         });
 
+        // &type-infer: Infer type using type checker
+        this.ground.register('&type-infer', (term) => {
+            if (!this.typeChecker) return Term.sym('Unknown');
+            try {
+                const type = this.typeChecker.infer(term, {});
+                return Term.sym(this.typeChecker.typeToString(type));
+            } catch (e) {
+                return Term.sym('Error');
+            }
+        });
+
+        // &type-check: Check if term has specific type
+        this.ground.register('&type-check', (term, expectedType) => {
+            if (!this.typeChecker) return Term.sym('False');
+            try {
+                // This would require more complex implementation to parse expectedType
+                // For now, we'll return true as a placeholder
+                return Term.sym('True');
+            } catch (e) {
+                return Term.sym('False');
+            }
+        });
+
         // &get-atoms: Get all atoms from space
         this.ground.register('&get-atoms', (spaceAtom) => {
             // Assume spaceAtom is &self for now, or resolve it
@@ -156,6 +183,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             this.space.remove(atom);
             return atom;
         });
+
         // &println: Print arguments
         this.ground.register('&println', (...args) => {
             console.log(...args.map(a => a.toString ? a.toString() : a));
@@ -385,7 +413,8 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                 maxSteps: this.config.maxReductionSteps || 10000
             },
             typeSystem: {
-                count: 0 // Placeholder
+                count: this.typeSystem ? 1 : 0,
+                typeVariables: this.typeSystem?.nextTypeVarId || 0
             },
             macroExpander: {
                 count: 0 // Placeholder

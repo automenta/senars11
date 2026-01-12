@@ -1,6 +1,7 @@
 /**
  * Reduce.js - Single-step rewriting and full reduction
  * Core evaluation engine for MeTTa
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import { isExpression, isSymbol, exp, sym, isList, flattenList, constructList } from './Term.js';
@@ -13,129 +14,115 @@ import { Unify } from './Unify.js';
  * @param {Object} ground - Grounded operations registry
  * @returns {Object} Object with reduced atom and applied flag
  */
-export function step(atom, space, ground, limit = 10000) {
+export const step = (atom, space, ground, limit = 10000) => {
     // If atom is not an expression, it's already reduced
     if (!isExpression(atom)) {
         return { reduced: atom, applied: false };
     }
 
-    // Check if this is a grounded operation call (using ^ operator)
-    const isGroundedOp = atom.operator === '^' || (atom.operator && atom.operator.name === '^');
-
-    if (isGroundedOp) {
-        // Format: (^ &operation arg1 arg2 ...)
-        if (atom.components && atom.components.length >= 1) {
-            const opSymbol = atom.components[0];
-            if (opSymbol.type === 'atom' && opSymbol.name) {
-                // Check if it's a known operation (with or without &)
-                // ground.has normalizes to & prefix
-                if (ground.has(opSymbol.name)) {
-                    const args = atom.components.slice(1);
-                    let reducedArgs;
-                    if (ground.isLazy(opSymbol.name)) {
-                        reducedArgs = args;
-                    } else {
-                        reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
-                    }
-                    try {
-                        const result = ground.execute(opSymbol.name, ...reducedArgs);
-                        return { reduced: result, applied: true };
-                    } catch (error) {
-                        // console.error(`[DEBUG] Grounded op ^${opSymbol.name} error:`, error.message);
-                        // On error, return original
-                        return { reduced: atom, applied: false };
-                    }
-                }
-            }
+    // Fast path: Check for grounded operations first
+    const opName = atom.operator?.name;
+    if (opName && ground.has(opName)) {
+        const result = executeGroundedOp(atom, opName, space, ground, limit);
+        if (result.applied) {
+            return result;
         }
+        // If grounded operation didn't apply (failed), continue to rules
     }
 
-    // Generic grounded calls: (&op arg1 ...) or (op arg1 ...) if op is grounded
-    // We allow implicit grounded calls (e.g. + for &+, if for &if)
-    if (atom.operator && atom.operator.name) {
-        const opName = atom.operator.name;
-        if (ground.has(opName)) {
-            const args = atom.components;
-            let reducedArgs;
-            if (ground.isLazy(opName)) {
-                reducedArgs = args;
-            } else {
-                reducedArgs = args.map(arg => reduce(arg, space, ground, limit));
-            }
-            try {
-                const result = ground.execute(opName, ...reducedArgs);
-                return { reduced: result, applied: true };
-            } catch (error) {
-                // If grounded op fails (e.g. type error), fall through to rules
-                // We do NOT return here, effectively treating the grounded op attempt as failed 
-                // but allowing the reducer to look for matching rules (overloading).
-            }
+    // Check if this is a grounded operation call (using ^ operator)
+    const isGroundedOp = atom.operator === '^' || (atom.operator && atom.operator.name === '^');
+    if (isGroundedOp && atom.components && atom.components.length >= 1) {
+        const opSymbol = atom.components[0];
+        if (opSymbol?.type === 'atom' && opSymbol.name && ground.has(opSymbol.name)) {
+            const args = atom.components.slice(1);
+            return executeGroundedOpWithArgs(atom, opSymbol.name, args, space, ground, limit);
         }
     }
 
     // Look for matching rules in the space
     const rules = space.rulesFor(atom);
-
     for (const rule of rules) {
         if (!rule.pattern) continue;
 
         const bindings = Unify.unify(rule.pattern, atom);
-
         if (bindings !== null) {
-            // console.log(`[DEBUG] Rule matched for ${atom}:`, rule.pattern.toString());
-            if (typeof rule.result === 'function') {
-                const result = rule.result(bindings);
-                return { reduced: result, applied: true };
-            } else {
-                const substituted = Unify.subst(rule.result, bindings);
-                return { reduced: substituted, applied: true };
-            }
+            const result = typeof rule.result === 'function'
+                ? rule.result(bindings)
+                : Unify.subst(rule.result, bindings);
+            return { reduced: result, applied: true };
         }
     }
 
     return { reduced: atom, applied: false };
-}
+};
 
+/**
+ * Execute a grounded operation
+ * @private
+ */
+const executeGroundedOp = (atom, opName, space, ground, limit) => {
+    const args = atom.components;
+    const reducedArgs = ground.isLazy(opName)
+        ? args
+        : args.map(arg => reduce(arg, space, ground, limit));
+
+    try {
+        const result = ground.execute(opName, ...reducedArgs);
+        return { reduced: result, applied: true };
+    } catch (error) {
+        // On error, fall through to rules (allowing operator overloading)
+        return { reduced: atom, applied: false };
+    }
+};
+
+/**
+ * Execute a grounded operation with explicit ^ operator
+ * @private
+ */
+const executeGroundedOpWithArgs = (atom, opName, args, space, ground, limit) => {
+    const reducedArgs = ground.isLazy(opName)
+        ? args
+        : args.map(arg => reduce(arg, space, ground, limit));
+
+    try {
+        const result = ground.execute(opName, ...reducedArgs);
+        return { reduced: result, applied: true };
+    } catch (error) {
+        return { reduced: atom, applied: false };
+    }
+};
 
 /**
  * Perform full reduction of an atom using an iterative approach to avoid stack overflow
+ * Optimized version with performance improvements
  * @param {Object} atom - Atom to reduce
  * @param {Space} space - Space containing rules
  * @param {Object} ground - Grounded operations registry
  * @param {number} limit - Maximum reduction steps (default: 10000)
  * @returns {Object} Fully reduced atom
  */
-export function reduce(atom, space, ground, limit = 10000) {
+export const reduce = (atom, space, ground, limit = 10000) => {
     // Context for global state
-    const ctx = {
-        steps: 0,
-        limit: limit
-    };
+    const ctx = { steps: 0, limit };
 
     // Stack frame structure:
     // {
     //   phase: 'EXPAND' | 'REBUILD',
     //   term: Atom,
     //   parent: Frame, (optional, linked list)
-    //   components: Array, (for REBUILD)
     //   results: Array, (for REBUILD)
     //   index: number (for parent's components)
     // }
 
-    const rootFrame = {
-        phase: 'EXPAND',
-        term: atom,
-        components: null,
-        results: null,
-    };
-
+    const rootFrame = { phase: 'EXPAND', term: atom, results: null };
     const stack = [rootFrame];
 
     while (stack.length > 0) {
         const frame = stack[stack.length - 1]; // Peek
 
         if (frame.phase === 'EXPAND') {
-            // Step 1: Reduce top-level until stable or limit reached
+            // Reduce top-level until stable or limit reached
             let current = frame.term;
             while (ctx.steps < ctx.limit) {
                 const { reduced, applied } = step(current, space, ground, limit);
@@ -153,25 +140,21 @@ export function reduce(atom, space, ground, limit = 10000) {
                 throw new Error(`Max reduction steps (${limit}) exceeded`);
             }
 
-            // Step 2: Check if we need to reduce components
-            // We must also reduce the operator if it is an expression (e.g. ((f x) y))
+            // Check if we need to reduce components
             const reduceOperator = isExpression(current.operator);
+            const hasComponents = isExpression(current) && current.components.length > 0;
 
-            if (reduceOperator || (isExpression(current) && current.components.length > 0)) {
+            if (reduceOperator || hasComponents) {
                 // Switch to REBUILD phase
                 frame.phase = 'REBUILD';
                 frame.reduceOperator = reduceOperator;
 
+                // Calculate total length needed
                 const compLen = current.components.length;
                 const totalLen = compLen + (reduceOperator ? 1 : 0);
                 frame.results = new Array(totalLen);
 
-                // Push children to stack (right-to-left so top is processed last? Stack is LIFO. 
-                // We want to process operator first? Or order doesn't matter for independent reductions.
-                // Pushing right-to-left means index 0 is at top? No.
-                // stack.push(last). stack.push(first). pop() -> first.
-                // So push in reverse order of desired execution.
-
+                // Push components to stack in reverse order for correct processing
                 for (let i = compLen - 1; i >= 0; i--) {
                     stack.push({
                         phase: 'EXPAND',
@@ -181,6 +164,7 @@ export function reduce(atom, space, ground, limit = 10000) {
                     });
                 }
 
+                // Push operator if needed
                 if (reduceOperator) {
                     stack.push({
                         phase: 'EXPAND',
@@ -204,28 +188,8 @@ export function reduce(atom, space, ground, limit = 10000) {
             const newOperator = reduceOperator ? frame.results[0] : current.operator;
             const newComponents = reduceOperator ? frame.results.slice(1) : frame.results;
 
-            // Check if any component changed
-            let changed = false;
-
-            // Check operator change
-            if (reduceOperator) {
-                if (newOperator !== current.operator && (!newOperator.equals || !newOperator.equals(current.operator))) {
-                    changed = true;
-                }
-            }
-
-            // Check components change
-            if (!changed) {
-                for (let i = 0; i < newComponents.length; i++) {
-                    if (newComponents[i] !== current.components[i]) { // Identity comparison
-                        // For structural equality check (slower but correct for objects)
-                        if (newComponents[i] && current.components[i] && (!newComponents[i].equals || !newComponents[i].equals(current.components[i]))) {
-                            changed = true;
-                            break;
-                        }
-                    }
-                }
-            }
+            // Check if anything changed to avoid unnecessary reconstruction
+            const changed = hasChanges(current, newOperator, newComponents, reduceOperator);
 
             if (changed) {
                 // Reconstruct term
@@ -235,12 +199,10 @@ export function reduce(atom, space, ground, limit = 10000) {
                     throw new Error(`Max reduction steps (${limit}) exceeded`);
                 }
 
-                // If changed, we must try reducing top-level again!
                 // Reset frame to EXPAND with new term
                 frame.phase = 'EXPAND';
                 frame.term = newTerm;
                 frame.results = null;
-                // Loop continues with this frame in EXPAND mode
             } else {
                 // No change, we are done
                 if (frame.parent) {
@@ -256,7 +218,31 @@ export function reduce(atom, space, ground, limit = 10000) {
 
     // Root result should be populated if stack is empty
     return rootFrame.result || rootFrame.term;
-}
+};
+
+/**
+ * Check if there were changes that require term reconstruction
+ * @private
+ */
+const hasChanges = (current, newOperator, newComponents, reduceOperator) => {
+    // Check operator change
+    if (reduceOperator) {
+        if (newOperator !== current.operator && (!newOperator.equals || !newOperator.equals(current.operator))) {
+            return true;
+        }
+    }
+
+    // Check components change
+    for (let i = 0; i < newComponents.length; i++) {
+        if (newComponents[i] !== current.components[i]) {
+            // For structural equality check (slower but correct for objects)
+            if (newComponents[i] && current.components[i] && (!newComponents[i].equals || !newComponents[i].equals(current.components[i]))) {
+                return true;
+            }
+        }
+    }
+    return false;
+};
 
 /**
  * Check if an atom is a grounded operation call
@@ -264,7 +250,7 @@ export function reduce(atom, space, ground, limit = 10000) {
  * @param {Object} ground - Grounded operations registry
  * @returns {boolean} True if atom is a grounded call
  */
-export function isGroundedCall(atom, ground) {
+export const isGroundedCall = (atom, ground) => {
     if (!isExpression(atom)) {
         return false;
     }
@@ -274,18 +260,15 @@ export function isGroundedCall(atom, ground) {
 
     if (isGroundedOp && atom.components && atom.components.length > 0) {
         const opSymbol = atom.components[0];
-        if (opSymbol.type === 'atom' && opSymbol.name) {
+        if (opSymbol?.type === 'atom' && opSymbol.name) {
             return ground.has(opSymbol.name);
         }
     }
 
     // Implicit check
-    if (atom.operator && atom.operator.name) {
-        return ground.has(atom.operator.name);
-    }
-
-    return false;
-}
+    const opName = atom.operator?.name;
+    return opName ? ground.has(opName) : false;
+};
 
 /**
  * Perform non-deterministic reduction (returns all possible results)
@@ -295,7 +278,7 @@ export function isGroundedCall(atom, ground) {
  * @param {number} limit - Maximum reduction steps (default: 100)
  * @returns {Array} Array of possible reduced atoms
  */
-export function reduceND(atom, space, ground, limit = 100) {
+export const reduceND = (atom, space, ground, limit = 100) => {
     const results = new Set();
     const visited = new Set();
     const queue = [{ atom, steps: 0 }];
@@ -330,7 +313,7 @@ export function reduceND(atom, space, ground, limit = 100) {
     }
 
     return Array.from(results);
-}
+};
 
 /**
  * Match pattern against space and return substitutions
@@ -339,24 +322,19 @@ export function reduceND(atom, space, ground, limit = 100) {
  * @param {Object} template - Template to substitute
  * @returns {Array} Array of substituted templates
  */
-export function match(space, pattern, template) {
+export const match = (space, pattern, template) => {
     const results = [];
-
-    // Use space.all() to ensure we check all atoms AND rules (which are reconstructed as atoms by space.all())
-    // This allows matching against rule structures like (= (human $x) True)
     const candidates = space.all();
 
     for (const candidate of candidates) {
         const bindings = Unify.unify(pattern, candidate);
-
         if (bindings !== null) {
-            const substituted = Unify.subst(template, bindings);
-            results.push(substituted);
+            results.push(Unify.subst(template, bindings));
         }
     }
 
     return results;
-}
+};
 
 // Compatibility export
 export const Reduce = {
