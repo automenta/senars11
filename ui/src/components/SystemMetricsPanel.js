@@ -1,4 +1,4 @@
-import {Component} from './Component.js';
+import { Component } from './Component.js';
 
 export class SystemMetricsPanel extends Component {
     constructor(containerId) {
@@ -40,8 +40,29 @@ export class SystemMetricsPanel extends Component {
         const latency = this.metrics.avgLatency.toFixed(2);
         const uptime = Math.floor(this.metrics.uptime / 1000);
 
+        if (this.container.querySelector('#heartbeat-icon')) {
+            // If we already have the DOM, just update values to avoid clearing animation state
+            // But for now, full re-render is safer for dynamic layout changes.
+            // Optimize later if needed.
+        }
+
+        const heartbeatClass = this.metrics.throughput > 0 ? 'beating' : '';
+
         this.container.innerHTML = `
+            <style>
+                @keyframes heartbeat {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    50% { transform: scale(1.2); opacity: 1; text-shadow: 0 0 5px red; }
+                    100% { transform: scale(1); opacity: 0.8; }
+                }
+                .beating { animation: heartbeat 1s infinite; }
+                .metric-heart { font-size: 1.2em; margin-right: 5px; color: #ff4444; }
+            </style>
             <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-heart ${heartbeatClass}">♥</span>
+                    <span class="metric-label">Heartbeat</span>
+                </div>
                 <div class="metric-item">
                     <span class="metric-label">Throughput</span>
                     <span class="metric-value">${throughput} <small>ops/s</small></span>

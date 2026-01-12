@@ -1,6 +1,7 @@
 import { GoldenLayout } from 'golden-layout';
 import { SeNARSUI } from './SeNARSUI.js';
 import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
+import { ConnectionManager } from './connection/ConnectionManager.js';
 
 // Setup Layout Configuration
 const config = {
@@ -41,7 +42,7 @@ async function init() {
     const layout = new GoldenLayout(layoutRoot);
 
     // 2. Initialize SeNARS with Local Connection
-    const connection = new LocalConnectionManager();
+    const connection = new ConnectionManager(new LocalConnectionManager());
     const app = new SeNARSUI(connection); // Calls connect() internally
 
     // 3. Register Layout Components
@@ -135,7 +136,7 @@ async function start() {
     const layout = new GoldenLayout(layoutRoot);
 
     // Create connection manager first
-    const connection = new LocalConnectionManager();
+    const connection = new ConnectionManager(new LocalConnectionManager());
 
     // Create SeNARSUI instance but delay initialization
     const app = new SeNARSUI(connection);

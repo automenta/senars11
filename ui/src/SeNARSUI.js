@@ -1,4 +1,5 @@
 import { UIElements } from './ui/UIElements.js';
+import { ConnectionManager } from './connection/ConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { GraphManager } from './visualization/GraphManager.js';
 import { Logger } from './logging/Logger.js';
@@ -16,8 +17,8 @@ export class SeNARSUI {
     constructor(connectionAdapter = null) {
         this.uiElements = new UIElements();
         this.logger = new Logger();
-        this.webSocketManager = connectionAdapter || new WebSocketManager();
-        this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger);
+        this.connectionManager = connectionAdapter || new ConnectionManager(new WebSocketManager());
+        this.commandProcessor = new CommandProcessor(this.connectionManager, this.logger);
 
         // Initialize managers but defer setup that requires UI elements
         this.graphManager = new GraphManager(this.uiElements.getAll(), {
@@ -58,7 +59,7 @@ export class SeNARSUI {
             this.commandProcessor,
             this.demoManager,
             this.graphManager,
-            this.webSocketManager,
+            this.connectionManager,
             this.controlPanel
         );
 
@@ -68,12 +69,12 @@ export class SeNARSUI {
 
         document.addEventListener('senars:action', (e) => {
             const { type, payload, context } = e.detail;
-            this.webSocketManager.sendMessage('activity.action', { type, payload, context, id: Date.now() });
+            this.connectionManager.sendMessage('activity.action', { type, payload, context, id: Date.now() }); // Renamed from webSocketManager
             this.logger.addLogEntry(`Action dispatched: ${type}`, 'info', '⚡');
         });
 
-        this.webSocketManager.connect();
-        this.webSocketManager.subscribe('connection.status', (status) => {
+        this.connectionManager.connect();
+        this.connectionManager.subscribe('connection.status', (status) => { // Renamed from webSocketManager
             status === 'connected' && this.demoManager.initialize();
         });
 
@@ -81,8 +82,8 @@ export class SeNARSUI {
     }
 
     _setupWebSocketHandlers() {
-        this.webSocketManager.subscribe('*', (message) => this._handleMessage(message));
-        this.webSocketManager.subscribe('connection.status', (status) => this._updateStatus(status));
+        this.connectionManager.subscribe('*', (message) => this._handleMessage(message)); // Renamed from webSocketManager
+        this.connectionManager.subscribe('connection.status', (status) => this._updateStatus(status)); // Renamed from webSocketManager
 
         const animationHandlers = {
             'reasoning:derivation': (msg) => {
@@ -107,7 +108,7 @@ export class SeNARSUI {
         };
 
         Object.entries(animationHandlers).forEach(([type, handler]) =>
-            this.webSocketManager.subscribe(type, handler)
+            this.connectionManager.subscribe(type, handler) // Renamed from webSocketManager
         );
     }
 
