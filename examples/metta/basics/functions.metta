@@ -9,6 +9,15 @@
    (let $y 20
      (+ $x $y)))
 
+; Sequential Let (let*)
+!(let* (( $x 10 ) ( $y 30 ))
+    (+ $x $y))
+
+; Recursion (Factorial)
+(= (fact 0) 1)
+(= (fact $n) (* $n (fact (- $n 1))))
+!(fact 5)
+
 ; Closure / Currying (simulated)
 (= (add-n $n) (λ $x (+ $x $n)))
 !((add-n 5) 10)
