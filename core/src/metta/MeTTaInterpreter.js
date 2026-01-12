@@ -254,12 +254,14 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                 recursiveLetStar = body;
             } else {
                 // Construct rest bindings expression
-                // Note: we always reconstruct as expression list for simplicity in recursion
-                // even if input was cons list. Grounded op handles both.
-                const restBindings = Term.exp(Term.sym('let-bindings'), restPairs);
-                // Note: operator name doesn't matter much for expression list as long as components match
-                // but let's use a dummy symbol or reusing the original operator if possible.
-                // Actually, Term.exp requires operator. 
+                // We must match the structure expected by our parsing logic:
+                // pairs = [bindings.operator, ...bindings.components]
+                // So we construct exp(first_pair, [rest_pairs])
+                const nextFirst = restPairs[0];
+                const nextRest = restPairs.slice(1);
+
+                // Note: Term.exp handles object operators fine
+                const restBindings = Term.exp(nextFirst, nextRest);
 
                 recursiveLetStar = Term.exp(sym('let*'), [restBindings, body]);
             }
