@@ -6,7 +6,7 @@ export const process = {
     argv: [],
     stdout: { write: () => { } },
     stderr: { write: () => { } },
-    versions: { node: '0.0.0' },
+    versions: {},
     on: () => { },
     exit: () => { },
     nextTick: (cb) => setTimeout(cb, 0),

@@ -86,29 +86,22 @@ export const GraphConfig = {
     },
 
     getGraphLayout: () => ({
-        name: 'fcose',
-        quality: 'default',
-        randomize: false,
-        animate: false,
+        name: 'cose', // Use built-in cose layout instead of fcose
+        animate: true,
+        refresh: 20,
         fit: true,
         padding: 30,
-        nodeSeparation: 75,
-        idealEdgeLength: 50,
-        edgeElasticity: 0.45,
-        nestingFactor: 0.1,
-        gravity: 0.25,
-        numIter: 2500,
+        randomize: false,
+        componentSpacing: 100,
+        nodeRepulsion: 400000,
+        nodeOverlap: 20,
+        idealEdgeLength: 100,
+        edgeElasticity: 100,
+        nestingFactor: 5,
+        gravity: 80,
+        numIter: 1000,
         initialTemp: 200,
         coolingFactor: 0.95,
-        minTemp: 1.0,
-        nodeRepulsion: 4500,
-        tile: true,
-        tilingPaddingVertical: 10,
-        tilingPaddingHorizontal: 10,
-        gravityRangeCompound: 1.5,
-        gravityCompound: 1.0,
-        gravityRange: 3.8,
-        stop: function () {
-        }
+        minTemp: 1.0
     })
 };

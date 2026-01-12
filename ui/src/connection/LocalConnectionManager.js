@@ -24,11 +24,29 @@ export class LocalConnectionManager extends ConnectionInterface {
             // Initialize Core components
             const config = Config.parse([]); // Use default config or inject
             config.system = { ...config.system, enableLogging: false }; // Reduce noise?
-            // Disable Metacognition component which causes issues in browser environment
-            if (config.components && config.components.Metacognition) {
-                config.components.Metacognition.enabled = false;
+
+            // In browser environment, completely remove components that cause issues
+            // since the ComponentManager's Node.js check may not work properly in bundled environment
+            if (typeof window !== 'undefined') {
+                // We're in browser environment - don't load any dynamic components
+                config.components = {};
             } else {
-                config.components = { ...config.components, Metacognition: { enabled: false } };
+                // Ensure components configuration exists and disable problematic components
+                if (!config.components) {
+                    config.components = {};
+                }
+
+                // Disable Metacognition component which causes issues in browser environment
+                if (config.components.Metacognition) {
+                    config.components.Metacognition.enabled = false;
+                } else {
+                    config.components.Metacognition = { enabled: false };
+                }
+
+                // Also disable any other components that might cause issues
+                if (config.components && config.components.LMIntegration) {
+                    config.components.LMIntegration.enabled = false;
+                }
             }
 
             // Initialize NAR

@@ -53,18 +53,27 @@
 }
 
 .lm_header .lm_tab .lm_close_tab {
-    width: 11px;
-    height: 11px;
-    background-image: url('../../img/lm_close_white.png');
-    background-position: center center;
-    background-repeat: no-repeat;
-    top: 4px;
-    right: 6px;
-    opacity: 0.4;
+    width: 14px;
+    height: 14px;
+    background: none !important;
+    top: 2px;
+    right: 2px;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cccccc;
+    font-size: 14px;
+}
+
+.lm_header .lm_tab .lm_close_tab::after {
+    content: '\00d7';
+    /* × */
 }
 
 .lm_header .lm_tab .lm_close_tab:hover {
     opacity: 1;
+    color: #ffffff;
 }
 
 .lm_header .lm_tab.lm_active {
@@ -112,34 +121,48 @@
 
 .lm_controls>* {
     position: relative;
-    background-position: center center;
-    background-repeat: no-repeat;
-    opacity: 0.4;
+    opacity: 0.6;
     transition: opacity 300ms ease;
+    width: 18px;
+    height: 18px;
+    background: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #cccccc;
 }
 
 .lm_controls>*:hover {
     opacity: 1;
+    color: #ffffff;
 }
 
-.lm_controls .lm_popout {
-    background-image: url('../../img/lm_popout_white.png');
+.lm_controls .lm_popout::after {
+    content: '\2197';
+    /* ↗ */
 }
 
-.lm_controls .lm_maximise {
-    background-image: url('../../img/lm_maximise_white.png');
+.lm_controls .lm_maximise::after {
+    content: '\2610';
+    /* ☐ */
+    font-size: 16px;
 }
 
-.lm_controls .lm_close {
-    background-image: url('../../img/lm_close_white.png');
+.lm_controls .lm_close::after {
+    content: '\00d7';
+    /* × */
+    font-size: 16px;
 }
 
 .lm_maximised .lm_header {
     background-color: #000000;
 }
 
-.lm_maximised .lm_controls .lm_maximise {
-    background-image: url('../../img/lm_minimize_white.png');
+.lm_maximised .lm_controls .lm_maximise::after {
+    content: '\2750';
+    /* ❐ */
 }
 
 .lm_transition_indicator {
@@ -149,6 +172,9 @@
 
 .lm_popin {
     cursor: pointer;
+    width: 20px;
+    height: 20px;
+    position: relative;
 }
 
 .lm_popin .lm_bg {
@@ -157,12 +183,19 @@
 }
 
 .lm_popin .lm_icon {
-    background-image: url('../../img/lm_popin_white.png');
-    background-position: center center;
-    background-repeat: no-repeat;
-    border-left: 1px solid #eeeeee;
-    border-top: 1px solid #eeeeee;
+    background: none !important;
     opacity: 0.7;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.lm_popin .lm_icon::after {
+    content: '\2199';
+    /* ↙ */
 }
 
 .lm_popin:hover .lm_icon {
