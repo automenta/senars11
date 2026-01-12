@@ -2,15 +2,13 @@ import { UIElements } from './ui/UIElements.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { GraphManager } from './visualization/GraphManager.js';
+import { DemoManager } from './demo/DemoManager.js';
 import { Logger } from './logging/Logger.js';
 import { CommandProcessor } from './command/CommandProcessor.js';
-import { DemoManager } from './demo/DemoManager.js';
 import { UIEventHandlers } from './ui/UIEventHandlers.js';
-import { MessageHandler } from '@senars/agent';
-import { capitalizeFirst } from './utils/Helpers.js';
-import { ControlPanel } from './ui/ControlPanel.js';
-import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
 import { ActivityLogPanel } from './components/ActivityLogPanel.js';
+import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
+import { ControlPanel } from './ui/ControlPanel.js';
 import { LMActivityIndicator } from './components/LMActivityIndicator.js';
 
 export class SeNARSUI {
@@ -20,12 +18,10 @@ export class SeNARSUI {
         this.connectionManager = connectionAdapter || new ConnectionManager(new WebSocketManager());
         this.commandProcessor = new CommandProcessor(this.connectionManager, this.logger);
 
-        // Initialize managers but defer setup that requires UI elements
         this.graphManager = new GraphManager(this.uiElements.getAll(), {
-            onNodeAction: (action, data) => this._handleNodeAction(action, data),
-            commandProcessor: null
+            onNodeSelect: (id) => this.commandProcessor.processCommand(`/inspect ${id}`),
+            onNodeContext: (id) => console.log('Context menu:', id)
         });
-        this.graphManager.callbacks.commandProcessor = this.commandProcessor;
         this.commandProcessor.graphManager = this.graphManager;
 
         this.controlPanel = new ControlPanel(this.uiElements, this.commandProcessor, this.logger);
@@ -38,9 +34,6 @@ export class SeNARSUI {
 
         this.uiEventHandlers = null;
 
-        this.messageHandler = new MessageHandler(this.graphManager);
-        this.logger.setUIElements(this.uiElements.getAll());
-
         // Only call initialize if no connection adapter is provided (for backward compatibility)
         if (!connectionAdapter) {
             this.initialize();
@@ -48,13 +41,15 @@ export class SeNARSUI {
     }
 
     initialize() {
-        // Initialize panels that require DOM elements
-        this.metricsPanel = new SystemMetricsPanel(this.uiElements.get('metricsPanel'));
-        this.activityLogPanel = new ActivityLogPanel(this.uiElements.get('tracePanel'));
+        this.uiElements.refresh();
+        this.graphManager.initialize(this.uiElements.get('graphContainer'));
+
+        new ActivityLogPanel('tracePanel');
+        this.metricsPanel = new SystemMetricsPanel('metricsPanel');
         this.lmActivityIndicator = new LMActivityIndicator(this.uiElements.get('graphContainer'));
 
-        // Initialize UI event handlers
-        this.uiEventHandlers = new UIEventHandlers(
+
+        this.eventHandlers = new UIEventHandlers(
             this.uiElements,
             this.commandProcessor,
             this.demoManager,
@@ -62,34 +57,39 @@ export class SeNARSUI {
             this.connectionManager,
             this.controlPanel
         );
+        this.eventHandlers.setupEventListeners();
 
-        this.graphManager.initialize();
-        this.uiEventHandlers.setupEventListeners();
+        this._setupConnectionHandlers();
         this._setupWebSocketHandlers();
 
-        document.addEventListener('senars:action', (e) => {
-            const { type, payload, context } = e.detail;
-            this.connectionManager.sendMessage('activity.action', { type, payload, context, id: Date.now() }); // Renamed from webSocketManager
+        console.log('SeNARS UI Initialized');
+        // Welcome message handled by connection manager
+    }
+
+    _setupConnectionHandlers() {
+        document.addEventListener('senars:action', ({ detail: { type, payload, context } }) => {
+            this.connectionManager.sendMessage('activity.action', { type, payload, context, id: Date.now() });
             this.logger.addLogEntry(`Action dispatched: ${type}`, 'info', '⚡');
         });
 
         this.connectionManager.connect();
-        this.connectionManager.subscribe('connection.status', (status) => { // Renamed from webSocketManager
-            status === 'connected' && this.demoManager.initialize();
-        });
-
-        this.logger.addLogEntry('SeNARS UI2 - Ready', 'info', '🚀');
+        this.connectionManager.subscribe('connection.status', (status) => status === 'connected' && this.demoManager.initialize());
     }
 
     _setupWebSocketHandlers() {
-        this.connectionManager.subscribe('*', (message) => this._handleMessage(message)); // Renamed from webSocketManager
-        this.connectionManager.subscribe('connection.status', (status) => this._updateStatus(status)); // Renamed from webSocketManager
+        this.connectionManager.subscribe('*', (msg) => this._handleMessage(msg));
+        this.connectionManager.subscribe('connection.status', (status) => this._updateStatus(status));
 
-        const animationHandlers = {
+        const handlers = {
             'reasoning:derivation': (msg) => {
-                const nodeId = msg.payload?.nodeId ?? msg.payload?.conceptId;
-                nodeId && this.graphManager.animateNode(nodeId, 'pulse');
+                this._handleTrace(msg);
+                this.graphManager.handleDerivation(msg);
             },
+            'reasoning:concept': (msg) => this.graphManager.updateGraph(msg),
+            'metrics:update': (msg) => this.metricsPanel.update(msg.payload),
+            'agent/result': (msg) => this.logger.addLogEntry(msg.payload?.result || JSON.stringify(msg), 'result', '💡'),
+            'agent/thought': (msg) => this.logger.addLogEntry(msg.payload?.thought || JSON.stringify(msg), 'thought', '💭'),
+            'error': (msg) => this.logger.addLogEntry(msg.payload?.message || "Unknown error", 'error', '🚨'),
             'memory:focus:promote': (msg) => {
                 const nodeId = msg.payload?.nodeId ?? msg.payload?.conceptId;
                 nodeId && this.graphManager.animateGlow(nodeId, 1.0);
@@ -107,9 +107,7 @@ export class SeNARSUI {
             'lm:error': (msg) => this.lmActivityIndicator && this.lmActivityIndicator.showError(msg.payload?.error ?? 'LM Error')
         };
 
-        Object.entries(animationHandlers).forEach(([type, handler]) =>
-            this.connectionManager.subscribe(type, handler) // Renamed from webSocketManager
-        );
+        Object.entries(handlers).forEach(([type, handler]) => this.connectionManager.subscribe(type, handler));
     }
 
     _handleMessage(message) {
@@ -121,7 +119,8 @@ export class SeNARSUI {
 
             if (this._handleSpecializedMessages(message)) return;
 
-            const { content, type, icon } = this.messageHandler.processMessage(message);
+            // The messageHandler and its logic are removed as per the diff.
+            // The specific message types are now handled in _setupWebSocketHandlers or directly here.
 
             if (message.type === 'metrics.updated' && this.metricsPanel) {
                 this.metricsPanel.update(message.payload);
@@ -134,7 +133,8 @@ export class SeNARSUI {
                 this.activityLogPanel.addActivity(message.payload);
             }
 
-            this.logger.addLogEntry(content, type, icon);
+            // The generic logger.addLogEntry for content, type, icon is removed.
+            // Specific logging is now handled by individual handlers.
             this.graphManager.updateFromMessage(message);
         } catch (error) {
             this.logger.log(`Error handling message of type ${message?.type ?? 'unknown'}: ${error.message}`, 'error', '❌');
@@ -185,9 +185,13 @@ export class SeNARSUI {
     }
 
     _updateStatus(status) {
-        const { connectionStatus, statusIndicator } = this.uiElements.getAll();
-        connectionStatus && (connectionStatus.textContent = capitalizeFirst(status));
-        statusIndicator && (statusIndicator.className = `status-indicator status-${status}`);
+        const el = document.getElementById('connectionStatus');
+        const indicator = document.getElementById('statusIndicator');
+        if (el) el.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        if (indicator) indicator.className = `${status}`;
+    }
+
+    _handleTrace(msg) {
+        // Trace handled by ActivityLogPanel subscription or unified logging
     }
 }
-

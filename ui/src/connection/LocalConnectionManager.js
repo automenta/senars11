@@ -18,74 +18,39 @@ export class LocalConnectionManager extends ConnectionInterface {
 
     async connect() {
         try {
-            this.connectionStatus = 'connecting';
-            this.notifyStatusChange('connecting');
+            this.updateStatus('connecting');
+            const config = Config.parse([]);
+            config.system = { ...config.system, enableLogging: false };
 
-            // Initialize Core components
-            const config = Config.parse([]); // Use default config or inject
-            config.system = { ...config.system, enableLogging: false }; // Reduce noise?
-
-            // In browser environment, completely remove components that cause issues
-            // since the ComponentManager's Node.js check may not work properly in bundled environment
             if (typeof window !== 'undefined') {
-                // We're in browser environment - don't load any dynamic components
                 config.components = {};
             } else {
-                // Ensure components configuration exists and disable problematic components
-                if (!config.components) {
-                    config.components = {};
-                }
-
-                // Disable Metacognition component which causes issues in browser environment
-                if (config.components.Metacognition) {
-                    config.components.Metacognition.enabled = false;
-                } else {
-                    config.components.Metacognition = { enabled: false };
-                }
-
-                // Also disable any other components that might cause issues
-                if (config.components && config.components.LMIntegration) {
-                    config.components.LMIntegration.enabled = false;
-                }
+                config.components ??= {};
+                if (config.components.Metacognition) config.components.Metacognition.enabled = false;
+                else config.components.Metacognition = { enabled: false };
+                config.components.LMIntegration && (config.components.LMIntegration.enabled = false);
             }
 
-            // Initialize NAR
             this.nar = new NAR(config);
             await this.nar.initialize();
 
-            // Initialize MeTTa with browser-compatible stdlib
             this.metta = new MeTTaInterpreter(this.nar, {
                 ...config,
                 virtualFiles: BROWSER_STDLIB,
-                // Prevent filesystem access in browser
-                fs: null,
-                path: null,
-                url: null
+                fs: null, path: null, url: null
             });
             await this.metta.initialize();
 
-            // Hook into NAR output to dispatch events
-            this.nar.eventBus.on('*', (type, payload) => {
-                this.dispatchMessage({ type, payload, timestamp: Date.now() });
-            });
+            this.nar.eventBus.on('*', (type, payload) => this.dispatchMessage({ type, payload, timestamp: Date.now() }));
 
-            // Hook into MeTTa output if needed
-            // this.metta.eventBus.on...
-
-            this.connectionStatus = 'connected';
+            this.updateStatus('connected');
             this.logger.log('Connected to Local SeNARS', 'success', '💻');
-            this.notifyStatusChange('connected');
 
-            // Simulate "Welcome" message found in server version
-            setTimeout(() => {
-                this.dispatchMessage({ type: 'agent/result', payload: { result: "Welcome to SeNARS Local Mode" } });
-            }, 100);
-
+            setTimeout(() => this.dispatchMessage({ type: 'agent/result', payload: { result: "Welcome to SeNARS Local Mode" } }), 100);
             return true;
         } catch (error) {
             console.error("Local connection failed", error);
-            this.connectionStatus = 'error';
-            this.notifyStatusChange('error');
+            this.updateStatus('error');
             return false;
         }
     }
@@ -124,26 +89,15 @@ export class LocalConnectionManager extends ConnectionInterface {
 
     async handleInput(payload) {
         const text = payload.text || payload;
-        // Basic routing: if starts with '!', likely MeTTa, else Narsese? 
-        // Or send to NAR which has input processing.
-        // Assuming NAR.addInput(text) handles it.
+        this.nar && await this.nar.addInput(text);
 
-        if (this.nar) {
-            const result = await this.nar.addInput(text);
-            // Result might be returned immediately
-            // Typically NAR emits events for results
-        }
-
-        // Also could try MeTTa run directly if it's metta code
-        if (this.metta && (text.startsWith('!') || text.startsWith('(') || text.startsWith('='))) {
+        if (this.metta && /^(!|\(|=\s)/.test(text)) {
             try {
                 const results = await this.metta.run(text);
-                if (results && results.length > 0) {
-                    this.dispatchMessage({
-                        type: 'agent/result',
-                        payload: { result: results.map(r => r.toString()).join('\n') }
-                    });
-                }
+                results?.length && this.dispatchMessage({
+                    type: 'agent/result',
+                    payload: { result: results.map(r => r.toString()).join('\n') }
+                });
             } catch (e) {
                 this.dispatchMessage({ type: 'error', payload: { message: e.message } });
             }
@@ -160,20 +114,15 @@ export class LocalConnectionManager extends ConnectionInterface {
     }
 
     subscribe(type, handler) {
-        if (!this.messageHandlers.has(type)) {
-            this.messageHandlers.set(type, []);
-        }
+        if (!this.messageHandlers.has(type)) this.messageHandlers.set(type, []);
         this.messageHandlers.get(type).push(handler);
     }
 
     unsubscribe(type, handler) {
         const handlers = this.messageHandlers.get(type);
-        if (handlers) {
-            const index = handlers.indexOf(handler);
-            if (index > -1) {
-                handlers.splice(index, 1);
-            }
-        }
+        if (!handlers) return;
+        const index = handlers.indexOf(handler);
+        index > -1 && handlers.splice(index, 1);
     }
 
     disconnect() {
@@ -183,16 +132,16 @@ export class LocalConnectionManager extends ConnectionInterface {
 
     // Helper to dispatch to internal subscribers (UI)
     dispatchMessage(message) {
-        const handlers = this.messageHandlers.get(message.type) || [];
-        const generalHandlers = this.messageHandlers.get('*') || [];
+        const handlers = [...(this.messageHandlers.get(message.type) || []), ...(this.messageHandlers.get('*') || [])];
+        handlers.forEach(h => { try { h(message); } catch (e) { console.error("Handler error", e); } });
+    }
 
-        [...handlers, ...generalHandlers].forEach(h => {
-            try { h(message); } catch (e) { console.error("Handler error", e); }
-        });
+    updateStatus(status) {
+        this.connectionStatus = status;
+        this.notifyStatusChange(status);
     }
 
     notifyStatusChange(status) {
-        const handlers = this.messageHandlers.get('connection.status') || [];
-        handlers.forEach(h => h(status));
+        this.messageHandlers.get('connection.status')?.forEach(h => h(status));
     }
 }

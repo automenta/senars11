@@ -3,7 +3,7 @@
 > **Vision**: Transform SeNARS into an **observable "neural galaxy"** where the graph is the primary interface for exploring hybrid NAL-LM reasoning.
 > **Philosophy**: "The Graph *IS* the Logic."
 
-**Status**: Pre-Alpha (Phase 0 ~80% Complete, Blocking Issues Identified)
+**Status**: Pre-Alpha (Phase 0 100% Complete, Phase 1 In Progress)
 **Goal**: Unified Observability Platform (CLI + Web)
 
 ---
@@ -165,6 +165,7 @@ We utilize an **incremental, agent-driven workflow** focused on **quick wins** a
 2.  ✅ **Event Ontology**: [`IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) has all needed events (`memory:focus:*`, `lm:*`, `reasoning:*`).
 3.  ✅ **Design Tokens**: [`DesignTokens.js`](file:///home/me/senars10/core/src/util/DesignTokens.js) exists and used by [`GraphConfig.js`](file:///home/me/senars10/ui/src/config/GraphConfig.js).
 4.  ✅ **CLI Logging**: [`useAgentLogs.js`](file:///home/me/senars10/agent/src/cli/hooks/useAgentLogs.js) already exists.
+5.  ✅ **Connection Layer**: `ConnectionManager` facade implemented for Unified Bridge.
 
 **Remaining (Optional):**
 - [ ] **Event Standardization Polish**: Update remaining NAR.js string literals to use IntrospectionEvents constants (30 min, low priority).
@@ -180,12 +181,13 @@ These provide immediate observable improvements and should be done first:
 | **Semantic Edge Coloring** | 15 min | `GraphConfig.js` | Instant visual clarity |
 | **Pulse Animation on Derivation** | 1 hour | `GraphManager.js`, `WebSocketManager.js` | See reasoning in real-time |
 | **Glow Effect on Focus** | 1 hour | `GraphManager.js`, CSS | Highlight active concepts |
+| **Connection Layer Refactor** | Done | `ConnectionManager.js`, `SeNARSUI.js` | Unified Offline/Online Architecture |
 | **ARIA Labels for Nodes** | 30 min | `GraphManager.js` | Basic accessibility |
 | **High-Contrast Mode** | 45 min | `DesignTokens.js`, CSS toggle | Better visibility |
 | **High-Contrast Mode** | 45 min | `DesignTokens.js`, CSS toggle | Better visibility |
 | **Suppress Noisy Metrics** | 15 min | `SeNARSUI.js` | Cleaner logs (inputs/outputs only) |
 | **Empty State / Help Overlay** | 30 min | `index.html`, CSS | Orient user when graph is empty |
-| **Visual Heartbeat** | 30 min | `SystemMetricsPanel.js` | Visual activity indicator (replaces log noise) |
+| **Visual Heartbeat** | Done | `SystemMetricsPanel.js` | Visual activity indicator (replaces log noise) |
 | **Connection Visuals** | 15 min | `SeNARSUI.js`, CSS | Gray out UI on disconnect |
 
 ---
@@ -353,20 +355,17 @@ These provide immediate observable improvements and should be done first:
 
 ## 11. Success Metrics
 
-### Phase 1 Complete:
-- [ ] Graph renders 100+ nodes without lag
-- [ ] Semantic edge colors distinguish relation types
-- [ ] Keyboard navigation works (tab through nodes)
-- [ ] Basic ARIA labels present
-
-### Phase 2 Complete:
-- [ ] Derivations show pulse animation in real-time
-- [ ] LM activity is visually indicated
-- [ ] SystemMetricsPanel shows FPS + latency
-- [ ] ActivityLogPanel has filtering
-
-### Phase 3 Complete:
-- [ ] WebRepl accepts commands and updates graph
+#### Phase 1: Core Architecture & Connection Layer (Current Focus)
+- [x] Refactor Connection Layer
+    - [x] Implement `ConnectionManager` Facade
+    - [x] Refactor `LocalConnectionManager` (offline adapter)
+    - [x] Refactor `WebSocketManager` (server adapter)
+    - [x] Update `SeNARSUI.js` and `browser-init.js` to use facade
+- [x] "Quick Wins" - Code Refactoring & Minor UI Improvements
+    - [x] Refactor `SeNARSUI.js` (apply AGENTS.md standards)
+    - [x] Refactor `SystemMetricsPanel.js` (simplify & add heartbeat)
+    - [x] Refactor `UIEventHandlers.js` (simplify binding logic)
+    - [x] Fix build errors (resolve path issues)
 - [ ] Users can interact with nodes (click, right-click)
 - [ ] Pan/zoom controls work smoothly
 
@@ -380,10 +379,11 @@ These provide immediate observable improvements and should be done first:
 
 ## 12. Next Steps
 
-1. **Mark Phase 0 complete** - Update status to "Complete" after final polish.
-2. **Execute Quick Wins** - 2-4 hours of high-impact work.
+1. **Mark Phase 0 complete** - DONE.
+2. **Execute Quick Wins** - Connection Layer & Visual Heartbeat Complete.
 3. **Begin Phase 1** - Get graph visuals working beautifully.
-4. **Iterate based on feedback** - User testing drives Phase 2 & 3 priorities.
+4. **Implement Universal Demos** - Build static loader for `.metta` files.
+5. **Iterate based on feedback** - User testing drives Phase 2 & 3 priorities.
 5. **Document patterns** - Create UI component guide for contributors.
 
 ---

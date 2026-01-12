@@ -21,49 +21,41 @@ export class WebSocketManager extends ConnectionInterface {
 
     connect() {
         try {
-            const wsUrl = Config.getWebSocketUrl();
-            this.ws = new WebSocket(wsUrl);
-
+            this.ws = new WebSocket(Config.getWebSocketUrl());
             this.ws.onopen = () => {
                 this.connectionStatus = 'connected';
                 this.reconnectAttempts = 0;
-                this.logger.log('Connected to SeNARS server', 'success', '🌐');
-                this.notifyStatusChange('connected');
+                this.updateHooks('connected', 'success', '🌐');
             };
 
             this.ws.onclose = () => {
                 this.connectionStatus = 'disconnected';
-                this.logger.log('Disconnected from server', 'warning', '🔌');
-                this.notifyStatusChange('disconnected');
-
+                this.updateHooks('disconnected', 'warning', '🔌');
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
                     setTimeout(() => this.connect(), this.reconnectDelay);
-                } else {
-                    this.logger.log(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`, 'error', '🚨');
-                }
+                } else this.logger.log(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`, 'error', '🚨');
             };
 
             this.ws.onerror = () => {
                 this.connectionStatus = 'error';
-                this.logger.log('WebSocket connection error', 'error', '🚨');
-                this.notifyStatusChange('error');
+                this.updateHooks('error', 'error', '🚨');
             };
 
-            this.ws.onmessage = (event) => {
-                try {
-                    this.handleMessage(JSON.parse(event.data));
-                } catch (e) {
-                    this.logger.log(`Invalid message format: ${event.data}`, 'error', '🚨');
-                }
+            this.ws.onmessage = ({ data }) => {
+                try { this.handleMessage(JSON.parse(data)); }
+                catch (e) { this.logger.log(`Invalid message: ${data}`, 'error', '🚨'); }
             };
         } catch (error) {
             this.connectionStatus = 'error';
-            this.logger.log('Failed to create WebSocket', 'error', '🚨');
-            if (!(error instanceof WebSocketConnectionError)) {
-                throw new WebSocketConnectionError(error.message, 'WEBSOCKET_CREATION_FAILED');
-            }
+            this.logger.log('WS creation failed', 'error', '🚨');
+            if (!(error instanceof WebSocketConnectionError)) throw new WebSocketConnectionError(error.message, 'WEBSOCKET_CREATION_FAILED');
         }
+    }
+
+    updateHooks(status, logType, icon) {
+        this.logger.log(`WS ${status}`, logType, icon);
+        this.notifyStatusChange(status);
     }
 
 
@@ -73,10 +65,7 @@ export class WebSocketManager extends ConnectionInterface {
         return true;
     }
 
-
-    isConnected() {
-        return this.ws && this.ws.readyState === WebSocket.OPEN;
-    }
+    isConnected() { return this.ws?.readyState === WebSocket.OPEN; }
 
 
     subscribe(type, handler) {
@@ -96,18 +85,12 @@ export class WebSocketManager extends ConnectionInterface {
         return this.connectionStatus;
     }
 
-    handleMessage(message) {
-        if (!message) return;
-
-        if (message.type === 'eventBatch') {
-            const events = message.data ?? [];
-            this.logger.log(`Received batch of ${events.length} events`, 'debug', '📦');
-            const normalized = events.map(e => ({ type: e.type, payload: e.data, timestamp: e.timestamp }));
-            this.eventQueue.push(...normalized);
-        } else {
-            this.eventQueue.push(message);
-        }
-
+    handleMessage(msg) {
+        if (!msg) return;
+        if (msg.type === 'eventBatch') {
+            const events = (msg.data ?? []).map(e => ({ type: e.type, payload: e.data, timestamp: e.timestamp }));
+            this.eventQueue.push(...events);
+        } else this.eventQueue.push(msg);
         this.scheduleQueueProcessing();
     }
 
@@ -118,65 +101,28 @@ export class WebSocketManager extends ConnectionInterface {
     }
 
     processQueue() {
-        const startTime = performance.now();
-
-        while (this.eventQueue.length > 0) {
-            if (performance.now() - startTime > this.processSliceMs) {
+        const start = performance.now();
+        while (this.eventQueue.length) {
+            if (performance.now() - start > this.processSliceMs) {
                 setTimeout(() => this.processQueue(), 0);
                 return;
             }
             this.dispatchMessage(this.eventQueue.shift());
         }
-
         this.isProcessingQueue = false;
     }
 
-    dispatchMessage(message) {
-        if (message.type === 'cycle.start' || message.type === 'cycle.complete') return;
-
-        const specificHandlers = this.messageHandlers.get(message.type) ?? [];
-        const generalHandlers = this.messageHandlers.get('*') ?? [];
-
-        [...specificHandlers, ...generalHandlers].forEach((handler, index) => {
-            const handlerType = index < specificHandlers.length ? message.type : '*';
-            this.tryHandleMessage(handler, message, handlerType);
-        });
-    }
-
-
-    tryExecuteHandler(handler, arg, handlerType, message = null) {
-        if (!handler || typeof handler !== 'function') return;
-
-        try {
-            handler(arg);
-        } catch (error) {
-            const detailedMsg = message
-                ? `Error in ${handlerType}: ${error.message}. Message details: ${JSON.stringify(message, null, 2)}`
-                : `Error in ${handlerType}: ${error.message}`;
-            this.logger.log(detailedMsg, 'error', '🚨');
-            console.error(`WebSocketManager ${handlerType} error:`, error);
-        }
-    }
-
-
-    tryHandleMessage(handler, message, handlerType) {
-        const context = handlerType === '*' ? 'general' : `message handler for ${message.type}`;
-        this.tryExecuteHandler(handler, message, context, message);
+    dispatchMessage(msg) {
+        if (msg.type === 'cycle.start' || msg.type === 'cycle.complete') return;
+        const handlers = [...(this.messageHandlers.get(msg.type) ?? []), ...(this.messageHandlers.get('*') ?? [])];
+        handlers.forEach(h => { try { h(msg); } catch (e) { console.error("WS Handler error", e); } });
     }
 
 
     notifyStatusChange(status) {
-        (this.messageHandlers.get('connection.status') ?? []).forEach(handler =>
-            this.tryExecuteHandler(handler, status, 'status handler')
-        );
+        this.messageHandlers.get('connection.status')?.forEach(h => h(status));
     }
 
 
-    disconnect() {
-        this.close();
-    }
-
-    close() {
-        this.ws?.close();
-    }
+    disconnect() { this.ws?.close(); }
 }
