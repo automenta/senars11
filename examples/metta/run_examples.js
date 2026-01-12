@@ -10,17 +10,10 @@ import { fileURLToPath } from 'url';
 
 import { MeTTaInterpreter } from '../../core/src/metta/MeTTaInterpreter.js';
 import { TermFactory } from '../../core/src/term/TermFactory.js';
+import { Term } from '../../core/src/metta/kernel/Term.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-
-// Initialize interpreter
-const termFactory = new TermFactory();
-const interpreter = new MeTTaInterpreter(null, {
-    termFactory,
-    typeChecking: false
-});
 
 // Find all .metta files
 const findMettaFiles = (dir) => {
@@ -39,13 +32,29 @@ const runFile = (filePath) => {
     console.log(`Running: ${relativePath}`);
     console.log('='.repeat(70));
 
+    // Initialize FRESH interpreter for each file
+    Term.clearSymbolTable(); // Reset symbol table if possible/needed (though Term.js usually keeps it)
+    const termFactory = new TermFactory();
+    const interpreter = new MeTTaInterpreter(null, {
+        termFactory,
+        typeChecking: false,
+        maxReductionSteps: 50000 // Saftey limit
+    });
+
     try {
         const code = fs.readFileSync(filePath, 'utf-8');
         console.log(code);
         console.log('\nResults:');
         console.log('-'.repeat(70));
 
+        // Timeout protection (simple approach only works for infinite loops if they are async or using safe reduction limits)
+        // Since interpreter.run is synchronous, we rely on maxReductionSteps.
+        // We add start/end logs.
+
+        console.time('Execution Time');
         const results = interpreter.run(code);
+        console.timeEnd('Execution Time');
+
         results.forEach((result, i) => {
             console.log(`${i + 1}. ${result?.toString() ?? 'null'}`);
         });
@@ -66,21 +75,30 @@ console.log('MeTTa Examples Runner');
 console.log('='.repeat(70));
 console.log(`Found ${files.length} example files\n`);
 
-const results = files.map(runFile);
+let passed = 0;
+let failed = 0;
+const failedList = [];
 
-const successCount = results.filter(r => r.success).length;
-const failedResults = results.filter(r => !r.success);
+for (const file of files) {
+    const result = runFile(file);
+    if (result.success) {
+        passed++;
+    } else {
+        failed++;
+        failedList.push(result);
+    }
+}
 
 console.log('\n' + '='.repeat(70));
 console.log('Summary');
 console.log('='.repeat(70));
-console.log(`Total: ${results.length}`);
-console.log(`Success: ${successCount}`);
-console.log(`Failed: ${failedResults.length}`);
+console.log(`Total: ${files.length}`);
+console.log(`Success: ${passed}`);
+console.log(`Failed: ${failed}`);
 
-if (failedResults.length > 0) {
+if (failed > 0) {
     console.log('\nFailed files:');
-    failedResults.forEach(({ file, error }) => {
+    failedList.forEach(({ file, error }) => {
         console.log(`  - ${path.relative(__dirname, file)}: ${error}`);
     });
 }

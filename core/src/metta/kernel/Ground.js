@@ -260,13 +260,35 @@ export class Ground {
 
         // List operations
         this.register('&first', (lst) => {
+            if (!lst) return null;
             if (Array.isArray(lst) && lst.length > 0) return lst[0];
+            // Handle Expression atoms
+            if (lst.components && lst.components.length > 0) return lst.components[0];
+            // Handle Cons atoms (should be handled by pattern matching, but for primitive safety)
+            if (lst.operator && lst.operator.name === ':') return lst.components[0];
             return null;
         });
 
         this.register('&rest', (lst) => {
+            if (!lst) return sym('()');
             if (Array.isArray(lst) && lst.length > 0) return lst.slice(1);
-            return [];
+
+            // Handle Expression atoms
+            if (lst.components && lst.components.length > 0) {
+                const newComponents = lst.components.slice(1);
+                // Return as proper expression
+                // We need 'exp' from Term.js. 
+                // It is not imported! 
+                // Wait, we need to fix imports first.
+                return {
+                    type: 'expression',
+                    operator: lst.operator,
+                    components: newComponents,
+                    name: `(${newComponents.map(c => c.name || c).join(' ')})`,
+                    toString: () => `(${newComponents.map(c => c.name || c).join(' ')})`
+                };
+            }
+            return sym('()');
         });
 
         this.register('&empty?', (lst) => {
@@ -275,7 +297,10 @@ export class Ground {
                 isEmpty = lst.length === 0;
             } else if (lst && lst.type === 'atom' && lst.name === '()') {
                 isEmpty = true;
-            } else if (lst && lst.type === 'symbol' && lst.name === '()') { // Legacy support
+            } else if (lst && lst.type === 'symbol' && lst.name === '()') {
+                isEmpty = true;
+            } else if (lst && lst.components && lst.components.length === 0) {
+                // Empty expression ()
                 isEmpty = true;
             }
             return createBooleanAtom(isEmpty);

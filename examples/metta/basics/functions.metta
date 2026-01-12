@@ -14,8 +14,8 @@
     (+ $x $y))
 
 ; Recursion (Factorial)
-(= (fact 0) 1)
-(= (fact $n) (* $n (fact (- $n 1))))
+; Use 'if' to ensure termination with lazy evaluation
+(= (fact $n) (if (== $n 0) 1 (* $n (fact (- $n 1)))))
 !(fact 5)
 
 ; Closure / Currying (simulated)

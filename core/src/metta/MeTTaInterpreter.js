@@ -47,17 +47,25 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     }
 
     registerAdvancedOps() {
+        const { sym } = Term;
+
         // &subst: Substitution (variable, value, template) -> result
         this.ground.register('&subst', (a, b, c) => {
             // Case 1: (subst variable value template) - used by let/lambda
             if (c !== undefined) {
-                const variable = a;
                 const value = b;
                 const template = c;
+                throw new Error(`SUBST CALLED: ${JSON.stringify(variable)} ${JSON.stringify(value)} ${JSON.stringify(template)}`);
                 const bindings = {};
                 if (variable.name) {
                     bindings[variable.name] = value;
                 }
+                if (variable.name) {
+                    bindings[variable.name] = value;
+                } else {
+                    console.log("DEBUG: variable has no name", variable);
+                }
+                // console.log("DEBUG: subst bindings", bindings, "template", template);
                 return Unify.subst(template, bindings);
             }
             // Case 2: (subst template bindings) - used by match
@@ -159,6 +167,85 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             }
             return Term.sym('0');
         });
+
+        // if: Conditional (lazy)
+        this.ground.register('if', (cond, thenBranch, elseBranch) => {
+            // Reduce condition first
+            const reducedCond = reduce(cond, this.space, this.ground);
+
+            // Check if condition reduced to True/False
+            if (reducedCond.name === 'True') {
+                return reduce(thenBranch, this.space, this.ground);
+            } else if (reducedCond.name === 'False') {
+                return reduce(elseBranch, this.space, this.ground);
+            }
+            // Could not decide, return original (reconstructed) or partially reduced
+            // We return expression (if reducedCond then else)
+            // This allows it to be reduced later if variables are bound
+            return Term.exp('if', [reducedCond, thenBranch, elseBranch]);
+        }, { lazy: true });
+
+        // let*: Sequential binding (let* ((var val) ...) body)
+        this.ground.register('let*', (bindings, body) => {
+            // Expect bindings to be a list (Expression or Cons)
+            // We'll handle Expression list ((v1 val1) (v2 val2))
+
+            const { isList, flattenList } = Term;
+            let pairs = [];
+
+            if (bindings.operator && bindings.operator.name === ':') {
+                // Cons list
+                pairs = flattenList(bindings).elements;
+            } else if (bindings.components) {
+                // Expression list
+                pairs = bindings.components;
+            } else {
+                // Empty or invalid
+                return body;
+            }
+
+            if (pairs.length === 0) {
+                return reduce(body, this.space, this.ground);
+            }
+
+            // Expand to nested let
+            // (let* (p1 p2 ...) body) -> (let v1 val1 (let* (p2 ...) body))
+            const firstPair = pairs[0];
+            const restPairs = pairs.slice(1);
+
+            // Extract var and val from firstPair
+            // firstPair should be (var val)
+            let variable, value;
+            if (firstPair.components && firstPair.components.length === 2) {
+                variable = firstPair.components[0];
+                value = firstPair.components[1];
+            } else {
+                // Invalid pair structure, skip or error? 
+                // For robustness, ignore
+                return reduce(body, this.space, this.ground);
+            }
+
+            // Recursive let* term
+            let recursiveLetStar;
+            if (restPairs.length === 0) {
+                recursiveLetStar = body;
+            } else {
+                // Construct rest bindings expression
+                // Note: we always reconstruct as expression list for simplicity in recursion
+                // even if input was cons list. Grounded op handles both.
+                const restBindings = Term.exp(Term.sym('let-bindings'), restPairs);
+                // Note: operator name doesn't matter much for expression list as long as components match
+                // but let's use a dummy symbol or reusing the original operator if possible.
+                // Actually, Term.exp requires operator. 
+
+                recursiveLetStar = Term.exp(sym('let*'), [restBindings, body]);
+            }
+
+            const letTerm = Term.exp(sym('let'), [variable, value, recursiveLetStar]);
+
+            return reduce(letTerm, this.space, this.ground);
+
+        }, { lazy: true });
     }
 
 

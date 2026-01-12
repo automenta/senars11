@@ -19,9 +19,7 @@
 
 ; Sequential let bindings (let*)
 ; (let* (($x $v1) ($y $v2)) $body) → nested lets
-(= (let* () $body) $body)
-(= (let* (: ($x $v) $rest) $body)
-   (let $x $v (let* $rest $body)))
+(= (let* $bindings $body) (^ &let* $bindings $body))
 
 ; ===== Lambda (Anonymous Functions) =====
 

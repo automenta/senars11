@@ -26,7 +26,9 @@ export function step(atom, space, ground, limit = 10000) {
         // Format: (^ &operation arg1 arg2 ...)
         if (atom.components && atom.components.length >= 1) {
             const opSymbol = atom.components[0];
-            if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
+            if (opSymbol.type === 'atom' && opSymbol.name) {
+                // Check if it's a known operation (with or without &)
+                // ground.has normalizes to & prefix
                 if (ground.has(opSymbol.name)) {
                     const args = atom.components.slice(1);
                     let reducedArgs;
@@ -39,6 +41,8 @@ export function step(atom, space, ground, limit = 10000) {
                         const result = ground.execute(opSymbol.name, ...reducedArgs);
                         return { reduced: result, applied: true };
                     } catch (error) {
+                        // console.error(`[DEBUG] Grounded op ^${opSymbol.name} error:`, error.message);
+                        // On error, return original
                         return { reduced: atom, applied: false };
                     }
                 }
@@ -46,8 +50,9 @@ export function step(atom, space, ground, limit = 10000) {
         }
     }
 
-    // Generic grounded calls: (&op arg1 ...)
-    if (atom.operator && atom.operator.name && atom.operator.name.startsWith('&')) {
+    // Generic grounded calls: (&op arg1 ...) or (op arg1 ...) if op is grounded
+    // We allow implicit grounded calls (e.g. + for &+, if for &if)
+    if (atom.operator && atom.operator.name) {
         const opName = atom.operator.name;
         if (ground.has(opName)) {
             const args = atom.components;
@@ -61,7 +66,9 @@ export function step(atom, space, ground, limit = 10000) {
                 const result = ground.execute(opName, ...reducedArgs);
                 return { reduced: result, applied: true };
             } catch (error) {
-                return { reduced: atom, applied: false };
+                // If grounded op fails (e.g. type error), fall through to rules
+                // We do NOT return here, effectively treating the grounded op attempt as failed 
+                // but allowing the reducer to look for matching rules (overloading).
             }
         }
     }
@@ -110,11 +117,9 @@ export function reduce(atom, space, ground, limit = 10000) {
     //   term: Atom,
     //   parent: Frame, (optional, linked list)
     //   components: Array, (for REBUILD)
-    //   result: Atom (output)
+    //   results: Array, (for REBUILD)
     //   index: number (for parent's components)
     // }
-
-    // We use an explicit array as stack.
 
     const rootFrame = {
         phase: 'EXPAND',
@@ -153,9 +158,7 @@ export function reduce(atom, space, ground, limit = 10000) {
                 frame.phase = 'REBUILD';
                 frame.results = new Array(current.components.length);
 
-                // Push children to stack (in reverse order so 0 is processed last on stack?
-                // Wait, stack is LIFO. If we push N, N-1, ... 0. Then 0 is popped first.
-                // Yes, we want to process left-to-right (0 first).
+                // Push children to stack (right-to-left so 0 is top)
                 for (let i = current.components.length - 1; i >= 0; i--) {
                     stack.push({
                         phase: 'EXPAND',
@@ -182,7 +185,7 @@ export function reduce(atom, space, ground, limit = 10000) {
             for (let i = 0; i < newComponents.length; i++) {
                 if (newComponents[i] !== current.components[i]) { // Identity comparison
                     // For structural equality check (slower but correct for objects)
-                    if (!newComponents[i].equals(current.components[i])) {
+                    if (newComponents[i] && current.components[i] && (!newComponents[i].equals || !newComponents[i].equals(current.components[i]))) {
                         changed = true;
                         break;
                     }
@@ -236,9 +239,14 @@ export function isGroundedCall(atom, ground) {
 
     if (isGroundedOp && atom.components && atom.components.length > 0) {
         const opSymbol = atom.components[0];
-        if (opSymbol.type === 'atom' && opSymbol.name && opSymbol.name.startsWith('&')) {
+        if (opSymbol.type === 'atom' && opSymbol.name) {
             return ground.has(opSymbol.name);
         }
+    }
+
+    // Implicit check
+    if (atom.operator && atom.operator.name) {
+        return ground.has(atom.operator.name);
     }
 
     return false;
