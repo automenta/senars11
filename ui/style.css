@@ -14,6 +14,17 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: filter 0.3s ease;
+}
+
+/* Disconnected Visual State */
+body.disconnected {
+    filter: grayscale(100%);
+    pointer-events: none; /* Block interaction */
+}
+/* Re-enable pointer events for the reconnect mechanism if we have one */
+body.disconnected .app-container {
+    opacity: 0.5;
 }
 
 .app-container {
@@ -553,7 +564,6 @@ select {
 
 .search-box input:focus {
     border-color: #007acc;
-    outline: none;
 }
 
 .shortcut-hint {

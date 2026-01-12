@@ -26,11 +26,17 @@ export const GraphConfig = {
             relation,
             highlight
         } = DESIGN_TOKENS.colors;
+
+        const highContrast = DESIGN_TOKENS.colorsHighContrast;
+        const isHighContrast = document.body.classList.contains('high-contrast');
+
+        const colors = isHighContrast ? highContrast : DESIGN_TOKENS.colors;
+
         return [
             {
                 selector: 'node',
                 style: {
-                    'background-color': concept,
+                    'background-color': colors.concept,
                     'label': 'data(label)',
                     'color': '#ffffff',
                     'text-valign': 'bottom',
@@ -44,40 +50,48 @@ export const GraphConfig = {
                     'width': 'mapData(weight, 0, 100, 20, 80)',
                     'height': 'mapData(weight, 0, 100, 20, 80)',
                     'border-width': 2,
-                    'border-color': concept
+                    'border-color': colors.concept
                 }
             },
             {
                 selector: 'edge',
                 style: {
                     'width': 2,
-                    'line-color': relation,
-                    'target-arrow-color': relation,
+                    'line-color': colors.relation,
+                    'target-arrow-color': colors.relation,
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'bezier'
                 }
             },
-            {selector: 'node[type = "concept"]', style: {'background-color': concept}},
-            {selector: 'node[type = "task"]', style: {'background-color': task}},
-            {selector: 'node[type = "question"]', style: {'background-color': question}},
+            {selector: 'node[type = "concept"]', style: {'background-color': colors.concept}},
+            {selector: 'node[type = "task"]', style: {'background-color': colors.task}},
+            {selector: 'node[type = "question"]', style: {'background-color': colors.question}},
             {
                 selector: 'edge[type = "inheritance"]',
-                style: {'line-color': inheritance, 'target-arrow-color': inheritance}
+                style: {'line-color': colors.inheritance, 'target-arrow-color': colors.inheritance}
             },
             {
                 selector: 'edge[type = "similarity"]',
-                style: {'line-color': similarity, 'target-arrow-color': similarity}
+                style: {'line-color': colors.similarity, 'target-arrow-color': colors.similarity}
             },
             {
                 selector: 'edge[type = "implication"]',
-                style: {'line-color': implication, 'target-arrow-color': implication}
+                style: {'line-color': colors.implication, 'target-arrow-color': colors.implication}
+            },
+            // Explicitly handle "Other" relations to ensure they are gray (or high contrast equivalent)
+            {
+                selector: 'edge[type != "inheritance"][type != "similarity"][type != "implication"]',
+                 style: {
+                    'line-color': colors.relation,
+                    'target-arrow-color': colors.relation
+                }
             },
             // Keyboard navigation highlight
             {
                 selector: '.keyboard-selected',
                 style: {
                     'border-width': 6,
-                    'border-color': highlight,
+                    'border-color': colors.highlight,
                     'border-style': 'solid',
                     'z-index': 9999
                 }
@@ -86,8 +100,9 @@ export const GraphConfig = {
     },
 
     getGraphLayout: () => ({
-        name: 'cose', // Use built-in cose layout instead of fcose
+        name: 'fcose', // Changed from cose to fcose per plan
         animate: true,
+        animationDuration: 300,
         refresh: 20,
         fit: true,
         padding: 30,
@@ -102,6 +117,9 @@ export const GraphConfig = {
         numIter: 1000,
         initialTemp: 200,
         coolingFactor: 0.95,
-        minTemp: 1.0
+        minTemp: 1.0,
+        tile: true, // Specific to fcose
+        tilingPaddingVertical: 10,
+        tilingPaddingHorizontal: 10
     })
 };
