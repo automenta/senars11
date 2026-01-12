@@ -134,26 +134,30 @@ async function start() {
     const layoutRoot = document.getElementById('layout-root');
     const layout = new GoldenLayout(layoutRoot);
 
+    // Create connection manager first
+    const connection = new LocalConnectionManager();
+
+    // Create SeNARSUI instance but delay initialization
+    const app = new SeNARSUI(connection);
+
     // Pre-register components so they exist when we load layout
-    const elementRegistry = {};
-
-    const register = (id, el) => {
-        elementRegistry[id] = el;
-    };
-
     layout.registerComponentFactoryFunction('graphComponent', (container) => {
         const el = document.createElement('div');
         el.id = 'graphContainer';
         el.style.width = '100%'; el.style.height = '100%';
         container.element.appendChild(el);
-        register('graphContainer', el);
+
+        // Register the element with the UI elements registry
+        app.uiElements.register('graphContainer', el);
     });
 
     layout.registerComponentFactoryFunction('logComponent', (container) => {
         const el = document.createElement('div');
         el.id = 'tracePanel';
         container.element.appendChild(el);
-        register('tracePanel', el);
+
+        // Register the element with the UI elements registry
+        app.uiElements.register('tracePanel', el);
     });
 
     layout.registerComponentFactoryFunction('replComponent', (container) => {
@@ -167,41 +171,42 @@ async function start() {
             <input type="text" id="replInput" style="width: 100%;" />
           `;
         container.element.appendChild(el);
-        register('controlPanel', el.querySelector('#controlPanel'));
-        register('cycleCount', el.querySelector('#cycleCount'));
-        register('messageCount', el.querySelector('#messageCount'));
-        register('replOutput', el.querySelector('#replOutput'));
-        register('replInput', el.querySelector('#replInput'));
+
+        // Register the elements with the UI elements registry
+        app.uiElements.register('controlPanel', el.querySelector('#controlPanel'));
+        app.uiElements.register('cycleCount', el.querySelector('#cycleCount'));
+        app.uiElements.register('messageCount', el.querySelector('#messageCount'));
+        app.uiElements.register('replOutput', el.querySelector('#replOutput'));
+        app.uiElements.register('replInput', el.querySelector('#replInput'));
     });
 
     layout.registerComponentFactoryFunction('metricsComponent', (container) => {
         const el = document.createElement('div');
         el.innerHTML = `
-            <div id="metricsPanel"></div>
-            <div id="connectionStatus"></div>
+            <div class="metric"><span>Concepts:</span> <span id="metric-concepts">0</span></div>
+            <div class="metric"><span>Att. Focus:</span> <span id="metric-focus">0</span></div>
+            <div id="connectionStatus">Disconnected</div>
             <div id="statusIndicator"></div>
           `;
         container.element.appendChild(el);
-        register('metricsPanel', el.querySelector('#metricsPanel'));
-        register('connectionStatus', el.querySelector('#connectionStatus'));
-        register('statusIndicator', el.querySelector('#statusIndicator'));
+
+        // Register the elements with the UI elements registry
+        app.uiElements.register('metricsPanel', el);
+        app.uiElements.register('metricConcepts', el.querySelector('#metric-concepts'));
+        app.uiElements.register('metricFocus', el.querySelector('#metric-focus'));
+        app.uiElements.register('connectionStatus', el.querySelector('#connectionStatus'));
+        app.uiElements.register('statusIndicator', el.querySelector('#statusIndicator'));
     });
 
+    // Load the layout
     layout.loadLayout(config);
 
-    // Wait for layout to initialize (it's synchronous usually but components create async?)
-    // GoldenLayout initializes components immediately on loadLayout if visible.
-
-    // Now manually inject these elements into UIElements Mock or Registry
-    // Since SeNARSUI instantiates UIElements internally and it likely queries DOM.
-    // If UIElements queries by ID, and we appended to DOM, it should find them!
-
-    const connection = new LocalConnectionManager();
-    // Determine if we need to pass a "manual" UIElements registry.
-    // SeNARSUI: this.uiElements = new UIElements();
-
-    const app = new SeNARSUI(connection);
-    console.log('SeNARS Started');
+    // Now that elements are registered, initialize the app
+    // We need to wait a tick to ensure the DOM elements are actually created
+    setTimeout(() => {
+        app.initialize();
+        console.log('SeNARS Started');
+    }, 0);
 
     // Resize listener
     window.addEventListener('resize', () => {

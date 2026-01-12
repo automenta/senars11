@@ -4,6 +4,8 @@ import { MeTTaInterpreter } from '../../../metta/src/MeTTaInterpreter.js';
 import { Config } from '../../../core/src/config/Config.js';
 import { Logger } from '../logging/Logger.js';
 
+import { BROWSER_STDLIB } from '../BrowserStdlib.js';
+
 export class LocalConnectionManager extends ConnectionInterface {
     constructor() {
         super();
@@ -22,13 +24,26 @@ export class LocalConnectionManager extends ConnectionInterface {
             // Initialize Core components
             const config = Config.parse([]); // Use default config or inject
             config.system = { ...config.system, enableLogging: false }; // Reduce noise?
+            // Disable Metacognition component which causes issues in browser environment
+            if (config.components && config.components.Metacognition) {
+                config.components.Metacognition.enabled = false;
+            } else {
+                config.components = { ...config.components, Metacognition: { enabled: false } };
+            }
 
             // Initialize NAR
             this.nar = new NAR(config);
             await this.nar.initialize();
 
-            // Initialize MeTTa
-            this.metta = new MeTTaInterpreter(this.nar, config);
+            // Initialize MeTTa with browser-compatible stdlib
+            this.metta = new MeTTaInterpreter(this.nar, {
+                ...config,
+                virtualFiles: BROWSER_STDLIB,
+                // Prevent filesystem access in browser
+                fs: null,
+                path: null,
+                url: null
+            });
             await this.metta.initialize();
 
             // Hook into NAR output to dispatch events

@@ -19,6 +19,7 @@ export class SeNARSUI {
         this.webSocketManager = connectionAdapter || new WebSocketManager();
         this.commandProcessor = new CommandProcessor(this.webSocketManager, this.logger);
 
+        // Initialize managers but defer setup that requires UI elements
         this.graphManager = new GraphManager(this.uiElements.getAll(), {
             onNodeAction: (action, data) => this._handleNodeAction(action, data),
             commandProcessor: null
@@ -28,10 +29,30 @@ export class SeNARSUI {
 
         this.controlPanel = new ControlPanel(this.uiElements, this.commandProcessor, this.logger);
         this.demoManager = new DemoManager(this.uiElements, this.commandProcessor, this.logger);
+
+        // Defer initialization of panels that require DOM elements until initialize() is called
+        this.metricsPanel = null;
+        this.activityLogPanel = null;
+        this.lmActivityIndicator = null;
+
+        this.uiEventHandlers = null;
+
+        this.messageHandler = new MessageHandler(this.graphManager);
+        this.logger.setUIElements(this.uiElements.getAll());
+
+        // Only call initialize if no connection adapter is provided (for backward compatibility)
+        if (!connectionAdapter) {
+            this.initialize();
+        }
+    }
+
+    initialize() {
+        // Initialize panels that require DOM elements
         this.metricsPanel = new SystemMetricsPanel(this.uiElements.get('metricsPanel'));
         this.activityLogPanel = new ActivityLogPanel(this.uiElements.get('tracePanel'));
         this.lmActivityIndicator = new LMActivityIndicator(this.uiElements.get('graphContainer'));
 
+        // Initialize UI event handlers
         this.uiEventHandlers = new UIEventHandlers(
             this.uiElements,
             this.commandProcessor,
@@ -41,12 +62,6 @@ export class SeNARSUI {
             this.controlPanel
         );
 
-        this.messageHandler = new MessageHandler(this.graphManager);
-        this.logger.setUIElements(this.uiElements.getAll());
-        this.initialize();
-    }
-
-    initialize() {
         this.graphManager.initialize();
         this.uiEventHandlers.setupEventListeners();
         this._setupWebSocketHandlers();
@@ -86,9 +101,9 @@ export class SeNARSUI {
                 const nodeId = msg.payload?.id;
                 nodeId && setTimeout(() => this.graphManager.animateFadeIn(nodeId), 50);
             },
-            'lm:prompt:start': () => this.lmActivityIndicator.show(),
-            'lm:prompt:complete': () => this.lmActivityIndicator.hide(),
-            'lm:error': (msg) => this.lmActivityIndicator.showError(msg.payload?.error ?? 'LM Error')
+            'lm:prompt:start': () => this.lmActivityIndicator && this.lmActivityIndicator.show(),
+            'lm:prompt:complete': () => this.lmActivityIndicator && this.lmActivityIndicator.hide(),
+            'lm:error': (msg) => this.lmActivityIndicator && this.lmActivityIndicator.showError(msg.payload?.error ?? 'LM Error')
         };
 
         Object.entries(animationHandlers).forEach(([type, handler]) =>
@@ -107,14 +122,14 @@ export class SeNARSUI {
 
             const { content, type, icon } = this.messageHandler.processMessage(message);
 
-            if (message.type === 'metrics.updated') {
+            if (message.type === 'metrics.updated' && this.metricsPanel) {
                 this.metricsPanel.update(message.payload);
                 return;
             }
 
             if (message.type === 'metrics.anomaly') return;
 
-            if (message.type === 'activity.new') {
+            if (message.type === 'activity.new' && this.activityLogPanel) {
                 this.activityLogPanel.addActivity(message.payload);
             }
 
