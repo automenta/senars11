@@ -1,5 +1,5 @@
 
-import { Term } from './kernel/Term.js';
+import { Term } from './Term.js';
 
 export function objToBindingsAtom(bindings) {
     const pairs = [];

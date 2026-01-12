@@ -80,32 +80,33 @@
 ```
 core/src/metta/
 ├── MeTTaInterpreter.js      # Main orchestration & public API
-├── MeTTaSpace.js            # Atomspace adapter (wraps SeNARS Memory)
-├── MatchEngine.js           # Pattern matching & unification
-├── ReductionEngine.js       # Evaluation engine
-├── NonDeterminism.js        # Superposition/collapse
-├── TypeSystem.js            # Type checking & inference
-├── TypeChecker.js           # Type validation
-├── GroundedAtoms.js         # Native function registry
+├── Parser.js                # S-expression parser
 ├── SeNARSBridge.js          # Bidirectional MeTTa ↔ NARS
-├── MacroExpander.js         # Macro system
-├── StateManager.js          # State management
+├── kernel/
+│   ├── Term.js              # Interned atoms
+│   ├── Space.js             # Atomspace storage
+│   ├── Unify.js             # Pattern matching & unification
+│   ├── Reduce.js            # Evaluation engine
+│   ├── Ground.js            # Native function registry
+│   └── Bindings.js          # Binding set utilities
+├── stdlib/                  # MeTTa standard library
+│   ├── core.metta
+│   ├── list.metta
+│   └── ...
 └── helpers/
-    ├── BaseMeTTaComponent.js   # Metrics, events, logging base class
-    └── MeTTaHelpers.js         # Unification & reduction utilities
+    └── BaseMeTTaComponent.js   # Metrics, events, logging base class
 ```
 
 **Conceptual Modules** (used in this spec for clarity):
 ```
-Atom → Term (via TermFactory)
-Space → MeTTaSpace (SeNARS Memory adapter)
-Unify → MatchEngine + helpers/MeTTaHelpers.js
-Reduce → ReductionEngine
-Nondet → NonDeterminism
-Types → TypeSystem + TypeChecker
-Grounded → GroundedAtoms
-Parser → (integrated in MeTTaInterpreter)
-Interpreter → MeTTaInterpreter
+Atom → kernel/Term.js
+Space → kernel/Space.js
+Unify → kernel/Unify.js
+Reduce → kernel/Reduce.js
+Grounded → kernel/Ground.js
+Parser → Parser.js
+Interpreter → MeTTaInterpreter.js
+Stdlib → stdlib/*.metta
 ```
 
 ### 2.3 BaseMeTTaComponent Pattern

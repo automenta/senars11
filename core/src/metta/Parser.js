@@ -41,18 +41,22 @@ export class Parser {
 
 class Tokenizer {
     tokenize(str) {
-        // Remove comments (starting with ; and going to end of line)
-        const noComments = str.replace(/;.*/g, '');
-        
-        // Split into tokens while preserving parentheses
         const tokens = [];
         let currentToken = '';
         let inString = false;
         let stringDelimiter = null;
-        
-        for (let i = 0; i < noComments.length; i++) {
-            const char = noComments[i];
-            
+        let inComment = false;
+
+        for (let i = 0; i < str.length; i++) {
+            const char = str[i];
+
+            if (inComment) {
+                if (char === '\n' || char === '\r') {
+                    inComment = false;
+                }
+                continue;
+            }
+
             if (char === '"' || char === "'") {
                 if (!inString) {
                     inString = true;
@@ -69,6 +73,12 @@ class Tokenizer {
                 }
             } else if (inString) {
                 currentToken += char;
+            } else if (char === ';') {
+                inComment = true;
+                if (currentToken.trim() !== '') {
+                    tokens.push(currentToken.trim());
+                    currentToken = '';
+                }
             } else if (char === '(' || char === ')') {
                 if (currentToken.trim() !== '') {
                     tokens.push(currentToken.trim());
@@ -84,7 +94,7 @@ class Tokenizer {
                 currentToken += char;
             }
         }
-        
+
         if (currentToken.trim() !== '') {
             tokens.push(currentToken.trim());
         }
@@ -102,9 +112,9 @@ class InternalParser {
         if (this.pos >= this.tokens.length) {
             return null;
         }
-        
+
         const token = this.tokens[this.pos];
-        
+
         if (token === '(') {
             return this.parseExpression();
         } else if (token.startsWith('$')) { // Changed ? to $ for variables
@@ -120,9 +130,9 @@ class InternalParser {
         if (this.tokens[this.pos] !== '(') {
             throw new Error(`Expected '(', got: ${this.tokens[this.pos]}`);
         }
-        
+
         this.pos++; // Skip '('
-        
+
         // Handle empty list ()
         if (this.tokens[this.pos] === ')') {
             this.pos++;
@@ -130,7 +140,7 @@ class InternalParser {
         }
 
         const components = [];
-        
+
         while (this.pos < this.tokens.length && this.tokens[this.pos] !== ')') {
             if (this.tokens[this.pos] === '(') {
                 components.push(this.parseExpression());
@@ -142,13 +152,13 @@ class InternalParser {
                 this.pos++;
             }
         }
-        
+
         if (this.pos >= this.tokens.length) {
             throw new Error("Unexpected end of input, expected ')'");
         }
-        
+
         this.pos++; // Skip ')'
-        
+
         // Check if we have an operator (first component) and arguments
         if (components.length > 0) {
             const operator = components[0];
@@ -166,7 +176,7 @@ class InternalParser {
 
     parseProgram() {
         const expressions = [];
-        
+
         while (this.pos < this.tokens.length) {
             const token = this.tokens[this.pos];
             // Basic validity check for start of expression
@@ -176,7 +186,7 @@ class InternalParser {
                 this.pos++;
             }
         }
-        
+
         return expressions;
     }
 }

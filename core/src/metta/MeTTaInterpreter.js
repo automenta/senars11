@@ -9,7 +9,7 @@ import { step, reduce, match } from './kernel/Reduce.js';
 import { Parser } from './Parser.js';
 import { Unify } from './kernel/Unify.js';
 import { Term } from './kernel/Term.js';
-import { objToBindingsAtom, bindingsAtomToObj } from './BindingsConverter.js';
+import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 
