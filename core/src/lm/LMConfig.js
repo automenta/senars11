@@ -1,4 +1,8 @@
-// Node-specific imports moved to dynamic usage or handled via environment checks
+import { TransformersJSProvider } from './TransformersJSProvider.js';
+import { DummyProvider } from './DummyProvider.js';
+import { LangChainProvider } from './LangChainProvider.js';
+import { HuggingFaceProvider } from './HuggingFaceProvider.js';
+import { createRequire } from 'module';
 
 export class LMConfig {
     static PROVIDERS = Object.freeze({
@@ -125,9 +129,10 @@ export class LMConfig {
         }
     }
 
-    async save(path = this.persistPath) {
+    save(path = this.persistPath) {
         if (typeof process !== 'undefined' && process.versions?.node) {
-            const fs = await import('fs');
+            const require = createRequire(import.meta.url);
+            const fs = require('fs');
             fs.writeFileSync(path, JSON.stringify({
                 active: this.active,
                 providers: Object.fromEntries(this.configs)
@@ -137,9 +142,10 @@ export class LMConfig {
         }
     }
 
-    async load(path = this.persistPath) {
+    load(path = this.persistPath) {
         if (typeof process !== 'undefined' && process.versions?.node) {
-            const fs = await import('fs');
+            const require = createRequire(import.meta.url);
+            const fs = require('fs');
             if (!fs.existsSync(path)) return;
 
             try {
