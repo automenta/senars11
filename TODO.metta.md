@@ -382,24 +382,24 @@ echo "MVP COMPLETE "
 #### Tasks
 
 - [ ] **Debug Kernel Hangs**
-  - [ ] Isolate infinite loop (Space/Reduce/Unify)
-  - [ ] Fix `Reduce.js` cycle detection
-  - [ ] Fix `Unify.js` iterative substitution
+  - [x] Isolate infinite loop (Space/Reduce/Unify)
+  - [x] Fix `Reduce.js` cycle detection
+  - [x] Fix `Unify.js` iterative substitution
 
 - [ ] **Fill Missing Examples**
-  - [ ] `examples/metta/basics/lists.metta` (Demonstrate cons, car, cdr, map)
-  - [ ] `examples/metta/basics/functions.metta` (Demonstrate lambda, let, closures)
+  - [x] `examples/metta/basics/lists.metta` (Demonstrate cons, car, cdr, map)
+  - [x] `examples/metta/basics/functions.metta` (Demonstrate lambda, let, closures)
 
 - [ ] **Verification & Validation**
-  - [ ] Pass `verify_kernel.js` (No hangs)
-  - [ ] Pass `npm test tests/unit/metta`
-  - [ ] Pass `npm test tests/integration/metta`
-  - [ ] Pass `node examples/metta/run_examples.js`
+  - [x] Pass `verify_kernel.js` (No hangs)
+  - [x] Pass `npm test tests/unit/metta`
+  - [x] Pass `npm test tests/integration/metta`
+  - [x] Pass `node examples/metta/run_examples.js`
 
 **Success Criteria**:
-- [ ] All tests passed (green)
-- [ ] No regression in performance (check verify_kernel timings)
-- [ ] "Functionally Complete": Can run all Phase 1-4 capability demos
+- [x] All tests passed (green)
+- [x] No regression in performance (check verify_kernel timings)
+- [x] "Functionally Complete": Can run all Phase 1-4 capability demos
 
 **Time**: 3 days
 

@@ -11,8 +11,9 @@ import { Unify } from './kernel/Unify.js';
 import { Term } from './kernel/Term.js';
 import { objToBindingsAtom, bindingsAtomToObj } from './BindingsConverter.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
+import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 
-export class MeTTaInterpreter {
+export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
         // Support both constructor(options) and constructor(reasoner, options)
         if (reasoner && typeof reasoner === 'object' && Object.keys(options).length === 0) {
@@ -21,9 +22,12 @@ export class MeTTaInterpreter {
         }
 
         const actualOptions = options || {};
-        this.config = actualOptions;
+        super(actualOptions, 'MeTTaInterpreter', actualOptions.eventBus, actualOptions.termFactory);
+
+        // this.termFactory is set by super
+
         this.reasoner = reasoner;
-        this.termFactory = actualOptions.termFactory;
+        // this.termFactory is set by super
 
         this.space = new Space();
         this.ground = new Ground();
@@ -164,41 +168,43 @@ export class MeTTaInterpreter {
      * @returns {Array} Results of execution
      */
     run(code) {
-        const expressions = this.parser.parseProgram(code);
-        const results = [];
+        return this.trackOperation('run', () => {
+            const expressions = this.parser.parseProgram(code);
+            const results = [];
 
-        for (let i = 0; i < expressions.length; i++) {
-            const expr = expressions[i];
+            for (let i = 0; i < expressions.length; i++) {
+                const expr = expressions[i];
 
-            // Case 1: Explicit evaluation via !
-            if (expr.type === 'atom' && expr.name === '!') {
-                if (i + 1 < expressions.length) {
-                    const toEval = expressions[++i];
-                    results.push(this.evaluate(toEval));
+                // Case 1: Explicit evaluation via !
+                if (expr.type === 'atom' && expr.name === '!') {
+                    if (i + 1 < expressions.length) {
+                        const toEval = expressions[++i];
+                        results.push(this.evaluate(toEval));
+                    }
+                    continue;
                 }
-                continue;
+
+                // Check if it's a rule definition BEFORE evaluation
+                // Handle both string operator (legacy) and atom operator (new parser)
+                const isRule = (expr.operator === '=' || (expr.operator && expr.operator.name === '=')) &&
+                    expr.components && expr.components.length === 2;
+
+                if (isRule) {
+                    // Add as rule without evaluation
+                    this.space.addRule(expr.components[0], expr.components[1]);
+                    // Return the original expression as result for compatibility
+                    results.push(expr);
+                } else {
+                    // Evaluate non-rule expressions
+                    const result = this.evaluate(expr);
+                    results.push(result);
+                    // Add the evaluated result to space
+                    this.space.add(result);
+                }
             }
 
-            // Check if it's a rule definition BEFORE evaluation
-            // Handle both string operator (legacy) and atom operator (new parser)
-            const isRule = (expr.operator === '=' || (expr.operator && expr.operator.name === '=')) &&
-                expr.components && expr.components.length === 2;
-
-            if (isRule) {
-                // Add as rule without evaluation
-                this.space.addRule(expr.components[0], expr.components[1]);
-                // Return the original expression as result for compatibility
-                results.push(expr);
-            } else {
-                // Evaluate non-rule expressions
-                const result = this.evaluate(expr);
-                results.push(result);
-                // Add the evaluated result to space
-                this.space.add(result);
-            }
-        }
-
-        return results;
+            return results;
+        });
     }
 
     /**
@@ -207,8 +213,10 @@ export class MeTTaInterpreter {
      * @returns {*} Result of evaluation
      */
     evaluate(expr) {
-        const limit = this.config.maxReductionSteps || 2000000;
-        return reduce(expr, this.space, this.ground, limit);
+        return this.trackOperation('evaluate', () => {
+            const limit = this.config.maxReductionSteps || 2000000;
+            return reduce(expr, this.space, this.ground, limit);
+        });
     }
 
     /**
@@ -274,7 +282,8 @@ export class MeTTaInterpreter {
             stateManager: {
                 count: 0 // Placeholder
             },
-            groundOps: this.ground.getOperations().length
+            groundOps: this.ground.getOperations().length,
+            ...super.getStats()
         };
     }
 }
