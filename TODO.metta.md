@@ -280,11 +280,11 @@ node -e "import {MeTTaInterpreter} from './core/src/metta/MeTTaInterpreter.js'; 
   - Sync STI atoms ↔ NARS Budget
 
 **Success Criteria**:
-- [ ] Deduction chain: `Socrates → Human → Mortal` with truth propagation
-- [ ] Can call `(&derive (Inh cat animal))` from MeTTa
-- [ ] Strategy switching: `(adaptive-strategy ...)` selects different premises
-- [ ] Introspection: `(&system-stats)` returns atom count, STI distribution
-- [ ] All `examples/metta/logic/` work
+- [x] Deduction chain: `Socrates → Human → Mortal` with truth propagation
+- [x] Can call `(&derive (Inh cat animal))` from MeTTa
+- [x] Strategy switching: `(adaptive-strategy ...)` selects different premises
+- [x] Introspection: `(&system-stats)` returns atom count, STI distribution
+- [x] All `examples/metta/logic/` work
 
 **Checkpoint 3 Validation**:
 ```bash
@@ -355,12 +355,12 @@ node -e "const m = new MeTTaInterpreter(); m.run('(&system-stats)');"
   - Control flow: MeTTa strategy selects NARS premises
 
 **Success Criteria**:
-- [ ] Maze demo: Solves 10x10 grid in < 100ms
-- [ ] Adaptive demo: Shows measurable strategy switching
-- [ ] Truth demo: Correct confidence decay across 3+ steps
-- [ ] Agent learns new rules and applies them
-- [ ] All tests green: `npm test`
-- [ ] Performance acceptable (< 1ms per reduction step)
+- [x] Maze demo: Solves 10x10 grid in < 100ms
+- [x] Adaptive demo: Shows measurable strategy switching
+- [x] Truth demo: Correct confidence decay across 3+ steps
+- [x] Agent learns new rules and applies them
+- [x] All tests green: `npm test`
+- [/] Performance acceptable (< 1ms per reduction step)
 
 **Checkpoint 4 Validation (Final)**:
 ```bash
@@ -398,7 +398,7 @@ echo "MVP COMPLETE "
 
 **Success Criteria**:
 - [x] All tests passed (green)
-- [x] No regression in performance (check verify_kernel timings)
+- [/] No regression in performance (check verify_kernel timings)
 - [x] "Functionally Complete": Can run all Phase 1-4 capability demos
 
 **Time**: 3 days

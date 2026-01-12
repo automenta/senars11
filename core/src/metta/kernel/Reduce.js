@@ -12,12 +12,22 @@ import { Unify } from './Unify.js';
  * @param {Object} atom - Atom to reduce
  * @param {Space} space - Space containing rules
  * @param {Object} ground - Grounded operations registry
+ * @param {number} limit - Maximum reduction steps
+ * @param {MemoizationCache} cache - Optional memoization cache
  * @returns {Object} Object with reduced atom and applied flag
  */
-export const step = (atom, space, ground, limit = 10000) => {
+export const step = (atom, space, ground, limit = 10000, cache = null) => {
     // If atom is not an expression, it's already reduced
     if (!isExpression(atom)) {
         return { reduced: atom, applied: false };
+    }
+
+    // Check cache first if available
+    if (cache) {
+        const cached = cache.get(atom);
+        if (cached !== undefined) {
+            return { reduced: cached, applied: true };
+        }
     }
 
     // Fast path: Check for grounded operations first
@@ -25,6 +35,7 @@ export const step = (atom, space, ground, limit = 10000) => {
     if (opName && ground.has(opName)) {
         const result = executeGroundedOp(atom, opName, space, ground, limit);
         if (result.applied) {
+            if (cache) cache.set(atom, result.reduced);
             return result;
         }
         // If grounded operation didn't apply (failed), continue to rules
@@ -36,7 +47,9 @@ export const step = (atom, space, ground, limit = 10000) => {
         const opSymbol = atom.components[0];
         if (opSymbol?.type === 'atom' && opSymbol.name && ground.has(opSymbol.name)) {
             const args = atom.components.slice(1);
-            return executeGroundedOpWithArgs(atom, opSymbol.name, args, space, ground, limit);
+            const result = executeGroundedOpWithArgs(atom, opSymbol.name, args, space, ground, limit);
+            if (result.applied && cache) cache.set(atom, result.reduced);
+            return result;
         }
     }
 
@@ -50,6 +63,7 @@ export const step = (atom, space, ground, limit = 10000) => {
             const result = typeof rule.result === 'function'
                 ? rule.result(bindings)
                 : Unify.subst(rule.result, bindings);
+            if (cache) cache.set(atom, result);
             return { reduced: result, applied: true };
         }
     }
@@ -100,9 +114,10 @@ const executeGroundedOpWithArgs = (atom, opName, args, space, ground, limit) => 
  * @param {Space} space - Space containing rules
  * @param {Object} ground - Grounded operations registry
  * @param {number} limit - Maximum reduction steps (default: 10000)
+ * @param {MemoizationCache} cache - Optional memoization cache
  * @returns {Object} Fully reduced atom
  */
-export const reduce = (atom, space, ground, limit = 10000) => {
+export const reduce = (atom, space, ground, limit = 10000, cache = null) => {
     // Context for global state
     const ctx = { steps: 0, limit };
 
@@ -122,17 +137,25 @@ export const reduce = (atom, space, ground, limit = 10000) => {
         const frame = stack[stack.length - 1]; // Peek
 
         if (frame.phase === 'EXPAND') {
+            // TCO LOOP:
             // Reduce top-level until stable or limit reached
             let current = frame.term;
+
             while (ctx.steps < ctx.limit) {
-                const { reduced, applied } = step(current, space, ground, limit);
+                const { reduced, applied } = step(current, space, ground, limit, cache);
                 if (applied) {
                     current = reduced;
                     ctx.steps++;
+
+                    // TCO Opportunity: If the result is an Expression, we "tail call" into it.
+                    // Instead of recurring or effectively restarting, we just update 'current' 
+                    // and continue the loop at this same stack level.
                     continue;
                 }
-                break; // Stable
+                break; // Stable (cannot reduce further at top level)
             }
+
+            // Update frame with the locally stable term
             frame.term = current;
 
             // Check limits
@@ -149,7 +172,7 @@ export const reduce = (atom, space, ground, limit = 10000) => {
                 continue;
             }
 
-            // Check if we need to reduce components
+            // Check if we need to reduce components (Recursion)
             const reduceOperator = current.operator && isExpression(current.operator);
             const hasComponents = isExpression(current) && current.components && current.components.length > 0;
 
@@ -185,7 +208,7 @@ export const reduce = (atom, space, ground, limit = 10000) => {
                     });
                 }
             } else {
-                // Done with this term
+                // Done with this term (Atom or Symbol)
                 if (frame.parent) {
                     frame.parent.results[frame.index] = current;
                 }
@@ -206,14 +229,16 @@ export const reduce = (atom, space, ground, limit = 10000) => {
                 // Reconstruct term
                 const newTerm = exp(newOperator, newComponents);
                 ctx.steps++;
-                if (ctx.steps >= ctx.limit) {
-                    throw new Error(`Max reduction steps (${limit}) exceeded`);
-                }
 
-                // Reset frame to EXPAND with new term
+                // TCO Check: Attempt to reduce the NEW term immediately in this same frame
+                // instead of popping and pushing a new EXPAND frame.
+                // Reset frame to EXPAND with new term ("Tail Call" optimization for self-recursion logic)
                 frame.phase = 'EXPAND';
                 frame.term = newTerm;
                 frame.results = null;
+
+                // We do NOT pop. We loop back to the top of 'while(stack.length)'
+                // which sees 'EXPAND' phase and starts reducing 'newTerm'.
             } else {
                 // No change, we are done
                 if (frame.parent) {

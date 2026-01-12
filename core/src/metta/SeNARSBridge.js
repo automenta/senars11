@@ -1,5 +1,6 @@
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { MeTTaRuleAdapter } from './helpers/MeTTaRuleAdapter.js';
+import { Term } from './kernel/Term.js';
 
 export class SeNARSBridge extends BaseMeTTaComponent {
     constructor(reasoner, mettaInterpreter, config = {}, eventBus = null) {
@@ -251,5 +252,67 @@ export class SeNARSBridge extends BaseMeTTaComponent {
             return null;
         });
     }
-}
+    /**
+     * Register SeNARS primitives in the MeTTa ground
+     * @param {object} ground - GroundedAtoms registry
+     */
+    registerPrimitives(ground) {
+        const { constructList, exp, sym } = Term;
 
+        // &get-sti: Get STI of a concept
+        ground.register('&get-sti', (atom) => {
+            const sti = this.getConceptSTI(atom);
+            return this.mettaInterpreter.termFactory.atomic(sti.toString());
+        });
+
+        // &set-sti: Set STI of a concept
+        ground.register('&set-sti', (atom, value) => {
+            const val = parseFloat(value.name || value);
+            this.setConceptSTI(atom, val);
+            return atom;
+        });
+
+        // &get-lti: Get LTI of a concept
+        ground.register('&get-lti', (atom) => {
+            const lti = this.getConceptLTI(atom);
+            return this.mettaInterpreter.termFactory.atomic(lti.toString());
+        });
+
+        // &set-lti: Set LTI of a concept
+        ground.register('&set-lti', (atom, value) => {
+            const val = parseFloat(value.name || value);
+            this.setConceptLTI(atom, val);
+            return atom;
+        });
+
+        // &get-related: Get related concepts
+        ground.register('&get-related', (atom) => {
+            const related = this.getRelatedConcepts(atom);
+            // Convert array to MeTTa list
+            return constructList(related, sym('()'));
+        });
+
+        // &nars-derive: Perform NARS derivation
+        ground.register('&nars-derive', (task, premise) => {
+            // Premise is optional
+            const result = this.executeNARSDerivation(task, premise?.name === '()' ? null : premise);
+            if (result) {
+                return result;
+            }
+            return sym('()');
+        });
+
+        // &system-stats: Get system statistics
+        ground.register('&system-stats', () => {
+            const stats = this.getSystemStats();
+            // Return as list or formatted string?
+            // Let's return a list of (Key Value) pairs for now
+
+            const pairs = Object.entries(stats).map(([k, v]) =>
+                exp(sym(':'), [sym(k), sym(v.toString())])
+            );
+
+            return constructList(pairs, sym('()'));
+        });
+    }
+}

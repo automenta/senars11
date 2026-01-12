@@ -14,6 +14,9 @@ import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { TypeChecker, TypeSystem, TypeConstructors } from './TypeSystem.js';
+import { TermFactory } from '../term/TermFactory.js';
+
+import { MemoizationCache } from './kernel/MemoizationCache.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
@@ -24,21 +27,33 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         }
 
         const actualOptions = options || {};
+        // Ensure termFactory exists
+        if (!actualOptions.termFactory) {
+            actualOptions.termFactory = new TermFactory();
+        }
+
         super(actualOptions, 'MeTTaInterpreter', actualOptions.eventBus, actualOptions.termFactory);
 
-        // this.termFactory is set by super
-
         this.reasoner = reasoner;
-        // this.termFactory is set by super
-
         this.space = new Space();
         this.ground = new Ground();
         this.parser = new Parser();
         this.typeSystem = new TypeSystem();
         this.typeChecker = new TypeChecker(this.typeSystem);
 
+        // Memoization Cache (AIKR Compliant)
+        this.memoCache = new MemoizationCache(actualOptions.cacheCapacity || 1000);
+
         // Register advanced grounded operations
         this.registerAdvancedOps();
+
+        // If provided, register bridge primitives
+        if (this.reasoner && this.reasoner.bridge && typeof this.reasoner.bridge.registerPrimitives === 'function') {
+            this.reasoner.bridge.registerPrimitives(this.ground);
+        } else if (options.bridge && typeof options.bridge.registerPrimitives === 'function') {
+            options.bridge.registerPrimitives(this.ground);
+        }
+
 
         // Load standard library (unless disabled)
         if (this.config.loadStdlib !== false) {
@@ -351,11 +366,16 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * @param {Object} expr - Expression to evaluate
      * @returns {*} Result of evaluation
      */
-    evaluate(expr) {
+    evaluate(atom) {
         return this.trackOperation('evaluate', () => {
-            const limit = this.config.maxReductionSteps || 2000000;
-            return reduce(expr, this.space, this.ground, limit);
+            const result = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            this._mettaMetrics.set('reductionSteps', (this._mettaMetrics.get('reductionSteps') || 0) + 1);
+            return result;
         });
+    }
+
+    step(atom) {
+        return step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
     }
 
     /**

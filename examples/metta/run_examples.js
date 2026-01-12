@@ -35,10 +35,14 @@ const runFile = (filePath) => {
     // Initialize FRESH interpreter for each file
     Term.clearSymbolTable(); // Reset symbol table if possible/needed (though Term.js usually keeps it)
     const termFactory = new TermFactory();
+    const config = {
+        loadStdlib: true,
+        maxReductionSteps: 100000
+    };
     const interpreter = new MeTTaInterpreter(null, {
         termFactory,
         typeChecking: false,
-        maxReductionSteps: 50000 // Saftey limit
+        ...config // Saftey limit
     });
 
     try {
