@@ -6,6 +6,15 @@ export const stat = async () => ({ isDirectory: () => false });
 export const mkdir = async () => { };
 export const readdir = async () => [];
 export const rm = async () => { };
+
+// fs sync (for tools that need it, e.g. inquirer)
+export const readFileSync = () => "{}";
+export const writeFileSync = () => { };
+export const unlinkSync = () => { };
+export const existsSync = () => false;
+export const mkdirSync = () => { };
+export const statSync = () => ({ isDirectory: () => false });
+
 export const constants = {};
 export const promises = { readFile, writeFile, access, stat, mkdir, readdir, rm, constants };
 
@@ -19,6 +28,7 @@ export const extname = (path) => '';
 // child_process
 export const spawn = () => ({ on: () => { }, stdout: { on: () => { } }, stderr: { on: () => { } } });
 export const exec = () => { };
+export const spawnSync = () => ({ output: [], stdout: '', stderr: '', status: 0, signal: null, error: null });
 
 // os
 export const platform = () => 'browser';
@@ -28,10 +38,41 @@ export const arch = () => 'javascript';
 export const randomUUID = () => 'uuid';
 export const createHash = () => ({ update: () => { }, digest: () => 'hash' });
 
+// url
+export const fileURLToPath = (url) => url;
+
+// async_hooks
+export class AsyncLocalStorage {
+    run(store, callback, ...args) { return callback(...args); }
+    getStore() { return undefined; }
+}
+export class AsyncResource {
+    constructor(type) { this.type = type; }
+    runInAsyncScope(fn, ...args) { return fn(...args); }
+}
+
+// util
+export const styleText = (style, text) => text;
+export const stripVTControlCharacters = (text) => text;
+export const promisify = (fn) => fn;
+export const callbackify = (fn) => fn;
+export const debuglog = () => () => { };
+export const types = { isDate: () => false, isNativeError: () => false };
+export const inspect = (obj) => JSON.stringify(obj);
+
+// module
+export const createRequire = () => ((path) => { console.warn("require called in browser for", path); return {}; });
+export const builtinModules = [];
+
 export default {
     readFile, writeFile, access, stat, mkdir, readdir, rm, constants, promises,
+    readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, statSync,
     join, resolve, dirname, basename, extname,
-    spawn, exec,
+    spawn, exec, spawnSync,
     platform, arch,
-    randomUUID, createHash
+    randomUUID, createHash,
+    fileURLToPath,
+    AsyncLocalStorage, AsyncResource,
+    styleText, stripVTControlCharacters, promisify, callbackify, debuglog, types, inspect,
+    createRequire, builtinModules
 };

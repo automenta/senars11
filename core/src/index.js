@@ -22,3 +22,4 @@ export * from './lm/LMProviderBuilder.js';
 export * from './lm/LMConfig.js';
 export * from './util/DesignTokens.js';
 export * from './SeNARS.js';
+export * from './util/CommandRegistry.js';
