@@ -69,44 +69,62 @@ Each phase in this roadmap must define:
 
 We unify the CLI (`npm run repl`) and Web UI (`ui/`) around a shared core, ensuring that "if it happens in the reasoner, it appears in the UI."
 
-### Unified Data Flow
+### Unified Data Flow: The Connection Bridge
+
+We utilize a **Connection Bridge Pattern** to decouple the UI from the execution environment. The UI *only* talks to an elaborate `ConnectionManager` interface, unaware of whether the Core is running in a Web Worker, the main thread, or a remote WebSocket server.
 
 ```mermaid
 graph TD
-    subgraph Core ["Shared Core (core/src)"]
-        NAR[NAR Engine]
-        EB[EventBus]
-        CMD[CommandRegistry]
-        DT[DesignTokens.js]
+    subgraph UI ["Universal UI (Browser)"]
+        Components[Graph / REPL / Panels]
+        CM[ConnectionManager Interface]
     end
 
-    subgraph Bridges ["Bridges"]
-        WSM[WebSocketMonitor] <-->|JSON Stream| WSC[WebSocketClient]
-        Hooks[useAgentLogs]
+    subgraph Bridges ["Connection Adapters"]
+        WSM[WebSocketAdapter]
+        LCM[LocalAdapter (Offline)]
     end
 
-    subgraph Interfaces ["Interfaces"]
-        CLI[CLI REPL (Ink)]
-        Web[Web UI (Vanilla JS + Cytoscape)]
-        WebREPL[Web REPL Overlay]
+    subgraph Execution ["Execution Environments"]
+        Remote[Node.js Server (Core)]
+        Local[Browser Main Thread (Core Bundled)]
     end
 
-    NAR -->|IntrospectionEvents| EB
-    EB -->|Stream| WSM
-    EB -->|Stream| Hooks
+    Components <--> CM
+    CM <--> WSM
+    CM <--> LCM
     
-    WSM --> Web
-    WSM --> WebREPL
-    Hooks --> CLI
-    
-    Web -.->|Commands| CMD
-    WebREPL -.->|Commands| CMD
-    CLI -.->|Commands| CMD
-    
-    DT -.->|Direct Import| Web
-    DT -.->|Direct Import| WebREPL
-    DT -.->|Direct Import| CLI
+    WSM <-->|JSON/WS| Remote
+    LCM <-->|Direct Calls/EventBus| Local
 ```
+
+### 1.1 Connection Modes & Feature Parity
+
+To ensure the "SeNARS on the Edge" (Offline) experience matches the "Power User" (Server) experience, we map features to their specific implementations in each mode.
+
+| Feature | Browser-Only (Offline) | WebSocket Server (Online) |
+| :--- | :--- | :--- |
+| **REPL Access** | Direct function calls to `MeTTa` / `NAR` instances via `LocalConnectionManager`. | Asynchronous JSON messages via `WebSocketClient`. |
+| **Logic Graph** | Direct `EventBus` subscription. | Subscriptions to `ws` event stream. |
+| **Filesystem / IDE** | **VirtualFS**: In-memory Map, `localStorage`, or Drag-and-Drop simple file loading. | **NativeFS**: Full read/write access to user's disk. |
+| **Demos** | **Universal Demos**: Static `.metta` / `.nars` files fetched via HTTP or bundled. | Server-side execution of scripts. |
+| **Persistence** | Export/Import State (JSON Download). | Native File Save. |
+
+#### 1.1.1 Offline Constraints & Mitigations
+*   **Single Thread**: Heavy reasoning blocks UI. *Mitigation*: Future move to Web Workers.
+*   **No Native FS**: Workspace is ephemeral. *Mitigation*: Support Upload/Download of JSON state.
+*   **Mocked Environment**: `STDIN`/`STDOUT` are routed to UI panels; `process.exit()` is a no-op.
+
+#### Specifications
+1.  **Entry Point**: `ui/src/browser-init.js` initializes the `LocalConnectionManager` instead of `WebSocketClient`.
+2.  **Build System**: `esbuild` injects `ui/src/shims/mock-node.js` and `process-shim.js` to replace `fs`, `path`, `crypto`, etc.
+3.  **Storage**: Ephemeral (in-memory) or `localStorage`/`IndexedDB` for simplified "filesystem" persistence.
+4.  **Networking**: Loopback only. Components communicate via the in-memory `EventBus`.
+
+#### Constraints & Mitigations
+*   **No Native FS**: Workspace is ephemeral. *Mitigation*: Support Upload/Download of JSON state.
+*   **Single Thread**: Heavy reasoning blocks UI. *Mitigation*: Future move to Web Workers.
+*   **Mocked Environment**: `STDIN`/`STDOUT` are routed to UI panels; `process.exit()` is a no-op.
 
 ### Key Integration Points
 1.  **Event Ontology**: [`core/src/util/IntrospectionEvents.js`](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) is the single source of truth.
@@ -395,6 +413,9 @@ npm run repl
 
 # Start Web UI (dev server)
 npm run web
+
+# Start Browser-Only Mode (Offline)
+npm run ui
 
 # Run unit tests
 npm run test:unit
