@@ -32,8 +32,6 @@
 ; Multiple argument lambda (curried)
 ; (λ ($x $y) $body) → (λ $x (λ $y $body))
 ; Rules moved to ReductionEngine.js to avoid variable unification issues
-; (= ((λ (: $x ()) $b) $v) ((λ $x $b) $v))
-; (= ((λ (: $x $xs) $b) $v) (λ $xs ((λ $x $b) $v)))
 
 ; ===== Sequencing =====
 
@@ -56,10 +54,8 @@
 (= (not False) True)
 
 ; and: logical conjunction
-; (= (and True True) True)
 (= (and True False) False)
 (= (and False True) False)
-; (= (and False False) False)
 
 ; or: logical disjunction
 (= (or True $_) True)
