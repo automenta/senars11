@@ -5,395 +5,162 @@
  */
 
 import { Term } from './kernel/Term.js';
-import { Unify } from './kernel/Unify.js';
 
-// Type constructors
 export const TypeConstructors = {
-    // Base types
-    Number: { kind: 'Base', name: 'Number' },
-    String: { kind: 'Base', name: 'String' },
-    Bool: { kind: 'Base', name: 'Bool' },
-    Atom: { kind: 'Base', name: 'Atom' },
-    
-    // Function type: Arrow(fromType, toType)
+    Base: (name) => ({ kind: 'Base', name }),
     Arrow: (from, to) => ({ kind: 'Arrow', from, to }),
-    
-    // List type: List(elementType)
     List: (element) => ({ kind: 'List', element }),
-    
-    // Maybe type: Maybe(type)
     Maybe: (type) => ({ kind: 'Maybe', type }),
-    
-    // Either type: Either(leftType, rightType)
     Either: (left, right) => ({ kind: 'Either', left, right }),
-    
-    // Vector type: Vector(length)
     Vector: (length) => ({ kind: 'Vector', length }),
-    
-    // Natural numbers less than n: Fin(n)
     Fin: (n) => ({ kind: 'Fin', n }),
-    
-    // Polymorphic type variable: TypeVar(index)
     TypeVar: (index) => ({ kind: 'TypeVar', index }),
-    
-    // Universal quantification: Forall(typeVar, type)
     Forall: (varName, type) => ({ kind: 'Forall', varName, type }),
-    
-    // Type constructor: TypeCtor(name, params)
     TypeCtor: (name, params = []) => ({ kind: 'TypeCtor', name, params })
 };
 
+// Base types
+const BaseTypes = {
+    Number: TypeConstructors.Base('Number'),
+    String: TypeConstructors.Base('String'),
+    Bool: TypeConstructors.Base('Bool'),
+    Atom: TypeConstructors.Base('Atom')
+};
+Object.assign(TypeConstructors, BaseTypes);
+
 export class TypeSystem {
     constructor() {
-        this.typeRegistry = new Map();
-        this.typeConstraints = [];
+        this.typeRegistry = new Map(Object.entries(BaseTypes).map(([k, v]) => [k, v]));
         this.substitution = new Map();
-        this.typeVariables = new Map();
         this.nextTypeVarId = 0;
-        
-        // Register base types
-        this.registerType('Number', TypeConstructors.Number);
-        this.registerType('String', TypeConstructors.String);
-        this.registerType('Bool', TypeConstructors.Bool);
-        this.registerType('Atom', TypeConstructors.Atom);
     }
 
-    /**
-     * Register a custom type with validation function
-     * @param {string} name - Type name
-     * @param {Function} validator - Function that takes a term and returns boolean
-     */
-    registerType(name, validator) {
-        this.typeRegistry.set(name, validator);
-    }
-
-    /**
-     * Create a fresh type variable
-     * @returns {Object} Fresh type variable
-     */
     freshTypeVar() {
-        const id = this.nextTypeVarId++;
-        return TypeConstructors.TypeVar(id);
+        return TypeConstructors.TypeVar(this.nextTypeVarId++);
     }
 
-    /**
-     * Infer type of a term
-     * @param {Object} term - Term to infer type for
-     * @param {Object} context - Type context
-     * @returns {Object} Inferred type
-     */
     inferType(term, context = {}) {
         if (!term) return this.freshTypeVar();
 
-        // Handle variables
-        if (term.type === 'atom' && term.name && (term.name.startsWith('$') || term.name.startsWith('?'))) {
-            // Look up variable type in context
-            const varName = term.name.startsWith('$') ? term.name.substring(1) : term.name.substring(1);
-            if (context[varName]) {
-                return context[varName];
-            }
-            // If not in context, return fresh type variable
-            return this.freshTypeVar();
-        }
-
-        // Handle atomic values
         if (term.type === 'atom') {
+            if (term.name?.match(/^[?$]/)) {
+                const name = term.name.substring(1);
+                return context[name] || this.freshTypeVar();
+            }
+
             if (term.name) {
-                // Check if it's a number
-                const num = parseFloat(term.name);
-                if (!isNaN(num)) {
-                    return TypeConstructors.Number;
-                }
-                
-                // Check if it's a boolean
-                if (['True', 'False', 'true', 'false'].includes(term.name)) {
-                    return TypeConstructors.Bool;
-                }
-                
-                // Check if it's a string (quoted)
-                if (term.name.startsWith('"') && term.name.endsWith('"')) {
-                    return TypeConstructors.String;
-                }
-                
-                // Default to Atom type
+                if (!isNaN(parseFloat(term.name))) return TypeConstructors.Number;
+                if (/^(True|False|true|false)$/.test(term.name)) return TypeConstructors.Bool;
+                if (term.name.startsWith('"')) return TypeConstructors.String;
                 return TypeConstructors.Atom;
             }
         }
 
-        // Handle expressions
-        if (term.type === 'compound' && term.operator && term.components) {
-            // Handle function application
-            const operatorType = this.inferType(term.operator, context);
+        if (term.type === 'compound' && term.operator) {
+            const opType = this.inferType(term.operator, context);
             const argTypes = term.components.map(arg => this.inferType(arg, context));
 
-            // If operator type is a function type, return the result type
-            if (operatorType.kind === 'Arrow') {
-                // Check if argument types match function's expected input type
-                if (argTypes.length === 1 && this.unifyTypes(argTypes[0], operatorType.from)) {
-                    return operatorType.to;
-                }
+            if (opType.kind === 'Arrow' && argTypes.length === 1 && this.unifyTypes(argTypes[0], opType.from)) {
+                return opType.to;
             }
-
-            // For other expressions, return a fresh type variable
-            return this.freshTypeVar();
         }
 
-        // Default case
         return this.freshTypeVar();
     }
 
-    /**
-     * Check if a term has a specific type
-     * @param {Object} term - Term to check
-     * @param {Object} expectedType - Expected type
-     * @param {Object} context - Type context
-     * @returns {boolean} True if term has expected type
-     */
     checkType(term, expectedType, context = {}) {
-        const inferredType = this.inferType(term, context);
-        return this.unifyTypes(inferredType, expectedType);
+        return this.unifyTypes(this.inferType(term, context), expectedType);
     }
 
-    /**
-     * Unify two types
-     * @param {Object} type1 - First type
-     * @param {Object} type2 - Second type
-     * @returns {boolean} True if types can be unified
-     */
-    unifyTypes(type1, type2) {
-        if (type1 === type2) return true;
+    unifyTypes(t1, t2) {
+        if (t1 === t2) return true;
+        if (t1.kind === 'TypeVar') return this.bindTypeVar(t1, t2);
+        if (t2.kind === 'TypeVar') return this.bindTypeVar(t2, t1);
 
-        // Handle type variables
-        if (type1.kind === 'TypeVar') {
-            return this.bindTypeVar(type1, type2);
-        }
-        if (type2.kind === 'TypeVar') {
-            return this.bindTypeVar(type2, type1);
-        }
+        if (t1.kind !== t2.kind) return false;
 
-        // Handle base types
-        if (type1.kind === 'Base' && type2.kind === 'Base') {
-            return type1.name === type2.name;
+        switch (t1.kind) {
+            case 'Base': return t1.name === t2.name;
+            case 'Arrow': return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
+            case 'List': return this.unifyTypes(t1.element, t2.element);
+            case 'TypeCtor':
+                return t1.name === t2.name &&
+                    t1.params.length === t2.params.length &&
+                    t1.params.every((p, i) => this.unifyTypes(p, t2.params[i]));
+            default: return false; // Simple structural equality for others handled by kind check above?
         }
-
-        // Handle function types
-        if (type1.kind === 'Arrow' && type2.kind === 'Arrow') {
-            return this.unifyTypes(type1.from, type2.from) && 
-                   this.unifyTypes(type1.to, type2.to);
-        }
-
-        // Handle list types
-        if (type1.kind === 'List' && type2.kind === 'List') {
-            return this.unifyTypes(type1.element, type2.element);
-        }
-
-        // Handle other type constructors
-        if (type1.kind === type2.kind) {
-            if (type1.kind === 'TypeCtor') {
-                if (type1.name !== type2.name) return false;
-                if (type1.params.length !== type2.params.length) return false;
-                
-                for (let i = 0; i < type1.params.length; i++) {
-                    if (!this.unifyTypes(type1.params[i], type2.params[i])) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        return false;
     }
 
-    /**
-     * Bind a type variable to a type
-     * @param {Object} varType - Type variable
-     * @param {Object} type - Type to bind to
-     * @returns {boolean} True if binding is successful
-     */
-    bindTypeVar(varType, type) {
-        // Occurs check: prevent circular type definitions
-        if (this.occursCheck(varType, type)) {
-            return false;
-        }
-
-        // Add substitution
-        this.substitution.set(varType.index, type);
+    bindTypeVar(v, t) {
+        if (this.occursCheck(v, t)) return false;
+        this.substitution.set(v.index, t);
         return true;
     }
 
-    /**
-     * Check if a type variable occurs in a type
-     * @param {Object} varType - Type variable
-     * @param {Object} type - Type to check in
-     * @returns {boolean} True if variable occurs in type
-     */
-    occursCheck(varType, type) {
-        if (type.kind === 'TypeVar' && type.index === varType.index) {
-            return true;
-        }
-
-        if (type.kind === 'Arrow') {
-            return this.occursCheck(varType, type.from) || 
-                   this.occursCheck(varType, type.to);
-        }
-
-        if (type.kind === 'List') {
-            return this.occursCheck(varType, type.element);
-        }
-
-        if (type.kind === 'TypeCtor') {
-            for (const param of type.params) {
-                if (this.occursCheck(varType, param)) {
-                    return true;
-                }
-            }
-        }
-
+    occursCheck(v, t) {
+        if (t.kind === 'TypeVar') return t.index === v.index;
+        if (t.kind === 'Arrow') return this.occursCheck(v, t.from) || this.occursCheck(v, t.to);
+        if (t.kind === 'List') return this.occursCheck(v, t.element);
+        if (t.kind === 'TypeCtor') return t.params.some(p => this.occursCheck(v, p));
         return false;
     }
 
-    /**
-     * Apply substitutions to a type
-     * @param {Object} type - Type to apply substitutions to
-     * @returns {Object} Type with substitutions applied
-     */
     applySubstitution(type) {
         if (type.kind === 'TypeVar') {
             const subst = this.substitution.get(type.index);
-            if (subst) {
-                return this.applySubstitution(subst);
-            }
-            return type;
+            return subst ? this.applySubstitution(subst) : type;
         }
-
-        if (type.kind === 'Arrow') {
-            return TypeConstructors.Arrow(
-                this.applySubstitution(type.from),
-                this.applySubstitution(type.to)
-            );
-        }
-
-        if (type.kind === 'List') {
-            return TypeConstructors.List(this.applySubstitution(type.element));
-        }
-
-        if (type.kind === 'TypeCtor') {
-            const newParams = type.params.map(param => this.applySubstitution(param));
-            return TypeConstructors.TypeCtor(type.name, newParams);
-        }
-
+        if (type.kind === 'Arrow') return TypeConstructors.Arrow(this.applySubstitution(type.from), this.applySubstitution(type.to));
+        if (type.kind === 'List') return TypeConstructors.List(this.applySubstitution(type.element));
+        if (type.kind === 'TypeCtor') return TypeConstructors.TypeCtor(type.name, type.params.map(p => this.applySubstitution(p)));
         return type;
     }
 
-    /**
-     * Generate type constraints for a term
-     * @param {Object} term - Term to generate constraints for
-     * @param {Object} context - Type context
-     * @returns {Array} Array of type constraints
-     */
     generateConstraints(term, context = {}) {
         const constraints = [];
-
-        if (term.type === 'compound' && term.operator && term.components) {
-            // Function application constraint
+        if (term.type === 'compound' && term.operator) {
             const funcType = this.inferType(term.operator, context);
             const resultType = this.freshTypeVar();
 
-            for (const arg of term.components) {
-                const argType = this.inferType(arg, context);
+            term.components.forEach(arg => {
                 constraints.push({
                     type1: funcType,
-                    type2: TypeConstructors.Arrow(argType, resultType)
+                    type2: TypeConstructors.Arrow(this.inferType(arg, context), resultType)
                 });
-            }
-
-            // Add constraint that the overall expression has the result type
-            constraints.push({
-                type1: this.inferType(term, context),
-                type2: resultType
             });
-        }
 
+            constraints.push({ type1: this.inferType(term, context), type2: resultType });
+        }
         return constraints;
     }
 
-    /**
-     * Solve type constraints
-     * @param {Array} constraints - Array of type constraints
-     * @returns {boolean} True if constraints can be solved
-     */
     solveConstraints(constraints) {
-        for (const constraint of constraints) {
-            if (!this.unifyTypes(constraint.type1, constraint.type2)) {
-                return false;
-            }
-        }
-        return true;
+        return constraints.every(c => this.unifyTypes(c.type1, c.type2));
     }
 
-    /**
-     * Perform type inference with constraint solving
-     * @param {Object} term - Term to infer type for
-     * @param {Object} context - Type context
-     * @returns {Object} Inferred type
-     */
     inferWithConstraints(term, context = {}) {
         const constraints = this.generateConstraints(term, context);
-        if (!this.solveConstraints(constraints)) {
-            throw new Error(`Type inference failed for term: ${term.toString()}`);
-        }
-
-        const inferredType = this.inferType(term, context);
-        return this.applySubstitution(inferredType);
+        if (!this.solveConstraints(constraints)) throw new Error(`Type inference failed: ${term.toString()}`);
+        return this.applySubstitution(this.inferType(term, context));
     }
 
-    /**
-     * Get string representation of a type
-     * @param {Object} type - Type to convert to string
-     * @returns {string} String representation of type
-     */
     typeToString(type) {
         if (!type) return 'Unknown';
-
         switch (type.kind) {
-            case 'Base':
-                return type.name;
-            case 'Arrow':
-                return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
-            case 'List':
-                return `(List ${this.typeToString(type.element)})`;
-            case 'Maybe':
-                return `(Maybe ${this.typeToString(type.type)})`;
-            case 'Either':
-                return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
-            case 'Vector':
-                return `(Vector ${type.length})`;
-            case 'Fin':
-                return `(Fin ${type.n})`;
-            case 'TypeVar':
-                return `t${type.index}`;
-            case 'Forall':
-                return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
+            case 'Base': return type.name;
+            case 'Arrow': return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
+            case 'List': return `(List ${this.typeToString(type.element)})`;
+            case 'Maybe': return `(Maybe ${this.typeToString(type.type)})`;
+            case 'Either': return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
+            case 'Vector': return `(Vector ${type.length})`;
+            case 'Fin': return `(Fin ${type.n})`;
+            case 'TypeVar': return `t${type.index}`;
+            case 'Forall': return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
             case 'TypeCtor':
-                const paramsStr = type.params.length > 0 
-                    ? ` ${type.params.map(p => this.typeToString(p)).join(' ')}` 
-                    : '';
-                return `(${type.name}${paramsStr})`;
-            default:
-                return 'Unknown';
+                const params = type.params.map(p => this.typeToString(p)).join(' ');
+                return `(${type.name}${params ? ' ' + params : ''})`;
+            default: return 'Unknown';
         }
-    }
-
-    /**
-     * Define a custom type constructor
-     * @param {string} name - Type constructor name
-     * @param {Array} paramTypes - Parameter types
-     * @param {Function} validator - Validation function
-     */
-    defineTypeConstructor(name, paramTypes, validator) {
-        this.registerType(name, validator);
-        return (params) => TypeConstructors.TypeCtor(name, params);
     }
 }
 
@@ -402,50 +169,21 @@ export class TypeChecker {
         this.typeSystem = typeSystem || new TypeSystem();
     }
 
-    /**
-     * Infer type of a term
-     * @param {Object} term - Term to infer type for
-     * @param {Object} context - Type context
-     * @returns {Object} Inferred type
-     */
     infer(term, context = {}) {
         return this.typeSystem.inferWithConstraints(term, context);
     }
 
-    /**
-     * Check if a term has a specific type
-     * @param {Object} term - Term to check
-     * @param {Object} expectedType - Expected type
-     * @param {Object} context - Type context
-     * @returns {boolean} True if term has expected type
-     */
     check(term, expectedType, context = {}) {
         return this.typeSystem.checkType(term, expectedType, context);
     }
 
-    /**
-     * Unify two types
-     * @param {Object} type1 - First type
-     * @param {Object} type2 - Second type
-     * @returns {Object} Substitution if unification succeeds, null otherwise
-     */
     unify(type1, type2) {
-        // Create a copy of the type system to avoid side effects
         const tempSystem = new TypeSystem();
         tempSystem.substitution = new Map(this.typeSystem.substitution);
         tempSystem.nextTypeVarId = this.typeSystem.nextTypeVarId;
-        
-        if (tempSystem.unifyTypes(type1, type2)) {
-            return tempSystem.substitution;
-        }
-        return null;
+        return tempSystem.unifyTypes(type1, type2) ? tempSystem.substitution : null;
     }
 
-    /**
-     * Get string representation of a type
-     * @param {Object} type - Type to convert to string
-     * @returns {string} String representation of type
-     */
     typeToString(type) {
         return this.typeSystem.typeToString(type);
     }

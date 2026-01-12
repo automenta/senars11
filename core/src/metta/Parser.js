@@ -11,30 +11,17 @@ export class Parser {
         this.tokenizer = new Tokenizer();
     }
 
-    /**
-     * Parse a MeTTa string into an atom
-     * @param {string} str - MeTTa source string
-     * @returns {Object} Parsed atom
-     */
     parse(str) {
         const tokens = this.tokenizer.tokenize(str);
-        if (tokens.length === 0) return null;
-        const parser = new InternalParser(tokens);
-        return parser.parse();
+        return tokens.length ? new InternalParser(tokens).parse() : null;
     }
 
-    /**
-     * Parse a MeTTa program (multiple expressions)
-     * @param {string} str - MeTTa source string
-     * @returns {Array} Array of parsed atoms
-     */
     parseProgram(str) {
         const tokens = this.tokenizer.tokenize(str);
-        const parser = new InternalParser(tokens);
-        return parser.parseProgram();
+        return new InternalParser(tokens).parseProgram();
     }
 
-    // Legacy method support
+    // Legacy support
     parseExpression(str) {
         return this.parse(str);
     }
@@ -43,62 +30,61 @@ export class Parser {
 class Tokenizer {
     tokenize(str) {
         const tokens = [];
-        let currentToken = '';
+        let current = '';
         let inString = false;
-        let stringDelimiter = null;
+        let quoteChar = null;
         let inComment = false;
+
+        const push = () => { if (current.trim()) tokens.push(current.trim()); current = ''; };
 
         for (let i = 0; i < str.length; i++) {
             const char = str[i];
 
             if (inComment) {
-                if (char === '\n' || char === '\r') {
-                    inComment = false;
+                if (char === '\n' || char === '\r') inComment = false;
+                continue;
+            }
+
+            if (inString) {
+                current += char;
+                if (char === quoteChar) {
+                    inString = false;
+                    tokens.push(current);
+                    current = '';
+                    quoteChar = null;
                 }
                 continue;
             }
 
             if (char === '"' || char === "'") {
-                if (!inString) {
-                    inString = true;
-                    stringDelimiter = char;
-                    currentToken += char;
-                } else if (char === stringDelimiter) {
-                    inString = false;
-                    currentToken += char;
-                    tokens.push(currentToken);
-                    currentToken = '';
-                    stringDelimiter = null;
-                } else {
-                    currentToken += char;
-                }
-            } else if (inString) {
-                currentToken += char;
-            } else if (char === ';') {
-                inComment = true;
-                if (currentToken.trim() !== '') {
-                    tokens.push(currentToken.trim());
-                    currentToken = '';
-                }
-            } else if (char === '(' || char === ')') {
-                if (currentToken.trim() !== '') {
-                    tokens.push(currentToken.trim());
-                    currentToken = '';
-                }
-                tokens.push(char);
-            } else if (/\s/.test(char)) {
-                if (currentToken.trim() !== '') {
-                    tokens.push(currentToken.trim());
-                    currentToken = '';
-                }
-            } else {
-                currentToken += char;
+                push();
+                inString = true;
+                quoteChar = char;
+                current += char;
+                continue;
             }
+
+            if (char === ';') {
+                push();
+                inComment = true;
+                continue;
+            }
+
+            if (char === '(' || char === ')') {
+                push();
+                tokens.push(char);
+                continue;
+            }
+
+            if (/\s/.test(char)) {
+                push();
+                continue;
+            }
+
+            current += char;
         }
 
-        if (currentToken.trim() !== '') {
-            tokens.push(currentToken.trim());
-        }
+        push();
         return tokens;
     }
 }
@@ -109,85 +95,60 @@ class InternalParser {
         this.pos = 0;
     }
 
+    get finished() {
+        return this.pos >= this.tokens.length;
+    }
+
+    peek() {
+        return this.tokens[this.pos];
+    }
+
+    consume() {
+        return this.tokens[this.pos++];
+    }
+
     parse() {
-        if (this.pos >= this.tokens.length) {
-            return null;
-        }
+        if (this.finished) return null;
+        const token = this.peek();
 
-        const token = this.tokens[this.pos];
+        if (token === '(') return this.parseExpression();
 
-        if (token === '(') {
-            return this.parseExpression();
-        } else if (token.startsWith('$')) { // Changed ? to $ for variables
-            this.pos++;
-            return var_(token);
-        } else {
-            this.pos++;
-            return sym(token);
-        }
+        this.consume();
+        // Support both $ and ? variables
+        if (token.startsWith('$') || token.startsWith('?')) return var_(token);
+        return sym(token);
     }
 
     parseExpression() {
-        if (this.tokens[this.pos] !== '(') {
-            throw new Error(`Expected '(', got: ${this.tokens[this.pos]}`);
-        }
+        if (this.consume() !== '(') throw new Error("Expected '('");
 
-        this.pos++; // Skip '('
-
-        // Handle empty list ()
-        if (this.tokens[this.pos] === ')') {
-            this.pos++;
+        if (!this.finished && this.peek() === ')') {
+            this.consume();
             return sym('()');
         }
 
         const components = [];
-
-        while (this.pos < this.tokens.length && this.tokens[this.pos] !== ')') {
-            if (this.tokens[this.pos] === '(') {
-                components.push(this.parseExpression());
-            } else if (this.tokens[this.pos].startsWith('$')) { // Changed ? to $
-                components.push(var_(this.tokens[this.pos]));
-                this.pos++;
-            } else {
-                components.push(sym(this.tokens[this.pos]));
-                this.pos++;
-            }
+        while (!this.finished && this.peek() !== ')') {
+            components.push(this.parse());
         }
 
-        if (this.pos >= this.tokens.length) {
-            throw new Error("Unexpected end of input, expected ')'");
-        }
+        if (this.finished) throw new Error("Unexpected end of input, expected ')'");
+        this.consume(); // Skip ')'
 
-        this.pos++; // Skip ')'
-
-        // Check if we have an operator (first component) and arguments
-        if (components.length > 0) {
-            const operator = components[0];
-            const args = components.slice(1);
-
-            // Pass the operator atom directly to exp
-            // This ensures variables in head position (like $f) are preserved as atoms
-            // and can be substituted during unification
-            return exp(operator, args);
-        }
-
-        // Fallback for empty list (should be handled earlier)
-        return sym('()');
+        return components.length > 0 ? exp(components[0], components.slice(1)) : sym('()');
     }
 
     parseProgram() {
         const expressions = [];
-
-        while (this.pos < this.tokens.length) {
-            const token = this.tokens[this.pos];
-            // Basic validity check for start of expression
-            if (token === '(' || token.startsWith('$') || token.length > 0) {
+        while (!this.finished) {
+            const token = this.peek();
+            // Basic validity check
+            if (token === '(' || /^[?$].+/.test(token) || token.length > 0) {
                 expressions.push(this.parse());
             } else {
-                this.pos++;
+                this.consume();
             }
         }
-
         return expressions;
     }
 }

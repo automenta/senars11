@@ -1,4 +1,4 @@
-import { Reduce } from '../../../../core/src/metta/kernel/Reduce.js';
+import { step, reduce, isGroundedCall } from '../../../../core/src/metta/kernel/Reduce.js';
 import { Space } from '../../../../core/src/metta/kernel/Space.js';
 import { Ground } from '../../../../core/src/metta/kernel/Ground.js';
 import { Term } from '../../../../core/src/metta/kernel/Term.js';
@@ -20,7 +20,7 @@ describe('Kernel Reduce', () => {
             space.addRule(pattern, result);
 
             const query = Term.exp('double', [Term.sym('5')]);
-            const { reduced, applied } = Reduce.step(query, space, ground);
+            const { reduced, applied } = step(query, space, ground);
 
             expect(applied).toBe(true);
             expect(reduced.operator.name).toBe('*');
@@ -30,7 +30,7 @@ describe('Kernel Reduce', () => {
 
         test('returns unchanged if no rule matches', () => {
             const query = Term.exp('unknown', [Term.sym('x')]);
-            const { reduced, applied } = Reduce.step(query, space, ground);
+            const { reduced, applied } = step(query, space, ground);
 
             expect(applied).toBe(false);
             expect(reduced).toBe(query);
@@ -42,7 +42,7 @@ describe('Kernel Reduce', () => {
             space.addRule(pattern, resultFn);
 
             const query = Term.exp('compute', [Term.sym('10')]);
-            const { reduced, applied } = Reduce.step(query, space, ground);
+            const { reduced, applied } = step(query, space, ground);
 
             expect(applied).toBe(true);
             expect(reduced.operator.name).toBe('+');
@@ -56,7 +56,7 @@ describe('Kernel Reduce', () => {
             space.addRule(Term.exp('h', [Term.var('x')]), Term.sym('h-result'));
 
             const query = Term.exp('g', [Term.sym('test')]);
-            const { reduced, applied } = Reduce.step(query, space, ground);
+            const { reduced, applied } = step(query, space, ground);
 
             expect(applied).toBe(true);
             expect(reduced.name).toBe('g-result');
@@ -66,7 +66,7 @@ describe('Kernel Reduce', () => {
     describe('step - Grounded operations', () => {
         test('executes grounded operation', () => {
             const query = Term.exp('^', [Term.sym('&+'), Term.sym('2'), Term.sym('3')]);
-            const { reduced, applied } = Reduce.step(query, space, ground);
+            const { reduced, applied } = step(query, space, ground);
 
             expect(applied).toBe(true);
             expect(reduced.name).toBe('5');
@@ -74,7 +74,7 @@ describe('Kernel Reduce', () => {
 
         test('handles grounded operation errors gracefully', () => {
             const query = Term.exp('^', [Term.sym('&unknown'), Term.sym('x')]);
-            const { reduced, applied } = Reduce.step(query, space, ground);
+            const { reduced, applied } = step(query, space, ground);
 
             expect(applied).toBe(false);
             expect(reduced).toBe(query);
@@ -100,14 +100,14 @@ describe('Kernel Reduce', () => {
             );
 
             const query = Term.exp('double', [Term.sym('5')]);
-            const result = Reduce.reduce(query, space, ground);
+            const result = reduce(query, space, ground);
 
             expect(result.name).toBe('10');
         });
 
         test('handles already-reduced terms', () => {
             const query = Term.sym('already-reduced');
-            const result = Reduce.reduce(query, space, ground);
+            const result = reduce(query, space, ground);
 
             expect(result).toBe(query); // Same object
         });
@@ -121,7 +121,7 @@ describe('Kernel Reduce', () => {
 
             const query = Term.exp('loop', [Term.sym('test')]);
 
-            expect(() => Reduce.reduce(query, space, ground, 10)).toThrow(/Max reduction steps/);
+            expect(() => reduce(query, space, ground, 10)).toThrow(/Max reduction steps/);
         });
 
         test('multi-step reduction', () => {
@@ -142,7 +142,7 @@ describe('Kernel Reduce', () => {
             );
 
             const query = Term.exp('inc', [Term.sym('5')]);
-            const result = Reduce.reduce(query, space, ground);
+            const result = reduce(query, space, ground);
 
             expect(result.name).toBe('6');
         });
@@ -151,22 +151,22 @@ describe('Kernel Reduce', () => {
     describe('isGroundedCall', () => {
         test('detects grounded calls', () => {
             const call = Term.exp('^', [Term.sym('&+'), Term.sym('1')]);
-            expect(Reduce.isGroundedCall(call, ground)).toBe(true);
+            expect(isGroundedCall(call, ground)).toBe(true);
         });
 
         test('non-grounded calls return false', () => {
             const call = Term.exp('f', [Term.sym('x')]);
-            expect(Reduce.isGroundedCall(call, ground)).toBe(false);
+            expect(isGroundedCall(call, ground)).toBe(false);
         });
 
         test('unknown grounded operation returns false', () => {
             const call = Term.exp('^', [Term.sym('&unknown')]);
-            expect(Reduce.isGroundedCall(call, ground)).toBe(false);
+            expect(isGroundedCall(call, ground)).toBe(false);
         });
 
         test('atomic terms are not grounded calls', () => {
             const atom = Term.sym('foo');
-            expect(Reduce.isGroundedCall(atom, ground)).toBe(false);
+            expect(isGroundedCall(atom, ground)).toBe(false);
         });
     });
 
@@ -176,8 +176,8 @@ describe('Kernel Reduce', () => {
             space.addRule(Term.exp('fib', [Term.sym('0')]), Term.sym('0'));
             space.addRule(Term.exp('fib', [Term.sym('1')]), Term.sym('1'));
 
-            const fib0 = Reduce.reduce(Term.exp('fib', [Term.sym('0')]), space, ground);
-            const fib1 = Reduce.reduce(Term.exp('fib', [Term.sym('1')]), space, ground);
+            const fib0 = reduce(Term.exp('fib', [Term.sym('0')]), space, ground);
+            const fib1 = reduce(Term.exp('fib', [Term.sym('1')]), space, ground);
 
             expect(fib0.name).toBe('0');
             expect(fib1.name).toBe('1');
@@ -191,7 +191,7 @@ describe('Kernel Reduce', () => {
             );
 
             const expr = Term.exp('+', [Term.sym('foo'), Term.sym('0')]);
-            const result = Reduce.reduce(expr, space, ground);
+            const result = reduce(expr, space, ground);
 
             expect(result.name).toBe('foo');
         });
@@ -214,7 +214,7 @@ describe('Kernel Reduce', () => {
             );
 
             const query = Term.exp('square', [Term.sym('7')]);
-            const result = Reduce.reduce(query, space, ground);
+            const result = reduce(query, space, ground);
 
             expect(result.name).toBe('49');
         });
@@ -240,7 +240,7 @@ describe('Kernel Reduce', () => {
 
             // Query: ((make-op) 5) -> (inc 5) -> (+ 5 1) -> 6
             const query = Term.exp(Term.exp('make-op', []), [Term.sym('5')]);
-            const result = Reduce.reduce(query, space, ground);
+            const result = reduce(query, space, ground);
 
             expect(result.name).toBe('6');
         });
