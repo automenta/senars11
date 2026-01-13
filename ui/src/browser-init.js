@@ -3,6 +3,7 @@ import { SeNARSUI } from './SeNARSUI.js';
 import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
 import { UIConfig } from './config/UIConfig.js';
+import { ExampleBrowser } from './components/ExampleBrowser.js';
 
 // Setup Layout Configuration
 const LAYOUT_CONFIG = {
@@ -15,9 +16,13 @@ const LAYOUT_CONFIG = {
             content: [{
                 title: 'Activity Log', type: 'component', componentType: 'logComponent', height: 40
             }, {
-                title: 'REPL / Control', type: 'component', componentType: 'replComponent', height: 30
-            }, {
-                title: 'System Metrics', type: 'component', componentType: 'metricsComponent', height: 30
+                type: 'stack',
+                height: 60,
+                content: [
+                     { title: 'Examples', type: 'component', componentType: 'examplesComponent' },
+                     { title: 'REPL / Control', type: 'component', componentType: 'replComponent' },
+                     { title: 'System Metrics', type: 'component', componentType: 'metricsComponent' }
+                ]
             }]
         }]
     }
@@ -148,6 +153,31 @@ async function start() {
         app.uiElements.register('statusIndicator', el.querySelector(`#${UIConfig.ELEMENT_IDS.statusIndicator}`));
         app.uiElements.register('cycleCount', el.querySelector(`#${UIConfig.ELEMENT_IDS.cycleCount}`));
         app.uiElements.register('messageCount', el.querySelector(`#${UIConfig.ELEMENT_IDS.messageCount}`));
+    });
+
+    layout.registerComponentFactoryFunction('examplesComponent', (container) => {
+        const el = document.createElement('div');
+        // Use a unique ID to avoid collision with static index.html
+        const containerId = 'example-browser-container-gl';
+        el.id = containerId;
+        el.className = 'example-browser-container';
+        el.style.padding = '10px';
+        el.style.overflow = 'auto';
+        el.style.height = '100%';
+        container.element.appendChild(el);
+
+        // Manual Init for this component
+        new ExampleBrowser(containerId, {
+            onSelect: (node) => {
+                 if (node.type === 'file') {
+                    app.demoManager.runStaticDemo({
+                        id: node.id,
+                        name: node.name,
+                        path: node.path
+                    });
+                }
+            }
+        }).initialize();
     });
 
     layout.loadLayout(LAYOUT_CONFIG);
