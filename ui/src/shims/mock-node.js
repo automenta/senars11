@@ -64,6 +64,33 @@ export const inspect = (obj) => JSON.stringify(obj);
 export const createRequire = () => ((path) => { console.warn("require called in browser for", path); return {}; });
 export const builtinModules = [];
 
+// events
+export class EventEmitter {
+    constructor() { this.events = {}; }
+    on(event, listener) { (this.events[event] = this.events[event] || []).push(listener); return this; }
+    emit(event, ...args) { (this.events[event] || []).forEach(l => l(...args)); return true; }
+    removeListener(event, listener) {
+        if (!this.events[event]) return this;
+        this.events[event] = this.events[event].filter(l => l !== listener);
+        return this;
+    }
+    off(event, listener) { return this.removeListener(event, listener); }
+    once(event, listener) {
+        const onceWrapper = (...args) => { this.removeListener(event, onceWrapper); listener(...args); };
+        return this.on(event, onceWrapper);
+    }
+    removeAllListeners(event) { if(event) delete this.events[event]; else this.events = {}; return this; }
+}
+
+// buffer
+export const Buffer = {
+    isBuffer: () => false,
+    from: (str) => str,
+    alloc: () => [],
+    concat: (list) => list.join(''),
+    byteLength: (str) => str.length
+};
+
 export default {
     readFile, writeFile, access, stat, mkdir, readdir, rm, constants, promises,
     readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, statSync,
@@ -74,5 +101,6 @@ export default {
     fileURLToPath,
     AsyncLocalStorage, AsyncResource,
     styleText, stripVTControlCharacters, promisify, callbackify, debuglog, types, inspect,
-    createRequire, builtinModules
+    createRequire, builtinModules,
+    EventEmitter, Buffer
 };

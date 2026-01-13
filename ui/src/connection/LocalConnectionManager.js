@@ -55,6 +55,10 @@ export class LocalConnectionManager extends ConnectionInterface {
         }
     }
 
+    isConnected() {
+        return this.connectionStatus === 'connected';
+    }
+
     sendMessage(type, payload) {
         if (this.connectionStatus !== 'connected') {
             console.warn("LocalConnectionManager: Not connected. Message dropped:", type);
@@ -70,6 +74,7 @@ export class LocalConnectionManager extends ConnectionInterface {
         try {
             switch (type) {
                 case 'agent/input':
+                case 'narseseInput':
                     await this.handleInput(payload);
                     break;
                 case 'control/reset':
@@ -88,8 +93,8 @@ export class LocalConnectionManager extends ConnectionInterface {
     }
 
     async handleInput(payload) {
-        const text = payload.text || payload;
-        this.nar && await this.nar.addInput(text);
+        const text = payload.text || payload.input || payload;
+        this.nar && await this.nar.input(text);
 
         if (this.metta && /^(!|\(|=\s)/.test(text)) {
             try {

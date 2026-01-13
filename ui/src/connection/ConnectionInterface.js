@@ -15,6 +15,14 @@ export class ConnectionInterface {
     }
 
     /**
+     * Check if connected to the backend
+     * @returns {boolean}
+     */
+    isConnected() {
+        throw new Error('Method not implemented');
+    }
+
+    /**
      * Send a message to the backend
      * @param {string} type - Message type (e.g. 'agent/input')
      * @param {Object} payload - Message data

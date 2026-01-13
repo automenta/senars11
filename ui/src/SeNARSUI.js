@@ -41,6 +41,7 @@ export class SeNARSUI {
     }
 
     initialize() {
+        this.logger.setUIElements(this.uiElements.getAll());
         this.graphManager.initialize(this.uiElements.get('graphContainer'));
 
         // Use correct IDs from Config (or hardcoded to match HTML/UIConfig)

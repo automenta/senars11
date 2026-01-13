@@ -2,6 +2,7 @@ import { GoldenLayout } from 'golden-layout';
 import { SeNARSUI } from './SeNARSUI.js';
 import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
+import { UIConfig } from './config/UIConfig.js';
 
 // Setup Layout Configuration
 const LAYOUT_CONFIG = {
@@ -29,63 +30,135 @@ async function start() {
 
     layout.registerComponentFactoryFunction('graphComponent', (container) => {
         const el = document.createElement('div');
-        el.id = 'graphContainer';
-        Object.assign(el.style, { width: '100%', height: '100%' });
+        el.id = UIConfig.ELEMENT_IDS.graphContainer;
+        el.className = 'cytoscape-container';
+        Object.assign(el.style, { width: '100%', height: '100%', background: '#252525' });
+
+        // Graph Controls Overlay
+        const controls = document.createElement('div');
+        controls.className = 'graph-controls';
+        controls.style.position = 'absolute';
+        controls.style.top = '10px';
+        controls.style.left = '10px';
+        controls.style.zIndex = '10';
+        controls.style.background = 'rgba(42, 42, 42, 0.8)';
+        controls.style.borderRadius = '4px';
+        controls.innerHTML = `
+            <button id="${UIConfig.ELEMENT_IDS.btnZoomIn}" title="Zoom In">➕</button>
+            <button id="${UIConfig.ELEMENT_IDS.btnZoomOut}" title="Zoom Out">➖</button>
+            <button id="${UIConfig.ELEMENT_IDS.btnFit}" title="Fit to Screen">⬜</button>
+            <button id="${UIConfig.ELEMENT_IDS.refreshGraph}" title="Refresh Graph">🔄</button>
+            <label class="checkbox-control"><input type="checkbox" id="${UIConfig.ELEMENT_IDS.showTasksToggle}" checked> Tasks</label>
+        `;
+
         container.element.appendChild(el);
+        container.element.appendChild(controls); // Add controls separately to overlay
+
+        // Register Elements
         app.uiElements.register('graphContainer', el);
+        app.uiElements.register('btnZoomIn', controls.querySelector(`#${UIConfig.ELEMENT_IDS.btnZoomIn}`));
+        app.uiElements.register('btnZoomOut', controls.querySelector(`#${UIConfig.ELEMENT_IDS.btnZoomOut}`));
+        app.uiElements.register('btnFit', controls.querySelector(`#${UIConfig.ELEMENT_IDS.btnFit}`));
+        app.uiElements.register('refreshGraph', controls.querySelector(`#${UIConfig.ELEMENT_IDS.refreshGraph}`));
+        app.uiElements.register('showTasksToggle', controls.querySelector(`#${UIConfig.ELEMENT_IDS.showTasksToggle}`));
     });
 
     layout.registerComponentFactoryFunction('logComponent', (container) => {
         const el = document.createElement('div');
-        el.id = 'tracePanel';
+        el.className = 'view-layer active';
+        el.id = UIConfig.ELEMENT_IDS.logView;
+        el.style.display = 'flex';
+        el.style.flexDirection = 'column';
+        el.style.height = '100%';
+
+        el.innerHTML = `<div class="logs-container" id="${UIConfig.ELEMENT_IDS.logsContainer}"></div>`;
+
         container.element.appendChild(el);
-        app.uiElements.register('tracePanel', el);
+        app.uiElements.register('logsContainer', el.querySelector(`#${UIConfig.ELEMENT_IDS.logsContainer}`));
     });
 
     layout.registerComponentFactoryFunction('replComponent', (container) => {
         const el = document.createElement('div');
+        el.className = 'log-panel'; // Reuse log-panel class for styling input section
+        el.style.display = 'flex';
+        el.style.flexDirection = 'column';
+        el.style.height = '100%';
+
         el.innerHTML = `
-            <div class="control-bar" id="controlPanel">
-                 <div id="cycleCount">0</div>
-                 <div id="messageCount">0</div>
+            <div class="panel-header" style="justify-content: flex-end;">
+                 <div class="control-toolbar">
+                    <button class="icon-btn" id="${UIConfig.ELEMENT_IDS.btnPlayPause}" title="Play/Pause">▶</button>
+                    <button class="icon-btn" id="${UIConfig.ELEMENT_IDS.btnStep}" title="Single Step">⏯</button>
+                    <button class="icon-btn" id="${UIConfig.ELEMENT_IDS.btnReset}" title="Reset System">🔄</button>
+                 </div>
             </div>
-            <div id="replOutput" style="height: calc(100% - 60px); overflow-y: auto;"></div>
-            <input type="text" id="replInput" style="width: 100%;" />`;
+            <div style="flex: 1;"></div>
+            <div class="input-section">
+                <div class="input-mode-toggle">
+                    <label class="mode-option"><input type="radio" name="input-mode" value="narsese" id="${UIConfig.ELEMENT_IDS.inputModeNarsese}" checked> Narsese</label>
+                    <label class="mode-option"><input type="radio" name="input-mode" value="agent" id="${UIConfig.ELEMENT_IDS.inputModeAgent}"> Agent</label>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="${UIConfig.ELEMENT_IDS.commandInput}" placeholder="Enter Narsese command..." autocomplete="off">
+                    <button id="${UIConfig.ELEMENT_IDS.sendButton}">Send</button>
+                </div>
+                <div class="input-group">
+                    <button id="${UIConfig.ELEMENT_IDS.btnToggleContrast}" style="font-size: 0.8em; padding: 5px 10px;">High Contrast</button>
+                </div>
+            </div>`;
+
         container.element.appendChild(el);
 
-        ['controlPanel', 'cycleCount', 'messageCount', 'replOutput', 'replInput'].forEach(id =>
-            app.uiElements.register(id, el.querySelector(`#${id}`))
-        );
+        // Register Input Elements
+        app.uiElements.register('commandInput', el.querySelector(`#${UIConfig.ELEMENT_IDS.commandInput}`));
+        app.uiElements.register('sendButton', el.querySelector(`#${UIConfig.ELEMENT_IDS.sendButton}`));
+        app.uiElements.register('btnPlayPause', el.querySelector(`#${UIConfig.ELEMENT_IDS.btnPlayPause}`));
+        app.uiElements.register('btnStep', el.querySelector(`#${UIConfig.ELEMENT_IDS.btnStep}`));
+        app.uiElements.register('btnReset', el.querySelector(`#${UIConfig.ELEMENT_IDS.btnReset}`));
+        app.uiElements.register('inputModeNarsese', el.querySelector(`#${UIConfig.ELEMENT_IDS.inputModeNarsese}`));
+        app.uiElements.register('inputModeAgent', el.querySelector(`#${UIConfig.ELEMENT_IDS.inputModeAgent}`));
     });
 
     layout.registerComponentFactoryFunction('metricsComponent', (container) => {
         const el = document.createElement('div');
+        el.style.padding = '10px';
+        el.style.background = '#252526';
+
         el.innerHTML = `
-            <div class="metric"><span>Concepts:</span> <span id="metric-concepts">0</span></div>
-            <div class="metric"><span>Att. Focus:</span> <span id="metric-focus">0</span></div>
-            <div id="connectionStatus">Disconnected</div>
-            <div id="statusIndicator"></div>`;
+            <div class="status-bar" style="border: none; padding: 0; margin-bottom: 10px;">
+                <div class="status-item">
+                    <div class="status-indicator status-disconnected" id="${UIConfig.ELEMENT_IDS.statusIndicator}"></div>
+                    <span id="${UIConfig.ELEMENT_IDS.connectionStatus}">Offline Mode</span>
+                </div>
+                <div class="status-item">
+                     <span class="cycle-badge" id="${UIConfig.ELEMENT_IDS.cycleCount}">Cycle: 0</span>
+                     <span class="divider">|</span>
+                     <span id="${UIConfig.ELEMENT_IDS.messageCount}">0</span> msgs
+                </div>
+            </div>
+            <div id="${UIConfig.ELEMENT_IDS.metricsPanel}" class="metrics-container"></div>
+            <div id="${UIConfig.ELEMENT_IDS.tracePanel}" class="trace-container hidden"></div>
+        `;
+
         container.element.appendChild(el);
 
-        ['metricsPanel', 'metric-concepts', 'metric-focus', 'connectionStatus', 'statusIndicator'].forEach(id => {
-            const key = id.replace(/-([a-z])/g, (g) => g[1].toUpperCase()).replace('metric', 'metric'); // quick hack to match original keys if needed, or just map manually
-            app.uiElements.register(id.replace('metric-', 'metric').replace('Panel', 'Panel'), el.querySelector(`#${id}`) || el);
-        });
-
-        // Manual mapping for consistency with previous specific keys
-        app.uiElements.register('metricsPanel', el);
-        app.uiElements.register('metricConcepts', el.querySelector('#metric-concepts'));
-        app.uiElements.register('metricFocus', el.querySelector('#metric-focus'));
-        app.uiElements.register('connectionStatus', el.querySelector('#connectionStatus'));
-        app.uiElements.register('statusIndicator', el.querySelector('#statusIndicator'));
+        app.uiElements.register('metricsPanel', el.querySelector(`#${UIConfig.ELEMENT_IDS.metricsPanel}`));
+        app.uiElements.register('tracePanel', el.querySelector(`#${UIConfig.ELEMENT_IDS.tracePanel}`));
+        app.uiElements.register('connectionStatus', el.querySelector(`#${UIConfig.ELEMENT_IDS.connectionStatus}`));
+        app.uiElements.register('statusIndicator', el.querySelector(`#${UIConfig.ELEMENT_IDS.statusIndicator}`));
+        app.uiElements.register('cycleCount', el.querySelector(`#${UIConfig.ELEMENT_IDS.cycleCount}`));
+        app.uiElements.register('messageCount', el.querySelector(`#${UIConfig.ELEMENT_IDS.messageCount}`));
     });
 
     layout.loadLayout(LAYOUT_CONFIG);
 
+    // Allow GoldenLayout to render first
     setTimeout(() => {
         app.initialize();
-        console.log('SeNARS Started');
-    }, 0);
+        // Force update status for offline mode
+        app._updateStatus('connected'); // In local mode, we are "connected" to the in-memory core
+        console.log('SeNARS Offline IDE Started');
+    }, 100);
 
     window.addEventListener('resize', () => layout.updateRootSize());
 }
