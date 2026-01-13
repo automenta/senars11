@@ -1,95 +1,36 @@
 import { getComponents, getOperator, getVariableName, isCompound, isVariable, termsEqual } from './TermUtils.js';
+import * as UnifyCore from './UnifyCore.js';
 
 const FAILURE = { success: false, substitution: {} };
 
 export class Unifier {
     constructor(termFactory) {
         this.termFactory = termFactory;
-    }
 
-    unify(term1, term2, substitution = {}) {
-        const t1 = this.applySubstitution(term1, substitution);
-        const t2 = this.applySubstitution(term2, substitution);
-
-        if (isVariable(t1)) return this._unifyVariable(t1, t2, substitution);
-        if (isVariable(t2)) return this._unifyVariable(t2, t1, substitution);
-        if (termsEqual(t1, t2)) return { success: true, substitution };
-
-        if (isCompound(t1) && isCompound(t2)) {
-            const comps1 = getComponents(t1);
-            const comps2 = getComponents(t2);
-
-            if (comps1.length !== comps2.length ||
-                (getOperator(t1) ?? '') !== (getOperator(t2) ?? '')) {
-                return FAILURE;
+        // NARS term adapter for UnifyCore
+        this.adapter = {
+            isVariable: term => isVariable(term),
+            isCompound: term => isCompound(term),
+            getVariableName: term => getVariableName(term),
+            getOperator: term => getOperator(term) ?? '',
+            getComponents: term => getComponents(term),
+            equals: (t1, t2) => termsEqual(t1, t2),
+            substitute: (term, bindings) => this.applySubstitution(term, bindings),
+            reconstruct: (term, newComponents) => {
+                const operator = getOperator(term);
+                return this.termFactory.create(operator, newComponents);
             }
-
-            let currentSubstitution = substitution;
-            for (let i = 0; i < comps1.length; i++) {
-                const result = this.unify(comps1[i], comps2[i], currentSubstitution);
-                if (!result.success) return FAILURE;
-                currentSubstitution = result.substitution;
-            }
-            return { success: true, substitution: currentSubstitution };
-        }
-
-        return FAILURE;
-    }
-
-    match(pattern, term, substitution = {}) {
-        const p = this.applySubstitution(pattern, substitution);
-
-        if (isVariable(p)) return this._unifyVariable(p, term, substitution);
-
-        if (isCompound(p) && isCompound(term)) {
-            if (getOperator(p) !== getOperator(term)) return FAILURE;
-
-            const pComps = getComponents(p);
-            const tComps = getComponents(term);
-            if (pComps.length !== tComps.length) return FAILURE;
-
-            let currentSub = substitution;
-            for (let i = 0; i < pComps.length; i++) {
-                const res = this.match(pComps[i], tComps[i], currentSub);
-                if (!res.success) return FAILURE;
-                currentSub = res.substitution;
-            }
-            return { success: true, substitution: currentSub };
-        }
-
-        return termsEqual(p, term)
-            ? { success: true, substitution }
-            : FAILURE;
-    }
-
-    _unifyVariable(variable, term, substitution) {
-        const varName = getVariableName(variable);
-
-        if (substitution[varName]) {
-            return this.unify(substitution[varName], term, substitution);
-        }
-
-        const termVarName = getVariableName(term);
-        if (isVariable(term) && substitution[termVarName]) {
-            return this.unify(variable, substitution[termVarName], substitution);
-        }
-
-        if (this._occursCheck(varName, term, substitution)) {
-            return FAILURE;
-        }
-
-        return {
-            success: true,
-            substitution: { ...substitution, [varName]: term }
         };
     }
 
-    _occursCheck(varName, term, substitution) {
-        if (isVariable(term) && getVariableName(term) === varName) return true;
-        if (isCompound(term)) {
-            return getComponents(term).some(comp => this._occursCheck(varName, comp, substitution));
-        }
-        return false;
+    unify(term1, term2, substitution = {}) {
+        const result = UnifyCore.unify(term1, term2, substitution, this.adapter);
+        return result ? { success: true, substitution: result } : FAILURE;
+    }
+
+    match(pattern, term, substitution = {}) {
+        const result = UnifyCore.match(pattern, term, substitution, this.adapter);
+        return result ? { success: true, substitution: result } : FAILURE;
     }
 
     applySubstitution(term, substitution, visited = new Set()) {
