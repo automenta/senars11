@@ -50,6 +50,7 @@ export class SeNARSUI {
     initialize() {
         this.logger.setUIElements(this.uiElements.getAll());
         this.graphManager.initialize(this.uiElements.get('graphContainer'));
+        this.controlPanel.initialize();
 
         // Use correct IDs from Config (or hardcoded to match HTML/UIConfig)
         // ui/src/config/UIConfig.js defines: tracePanel: 'trace-panel', metricsPanel: 'metrics-panel'
