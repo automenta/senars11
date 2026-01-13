@@ -4,7 +4,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import {sym, exp} from './Term.js';
+import { sym, exp, isExpression, constructList } from './Term.js';
 
 export class Ground {
     constructor() {
@@ -15,7 +15,7 @@ export class Ground {
     // === Core API ===
 
     register(name, fn, options = {}) {
-        this.operations.set(this._normalize(name), {fn, options});
+        this.operations.set(this._normalize(name), { fn, options });
         return this;
     }
 
@@ -61,6 +61,7 @@ export class Ground {
         this._registerSpaceOps();
         this._registerIntrospectionOps();
         this._registerTypeOps();
+        this._registerBudgetOps();
 
         this.register('&now', () => sym(String(Date.now())));
 
@@ -70,6 +71,48 @@ export class Ground {
                 throw new Error(`${op} should be provided by Interpreter`);
             })
         );
+
+        // Metaprogramming operations (require interpreter context)
+        this._registerMetaprogrammingOps();
+    }
+
+    _registerMetaprogrammingOps() {
+        // These operations require access to the Space, provided via interpreter context
+        // They will be overridden by Interpreter to provide actual space access
+
+        this.register('&add-rule', (pattern, result, interp) => {
+            if (!interp?.space) throw new Error('&add-rule requires interpreter context');
+            interp.space.add(exp(sym('='), [pattern, result]));
+            return sym('ok');
+        });
+
+        this.register('&remove-rule', (pattern, interp) => {
+            if (!interp?.space) throw new Error('&remove-rule requires interpreter context');
+            // Find and remove matching rules
+            const removed = interp.space.remove(pattern);
+            return sym(removed ? 'ok' : 'not-found');
+        });
+
+        this.register('&get-rules-for', (pattern, interp) => {
+            if (!interp?.space) throw new Error('&get-rules-for requires interpreter context');
+            // Query space for rules matching pattern
+            const rules = interp.space.query(pattern) || [];
+            return constructList(rules.map(r => r), sym('()'));
+        });
+
+        this.register('&list-all-rules', (interp) => {
+            if (!interp?.space) throw new Error('&list-all-rules requires interpreter context');
+            const allAtoms = Array.from(interp.space.atoms || []);
+            const rules = allAtoms.filter(atom =>
+                isExpression(atom) && atom.operator?.name === '='
+            );
+            return constructList(rules, sym('()'));
+        });
+
+        this.register('&rule-count', (interp) => {
+            if (!interp?.space) throw new Error('&rule-count requires interpreter context');
+            return sym(String(interp.space.size() || 0));
+        });
     }
 
     // === Implementation Helpers ===
@@ -219,6 +262,34 @@ export class Ground {
         this.register('&type-infer', (t, i) => i?.typeChecker ? sym(i.typeChecker.typeToString(i.typeChecker.infer(t, {}))) : sym('Unknown'));
         this.register('&type-check', (t, e, i) => this._bool(i?.typeChecker?.check(t, e, {})));
         this.register('&type-unify', (t1, t2, i) => sym(i?.typeChecker?.unify(t1, t2) ? 'Success' : 'Failure'));
+    }
+
+    _registerBudgetOps() {
+        // Budget priority operations
+        this.register('&or-priority', (p1, p2) => {
+            const [a, b] = this._requireNums([p1, p2], 2);
+            return sym(String(Math.max(a, b)));
+        });
+
+        this.register('&and-priority', (p1, p2) => {
+            const [a, b] = this._requireNums([p1, p2], 2);
+            return sym(String((a + b) / 2)); // Average for AND
+        });
+
+        this.register('&max', (a, b) => {
+            const [x, y] = this._requireNums([a, b], 2);
+            return sym(String(Math.max(x, y)));
+        });
+
+        this.register('&min', (a, b) => {
+            const [x, y] = this._requireNums([a, b], 2);
+            return sym(String(Math.min(x, y)));
+        });
+
+        // Conditional for clamping
+        this.register('&if', (cond, thenVal, elseVal) =>
+            this._truthy(cond) ? thenVal : elseVal
+        );
     }
 
     _listify(arr) {

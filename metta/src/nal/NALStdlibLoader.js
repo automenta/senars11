@@ -1,20 +1,19 @@
 /**
- * MeTTa Standard Library Loader
- * Manages loading stdlib .metta files in dependency order
- * Supports both Node.js (fs/path) and browser (virtual files)
+ * NAL Standard Library Loader
+ * Loads NAL-specific modules from metta/src/nal/stdlib/
+ * Separate from general MeTTa stdlib
  */
 
 import { createRequire } from 'module';
 
-// General MeTTa stdlib (not NAL-specific)
-const DEFAULT_MODULES = ['core', 'list', 'match', 'types'];
+const NAL_MODULES = ['truth', 'nal', 'budget', 'attention', 'control', 'search', 'learn'];
 
-export class StdlibLoader {
+export class NALStdlibLoader {
     constructor(interpreter, options = {}) {
         this.interpreter = interpreter;
-        this.stdlibDir = options.stdlibDir || '';
-        this.modules = options.modules || DEFAULT_MODULES;
-        this.virtualFiles = options.virtualFiles || {}; // { 'core.metta': '...' }
+        this.nalStdlibDir = options.nalStdlibDir || '';
+        this.modules = options.modules || NAL_MODULES;
+        this.virtualFiles = options.virtualFiles || {};
         this.loadedModules = new Set();
     }
 
@@ -29,7 +28,7 @@ export class StdlibLoader {
                 this.loadedModules.add(mod);
             } catch (err) {
                 stats.failed.push({ module: mod, error: err.message });
-                console.warn(`Failed to load stdlib '${mod}': ${err.message}`);
+                console.warn(`Failed to load NAL stdlib '${mod}': ${err.message}`);
             }
         }
         return stats;
@@ -52,19 +51,20 @@ export class StdlibLoader {
                 const { fileURLToPath } = require('url');
 
                 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-                const stdlibDir = this.stdlibDir || currentDir;
-                const filePath = path.join(stdlibDir, fileName);
+                // NAL stdlib is in ../nal/stdlib/ relative to metta/src/nal/
+                const nalStdlibDir = this.nalStdlibDir || path.join(currentDir, 'stdlib');
+                const filePath = path.join(nalStdlibDir, fileName);
 
                 if (fs.existsSync(filePath)) {
                     content = fs.readFileSync(filePath, 'utf-8');
                 } else {
-                    throw new Error(`Stdlib module not found on disk: ${filePath}`);
+                    throw new Error(`NAL stdlib module not found: ${filePath}`);
                 }
             } catch (e) {
-                throw new Error(`Failed to load '${name}' from filesystem: ${e.message}`);
+                throw new Error(`Failed to load NAL '${name}' from filesystem: ${e.message}`);
             }
         } else {
-            throw new Error(`Stdlib module '${name}' not found in virtualFiles and filesystem is unavailable.`);
+            throw new Error(`NAL stdlib module '${name}' not found in virtualFiles and filesystem is unavailable.`);
         }
 
         const countBefore = this.interpreter.space?.size?.() ?? 0;
@@ -84,4 +84,4 @@ export class StdlibLoader {
     }
 }
 
-export const loadStdlib = (interpreter, options) => new StdlibLoader(interpreter, options).load();
+export const loadNALStdlib = (interpreter, options) => new NALStdlibLoader(interpreter, options).load();
