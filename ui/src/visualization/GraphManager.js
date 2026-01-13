@@ -1,5 +1,6 @@
 import {Config} from '../config/Config.js';
 import {ContextMenu} from '../components/ContextMenu.js';
+import {DESIGN_TOKENS} from '@senars/core';
 
 export class GraphManager {
     constructor(uiElements = null, callbacks = {}) {
@@ -490,6 +491,15 @@ export class GraphManager {
     }
 
     /**
+     * Update the graph style (e.g., after toggling high-contrast mode)
+     */
+    updateStyle() {
+        if (this.cy) {
+            this.cy.style(Config.getGraphStyle());
+        }
+    }
+
+    /**
      * Update the graph details panel
      */
     updateGraphDetails(details) {
@@ -606,12 +616,6 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const {DESIGN_TOKENS} = window.SeNARS_Core || {
-            DESIGN_TOKENS: {
-                colors: {highlight: '#ff0000'},
-                timing: {pulse: 300}
-            }
-        };
         const originalColor = node.style('border-color');
         const originalWidth = node.style('border-width');
 
@@ -642,7 +646,6 @@ export class GraphManager {
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
 
-        const {DESIGN_TOKENS} = window.SeNARS_Core || {DESIGN_TOKENS: {timing: {glow: 300}}};
         const baseSize = node.data('weight') || 50;
         const targetSize = baseSize * (0.8 + intensity * 0.4); // Range: 80%-120% of base
         const borderWidth = 2 + intensity * 6; // Range: 2-8px
@@ -667,8 +670,6 @@ export class GraphManager {
 
         const node = this.cy.getElementById(nodeId);
         if (!node.length) return;
-
-        const {DESIGN_TOKENS} = window.SeNARS_Core || {DESIGN_TOKENS: {timing: {glow: 300}}};
 
         // Start invisible, fade to full opacity
         node.style('opacity', 0);

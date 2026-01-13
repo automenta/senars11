@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
     const localPath = path.join(__dirname, filePath);
     const fullPath = fs.existsSync(localPath) && fs.statSync(localPath).isFile()
         ? localPath
-        : (filePath.startsWith('/core/') || filePath.startsWith('/agent/'))
+        : (filePath.startsWith('/core/') || filePath.startsWith('/agent/') || filePath.startsWith('/examples/'))
             ? path.join(__dirname, '..', filePath)
             : localPath;
 

@@ -10,6 +10,7 @@ import { ActivityLogPanel } from './components/ActivityLogPanel.js';
 import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
 import { ControlPanel } from './ui/ControlPanel.js';
 import { LMActivityIndicator } from './components/LMActivityIndicator.js';
+import { ExampleBrowser } from './components/ExampleBrowser.js';
 
 export class SeNARSUI {
     constructor(connectionAdapter = null) {
@@ -31,6 +32,7 @@ export class SeNARSUI {
         this.metricsPanel = null;
         this.activityLogPanel = null;
         this.lmActivityIndicator = null;
+        this.exampleBrowser = null;
 
         this.uiEventHandlers = null;
 
@@ -41,13 +43,28 @@ export class SeNARSUI {
     }
 
     initialize() {
-        this.uiElements.refresh();
+        this.logger.setUIElements(this.uiElements.getAll());
         this.graphManager.initialize(this.uiElements.get('graphContainer'));
 
-        new ActivityLogPanel('tracePanel');
-        this.metricsPanel = new SystemMetricsPanel('metricsPanel');
+        // Use correct IDs from Config (or hardcoded to match HTML/UIConfig)
+        // ui/src/config/UIConfig.js defines: tracePanel: 'trace-panel', metricsPanel: 'metrics-panel'
+        new ActivityLogPanel('trace-panel');
+        this.metricsPanel = new SystemMetricsPanel('metrics-panel');
         this.lmActivityIndicator = new LMActivityIndicator(this.uiElements.get('graphContainer'));
-
+        this.exampleBrowser = new ExampleBrowser('example-browser-container', {
+            onSelect: (node) => {
+                // If it's a file, run it
+                if (node.type === 'file') {
+                    // Try to map to STATIC_DEMOS if exists, or use generic runner
+                    this.demoManager.runStaticDemo({
+                        id: node.id,
+                        name: node.name,
+                        path: node.path
+                    });
+                }
+            }
+        });
+        this.exampleBrowser.initialize();
 
         this.eventHandlers = new UIEventHandlers(
             this.uiElements,
@@ -58,6 +75,18 @@ export class SeNARSUI {
             this.controlPanel
         );
         this.eventHandlers.setupEventListeners();
+
+        // High Contrast Mode Toggle
+        const contrastBtn = document.getElementById('btn-toggle-contrast');
+        if (contrastBtn) {
+            contrastBtn.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                this.graphManager.updateStyle();
+            });
+        }
+
+        // Initialize demos (loads static demos immediately)
+        this.demoManager.initialize();
 
         this._setupConnectionHandlers();
         this._setupWebSocketHandlers();
@@ -73,7 +102,7 @@ export class SeNARSUI {
         });
 
         this.connectionManager.connect();
-        this.connectionManager.subscribe('connection.status', (status) => status === 'connected' && this.demoManager.initialize());
+        this.connectionManager.subscribe('connection.status', (status) => status === 'connected' && this.demoManager.requestDemoList());
     }
 
     _setupWebSocketHandlers() {
@@ -185,10 +214,21 @@ export class SeNARSUI {
     }
 
     _updateStatus(status) {
-        const el = document.getElementById('connectionStatus');
-        const indicator = document.getElementById('statusIndicator');
+        const el = document.getElementById('connection-status');
+        const indicator = document.getElementById('status-indicator');
+
+        // Update connection text
         if (el) el.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        if (indicator) indicator.className = `${status}`;
+
+        // Update indicator class
+        if (indicator) indicator.className = `status-indicator status-${status}`;
+
+        // Visual feedback for disconnected state (gray out)
+        if (status === 'disconnected' || status === 'error') {
+            document.body.classList.add('disconnected');
+        } else {
+            document.body.classList.remove('disconnected');
+        }
     }
 
     _handleTrace(msg) {
