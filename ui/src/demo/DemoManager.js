@@ -7,12 +7,37 @@ export class DemoManager {
         this.commandProcessor = commandProcessor;
         this.logger = logger;
         this.demos = new Map();
+
+        // Define static demos (Universal Demos)
+        this.STATIC_DEMOS = [
+            {
+                id: 'static-adaptive-reasoning',
+                name: 'Adaptive Reasoning (Static)',
+                description: 'Demonstrates adaptation to new evidence (client-side execution)',
+                path: 'examples/metta/demos/adaptive_reasoning.metta'
+            },
+            {
+                id: 'static-maze-solver',
+                name: 'Maze Solver (Static)',
+                description: 'Pathfinding in a grid (client-side execution)',
+                path: 'examples/metta/demos/maze_solver.metta'
+            },
+            {
+                id: 'static-truth-chain',
+                name: 'Truth Chain (Static)',
+                description: 'Multi-step deduction (client-side execution)',
+                path: 'examples/metta/demos/truth_chain.metta'
+            }
+        ];
     }
 
     /**
      * Initialize and request available demos
      */
     initialize() {
+        // Load static demos first
+        this.renderDemoList([]);
+
         // Request demo list from backend
         this.requestDemoList();
     }
@@ -31,7 +56,13 @@ export class DemoManager {
      * Handle received demo list
      */
     handleDemoList(payload) {
-        // Payload is array of demo objects
+        this.renderDemoList(payload);
+    }
+
+    /**
+     * Render the demo list (combining static and backend demos)
+     */
+    renderDemoList(backendDemos = []) {
         this.demos.clear();
         const select = this.uiElements.get('demoSelect');
         if (!select) return;
@@ -41,39 +72,107 @@ export class DemoManager {
             select.remove(1);
         }
 
-        if (Array.isArray(payload)) {
-            // Use for...of for better performance
-            for (const demo of payload) {
+        // 1. Add Backend Demos
+        if (Array.isArray(backendDemos) && backendDemos.length > 0) {
+            const group = document.createElement('optgroup');
+            group.label = 'Backend Demos';
+            for (const demo of backendDemos) {
                 this.demos.set(demo.id, demo);
                 const option = document.createElement('option');
                 option.value = demo.id;
                 option.textContent = demo.name;
                 option.title = demo.description || '';
-                select.appendChild(option);
+                group.appendChild(option);
             }
+            select.appendChild(group);
+        }
 
-            // Only log if we actually loaded something, to avoid noise on re-connect
-            if (payload.length > 0) {
-                // Log silently or as debug to avoid spam on refresh
-                console.debug(`Loaded ${payload.length} demos`);
+        // 2. Add Static Demos
+        if (this.STATIC_DEMOS.length > 0) {
+            const group = document.createElement('optgroup');
+            group.label = 'Static Demos (Offline)';
+            for (const demo of this.STATIC_DEMOS) {
+                this.demos.set(demo.id, demo);
+                const option = document.createElement('option');
+                option.value = demo.id;
+                option.textContent = demo.name;
+                option.title = demo.description || '';
+                group.appendChild(option);
             }
+            select.appendChild(group);
+        }
+
+        // Log if backend demos were loaded
+        if (Array.isArray(backendDemos) && backendDemos.length > 0) {
+            console.debug(`Loaded ${backendDemos.length} backend demos`);
         }
     }
 
     /**
      * Run a specific demo by ID
      */
-    runDemo(demoId) {
+    async runDemo(demoId) {
         if (!demoId) {
             this.logger.log('Please select a demo', 'warning', '⚠️');
             return false;
         }
 
+        const demo = this.demos.get(demoId);
+
+        // Check if it's a static demo
+        if (demo && demo.path) {
+            return this.runStaticDemo(demo);
+        }
+
+        // Otherwise assume backend demo
         this.commandProcessor.executeControlCommand('demoControl', {
             command: 'start',
             demoId: demoId
         });
         this.logger.log(`Requested demo start: ${demoId}`, 'info', '🚀');
+        return true;
+    }
+
+    /**
+     * Run a static demo by fetching and executing it line-by-line
+     */
+    async runStaticDemo(demo) {
+        this.logger.log(`Starting static demo: ${demo.name}`, 'info', '🚀');
+
+        try {
+            const response = await fetch(`/${demo.path}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load demo file: ${response.statusText}`);
+            }
+
+            const text = await response.text();
+            const lines = text.split('\n');
+
+            let delay = 0;
+            const stepDelay = 1000; // ms between steps
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line || line.startsWith(';')) continue; // Skip empty lines and comments
+
+                // Simple simulation of delay
+                setTimeout(() => {
+                    this.logger.log(`Executing: ${line}`, 'info', '▶️');
+                    // Treat as user input
+                    this.commandProcessor.processCommand(line);
+                }, delay);
+
+                delay += stepDelay;
+            }
+
+            setTimeout(() => {
+                this.logger.log(`Demo ${demo.name} finished queuing commands.`, 'success', '🏁');
+            }, delay);
+
+        } catch (error) {
+            this.logger.log(`Error running static demo: ${error.message}`, 'error', '❌');
+        }
+
         return true;
     }
 

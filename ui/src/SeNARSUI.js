@@ -70,6 +70,9 @@ export class SeNARSUI {
             });
         }
 
+        // Initialize demos (loads static demos immediately)
+        this.demoManager.initialize();
+
         this._setupConnectionHandlers();
         this._setupWebSocketHandlers();
 
@@ -84,7 +87,7 @@ export class SeNARSUI {
         });
 
         this.connectionManager.connect();
-        this.connectionManager.subscribe('connection.status', (status) => status === 'connected' && this.demoManager.initialize());
+        this.connectionManager.subscribe('connection.status', (status) => status === 'connected' && this.demoManager.requestDemoList());
     }
 
     _setupWebSocketHandlers() {
