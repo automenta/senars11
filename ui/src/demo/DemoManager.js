@@ -122,27 +122,28 @@ export class DemoManager {
 
             const text = await response.text();
             const lines = text.split('\n');
-
-            let delay = 0;
             const stepDelay = 1000; // ms between steps
+
+            // Helper for delay
+            const delay = ms => new Promise(res => setTimeout(res, ms));
 
             for (let line of lines) {
                 line = line.trim();
                 if (!line || line.startsWith(';')) continue; // Skip empty lines and comments
 
-                // Simple simulation of delay
-                setTimeout(() => {
-                    this.logger.log(`Executing: ${line}`, 'info', '▶️');
-                    // Treat as user input
-                    this.commandProcessor.processCommand(line);
-                }, delay);
+                await delay(stepDelay);
 
-                delay += stepDelay;
+                // Check connection before processing
+                if (!this.commandProcessor.webSocketManager.isConnected()) {
+                    this.logger.log('Demo execution paused: System disconnected', 'warning', '⚠️');
+                    return false;
+                }
+
+                this.logger.log(`Executing: ${line}`, 'info', '▶️');
+                this.commandProcessor.processCommand(line);
             }
 
-            setTimeout(() => {
-                this.logger.log(`Demo ${demo.name} finished queuing commands.`, 'success', '🏁');
-            }, delay);
+            this.logger.log(`Demo ${demo.name} finished.`, 'success', '🏁');
 
         } catch (error) {
             this.logger.log(`Error running static demo: ${error.message}`, 'error', '❌');
