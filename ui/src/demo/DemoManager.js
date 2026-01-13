@@ -36,7 +36,7 @@ export class DemoManager {
      */
     initialize() {
         // Load static demos first
-        this.renderDemoList([]);
+        this.processDemoList([]);
 
         // Request demo list from backend
         this.requestDemoList();
@@ -56,50 +56,25 @@ export class DemoManager {
      * Handle received demo list
      */
     handleDemoList(payload) {
-        this.renderDemoList(payload);
+        this.processDemoList(payload);
     }
 
     /**
-     * Render the demo list (combining static and backend demos)
+     * Process the demo list (combining static and backend demos)
      */
-    renderDemoList(backendDemos = []) {
+    processDemoList(backendDemos = []) {
         this.demos.clear();
-        const select = this.uiElements.get('demoSelect');
-        if (!select) return;
 
-        // Clear existing options (keep first default option)
-        while (select.options.length > 1) {
-            select.remove(1);
-        }
-
-        // 1. Add Backend Demos
-        if (Array.isArray(backendDemos) && backendDemos.length > 0) {
-            const group = document.createElement('optgroup');
-            group.label = 'Backend Demos';
+        // 1. Register Backend Demos
+        if (Array.isArray(backendDemos)) {
             for (const demo of backendDemos) {
                 this.demos.set(demo.id, demo);
-                const option = document.createElement('option');
-                option.value = demo.id;
-                option.textContent = demo.name;
-                option.title = demo.description || '';
-                group.appendChild(option);
             }
-            select.appendChild(group);
         }
 
-        // 2. Add Static Demos
-        if (this.STATIC_DEMOS.length > 0) {
-            const group = document.createElement('optgroup');
-            group.label = 'Static Demos (Offline)';
-            for (const demo of this.STATIC_DEMOS) {
-                this.demos.set(demo.id, demo);
-                const option = document.createElement('option');
-                option.value = demo.id;
-                option.textContent = demo.name;
-                option.title = demo.description || '';
-                group.appendChild(option);
-            }
-            select.appendChild(group);
+        // 2. Register Static Demos
+        for (const demo of this.STATIC_DEMOS) {
+            this.demos.set(demo.id, demo);
         }
 
         // Log if backend demos were loaded

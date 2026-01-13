@@ -10,6 +10,7 @@ import { ActivityLogPanel } from './components/ActivityLogPanel.js';
 import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
 import { ControlPanel } from './ui/ControlPanel.js';
 import { LMActivityIndicator } from './components/LMActivityIndicator.js';
+import { ExampleBrowser } from './components/ExampleBrowser.js';
 
 export class SeNARSUI {
     constructor(connectionAdapter = null) {
@@ -31,6 +32,7 @@ export class SeNARSUI {
         this.metricsPanel = null;
         this.activityLogPanel = null;
         this.lmActivityIndicator = null;
+        this.exampleBrowser = null;
 
         this.uiEventHandlers = null;
 
@@ -49,7 +51,20 @@ export class SeNARSUI {
         new ActivityLogPanel('trace-panel');
         this.metricsPanel = new SystemMetricsPanel('metrics-panel');
         this.lmActivityIndicator = new LMActivityIndicator(this.uiElements.get('graphContainer'));
-
+        this.exampleBrowser = new ExampleBrowser('example-browser-container', {
+            onSelect: (node) => {
+                // If it's a file, run it
+                if (node.type === 'file') {
+                    // Try to map to STATIC_DEMOS if exists, or use generic runner
+                    this.demoManager.runStaticDemo({
+                        id: node.id,
+                        name: node.name,
+                        path: node.path
+                    });
+                }
+            }
+        });
+        this.exampleBrowser.initialize();
 
         this.eventHandlers = new UIEventHandlers(
             this.uiElements,
