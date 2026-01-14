@@ -12,7 +12,7 @@ import { TermFactory } from '@senars/core/src/term/TermFactory.js';
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';
 import { MemoizationCache } from './kernel/MemoizationCache.js';
-import { reduce, step, match } from './kernel/Reduce.js';
+import { reduce, reduceND, step, match } from './kernel/Reduce.js';
 import { Space } from './kernel/Space.js';
 import { Term } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
@@ -47,6 +47,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         // Register advanced grounded operations
         this.registerAdvancedOps();
+        this.registerMinimalOps();
 
         // If provided, register bridge primitives
         if (this.reasoner?.bridge?.registerPrimitives) {
@@ -206,6 +207,71 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                 return reduce(application, this.space, this.ground);
             }, init);
         }, { lazy: true });
+    }
+
+    registerMinimalOps() {
+        const { sym, exp, isExpression } = Term;
+
+        // === eval: single-step evaluation ===
+        this.ground.register('eval', (atom) => {
+            const { reduced } = step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            return reduced;
+        }, { lazy: true });
+
+        // === chain: evaluate $atom, bind to $var, evaluate $template ===
+        this.ground.register('chain', (atom, varAtom, template) => {
+            const result = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            if (result.name === 'Empty' || (isExpression(result) && result.operator?.name === 'Error')) return result;
+            return Unify.subst(template, { [varAtom.name]: result });
+        }, { lazy: true });
+
+        // === unify: pattern match with then/else branches ===
+        this.ground.register('unify', (atom, pattern, thenBranch, elseBranch) => {
+            const bindings = Unify.unify(atom, pattern);
+            return bindings !== null ? Unify.subst(thenBranch, bindings) : elseBranch;
+        }, { lazy: true });
+
+        // === function/return: block evaluation ===
+        this.ground.register('function', (body) => {
+            let current = body;
+            let iterations = 0;
+            const limit = this.config.maxReductionSteps || 1000;
+            while (iterations++ < limit) {
+                const result = step(current, this.space, this.ground, limit, this.memoCache);
+                const reduced = result.reduced;
+                // Check for return
+                if (isExpression(reduced) && reduced.operator?.name === 'return') {
+                    return reduced.components[0] || sym('()');
+                }
+                if (reduced === current || (reduced.equals && reduced.equals(current))) break;
+                current = reduced;
+                if (!result.applied) break;
+            }
+            return exp(sym('Error'), [body, sym('NoReturn')]);
+        }, { lazy: true });
+
+        this.ground.register('return', (value) => exp(sym('return'), [value]), { lazy: true });
+
+        // === collapse-bind: collect all results ===
+        this.ground.register('collapse-bind', (atom) => {
+            const results = reduceND(atom, this.space, this.ground, this.config.maxReductionSteps);
+            // Hyperon typically wraps results in duplicates/structure?
+            // "The operation produces a list of pairs (Result {})" per some docs, or just list of results.
+            // TODO snippet says: this._listify(results.map(r => exp(sym(':'), [r, sym('{}')])))
+            return this._listify(results); // Using simple list for now as per minimal parity
+        }, { lazy: true });
+
+        // === superpose-bind: expand results ===
+        this.ground.register('superpose-bind', (collapsed) => {
+            const items = this._flattenList(collapsed);
+            return items.length === 1 ? items[0] : exp(sym('superpose'), items);
+        });
+
+        // === context-space: return current space ===
+        this.ground.register('context-space', () => this.space, { lazy: true });
+
+        // === noeval: prevent evaluation ===
+        this.ground.register('noeval', (atom) => atom, { lazy: true });
     }
 
     _listify(arr) {

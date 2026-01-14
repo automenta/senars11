@@ -18,17 +18,14 @@ const mettaAdapter = {
     getOperator: term => typeof term.operator === 'object' ? term.operator : term.operator,
 
     getComponents: term => {
-        if (isList(term)) {
-            const { elements } = flattenList(term);
-            return elements;
-        }
+        // Do NOT flatten lists here. UnifyCore expects structural components.
+        // (; A B) is unified structurally as (: A (: B ()))
         return term.components || [];
     },
 
     equals: (t1, t2) => {
-        if (t1 === t2) return true;
-        if (t1?.equals && typeof t1.equals === 'function') return t1.equals(t2);
-        return false;
+        const eq = (t1 === t2) || (t1?.equals && typeof t1.equals === 'function' && t1.equals(t2));
+        return eq || false;
     },
 
     substitute: (term, bindings) => safeSubstitute(term, bindings),
