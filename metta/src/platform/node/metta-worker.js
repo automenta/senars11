@@ -16,7 +16,6 @@ parentPort.on('message', (task) => {
 
         // Serialize results to string as Atoms are not clonable across threads
         const resultStr = results.map(r => r.toString()).join(' ');
-        // console.log('WORKER:', code, '->', resultStr);
 
         parentPort.postMessage({ id, result: resultStr });
     } catch (e) {

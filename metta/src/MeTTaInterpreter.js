@@ -4,17 +4,17 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
+import { TermFactory } from '@senars/core/src/term/TermFactory.js';
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { Parser } from './Parser.js';
 import { TypeChecker, TypeSystem } from './TypeSystem.js';
-import { TermFactory } from '@senars/core/src/term/TermFactory.js';
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';
 import { MemoizationCache } from './kernel/MemoizationCache.js';
 import { reduce, reduceND, step, match, reduceAsync, reduceNDAsync } from './kernel/Reduce.js';
 import { ReactiveSpace } from './extensions/ReactiveSpace.js';
 import { Space } from './kernel/Space.js';
-import { Term } from './kernel/Term.js';
+import { Term, isList, flattenList, isExpression } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
 import { Formatter } from './kernel/Formatter.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
@@ -87,7 +87,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * Register advanced operations that extend the core functionality
      */
     registerAdvancedOps() {
-        const { sym, exp, var: v, isList, flattenList } = Term;
+        const { sym, exp, var: v } = Term;
         const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
 
         // Substitution operations
@@ -189,21 +189,21 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         // Higher-order function operations
         reg('&map-fast', (fn, list) =>
-            this._listify(this._flattenList(list).map(el =>
+            this._listify(this._flattenToList(list).map(el =>
                 reduce(exp(fn, [el]), this.space, this.ground)
             )),
             { lazy: true }
         );
 
         reg('&filter-fast', (pred, list) =>
-            this._listify(this._flattenList(list).filter(el =>
+            this._listify(this._flattenToList(list).filter(el =>
                 this._truthy(reduce(exp(pred, [el]), this.space, this.ground))
             )),
             { lazy: true }
         );
 
         reg('&foldl-fast', (fn, init, list) =>
-            this._flattenList(list).reduce((acc, el) =>
+            this._flattenToList(list).reduce((acc, el) =>
                 reduce(exp(fn, [acc, el]), this.space, this.ground),
                 init
             ),
@@ -257,7 +257,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
                 if (evalRes && evalRes.length > 0) list = evalRes[0];
             }
 
-            const items = this._flattenList(list);
+            const items = this._flattenToList(list);
             if (!this.workerPool) {
                 this.workerPool = new WorkerPool(
                     this.config.workerScript || (ENV.isNode ?
@@ -376,7 +376,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         );
 
         reg('superpose-bind', (collapsed) => {
-            const items = this._flattenList(collapsed);
+            const items = this._flattenToList(collapsed);
             return items.length === 1 ? items[0] : exp(sym('superpose'), items);
         });
 
@@ -431,14 +431,11 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     /**
      * Flatten list structure to array
      */
-    _flattenList(atom) {
+    _flattenToList(atom) {
         if (!atom || atom.name === '()') return [];
-        if (atom.operator?.name === ':') {
-            return [atom.components[0], ...this._flattenList(atom.components[1])];
-        }
-        if (atom.type === 'compound') {
-            return [atom.operator, ...atom.components];
-        }
+        if (isList(atom)) return flattenList(atom).elements;
+        // Fallback for non-list compounds (legacy/specific behavior)
+        if (isExpression(atom)) return [atom.operator, ...atom.components];
         return [atom];
     }
 

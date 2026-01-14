@@ -4,7 +4,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import { sym, exp, isExpression, constructList } from './Term.js';
+import { sym, exp, isExpression, constructList, isList, flattenList } from './Term.js';
 import { reduce } from './Reduce.js';
 import { Unify } from './Unify.js';
 
@@ -205,19 +205,11 @@ export class Ground {
         if (!isExpression(expr)) return [expr];
 
         // Special handling for list structure (: head tail)
-        if (expr.operator?.name === ':') {
-            const result = [];
-            if (expr.components && expr.components.length > 0) {
-                // Add first component (head)
-                const head = expr.components[0];
-                if (head && head.name !== '()') result.push(head);
-
-                // Recursively flatten tail
-                if (expr.components.length > 1) {
-                    result.push(...this._flattenExpr(expr.components[1]));
-                }
-            }
-            return result;
+        if (isList(expr)) {
+            const { elements, tail } = flattenList(expr);
+            // Recursively flatten tail for improper lists
+            const tailItems = this._flattenExpr(tail);
+            return [...elements, ...tailItems];
         }
 
         // For other expressions, flatten all parts
@@ -238,7 +230,7 @@ export class Ground {
      */
     _listify(arr) {
         if (!arr || arr.length === 0) return sym('()');
-        return exp(sym(':'), [arr[0], this._listify(arr.slice(1))]);
+        return constructList(arr, sym('()'));
     }
 
     // === Operation Groups ===
