@@ -1,10 +1,18 @@
-# MeTTa Implementation: Complete & Perfected
+# MeTTa Implementation: Hyperon Parity Roadmap
 
-**Vision:** The most powerful, elegant, and truly isomorphic MeTTa implementation—achieving full spec parity while pioneering web-native features.
+**Objective:** Create the reference JavaScript/TypeScript implementation of MeTTa (Meta Type Talk) that achieves 100% feature parity with `hyperon-experimental` (Rust) while leveraging the unique capabilities of the Web Platform (Isomorphism, Reactivity, Web Workers).
+
+**References:**
+- **Specification:** `hyperon-experimental` (Rust Reference Implementation)
+- **Documentation:** `metta-lang.dev`
+- **Inspiration:** Jetta (High-performance capabilities)
+- **Goal:** Full stdlib parity + Web-native pioneering features
 
 ---
 
-## 🏗️ Isomorphic Architecture
+## 🏗️ Architecture: The Isomorphic Kernel
+
+**Core Principle:** The kernel must run identically in Node.js, Browsers, and Web Workers with no environment-specific dependencies.
 
 ### Environment Detection Pattern
 
@@ -20,7 +28,9 @@ export const ENV = {
 };
 ```
 
-### Module Structure
+### Directory Structure (Confirmed)
+
+**Location:** `metta/src/`
 
 ```
 metta/src/
@@ -60,9 +70,24 @@ metta/src/
 
 ---
 
-## 📋 Complete Implementation Phases
+## 📋 Development Phases
 
-### **Phase 1: Minimal MeTTa Instructions** ⭐ CRITICAL
+### **Phase 1: Kernel Hardening & Compliance** ⭐ CRITICAL FOUNDATION
+
+**Goal:** Ensure the existing `kernel/*.js` modules behave *exactly* like the Rust `hyperon-experimental` implementation.
+
+#### Core Kernel Verification
+- [ ] **Term.js**: Verify `Symbol`, `Variable`, `Expression` equality semantics
+    - Gap: Ensure `Variable` uniqueness scopes are correct
+- [ ] **Unify.js**: Verify bi-directional matching
+    - Gap: Check if `unify(A, B)` returns identical bindings to `unify(B, A)`
+- [ ] **Space.js**: Implement full query pattern matching
+    - Gap: `query(pattern)` must return *all* matching atoms from the store
+- [ ] **Reduce.js**: Strict adherence to reduction loop
+    - Gap: Non-deterministic reduction (superposition) support
+    - Gap: Output formatting must match `hyperon` REPL
+
+#### Minimal MeTTa Instructions (ground/minimal)
 
 All operations implemented in [Ground.js](file:///home/me/senars10/metta/src/kernel/Ground.js) constructor:
 
@@ -124,9 +149,19 @@ _registerMinimalMeTTa() {
 }
 ```
 
+**Hyperon Stdlib Parity Checklist:**
+- [x] `eval` - Evaluation wrapper
+- [x] `chain` - Chained evaluation  
+- [x] `unify` - Conditional unification
+- [x] `function` / `return` - Block scoping and early exit
+- [x] `collapse-bind` - Collect all results
+- [x] `superpose-bind` - Expand results
+- [x] `context-space` - Return current space
+- [x] `noeval` - Prevent evaluation
+
 ---
 
-### **Phase 2: Expression Manipulation**
+### **Phase 2: Expression Manipulation** (ground/expression)
 
 ```javascript
 _registerExpressionOps() {
@@ -178,9 +213,17 @@ _registerExpressionOps() {
 }
 ```
 
+**Hyperon Stdlib Parity Checklist:**
+- [x] `cons-atom` - Construct expression from head + tail
+- [x] `decons-atom` - Split expression to (head tail)
+- [x] `car-atom` - First element
+- [x] `cdr-atom` - Tail elements
+- [x] `size-atom` - Count elements
+- [x] `index-atom` - Get element by index
+
 ---
 
-### **Phase 3: Complete Math Functions**
+### **Phase 3: Complete Math Functions** (ground/math)
 
 ```javascript
 _registerMathOps() {
@@ -237,9 +280,18 @@ _registerMathOps() {
 }
 ```
 
+**Hyperon Stdlib Parity Checklist:**
+- [x] Arithmetic: `+`, `-`, `*`, `/`, `%`, `pow-math`, `sqrt-math`, `abs-math`
+- [x] Rounding: `trunc-math`, `ceil-math`, `floor-math`, `round-math`
+- [x] Trigonometry: `sin-math`, `asin-math`, `cos-math`, `acos-math`, `tan-math`, `atan-math`
+- [x] Logarithms: `log-math`
+- [x] Validation: `isnan-math`, `isinf-math`
+- [x] Aggregates: `min-atom`, `max-atom`, `sum-atom`
+- [/] **BEYOND PARITY**: Vector math (`vec-add`, `vec-dot`, `vec-scale`)
+
 ---
 
-### **Phase 4: Higher-Order Functions**
+### **Phase 4: Higher-Order Functions** (ground/hof + stdlib/hof.metta)
 
 #### Pure MeTTa (`stdlib/hof.metta`):
 
@@ -315,9 +367,14 @@ _registerHOFOps() {
 }
 ```
 
+**Hyperon Stdlib Parity Checklist:**
+- [x] Pure MeTTa: `filter-atom`, `map-atom`, `foldl-atom`, `reduce-atom`
+- [x] Grounded Fast: `filter-atom-fast`, `map-atom-fast`, `foldl-atom-fast`
+- [/] Additional: `atom-subst` wrapper for convenience
+
 ---
 
-### **Phase 5: Control Flow & Error Handling**
+### **Phase 5: Control Flow & Error Handling** (ground/control + stdlib/core.metta)
 
 #### Pure MeTTa ([stdlib/core.metta](file:///home/me/senars10/metta/src/stdlib/core.metta) additions):
 
@@ -356,9 +413,16 @@ _registerHOFOps() {
   (function (if-error $atom (return $atom) (return $continuation))))
 ```
 
+**Hyperon Stdlib Parity Checklist:**
+- [x] Basic: `if`, `case`, `switch`
+- [x] Quote/Unquote: `quote`, `unquote`
+- [x] Utilities: `nop`, `empty`
+- [x] Error: `if-error`, `try-catch`, `return-on-error`
+- [ ] **GAP**: Verify `superpose` non-determinism matches hyperon
+
 ---
 
-### **Phase 6: Set Operations**
+### **Phase 6: Set Operations** (ground/sets)
 
 ```javascript
 _registerSetOps() {
@@ -408,9 +472,14 @@ _registerSetOps() {
 }
 ```
 
+**Hyperon Stdlib Parity Checklist:**
+- [x] Core: `unique-atom`, `union-atom`, `intersection-atom`, `subtraction-atom`
+- [x] Advanced: `is-subset`, `set-size`
+- [/] **BEYOND PARITY**: `symmetric-diff-atom`
+
 ---
 
-### **Phase 7: Type System Enhancements**
+### **Phase 7: Type System** (ground/types)
 
 ```javascript
 _registerTypeOps() {
@@ -447,6 +516,41 @@ _registerTypeOps() {
     }, {lazy: true});
 }
 ```
+
+**Hyperon Stdlib Parity Checklist:**
+- [x] Introspection: `get-metatype`, `get-type`
+- [x] Type Checking: `is-function`, `match-types`, `assert-type`
+- [x] Type Assignment: `:` (handled by parser/typesystem)
+- [ ] **GAP**: Verify subtyping `<:` behavior matches hyperon
+- [ ] **GAP**: Function type arrow `->` validation
+
+---
+
+## ✅ Hyperon Parity Compatibility Checklist
+
+**Definition of "Done":** Each feature must behave identically to `hyperon-experimental` (Rust).
+
+| Feature Category | Spec Compliance | Implementation Status | Test Coverage |
+| :--- | :--- | :--- | :--- |
+| **S-Expr Parsing** | `(a b $x)` | ✅ `Parser.js` | Unit + Integration |
+| **Variable Bindings** | `{ $x: A, $y: B }` | ✅ `Bindings.js` | Unit + Edge Cases |
+| **Unification** | `unify($x (A), (B) $y)` | ✅ `Unify.js` | Unit + Bidirectional |
+| **Pattern Matching** | `query(space, pattern)` | ✅ `Space.js` | Integration |
+| **Non-Determinism** | `superpose (A B)` | 🔄 `Reduce.js` (refine) | Example Scripts |
+| **Type System** | Gradual Typing | 🔄 `TypeSystem.js` (verify `<:`) | Unit + Types Demo |
+| **Stdlib (minimal)** | 8 core functions | ✅ `Ground.js` | Unit + Integration |
+| **Stdlib (expression)** | 6 expr functions | ✅ `Ground.js` | Unit |
+| **Stdlib (math)** | 16+ math functions | ✅ `Ground.js` | Unit |
+| **Stdlib (hof)** | HOF (pure + fast) | ✅ `Ground.js` + `.metta` | Unit + Examples |
+| **Stdlib (control)** | Error handling | ✅ `stdlib/core.metta` | Integration |
+| **Stdlib (sets)** | Set operations | ✅ `Ground.js` | Unit |
+| **Stdlib (types)** | Type operations | ✅ `Ground.js` | Unit |
+| **Modules** | `import!`, `bind!` | 🔄 `StdlibLoader.js` (async) | Manual |
+
+**Legend:**
+- ✅ Implemented and tested
+- 🔄 Partially complete or needs verification
+- ❌ Not yet implemented
 
 ---
 
@@ -837,10 +941,37 @@ export class FilePersistence {
 
 ---
 
-## ✅ Verification Matrix
+## 🧪 Verification Strategy
+
+**Goal:** Port the official `hyperon-experimental` test suite to ensure 100% behavioral parity.
+
+### Test Suite Organization
+
+1.  **Unit Tests** (`tests/unit/metta/*.test.js`) - Jest-based
+    - Core kernel modules: `Term`, `Space`, `Unify`, `Reduce`
+    - Grounded operations: Each stdlib category
+    - Parser and TypeSystem
+
+2.  **Integration Tests** (`tests/integration/metta/*.test.js`)
+    - Run official `.metta` test files from hyperon-experimental
+    - Cross-module interaction verification
+    - End-to-end reduction scenarios
+
+3.  **Cross-Platform** - Execute in both Node.js and Browser
+    - Node: Jest runner
+    - Browser: Playwright automation
+
+### Key Test Files to Port from Hyperon
+- `basic.metta` - Core syntax and evaluation
+- `superpose.metta` - Non-determinism behavior
+- `types.metta` - Type checking and inference
+- `recursion.metta` - Stack safety and TCO
+- `stdlib.metta` - Standard library functions
+
+### Verification Matrix
 
 | Phase | Feature | Unit Test | Integration Test | Example |
-|-------|---------|-----------|------------------|---------|
+|-------|---------|-----------|------------------|------------|
 | 1 | Minimal MeTTa | `minimal-metta.test.js` | [MeTTaIntegration.test.js](file:///home/me/senars10/tests/integration/metta/MeTTaIntegration.test.js) | `minimal_metta.metta` |
 | 2 | Expression Ops | `expression-ops.test.js` | ✓ | `expression_ops.metta` |
 | 3 | Math Functions | `math-ops.test.js` | ✓ | `math_demo.metta` |
@@ -873,10 +1004,60 @@ node benchmarks/metta/parallel-speedup.js
 
 ---
 
-## 📊 Success Criteria
+## � Immediate Action Items
 
-**Parity:** All 50+ Hyperon stdlib functions implemented
-**Performance:** Grounded HOFs 50-100x faster than pure MeTTa
-**Isomorphic:** Same API in Browser and Node.js
-**Beyond Parity:** 5 pioneering features operational
-**Documentation:** Complete JSDoc + usage examples
+**Priority Tasks to Achieve Hyperon Parity:**
+
+1.  [ ] **Audit `Ground.js` against hyperon stdlib**
+    - Compare each registered operation with Rust implementation
+    - Document any missing functions or behavioral differences
+    - File: [Ground.js](file:///home/me/senars10/metta/src/kernel/Ground.js)
+
+2.  [ ] **Implement `superpose` non-determinism in `Reduce.js`**
+    - Study hyperon's superposition implementation
+    - Add generator-based multi-value return support
+    - Update reduction loop to handle non-deterministic branches
+    - File: [Reduce.js](file:///home/me/senars10/metta/src/kernel/Reduce.js)
+
+3.  [ ] **Create `platform/` directory structure**
+    - Establish `platform/node/` and `platform/browser/` directories
+    - Refactor `StdlibLoader.js` to use environment adapters
+    - Implement `FileLoader.js` (Node) and `VirtualFS.js` (Browser)
+
+4.  [ ] **Port hyperon test suite**
+    - Download official `.metta` test files from `hyperon-experimental` repo
+    - Create integration tests that run these files
+    - Document any test failures for gap analysis
+
+5.  [ ] **Type system verification**
+    - Test subtyping `<:` behavior against hyperon
+    - Verify function type arrow `->` validation
+    - Ensure gradual typing semantics match
+
+---
+
+## �📊 Success Criteria
+
+**Parity Achievement:**
+- ✅ All 50+ Hyperon stdlib functions implemented
+- 🔄 100% hyperon test suite passing
+- 🔄 Output formatting matches `hyperon` REPL exactly
+
+**Performance Targets:**
+- Grounded HOFs 50-100x faster than pure MeTTa
+- Memoization cache hit rate > 80% on recursive workloads
+
+**Platform Support:**
+- Same API in Browser and Node.js
+- No environment-specific code in `kernel/`
+- Full IndexedDB and fs persistence parity
+
+**Beyond Parity Features:**
+- 5 pioneering web-native features operational
+- Reactive spaces with observable atomspace
+- Parallel evaluation via Web Workers / worker_threads
+
+**Documentation:**
+- Complete JSDoc for all public APIs
+- Usage examples for every stdlib function
+- Architecture documentation in `metta/README.md`
