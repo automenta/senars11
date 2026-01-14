@@ -12,6 +12,7 @@ import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';
 import { MemoizationCache } from './kernel/MemoizationCache.js';
 import { reduce, reduceND, step, match } from './kernel/Reduce.js';
+import { ReactiveSpace } from './extensions/ReactiveSpace.js';
 import { Space } from './kernel/Space.js';
 import { Term } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
@@ -32,7 +33,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         super(opts, 'MeTTaInterpreter', opts.eventBus, opts.termFactory);
 
         this.reasoner = reasoner;
-        this.space = new Space();
+        this.space = new ReactiveSpace();
         this.ground = new Ground();
         this.parser = new Parser();
         this.typeSystem = new TypeSystem();
@@ -49,6 +50,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     _initializeOperations() {
         this.registerAdvancedOps();
+        this.registerReactiveOps();
         this.registerMinimalOps();
         this.registerHofOps();
     }
@@ -204,6 +206,38 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             ),
             { lazy: true }
         );
+    }
+
+    /**
+     * Register reactive operations
+     */
+    registerReactiveOps() {
+        const { sym, exp } = Term;
+        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
+
+        reg('&get-event-log', (sinceAtom) => {
+            const since = sinceAtom ? (parseInt(sinceAtom.name) || 0) : 0;
+            const log = this.space.getEventLog?.(since) || [];
+
+            return this._listify(log.map(e => {
+                let dataAtom = e.data;
+                if (e.event === 'addRule') {
+                    // Convert rule object to (= pattern result)
+                    dataAtom = exp(sym('='), [e.data.pattern, e.data.result]);
+                }
+
+                return exp(sym('Event'), [
+                    sym(e.event),
+                    dataAtom,
+                    sym(String(e.timestamp))
+                ]);
+            }));
+        }, { lazy: true });
+
+        reg('&clear-event-log', () => {
+            this.space.clearEventLog?.();
+            return sym('()');
+        });
     }
 
     /**
