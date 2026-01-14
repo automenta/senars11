@@ -11,13 +11,15 @@ import { TermFactory } from '@senars/core/src/term/TermFactory.js';
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';
 import { MemoizationCache } from './kernel/MemoizationCache.js';
-import { reduce, reduceND, step, match } from './kernel/Reduce.js';
+import { reduce, reduceND, step, match, reduceAsync, reduceNDAsync } from './kernel/Reduce.js';
 import { ReactiveSpace } from './extensions/ReactiveSpace.js';
 import { Space } from './kernel/Space.js';
 import { Term } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
 import { Formatter } from './kernel/Formatter.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
+import { WorkerPool } from './platform/WorkerPool.js';
+import { ENV } from './platform/env.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
@@ -51,6 +53,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     _initializeOperations() {
         this.registerAdvancedOps();
         this.registerReactiveOps();
+        this.registerParallelOps();
         this.registerMinimalOps();
         this.registerHofOps();
     }
@@ -241,6 +244,42 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     }
 
     /**
+     * Register parallel evaluation operations
+     */
+    registerParallelOps() {
+        const { sym, exp } = Term;
+        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
+
+        reg('&map-parallel', async (listRaw, vari, templ) => {
+            let list = listRaw;
+            if (listRaw) {
+                const evalRes = await this.evaluateAsync(listRaw);
+                if (evalRes && evalRes.length > 0) list = evalRes[0];
+            }
+
+            const items = this._flattenList(list);
+            if (!this.workerPool) {
+                this.workerPool = new WorkerPool(
+                    this.config.workerScript || (ENV.isNode ?
+                        (new URL('./platform/node/metta-worker.js', import.meta.url).pathname) :
+                        '/metta-worker.js'),
+                    this.config.workerPoolSize || 4
+                );
+            }
+
+            const results = await this.workerPool.mapParallel(items, item => {
+                const subst = Unify.subst(templ, { [vari.name]: item });
+                return { code: `!${subst.toString()}` };
+            });
+
+            return this._listify(results.map(r => {
+                const parsed = this.parser.parse(r);
+                return parsed || sym('()');
+            }));
+        }, { lazy: true });
+    }
+
+    /**
      * Register higher-order function operations with interpreter awareness
      */
     registerHofOps() {
@@ -397,6 +436,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         if (atom.operator?.name === ':') {
             return [atom.components[0], ...this._flattenList(atom.components[1])];
         }
+        if (atom.type === 'compound') {
+            return [atom.operator, ...atom.components];
+        }
         return [atom];
     }
 
@@ -514,5 +556,45 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             groundOps: this.ground.getOperations().length,
             ...super.getStats()
         };
+    }
+
+    /**
+     * Run code asynchronously
+     */
+    async runAsync(code) {
+        return this.trackOperation('run', async () => {
+            const exprs = this.parser.parseProgram(code);
+            const res = [];
+
+            for (let i = 0; i < exprs.length; i++) {
+                const e = exprs[i];
+                if (e.name === '!' && i + 1 < exprs.length) {
+                    const evalRes = await this.evaluateAsync(exprs[++i]);
+                    if (Array.isArray(evalRes)) res.push(...evalRes);
+                    else res.push(evalRes);
+                    continue;
+                }
+
+                if ((e.operator === '=' || e.operator?.name === '=') && e.components?.length === 2) {
+                    this.space.addRule(e.components[0], e.components[1]);
+                } else {
+                    this.space.add(e);
+                }
+            }
+            res.toString = () => Formatter.formatResult(res);
+            return res;
+        });
+    }
+
+    /**
+     * Evaluate asynchronously
+     */
+    async evaluateAsync(atom) {
+        return this.trackOperation('evaluate', async () => {
+            const res = await reduceNDAsync(atom, this.space, this.ground, this.config.maxReductionSteps);
+            const steps = this._mettaMetrics.get('reductionSteps') || 0;
+            this._mettaMetrics.set('reductionSteps', steps + 1);
+            return res;
+        });
     }
 }

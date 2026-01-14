@@ -1015,7 +1015,7 @@ export class FilePersistence {
 | 6 | Set Operations | `sets.test.js` | ✓ | `sets_demo.metta` |
 | 7 | Type System | `types.test.js` | ✓ | `types_demo.metta` |
 | 8 | Reactive | `reactive-space.test.js` | ✓ | Live IDE demo |
-| 9 | Parallel | `parallel-eval.test.js` | Browser+Node | benchmark |
+| 9 | Parallel | `parallel.test.js` | Node Verified | `parallel_demo.metta` |
 | 10 | Debugger | `debugger.test.js` | ✓ | DevTools panel |
 | 11 | Persistence | `persistence.test.js` | Browser+Node | Multi-tab demo |
 
@@ -1081,6 +1081,13 @@ node benchmarks/metta/parallel-speedup.js
    - Implemented in MeTTaInterpreter.js with helper methods
    - **Files**: [MeTTaInterpreter.js](file:///home/me/senars10/metta/src/MeTTaInterpreter.js#L176-L209)
    - **Tests**: [hof-grounded.test.js](file:///home/me/senars10/tests/unit/metta/hof-grounded.test.js) - 10/10 passing ✅
+
+**6. Implement Parallel Evaluation (Phase 9)** - ✅ **COMPLETED** (2026-01-14)
+   - Implemented `WorkerPool` (Node/Browser) and `reduceAsync` mechanism
+   - Added grounded op `&map-parallel` processing tasks in background threads
+   - Created `metta-worker.js` with task handling logic
+   - **Files**: [WorkerPool.js](file:///home/me/senars10/metta/src/platform/node/WorkerPool.js), [WebWorkerPool.js](file:///home/me/senars10/metta/src/platform/browser/WebWorkerPool.js), [MeTTaInterpreter.js](file:///home/me/senars10/metta/src/MeTTaInterpreter.js)
+   - **Tests**: [parallel.test.js](file:///home/me/senars10/tests/unit/metta/extensions/parallel.test.js) - Passing ✅
 
 ---
 

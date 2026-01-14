@@ -9,7 +9,7 @@ import { Term } from '../../metta/src/kernel/Term.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const runFile = (filePath) => {
+const runFile = async (filePath) => {
     // Reset state
     Term.clearSymbolTable();
     const termFactory = new TermFactory();
@@ -21,10 +21,13 @@ const runFile = (filePath) => {
 
     try {
         const code = fs.readFileSync(filePath, 'utf-8');
-        const results = interpreter.run(code);
+        const results = await interpreter.runAsync(code);
         results.forEach((result, i) => {
             console.log(`${i + 1}. ${result?.toString() ?? 'null'}`);
         });
+
+        // Terminate worker pool if exists
+        if (interpreter.workerPool) interpreter.workerPool.terminate();
     } catch (error) {
         console.error(`Error executing ${filePath}:`, error);
         process.exit(1);

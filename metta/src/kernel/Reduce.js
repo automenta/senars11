@@ -298,7 +298,7 @@ export const isGroundedCall = (atom, ground) => {
     if (!isExpression(atom)) return false;
     const op = atom.operator?.name;
     return (op && ground.has(op)) ||
-           (op === '^' && atom.components?.[0]?.name && ground.has(atom.components[0].name));
+        (op === '^' && atom.components?.[0]?.name && ground.has(atom.components[0].name));
 };
 
 /**
@@ -402,4 +402,208 @@ export const match = (space, pattern, template) => {
         if (bind) res.push(Unify.subst(template, bind));
     }
     return res;
+};
+
+/**
+ * Perform full deterministic reduction asynchronously
+ * Supports grounded operations returning Promises
+ */
+export const reduceAsync = async (atom, space, ground, limit = 10000, cache = null) => {
+    const ctx = { steps: 0, limit };
+    const root = { phase: 'EXPAND', term: atom, results: null };
+    const stack = [root];
+
+    while (stack.length) {
+        const frame = stack[stack.length - 1];
+
+        if (frame.phase === 'EXPAND') {
+            let curr = frame.term;
+            // Apply reductions iteratively until no more can be applied
+            while (ctx.steps < ctx.limit) {
+                const { reduced: rawReduced, applied } = step(curr, space, ground, limit, cache);
+                let reduced = rawReduced;
+
+                if (reduced instanceof Promise) {
+                    reduced = await reduced;
+                }
+
+                if (applied) {
+                    curr = reduced;
+                    ctx.steps++;
+                    continue;
+                }
+                break;
+            }
+
+            frame.term = curr;
+            if (ctx.steps >= limit) throw new Error(`Max steps (${limit}) exceeded`);
+
+            if (!curr) {
+                if (frame.parent) frame.parent.results[frame.index] = curr;
+                stack.pop();
+                continue;
+            }
+
+            const isExpr = isExpression(curr);
+            const op = curr.operator;
+            const isReducibleOp = op && isExpression(op);
+            const hasComps = isExpr && curr.components?.length > 0;
+
+            if (isReducibleOp || hasComps) {
+                frame.phase = 'REBUILD';
+                frame.reduceOp = isReducibleOp;
+                const len = hasComps ? curr.components.length : 0;
+                frame.results = new Array(len + (isReducibleOp ? 1 : 0));
+
+                // Push components onto stack for processing
+                if (hasComps) {
+                    for (let i = len - 1; i >= 0; i--) {
+                        stack.push({
+                            phase: 'EXPAND',
+                            term: curr.components[i],
+                            parent: frame,
+                            index: i + (isReducibleOp ? 1 : 0)
+                        });
+                    }
+                }
+                // Push operator onto stack for processing
+                if (isReducibleOp) {
+                    stack.push({
+                        phase: 'EXPAND',
+                        term: op,
+                        parent: frame,
+                        index: 0
+                    });
+                }
+            } else {
+                if (frame.parent) frame.parent.results[frame.index] = curr;
+                stack.pop();
+            }
+        } else { // REBUILD phase
+            const curr = frame.term;
+            const reduceOp = frame.reduceOp;
+            const newOp = reduceOp ? frame.results[0] : curr.operator;
+            const newComps = reduceOp ? frame.results.slice(1) : frame.results;
+
+            if (hasChanges(curr, newOp, newComps, reduceOp)) {
+                ctx.steps++;
+                frame.phase = 'EXPAND';
+                frame.term = exp(newOp, newComps);
+                frame.results = null;
+            } else {
+                if (frame.parent) frame.parent.results[frame.index] = curr;
+                else root.result = curr;
+                stack.pop();
+            }
+        }
+    }
+    return root.result || root.term;
+};
+
+/**
+ * Perform non-deterministic reduction asynchronously
+ */
+export const reduceNDAsync = async (atom, space, ground, limit = 100) => {
+    const results = new Set();
+    const visited = new Set();
+    const queue = [{ atom, steps: 0 }];
+
+    while (queue.length) {
+        const { atom: curr, steps } = queue.shift();
+        const str = curr.toString();
+
+        if (visited.has(str)) continue;
+        visited.add(str);
+
+        if (steps >= limit) {
+            results.add(curr);
+            continue;
+        }
+
+        let any = false;
+        const reds = [];
+        // Handle stepYield being a generator, explicitly iterate
+        for (const r of stepYield(curr, space, ground, limit)) {
+            if (r.reduced instanceof Promise) {
+                r.reduced = await r.reduced;
+            }
+            reds.push(r);
+        }
+
+        if (reds.length) {
+            for (const { reduced, deadEnd } of reds) {
+                any = true;
+                if (!deadEnd) queue.push({ atom: reduced, steps: steps + 1 });
+            }
+        } else if (isExpression(curr) && curr.components.length) {
+            const sub = await reduceSubcomponentsNDAsync(curr, space, ground, limit - steps);
+            if (sub.length) {
+                for (const expr of sub) {
+                    if (!expr.equals(curr)) {
+                        queue.push({ atom: expr, steps: steps + 1 });
+                        any = true;
+                    }
+                }
+            }
+        }
+
+        if (!any) results.add(curr);
+    }
+
+    return [...results];
+};
+
+/**
+ * Reduce subcomponents of an expression asynchronously
+ */
+const reduceSubcomponentsNDAsync = async (expr, space, ground, limit) => {
+    const { components: comps, operator: op } = expr;
+
+    for (let i = 0; i < comps.length; i++) {
+        const stepResults = [];
+        for (const r of stepYield(comps[i], space, ground, limit)) {
+            if (r.reduced instanceof Promise) {
+                r.reduced = await r.reduced;
+            }
+            stepResults.push(r);
+        }
+
+        let variants = [];
+
+        if (stepResults.length > 0) {
+            variants = stepResults.filter(s => !s.deadEnd).map(s => s.reduced);
+        } else if (isExpression(comps[i]) && comps[i].components.length) {
+            variants = await reduceSubcomponentsNDAsync(comps[i], space, ground, limit);
+        }
+
+        if (variants.length) {
+            const res = [];
+            for (const reduced of variants) {
+                const newComps = [...comps];
+                newComps[i] = reduced;
+                res.push(exp(op, newComps));
+            }
+            if (res.length) return res;
+        }
+    }
+
+    if (op && isExpression(op)) {
+        const vars = [];
+        for (const r of stepYield(op, space, ground, limit)) {
+            if (r.reduced instanceof Promise) {
+                r.reduced = await r.reduced;
+            }
+            vars.push(r);
+        }
+
+        if (vars.length) {
+            const res = [];
+            for (const { reduced, deadEnd } of vars) {
+                if (deadEnd) continue;
+                res.push(exp(reduced, comps));
+            }
+            if (res.length) return res;
+        }
+    }
+    return [];
 };
