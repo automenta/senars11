@@ -84,7 +84,7 @@ export const exp = (operator, components) => {
 /**
  * Check equality between two atoms
  */
-export const equals = (a, b) => (a === b && a !== null) || (!!a && !!b && (a.equals?.(b) ?? false));
+export const equals = (a, b) => (a === b && a !== null) || (!!a && !!b && a.equals?.(b));
 
 /**
  * Clone an atom

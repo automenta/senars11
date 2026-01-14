@@ -205,29 +205,19 @@ export class TypeSystem {
     typeToString(type) {
         if (!type) return 'Unknown';
         switch (type.kind) {
-            case 'Base':
-                return type.name;
-            case 'Arrow':
-                return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
-            case 'List':
-                return `(List ${this.typeToString(type.element)})`;
-            case 'Maybe':
-                return `(Maybe ${this.typeToString(type.type)})`;
-            case 'Either':
-                return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
-            case 'Vector':
-                return `(Vector ${type.length})`;
-            case 'Fin':
-                return `(Fin ${type.n})`;
-            case 'TypeVar':
-                return `t${type.index}`;
-            case 'Forall':
-                return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
+            case 'Base': return type.name;
+            case 'Arrow': return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
+            case 'List': return `(List ${this.typeToString(type.element)})`;
+            case 'Maybe': return `(Maybe ${this.typeToString(type.type)})`;
+            case 'Either': return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
+            case 'Vector': return `(Vector ${type.length})`;
+            case 'Fin': return `(Fin ${type.n})`;
+            case 'TypeVar': return `t${type.index}`;
+            case 'Forall': return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
             case 'TypeCtor':
                 const params = type.params.map(p => this.typeToString(p)).join(' ');
                 return `(${type.name}${params ? ' ' + params : ''})`;
-            default:
-                return 'Unknown';
+            default: return 'Unknown';
         }
     }
 }

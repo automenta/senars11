@@ -187,13 +187,13 @@ export class Ground {
      */
     _truthy(val) {
         if (!val) return false;
-        if (val.name) {
-            if (['False', 'false', 'null', 'Nil'].includes(val.name)) return false;
-            if (['True', 'true'].includes(val.name)) return true;
-            const num = parseFloat(val.name);
-            return !isNaN(num) ? num !== 0 : true;
-        }
-        return Boolean(val);
+        if (!val.name) return Boolean(val);
+
+        if (['False', 'false', 'null', 'Nil'].includes(val.name)) return false;
+        if (['True', 'true'].includes(val.name)) return true;
+
+        const num = parseFloat(val.name);
+        return !isNaN(num) ? num !== 0 : true;
     }
 
     /**
@@ -253,7 +253,7 @@ export class Ground {
 
         this.register('&+', reduceOp((a, b) => a + b, 0));
         this.register('&*', reduceOp((a, b) => a * b, 1));
-        this.register('&%', binaryOp((a, b) => a % b));
+        this.register('&%', binaryOp((a, b) => a % b, true)); // Check division by zero
 
         // Custom logic for - and / to handle unary/binary
         this.register('&-', (...args) => {

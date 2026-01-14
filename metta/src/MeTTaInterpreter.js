@@ -301,16 +301,15 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         reg('filter-atom-fast', (list, varName, predFn) => {
             const elements = this.ground._flattenExpr(list);
-            const filtered = elements.filter(el => {
-                const res = reduce(
+            const filtered = elements.filter(el =>
+                this.ground._truthy(reduce(
                     Unify.subst(predFn, { [varName.name]: el }),
                     this.space,
                     this.ground,
                     this.config.maxReductionSteps,
                     this.memoCache
-                );
-                return this.ground._truthy(res);
-            });
+                ))
+            );
             return this.ground._listify(filtered);
         }, { lazy: true });
 
@@ -398,26 +397,25 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     _handleLetStar(bindings, body) {
         const { flattenList, sym, exp } = Term;
-        let pairs = [];
 
-        if (bindings.operator?.name === ':') {
-            pairs = flattenList(bindings).elements;
-        } else if (bindings.type === 'compound') {
-            pairs = [bindings.operator, ...bindings.components];
-        } else if (bindings.name !== '()') {
-            console.error('Invalid &let* bindings', bindings);
-            return body;
-        }
+        // Extract pairs based on binding structure
+        const pairs = bindings.operator?.name === ':'
+            ? flattenList(bindings).elements
+            : bindings.type === 'compound'
+                ? [bindings.operator, ...bindings.components]
+                : bindings.name !== '()'
+                    ? (console.error('Invalid &let* bindings', bindings), [])
+                    : [];
 
         if (!pairs.length) return reduce(body, this.space, this.ground);
 
         const [first, ...rest] = pairs;
-        let v, val;
+        if (!first?.components?.length) return body;
 
-        if (first.components?.length) {
-            if (first.operator?.name === ':') [v, val] = first.components;
-            else { v = first.operator; val = first.components[0]; }
-        }
+        // Extract variable and value
+        const [v, val] = first.operator?.name === ':'
+            ? first.components
+            : [first.operator, first.components[0]];
 
         if (!v || !val) return body;
 
@@ -443,10 +441,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * Determine truthiness of an atom
      */
     _truthy(atom) {
-        return atom &&
-            atom.name !== 'False' &&
-            atom.name !== '()' &&
-            atom.name !== 'Empty';
+        return atom && !['False', '()', 'Empty'].includes(atom.name);
     }
 
     /**

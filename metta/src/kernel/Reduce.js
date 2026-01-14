@@ -285,10 +285,8 @@ export const reduce = (atom, space, ground, limit = 10000, cache = null) => {
  * Check if there are changes between current and new term
  */
 const hasChanges = (curr, newOp, newComps, reduceOp) => {
-    if (reduceOp && newOp !== curr.operator && !newOp.equals?.(curr.operator)) return true;
-    return newComps.some((c, i) =>
-        c !== curr.components[i] && !c?.equals?.(curr.components[i])
-    );
+    return (reduceOp && newOp !== curr.operator && !newOp.equals?.(curr.operator)) ||
+           newComps.some((c, i) => c !== curr.components[i] && !c?.equals?.(curr.components[i]));
 };
 
 /**
