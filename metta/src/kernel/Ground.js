@@ -462,7 +462,8 @@ export class Ground {
     }
 
     _flattenExpr(expr) {
-        if (!expr) return [];
+        // Early return for empty list symbol to prevent it being included in results
+        if (!expr || expr.name === '()') return [];
         if (!isExpression(expr)) return [expr];
 
         // Special handling for list structure (: head tail)
