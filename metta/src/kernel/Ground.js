@@ -62,6 +62,9 @@ export class Ground {
         this._registerIntrospectionOps();
         this._registerTypeOps();
         this._registerBudgetOps();
+        this._registerExpressionOps();
+        this._registerMathOps();
+        this._registerSetOps();
 
         this.register('&now', () => sym(String(Date.now())));
 
@@ -259,6 +262,22 @@ export class Ground {
     }
 
     _registerTypeOps() {
+        // Get metatype of an atom
+        this.register('&get-metatype', (atom) => {
+            if (!atom) return sym('%Undefined%');
+            if (atom.name?.startsWith('$')) return sym('Variable');
+            if (isExpression(atom)) return sym('Expression');
+            if (typeof atom.execute === 'function') return sym('Grounded');
+            return sym('Symbol');
+        });
+
+        // Check if type is a function type (has -> arrow)
+        this.register('&is-function', (type) => {
+            if (!isExpression(type)) return sym('False');
+            return this._bool(type.operator?.name === '->');
+        });
+
+        // Existing type operations
         this.register('&type-infer', (t, i) => i?.typeChecker ? sym(i.typeChecker.typeToString(i.typeChecker.infer(t, {}))) : sym('Unknown'));
         this.register('&type-check', (t, e, i) => this._bool(i?.typeChecker?.check(t, e, {})));
         this.register('&type-unify', (t1, t2, i) => sym(i?.typeChecker?.unify(t1, t2) ? 'Success' : 'Failure'));
@@ -292,7 +311,191 @@ export class Ground {
         );
     }
 
+    _registerExpressionOps() {
+        // === cons-atom: construct expression from head + tail ===
+        this.register('&cons-atom', (head, tail) => {
+            if (!isExpression(tail)) return exp(head, [tail]);
+            const components = tail.components ? [tail.operator, ...tail.components] : [tail];
+            return exp(head, components);
+        });
+
+        // === decons-atom: split expression to (head tail) ===
+        this.register('&decons-atom', (expr) => {
+            if (!isExpression(expr)) return exp(sym('Error'), [expr, sym('NotExpression')]);
+            const head = expr.operator;
+            const tail = expr.components?.length
+                ? (expr.components.length === 1 ? expr.components[0] : exp(expr.components[0], expr.components.slice(1)))
+                : sym('()');
+            return exp(sym(':'), [head, tail]);
+        });
+
+        // === car-atom: first element ===
+        this.register('&car-atom', (expr) => {
+            if (!isExpression(expr)) return exp(sym('Error'), [expr, sym('NotExpression')]);
+            return expr.operator || exp(sym('Error'), [expr, sym('EmptyExpression')]);
+        });
+
+        // === cdr-atom: tail elements ===
+        this.register('&cdr-atom', (expr) => {
+            if (!isExpression(expr) || !expr.components?.length) return sym('()');
+            return expr.components.length === 1
+                ? expr.components[0]
+                : exp(expr.components[0], expr.components.slice(1));
+        });
+
+        // === size-atom: count elements ===
+        this.register('&size-atom', (expr) => {
+            if (!isExpression(expr)) return sym('1');
+            return sym(String(1 + (expr.components?.length || 0)));
+        });
+
+        // === index-atom: get element by index ===
+        this.register('&index-atom', (expr, idx) => {
+            const i = parseInt(idx.name);
+            if (isNaN(i)) return exp(sym('Error'), [idx, sym('NotANumber')]);
+            if (i === 0) return expr.operator || expr;
+            const comp = expr.components?.[i - 1];
+            return comp || exp(sym('Error'), [idx, sym('OutOfBounds')]);
+        });
+    }
+
+    _registerMathOps() {
+        const toNum = (atom) => parseFloat(atom?.name) || 0;
+        const toSym = (n) => sym(String(Number.isInteger(n) ? n : n.toFixed(12).replace(/\.?0+$/, '')));
+        const unary = (fn) => (x) => toSym(fn(toNum(x)));
+        const binary = (fn) => (a, b) => toSym(fn(toNum(a), toNum(b)));
+
+        // Transcendental functions
+        this.register('&pow-math', binary(Math.pow));
+        this.register('&sqrt-math', unary(Math.sqrt));
+        this.register('&abs-math', unary(Math.abs));
+        this.register('&log-math', binary((base, x) => Math.log(x) / Math.log(base)));
+
+        // Rounding functions
+        this.register('&trunc-math', unary(Math.trunc));
+        this.register('&ceil-math', unary(Math.ceil));
+        this.register('&floor-math', unary(Math.floor));
+        this.register('&round-math', unary(Math.round));
+
+        // Trigonometry
+        this.register('&sin-math', unary(Math.sin));
+        this.register('&asin-math', unary(Math.asin));
+        this.register('&cos-math', unary(Math.cos));
+        this.register('&acos-math', unary(Math.acos));
+        this.register('&tan-math', unary(Math.tan));
+        this.register('&atan-math', unary(Math.atan));
+
+        // Validation
+        this.register('&isnan-math', (x) => {
+            const n = parseFloat(x?.name);
+            return this._bool(isNaN(n));
+        });
+        this.register('&isinf-math', (x) => {
+            const n = parseFloat(x?.name);
+            return this._bool(!isFinite(n) && !isNaN(n));
+        });
+
+        // Aggregate operations
+        this.register('&min-atom', (expr) => {
+            const elements = this._flattenExpr(expr);
+            const nums = elements.map(e => parseFloat(e?.name)).filter(n => !isNaN(n));
+            if (nums.length === 0) return exp(sym('Error'), [expr, sym('EmptyOrNonNumeric')]);
+            return sym(String(Math.min(...nums)));
+        });
+        this.register('&max-atom', (expr) => {
+            const elements = this._flattenExpr(expr);
+            const nums = elements.map(e => parseFloat(e?.name)).filter(n => !isNaN(n));
+            if (nums.length === 0) return exp(sym('Error'), [expr, sym('EmptyOrNonNumeric')]);
+            return sym(String(Math.max(...nums)));
+        });
+        this.register('&sum-atom', (expr) => {
+            const elements = this._flattenExpr(expr);
+            const sum = elements.reduce((s, e) => s + (parseFloat(e?.name) || 0), 0);
+            return sym(String(sum));
+        });
+    }
+
+    _registerSetOps() {
+        this.register('&unique-atom', (expr) => {
+            const seen = new Set();
+            const result = [];
+            for (const el of this._flattenExpr(expr)) {
+                const key = el.toString();
+                if (!seen.has(key)) { seen.add(key); result.push(el); }
+            }
+            return this._listify(result);
+        });
+
+        this.register('&union-atom', (a, b) => {
+            const setA = this._flattenExpr(a);
+            const setB = this._flattenExpr(b);
+            return this._listify([...setA, ...setB]);
+        });
+
+        this.register('&intersection-atom', (a, b) => {
+            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
+            return this._listify(this._flattenExpr(a).filter(x => setB.has(x.toString())));
+        });
+
+        this.register('&subtraction-atom', (a, b) => {
+            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
+            return this._listify(this._flattenExpr(a).filter(x => !setB.has(x.toString())));
+        });
+
+        // BEYOND PARITY
+        this.register('&symmetric-diff-atom', (a, b) => {
+            const setA = new Set(this._flattenExpr(a).map(x => x.toString()));
+            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
+            const result = [
+                ...this._flattenExpr(a).filter(x => !setB.has(x.toString())),
+                ...this._flattenExpr(b).filter(x => !setA.has(x.toString()))
+            ];
+            return this._listify(result);
+        });
+
+        this.register('&is-subset', (a, b) => {
+            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
+            return this._bool(this._flattenExpr(a).every(x => setB.has(x.toString())));
+        });
+
+        this.register('&set-size', (expr) => sym(String(new Set(this._flattenExpr(expr).map(x => x.toString())).size)));
+    }
+
+    _flattenExpr(expr) {
+        if (!expr) return [];
+        if (!isExpression(expr)) return [expr];
+
+        // Special handling for list structure (: head tail)
+        if (expr.operator?.name === ':') {
+            const result = [];
+            if (expr.components && expr.components.length > 0) {
+                // Add first component (head)
+                const head = expr.components[0];
+                if (head && head.name !== '()') result.push(head);
+
+                // Recursively flatten tail
+                if (expr.components.length > 1) {
+                    result.push(...this._flattenExpr(expr.components[1]));
+                }
+            }
+            return result;
+        }
+
+        // For other expressions, flatten all parts
+        const result = [];
+        if (expr.operator) result.push(expr.operator);
+        if (expr.components) {
+            for (const comp of expr.components) {
+                if (comp.name !== '()') {
+                    result.push(...this._flattenExpr(comp));
+                }
+            }
+        }
+        return result;
+    }
+
     _listify(arr) {
-        return arr.length ? exp(sym(':'), [arr[0], this._listify(arr.slice(1))]) : sym('()');
+        if (!arr || arr.length === 0) return sym('()');
+        return exp(sym(':'), [arr[0], this._listify(arr.slice(1))]);
     }
 }
