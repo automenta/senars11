@@ -386,7 +386,7 @@ export class Ground {
             if (isExpression(atom)) return sym('Expression');
             if (typeof atom.execute === 'function') return sym('Grounded');
             return sym('Symbol');
-        });
+        }, { lazy: true }); // Prevent reduction to check actual metatype
 
         // Check if type is a function type (has -> arrow)
         this.register('&is-function', (type) => {
@@ -462,7 +462,7 @@ export class Ground {
             !isExpression(expr)
                 ? exp(sym('Error'), [expr, sym('NotExpression')])
                 : expr.operator || exp(sym('Error'), [expr, sym('EmptyExpression')])
-        );
+            , { lazy: true }); // Prevent reduction of argument
 
         // === cdr-atom: tail elements ===
         this.register('&cdr-atom', (expr) => {
@@ -470,14 +470,14 @@ export class Ground {
             return expr.components.length === 1
                 ? expr.components[0]
                 : exp(expr.components[0], expr.components.slice(1));
-        });
+        }, { lazy: true }); // Prevent reduction of argument
 
         // === size-atom: count elements ===
         this.register('&size-atom', (expr) =>
             isExpression(expr)
                 ? sym(String(1 + (expr.components?.length || 0)))
                 : sym('1')
-        );
+            , { lazy: true }); // Prevent reduction of argument
 
         // === index-atom: get element by index ===
         this.register('&index-atom', (expr, idx) => {
