@@ -1,10 +1,11 @@
-import {MeTTaInterpreter} from '@senars/metta/src/MeTTaInterpreter.js';
-import {Term} from '@senars/metta/src/kernel/Term.js';
+import { MeTTaInterpreter } from '@senars/metta/src/MeTTaInterpreter.js';
+import { Term } from '@senars/metta/src/kernel/Term.js';
 import path from 'path';
-import {fileURLToPath} from 'url';
+import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const stdlibDir = path.resolve(__dirname, '../../../metta/src/stdlib');
+const nalStdlibDir = path.resolve(__dirname, '../../../metta/src/nal/stdlib');
 
 describe('Examples to Unit Tests Promotion', () => {
     let interpreter;
@@ -16,6 +17,7 @@ describe('Examples to Unit Tests Promotion', () => {
             maxReductionSteps: 50000,
             loadStdlib: true,
             stdlibDir,
+            searchPaths: [stdlibDir, nalStdlibDir],
             modules: ['core', 'list', 'match', 'types', 'truth', 'nal']
         });
     });

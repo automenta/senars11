@@ -5,6 +5,7 @@
 
 import { MeTTaTestUtils } from '../../helpers/MeTTaTestUtils.js';
 import { Parser } from '../../../metta/src/Parser.js';
+import { Unify } from '../../../metta/src/kernel/Unify.js';
 
 describe('Lambda Rule Matching Debug', () => {
     let interpreter;
@@ -53,7 +54,6 @@ describe('Lambda Rule Matching Debug', () => {
 
         // Try manual unification
         if (lambdaRules.length > 0) {
-            const { Unify } = require('../../../metta/src/kernel/Unify.js');
             const rule = lambdaRules[0];
             console.log('\n=== Manual Unification Test ===');
             console.log('Pattern:', rule.pattern?.toString());

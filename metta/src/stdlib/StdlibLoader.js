@@ -12,6 +12,7 @@ const DEFAULT_MODULES = ['core', 'list', 'match', 'types'];
 export class StdlibLoader {
     constructor(interpreter, options = {}) {
         this.interpreter = interpreter;
+        this.options = options;
         this.stdlibDir = options.stdlibDir || '';
         this.modules = options.modules || DEFAULT_MODULES;
         this.virtualFiles = options.virtualFiles || {}; // { 'core.metta': '...' }
@@ -52,15 +53,31 @@ export class StdlibLoader {
                 const { fileURLToPath } = require('url');
 
                 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-                const stdlibDir = this.stdlibDir || currentDir;
-                const filePath = path.join(stdlibDir, fileName);
+                const primaryDir = this.stdlibDir || currentDir;
 
-                if (fs.existsSync(filePath)) {
+                // Allow searchPaths option or default to primary path
+                const searchPaths = this.options?.searchPaths || [primaryDir];
+                // Ensure primaryDir is included if not explicitly in searchPaths
+                if (!searchPaths.includes(primaryDir)) {
+                    searchPaths.unshift(primaryDir);
+                }
+
+                let filePath = null;
+                for (const dir of searchPaths) {
+                    const p = path.join(dir, fileName);
+                    if (fs.existsSync(p)) {
+                        filePath = p;
+                        break;
+                    }
+                }
+
+                if (filePath) {
                     content = fs.readFileSync(filePath, 'utf-8');
                 } else {
-                    throw new Error(`Stdlib module not found on disk: ${filePath}`);
+                    throw new Error(`Stdlib module '${name}' not found in paths: ${searchPaths.join(', ')}`);
                 }
             } catch (e) {
+                if (e.message.startsWith('Stdlib module')) throw e;
                 throw new Error(`Failed to load '${name}' from filesystem: ${e.message}`);
             }
         } else {

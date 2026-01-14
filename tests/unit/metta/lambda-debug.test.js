@@ -46,7 +46,7 @@ describe('Lambda Diagnostic Tests', () => {
 
     test('step-by-step lambda reduction', () => {
         // Test individual reduction steps
-        const parser = MeTTaTestUtils.createParser();
+        const parser = interpreter.parser;
         const atom = parser.parse('((λ $x (* $x 2)) 5)');
 
         console.log('[DEBUG] Initial atom:', atom.toString());
