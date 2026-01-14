@@ -3,7 +3,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import {Term} from './Term.js';
+import { Term } from './Term.js';
 
 /**
  * Convert a binding object to a binding atom
@@ -18,10 +18,10 @@ export const bindingsAtomToObj = (bindingsAtom) => {
     if (bindingsAtom?.operator?.name !== 'Bindings') return {};
 
     const bindings = {};
-    bindingsAtom.components.forEach(pair => {
-        if (pair?.operator?.name === 'Pair' && pair.components.length === 2 && pair.components[0].name) {
+    for (const pair of bindingsAtom.components || []) {
+        if (pair?.operator?.name === 'Pair' && pair.components?.length === 2 && pair.components[0]?.name) {
             bindings[pair.components[0].name] = pair.components[1];
         }
-    });
+    }
     return bindings;
 };

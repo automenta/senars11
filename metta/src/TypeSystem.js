@@ -4,22 +4,22 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import {Term} from './kernel/Term.js';
+import { Term } from './kernel/Term.js';
 
 /**
  * Type constructor factory functions
  */
 export const TypeConstructors = {
-    Base: (name) => ({kind: 'Base', name}),
-    Arrow: (from, to) => ({kind: 'Arrow', from, to}),
-    List: (element) => ({kind: 'List', element}),
-    Maybe: (type) => ({kind: 'Maybe', type}),
-    Either: (left, right) => ({kind: 'Either', left, right}),
-    Vector: (length) => ({kind: 'Vector', length}),
-    Fin: (n) => ({kind: 'Fin', n}),
-    TypeVar: (index) => ({kind: 'TypeVar', index}),
-    Forall: (varName, type) => ({kind: 'Forall', varName, type}),
-    TypeCtor: (name, params = []) => ({kind: 'TypeCtor', name, params})
+    Base: (name) => ({ kind: 'Base', name }),
+    Arrow: (from, to) => ({ kind: 'Arrow', from, to }),
+    List: (element) => ({ kind: 'List', element }),
+    Maybe: (type) => ({ kind: 'Maybe', type }),
+    Either: (left, right) => ({ kind: 'Either', left, right }),
+    Vector: (length) => ({ kind: 'Vector', length }),
+    Fin: (n) => ({ kind: 'Fin', n }),
+    TypeVar: (index) => ({ kind: 'TypeVar', index }),
+    Forall: (varName, type) => ({ kind: 'Forall', varName, type }),
+    TypeCtor: (name, params = []) => ({ kind: 'TypeCtor', name, params })
 };
 
 // Base types
@@ -142,22 +142,23 @@ export class TypeSystem {
             const subst = this.substitution.get(type.index);
             return subst ? this.applySubstitution(subst) : type;
         }
-        if (type.kind === 'Arrow') {
-            return TypeConstructors.Arrow(
-                this.applySubstitution(type.from),
-                this.applySubstitution(type.to)
-            );
+
+        switch (type.kind) {
+            case 'Arrow':
+                return TypeConstructors.Arrow(
+                    this.applySubstitution(type.from),
+                    this.applySubstitution(type.to)
+                );
+            case 'List':
+                return TypeConstructors.List(this.applySubstitution(type.element));
+            case 'TypeCtor':
+                return TypeConstructors.TypeCtor(
+                    type.name,
+                    type.params.map(p => this.applySubstitution(p))
+                );
+            default:
+                return type;
         }
-        if (type.kind === 'List') {
-            return TypeConstructors.List(this.applySubstitution(type.element));
-        }
-        if (type.kind === 'TypeCtor') {
-            return TypeConstructors.TypeCtor(
-                type.name,
-                type.params.map(p => this.applySubstitution(p))
-            );
-        }
-        return type;
     }
 
     /**
@@ -176,7 +177,7 @@ export class TypeSystem {
                 });
             });
 
-            constraints.push({type1: this.inferType(term, context), type2: resultType});
+            constraints.push({ type1: this.inferType(term, context), type2: resultType });
         }
         return constraints;
     }

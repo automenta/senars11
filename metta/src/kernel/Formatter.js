@@ -13,7 +13,7 @@ export class Formatter {
         // We only format *proper* lists as S-expressions because improper lists like (: A B)
         // are ambiguously printed as (A B) vs (A . B) if we aren't careful.
         // For now, if it terminates in (), we format as list.
-        if (isListDeep(atom)) {
+        if (isList(atom)) {
             const { elements, tail } = flattenList(atom);
             if (tail.name === '()') {
                 return `(${elements.map(Formatter.toHyperonString).join(' ')})`;
@@ -40,7 +40,3 @@ export class Formatter {
             : Formatter.toHyperonString(results);
     }
 }
-
-// Helper to check if it's a list structure we want to pretty print
-// We want to pretty print (: ...) but only if it eventually ends in ()
-const isListDeep = (atom) => isList(atom);

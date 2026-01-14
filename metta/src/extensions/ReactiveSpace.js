@@ -117,14 +117,12 @@ export class ReactiveSpace extends Space {
         // Notify observers
         for (const [_, observers] of this.observers) {
             for (const { pattern, callback } of observers) {
-                try {
-                    // Check if pattern matches event data
-                    const matches = this._matchesPattern(pattern, data);
-                    if (matches) {
+                if (this._matchesPattern(pattern, data)) {
+                    try {
                         callback(entry);
+                    } catch (e) {
+                        console.error('Observer error:', e);
                     }
-                } catch (e) {
-                    console.error('Observer error:', e);
                 }
             }
         }
@@ -139,8 +137,7 @@ export class ReactiveSpace extends Space {
 
         // Try unification for structured matching
         try {
-            const result = Unify.unify(pattern, target);
-            return result !== null;
+            return Unify.unify(pattern, target) !== null;
         } catch {
             // Fallback to simple equality
             return pattern === target || pattern.equals?.(target);

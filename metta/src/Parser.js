@@ -4,7 +4,7 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
-import {sym, var_, exp} from './kernel/Term.js';
+import { sym, var_, exp } from './kernel/Term.js';
 
 export class Parser {
     constructor() {
@@ -151,8 +151,7 @@ class InternalParser {
 
         this.consume();
         // Support both $ and ? variables
-        if (token.startsWith('$') || token.startsWith('?')) return var_(token);
-        return sym(token);
+        return token.startsWith('$') || token.startsWith('?') ? var_(token) : sym(token);
     }
 
     /**
