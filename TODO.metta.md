@@ -83,10 +83,10 @@ metta/src/
     - Note: Bidirectional tests passing
 - [x] **Space.js**: Implement full query pattern matching ✅
     - Note: Pattern matching working correctly
-- [ ] **Reduce.js**: Strict adherence to reduction loop
-    - Gap: Non-deterministic reduction (superposition) support needed
+- [x] **Reduce.js**: Strict adherence to reduction loop ✅
+    - [x] Non-deterministic reduction (superposition) support implemented (Generator-based)
+    - [x] Pre-existing lambda evaluation issues fixed (16 stdlib tests passing)
     - Gap: Output formatting must match `hyperon` REPL
-    - **NEW**: Pre-existing lambda evaluation issues discovered (16 stdlib tests failing)
 
 #### Minimal MeTTa Instructions (ground/minimal)
 

@@ -1,14 +1,12 @@
 /**
- * MeTTaInterpreter.js - Main MeTTa interpreter
- * Wires kernel components and loads standard library
- * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
+ * MeTTaInterpreter.js - Main Interpreter
+ * Components wiring and standard library loading.
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { Parser } from './Parser.js';
 import { TypeChecker, TypeSystem } from './TypeSystem.js';
 import { TermFactory } from '@senars/core/src/term/TermFactory.js';
-
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';
 import { MemoizationCache } from './kernel/MemoizationCache.js';
@@ -16,24 +14,15 @@ import { reduce, reduceND, step, match } from './kernel/Reduce.js';
 import { Space } from './kernel/Space.js';
 import { Term } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
-
 import { loadStdlib } from './stdlib/StdlibLoader.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
-        // Support both constructor(options) and constructor(reasoner, options)
-        if (reasoner && typeof reasoner === 'object' && Object.keys(options).length === 0) {
-            options = reasoner;
-            reasoner = null;
-        }
+        if (reasoner && typeof reasoner === 'object' && !Object.keys(options).length) { options = reasoner; reasoner = null; }
+        const opts = options || {};
+        if (!opts.termFactory) opts.termFactory = new TermFactory();
 
-        const actualOptions = options || {};
-        // Ensure termFactory exists
-        if (!actualOptions.termFactory) {
-            actualOptions.termFactory = new TermFactory();
-        }
-
-        super(actualOptions, 'MeTTaInterpreter', actualOptions.eventBus, actualOptions.termFactory);
+        super(opts, 'MeTTaInterpreter', opts.eventBus, opts.termFactory);
 
         this.reasoner = reasoner;
         this.space = new Space();
@@ -41,402 +30,204 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.parser = new Parser();
         this.typeSystem = new TypeSystem();
         this.typeChecker = new TypeChecker(this.typeSystem);
+        this.memoCache = new MemoizationCache(opts.cacheCapacity || 1000);
 
-        // Memoization Cache (AIKR Compliant)
-        this.memoCache = new MemoizationCache(actualOptions.cacheCapacity || 1000);
-
-        // Register advanced grounded operations
         this.registerAdvancedOps();
         this.registerMinimalOps();
 
-        // If provided, register bridge primitives
-        if (this.reasoner?.bridge?.registerPrimitives) {
-            this.reasoner.bridge.registerPrimitives(this.ground);
-        } else if (options.bridge?.registerPrimitives) {
-            options.bridge.registerPrimitives(this.ground);
-        }
+        const bridge = this.reasoner?.bridge || opts.bridge;
+        if (bridge?.registerPrimitives) bridge.registerPrimitives(this.ground);
 
-        // Standard library loading
-        this._initialize();
-    }
-
-    _initialize() {
-        // Load standard library (unless disabled)
         if (this.config.loadStdlib !== false) {
-            try {
-                loadStdlib(this, this.config);
-            } catch (e) {
-                console.warn("Failed to load standard library:", e.message);
-            }
+            try { loadStdlib(this, this.config); } catch (e) { console.warn("Stdlib load failed:", e.message); }
         }
     }
 
     registerAdvancedOps() {
-        // &subst: Subst (variable value template) or (template bindings)
-        this.ground.register('&subst', (a, b, c) => {
-            if (c !== undefined) {
-                // (subst variable value template)
-                const [variable, value, template] = [a, b, c];
-                const bindings = variable.name ? { [variable.name]: value } : {};
-                return Unify.subst(template, bindings);
-            }
-            // (subst template bindings)
-            return Unify.subst(a, bindingsAtomToObj(b));
+        const { sym, exp, var: v, isList, flattenList } = Term;
+        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
+
+        reg('&subst', (a, b, c) => c ? Unify.subst(c, a.name ? { [a.name]: b } : {}) : Unify.subst(a, bindingsAtomToObj(b)), { lazy: true });
+
+        reg('&let', (vari, val, body) => Unify.subst(body, vari?.name ? { [vari.name]: val } : {}), { lazy: true });
+
+        reg('&unify', (pat, term) => {
+            const b = Unify.unify(pat, term);
+            return b ? objToBindingsAtom(b) : sym('False');
+        });
+
+        reg('&match', (s, p, t) => this._listify(match(this.space, p, t)), { lazy: true });
+        reg('&query', (p, t) => this._listify(match(this.space, p, t)));
+
+        reg('&type-of', (atom) => {
+            const res = match(this.space, exp(':', [atom, v('type')]), v('type'));
+            return res.length ? res[0] : sym('Atom');
+        });
+
+        reg('&type-infer', (term) => {
+            try { return sym(this.typeChecker?.typeToString(this.typeChecker.infer(term, {})) || 'Unknown'); }
+            catch { return sym('Error'); }
+        });
+
+        reg('&type-check', (t, type) => sym(this.typeChecker ? 'True' : 'False'));
+
+        reg('&get-atoms', () => this._listify(this.space.all()));
+
+        reg('&add-atom', (atom) => { this.space.add(atom); return atom; });
+        reg('&rm-atom', (atom) => { this.space.remove(atom); return atom; });
+
+        reg('&println', (...args) => { console.log(...args.map(a => a.toString?.() ?? a)); return sym('()'); });
+
+        reg('&length', (list) => sym(isList(list) ? flattenList(list).elements.length.toString() : '0'));
+
+        reg('&if', (cond, thenB, elseB) => {
+            const res = reduce(cond, this.space, this.ground);
+            if (res.name === 'True') return reduce(thenB, this.space, this.ground);
+            if (res.name === 'False') return reduce(elseB, this.space, this.ground);
+            return exp('if', [res, thenB, elseB]);
         }, { lazy: true });
 
-        // &let: Let (variable, value, body) -> result
-        this.ground.register('&let', (variable, value, body) => {
-            const bindings = variable.name ? { [variable.name]: value } : {};
-            return Unify.subst(body, bindings);
-        }, { lazy: true });
+        reg('&let*', (binds, body) => this._handleLetStar(binds, body), { lazy: true });
 
-        // &unify: Unify (pattern, term) -> bindings or False
-        this.ground.register('&unify', (pattern, term) => {
-            const bindings = Unify.unify(pattern, term);
-            return bindings === null ? Term.sym('False') : objToBindingsAtom(bindings);
-        });
+        // Higher-Order Fast
+        reg('&map-fast', (fn, list) => this._listify(this._flattenList(list).map(el => reduce(exp(fn, [el]), this.space, this.ground))), { lazy: true });
 
-        // &match: Match (space, pattern, template)
-        this.ground.register('&match', (space, pattern, template) => {
-            const results = match(this.space, pattern, template);
-            return this._listify(results);
-        }, { lazy: true });
+        reg('&filter-fast', (pred, list) => this._listify(this._flattenList(list).filter(el => this._truthy(reduce(exp(pred, [el]), this.space, this.ground)))), { lazy: true });
 
-        // &query: Query (pattern, template) -> results
-        this.ground.register('&query', (pattern, template) => {
-            const results = match(this.space, pattern, template);
-            return this._listify(results);
-        });
-
-        // &type-of: Get type
-        this.ground.register('&type-of', (atom) => {
-            const pattern = Term.exp(':', [atom, Term.var('type')]);
-            const results = match(this.space, pattern, Term.var('type'));
-            return results.length > 0 ? results[0] : Term.sym('Atom');
-        });
-
-        // &type-infer: Infer type using type checker
-        this.ground.register('&type-infer', (term) => {
-            if (!this.typeChecker) return Term.sym('Unknown');
-            try {
-                const type = this.typeChecker.infer(term, {});
-                return Term.sym(this.typeChecker.typeToString(type));
-            } catch {
-                return Term.sym('Error');
-            }
-        });
-
-        // &type-check: Check if term has specific type
-        this.ground.register('&type-check', (term, expectedType) => {
-            return Term.sym(this.typeChecker ? 'True' : 'False');
-        });
-
-        // &get-atoms: Get all atoms from space
-        this.ground.register('&get-atoms', (spaceAtom) => {
-            return this._listify(this.space.all());
-        });
-
-        // &add-atom: Add atom to space
-        this.ground.register('&add-atom', (atom) => {
-            this.space.add(atom);
-            return atom;
-        });
-
-        // &rm-atom: Remove atom from space
-        this.ground.register('&rm-atom', (atom) => {
-            this.space.remove(atom);
-            return atom;
-        });
-
-        // &println: Print arguments
-        this.ground.register('&println', (...args) => {
-            console.log(...args.map(a => a.toString ? a.toString() : a));
-            return Term.sym('()');
-        });
-
-        // &length: Get list length
-        this.ground.register('&length', (list) => {
-            if (Term.isList(list)) {
-                return Term.sym(Term.flattenList(list).elements.length.toString());
-            }
-            return Term.sym('0');
-        });
-
-        // &if: Conditional (lazy)
-        this.ground.register('&if', (cond, thenBranch, elseBranch) => {
-            const reducedCond = reduce(cond, this.space, this.ground);
-            if (reducedCond.name === 'True') return reduce(thenBranch, this.space, this.ground);
-            if (reducedCond.name === 'False') return reduce(elseBranch, this.space, this.ground);
-            return Term.exp('if', [reducedCond, thenBranch, elseBranch]);
-        }, { lazy: true });
-
-        // &let*: Sequential binding (let* ((var val) ...) body)
-        this.ground.register('&let*', (bindings, body) => {
-            return this._handleLetStar(bindings, body);
-        }, { lazy: true });
-
-        // === Higher-Order Functions (Grounded Fast Versions) ===
-
-        // &map-fast: Fast grounded map (50-100x faster than pure MeTTa)
-        this.ground.register('&map-fast', (fn, list) => {
-            const elements = this._flattenList(list);
-            const mapped = elements.map(el => {
-                // Apply function to element
-                const application = Term.exp(fn, [el]);
-                return reduce(application, this.space, this.ground);
-            });
-            return this._listify(mapped);
-        }, { lazy: true });
-
-        // &filter-fast: Fast grounded filter
-        this.ground.register('&filter-fast', (predicate, list) => {
-            const elements = this._flattenList(list);
-            const filtered = elements.filter(el => {
-                const application = Term.exp(predicate, [el]);
-                const result = reduce(application, this.space, this.ground);
-                return this._truthy(result);
-            });
-            return this._listify(filtered);
-        }, { lazy: true });
-
-        // &foldl-fast: Fast grounded left fold
-        this.ground.register('&foldl-fast', (fn, init, list) => {
-            const elements = this._flattenList(list);
-            return elements.reduce((acc, el) => {
-                const application = Term.exp(fn, [acc, el]);
-                return reduce(application, this.space, this.ground);
-            }, init);
-        }, { lazy: true });
+        reg('&foldl-fast', (fn, init, list) => this._flattenList(list).reduce((acc, el) => reduce(exp(fn, [acc, el]), this.space, this.ground), init), { lazy: true });
     }
 
     registerMinimalOps() {
         const { sym, exp, isExpression } = Term;
+        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
 
-        // === eval: single-step evaluation ===
-        this.ground.register('eval', (atom) => {
-            const { reduced } = step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-            return reduced;
+        reg('eval', (atom) => step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache).reduced, { lazy: true });
+
+        reg('chain', (atom, vari, templ) => {
+            const res = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            return (res.name === 'Empty' || (isExpression(res) && res.operator?.name === 'Error')) ? res : Unify.subst(templ, { [vari.name]: res });
         }, { lazy: true });
 
-        // === chain: evaluate $atom, bind to $var, evaluate $template ===
-        this.ground.register('chain', (atom, varAtom, template) => {
-            const result = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-            if (result.name === 'Empty' || (isExpression(result) && result.operator?.name === 'Error')) return result;
-            return Unify.subst(template, { [varAtom.name]: result });
+        reg('unify', (atom, pat, thenB, elseB) => {
+            const b = Unify.unify(atom, pat);
+            return b ? Unify.subst(thenB, b) : elseB;
         }, { lazy: true });
 
-        // === unify: pattern match with then/else branches ===
-        this.ground.register('unify', (atom, pattern, thenBranch, elseBranch) => {
-            const bindings = Unify.unify(atom, pattern);
-            return bindings !== null ? Unify.subst(thenBranch, bindings) : elseBranch;
-        }, { lazy: true });
-
-        // === function/return: block evaluation ===
-        this.ground.register('function', (body) => {
-            let current = body;
-            let iterations = 0;
-            const limit = this.config.maxReductionSteps || 1000;
-            while (iterations++ < limit) {
-                const result = step(current, this.space, this.ground, limit, this.memoCache);
-                const reduced = result.reduced;
-                // Check for return
-                if (isExpression(reduced) && reduced.operator?.name === 'return') {
-                    return reduced.components[0] || sym('()');
-                }
-                if (reduced === current || (reduced.equals && reduced.equals(current))) break;
-                current = reduced;
-                if (!result.applied) break;
+        reg('function', (body) => {
+            let curr = body, limit = this.config.maxReductionSteps || 1000;
+            for (let i = 0; i < limit; i++) {
+                const res = step(curr, this.space, this.ground, limit, this.memoCache);
+                const red = res.reduced;
+                if (isExpression(red) && red.operator?.name === 'return') return red.components[0] || sym('()');
+                if (red === curr || red.equals?.(curr)) break;
+                curr = red;
+                if (!res.applied) break;
             }
             return exp(sym('Error'), [body, sym('NoReturn')]);
         }, { lazy: true });
 
-        this.ground.register('return', (value) => exp(sym('return'), [value]), { lazy: true });
+        reg('return', (val) => exp(sym('return'), [val]), { lazy: true });
 
-        // === collapse-bind: collect all results ===
-        this.ground.register('collapse-bind', (atom) => {
-            const results = reduceND(atom, this.space, this.ground, this.config.maxReductionSteps);
-            // Hyperon typically wraps results in duplicates/structure?
-            // "The operation produces a list of pairs (Result {})" per some docs, or just list of results.
-            // TODO snippet says: this._listify(results.map(r => exp(sym(':'), [r, sym('{}')])))
-            return this._listify(results); // Using simple list for now as per minimal parity
-        }, { lazy: true });
+        reg('collapse-bind', (atom) => this._listify(reduceND(atom, this.space, this.ground, this.config.maxReductionSteps)), { lazy: true });
 
-        // === superpose-bind: expand results ===
-        this.ground.register('superpose-bind', (collapsed) => {
+        reg('superpose-bind', (collapsed) => {
             const items = this._flattenList(collapsed);
             return items.length === 1 ? items[0] : exp(sym('superpose'), items);
         });
 
-        // === context-space: return current space ===
-        this.ground.register('context-space', () => this.space, { lazy: true });
-
-        // === noeval: prevent evaluation ===
-        this.ground.register('noeval', (atom) => atom, { lazy: true });
+        reg('context-space', () => this.space, { lazy: true });
+        reg('noeval', (atom) => atom, { lazy: true });
     }
 
     _listify(arr) {
-        if (arr.length === 0) return Term.sym('()');
-        return Term.exp(':', [arr[0], this._listify(arr.slice(1))]);
+        return arr.length ? Term.exp(':', [arr[0], this._listify(arr.slice(1))]) : Term.sym('()');
     }
 
     _handleLetStar(bindings, body) {
         const { flattenList, sym, exp } = Term;
         let pairs = [];
 
-        if (bindings.operator?.name === ':') {
-            pairs = flattenList(bindings).elements;
-        } else if (bindings.type === 'compound') {
-            pairs = [bindings.operator, ...bindings.components];
-        } else if (bindings.name === '()') {
-            pairs = [];
-        } else {
-            console.error('[DEBUG] &let* invalid bindings', bindings);
-            return body;
+        if (bindings.operator?.name === ':') pairs = flattenList(bindings).elements;
+        else if (bindings.type === 'compound') pairs = [bindings.operator, ...bindings.components];
+        else if (bindings.name !== '()') { console.error('Invaild &let* bindings', bindings); return body; }
+
+        if (!pairs.length) return reduce(body, this.space, this.ground);
+
+        const [first, ...rest] = pairs;
+        let v, val;
+
+        if (first.components?.length) {
+            if (first.operator?.name === ':') [v, val] = first.components;
+            else { v = first.operator; val = first.components[0]; }
         }
 
-        if (pairs.length === 0) return reduce(body, this.space, this.ground);
+        if (!v || !val) return body;
 
-        const firstPair = pairs[0];
-        const restPairs = pairs.slice(1);
-        let variable, value;
-
-        if (firstPair.components?.length > 0) {
-            if (firstPair.operator?.name === ':') {
-                [variable, value] = firstPair.components;
-            } else {
-                variable = firstPair.operator;
-                value = firstPair.components[0];
-            }
-        }
-
-        if (!variable || !value) return body;
-
-        let recursiveLetStar = body;
-        if (restPairs.length > 0) {
-            const [nextFirst, ...nextRest] = restPairs;
-            const restBindings = exp(nextFirst, nextRest);
-            recursiveLetStar = exp(sym('let*'), [restBindings, body]);
-        }
-
-        const letTerm = exp(sym('let'), [variable, value, recursiveLetStar]);
-        return reduce(letTerm, this.space, this.ground);
+        const inner = rest.length ? exp(sym('let*'), [exp(rest[0], rest.slice(1)), body]) : body;
+        return reduce(exp(sym('let'), [v, val, inner]), this.space, this.ground);
     }
 
-    _flattenList(listAtom) {
-        // Extract elements from (: head tail) structure
-        if (!listAtom || listAtom.name === '()') return [];
-        if (listAtom.operator?.name === ':') {
-            const head = listAtom.components[0];
-            const tail = listAtom.components[1];
-            return [head, ...this._flattenList(tail)];
-        }
-        return [listAtom];
+    _flattenList(atom) {
+        if (!atom || atom.name === '()') return [];
+        if (atom.operator?.name === ':') return [atom.components[0], ...this._flattenList(atom.components[1])];
+        return [atom];
     }
 
     _truthy(atom) {
-        if (!atom) return false;
-        if (atom.name === 'True') return true;
-        if (atom.name === 'False' || atom.name === '()' || atom.name === 'Empty') return false;
-        return true;
+        return atom && atom.name !== 'False' && atom.name !== '()' && atom.name !== 'Empty';
     }
 
-    /**
-     * Run MeTTa code
-     * @param {string} code - MeTTa source code
-     * @returns {Array} Results of execution
-     */
     run(code) {
         return this.trackOperation('run', () => {
-            const expressions = this.parser.parseProgram(code);
-            const results = [];
-
-            for (let i = 0; i < expressions.length; i++) {
-                const expr = expressions[i];
-
-                // Case 1: Explicit evaluation via !
-                if (expr.type === 'atom' && expr.name === '!') {
-                    if (i + 1 < expressions.length) {
-                        results.push(this.evaluate(expressions[++i]));
-                    }
-                    continue;
-                }
-
-                this._processExpression(expr, results);
+            const exprs = this.parser.parseProgram(code);
+            const res = [];
+            for (let i = 0; i < exprs.length; i++) {
+                const e = exprs[i];
+                if (e.name === '!' && i + 1 < exprs.length) { res.push(this.evaluate(exprs[++i])); continue; }
+                this._processExpression(e, res);
             }
-            return results;
+            return res;
         });
     }
 
-    /**
-     * Load MeTTa code without evaluating
-     * @param {string} code - MeTTa source code
-     */
     load(code) {
-        const expressions = this.parser.parseProgram(code);
-        expressions.forEach(expr => this._processExpression(expr, null));
-        return expressions.map(e => ({ term: e }));
+        return this.parser.parseProgram(code).map(e => { this._processExpression(e, null); return { term: e }; });
     }
 
     _processExpression(expr, results) {
-        const isRule = (expr.operator === '=' || expr.operator?.name === '=') &&
-            expr.components?.length === 2;
-
-        if (isRule) {
+        if ((expr.operator === '=' || expr.operator?.name === '=') && expr.components?.length === 2) {
             this.space.addRule(expr.components[0], expr.components[1]);
-            if (results) results.push(expr);
+            results?.push(expr);
         } else {
-            if (results) {
-                const result = this.evaluate(expr);
-                results.push(result);
-                this.space.add(result);
-            } else {
-                this.space.add(expr);
-            }
+            const res = results ? this.evaluate(expr) : expr;
+            if (results) results.push(res);
+            this.space.add(res);
         }
     }
 
-    /**
-     * Evaluate a single expression
-     * @param {Object} expr - Expression to evaluate
-     * @returns {*} Result of evaluation
-     */
     evaluate(atom) {
         return this.trackOperation('evaluate', () => {
-            const result = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-            this._mettaMetrics.set('reductionSteps', (this._mettaMetrics.get('reductionSteps') || 0) + 1);
-            return result;
+            const res = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            const steps = this._mettaMetrics.get('reductionSteps') || 0;
+            this._mettaMetrics.set('reductionSteps', steps + 1);
+            return res;
         });
     }
 
-    step(atom) {
-        return step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-    }
+    step(atom) { return step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache); }
 
-    /**
-     * Query the space with a pattern
-     * @param {string|Object} pattern - Pattern to match
-     * @param {string|Object} template - Template to instantiate
-     * @returns {Array} Matched results
-     */
     query(pattern, template) {
-        const pat = typeof pattern === 'string' ? this.parser.parse(pattern) : pattern;
-        const tmpl = typeof template === 'string' ? this.parser.parse(template) : template;
-        return match(this.space, pat, tmpl);
+        const p = typeof pattern === 'string' ? this.parser.parse(pattern) : pattern;
+        const t = typeof template === 'string' ? this.parser.parse(template) : template;
+        return match(this.space, p, t);
     }
 
-    /**
-     * Get interpreter statistics
-     * @returns {Object} Statistics about the interpreter
-     */
     getStats() {
         return {
             space: this.space.getStats(),
             groundedAtoms: { count: this.ground.getOperations().length },
             reductionEngine: { maxSteps: this.config.maxReductionSteps || 10000 },
-            typeSystem: {
-                count: this.typeSystem ? 1 : 0,
-                typeVariables: this.typeSystem?.nextTypeVarId || 0
-            },
+            typeSystem: { count: this.typeSystem ? 1 : 0, typeVariables: this.typeSystem?.nextTypeVarId || 0 },
             groundOps: this.ground.getOperations().length,
             ...super.getStats()
         };
