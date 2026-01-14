@@ -1,295 +1,102 @@
-# SeNARS Development Plan
+# SeNARS Strategic Roadmap
 
-> **Semantic Non-Axiomatic Reasoning System**  
+> "From Substrate to Ecosystem: Maximizing Value, Usability, and Reach."
 
----
+This document outlines the strategic plan to elevate SeNARS from a promising research prototype into a robust, high-value AI platform.
 
-## Principles
+## Guiding Principles
 
-| Principle | Implication |
-|-----------|-------------|
-| **NAL First** | LM augments, not replaces formal semantics |
-| **Declarative** | Logic defined by patterns, not imperative code |
-| **Compiled** | Patterns compiled to optimized decision trees |
-| **Composable** | Standard interfaces, plug-and-play |
-| **Observable** | Emit events, bounded retention |
-| **Resource-Aware** | Budgets, timeouts, graceful degradation |
-| **Leverage Existing** | Build on existing code, don't rewrite |
-| **Tensor-Native** | Neural operations as first-class terms |
+1.  **Usability First**: Complexity should be opt-in. The "Happy Path" must be zero-friction.
+2.  **Demonstrable Value**: Every feature must have a corresponding "Show, Don't Tell" demo.
+3.  **Research Enablement**: Tools that make the *invisible* reasoning process *visible* and *measurable*.
+4.  **Ecosystem Ready**: Designed for extension, embedding, and community growth.
 
 ---
 
-## Quick Reference
+## Phase 1: Foundation & Reliability (The "Trust" Phase)
 
-| I want to... | Command / Location |
-|--------------|-------------------|
-| Run reasoning | `const nar = new NAR(); nar.input('(a --> b).');` |
-| Start REPL | `node repl/src/Repl.js` |
-| Run demos | `node agent/src/demo/demoRunner.js` |
-| Start MCP server | `node agent/src/mcp/start-server.js` |
-| Run all tests | `npm test` |
+**Goal**: Ensure the system is rock-solid, predictable, and performant so users trust it with real work.
 
----
+- [ ] **Comprehensive Test Suite Expansion**
+    - [ ] Achieve >95% code coverage in `core/` (currently high, but needs edge cases).
+    - [ ] Add **Property-Based Testing** for all logical operators to guarantee validity.
+    - [ ] Create "Long-Running" stability tests (24h+ runtime without memory leaks).
+    - [ ] Implement regression testing for reasoning quality (ensure newer versions don't get "dumber").
+- [ ] **Performance Optimization**
+    - [ ] Profile and optimize hot paths in `Term` unification and `Memory` queries.
+    - [ ] Implement **WASM (WebAssembly)** core for critical NAL operations (10x speedup target).
+    - [ ] Add automated logical benchmarks (derivations/sec) to CI pipeline.
+- [ ] **Documentation Perfection**
+    - [ ] Interactive API docs (TypeDoc + embedded runnable examples).
+    - [ ] "Zero to Hero" video tutorial series embedded in docs.
 
-## Foundation Status
+## Phase 2: Usability & Developer Experience (The "Joy" Phase)
 
-### Complete Systems
+**Goal**: Make SeNARS the easiest Cognitive Architecture to install, learn, and use.
 
-| System | Location | README | Status |
-|--------|----------|--------|--------|
-| **Core NAR** | `core/src/nar/NAR.js` | — | ✅ |
-| **Unifier** | `core/src/term/Unifier.js` | — | ✅ |
-| **RuleCompiler** | `core/src/reason/rules/compiler/` | — | ✅ |
-| **All 10 Strategies** | `core/src/reason/strategy/` | [README](file:///home/me/senars10/core/src/reason/strategy/README.md) | ✅ |
-| **LM Integration** | Multiple files | — | ✅ |
-| - All 16 LM Rules | `core/src/reason/rules/lm/` | — | ✅ |
-| - **NARS-GPT** | `NarsGPTStrategy.js`, rules | [NARSGPT.md](file:///home/me/senars10/core/src/reason/strategy/NARSGPT.md) | ✅ |
-| - EmbeddingLayer | `core/src/lm/EmbeddingLayer.js` | — | ✅ |
-| **MCP Server** | `agent/src/mcp/` | [README](file:///home/me/senars10/agent/src/mcp/README.md) | ✅ |
-| **Demo System** | `agent/src/demo/` | [README](file:///home/me/senars10/agent/src/demo/README.md) | ✅ |
-| **RLFP Framework** | `agent/src/rlfp/` | [README](file:///home/me/senars10/agent/src/rlfp/README.md) | Skeleton |
-| **Knowledge System** | `agent/src/know/` | [README](file:///home/me/senars10/agent/src/know/README.md) | ✅ |
-| **WebSocket API** | `agent/src/server/` | — | ✅ |
-| **REPL** | `repl/src/` | — | ✅ |
-| **Serialization** | NAR, Memory, Task, Term, Bag, Concept | — | ✅ |
-| **Events** | `IntrospectionEvents.js` | — | ✅ |
+- [ ] **Polished CLI & TUI 2.0**
+    - [ ] Enhance existing Ink-based REPL with syntax highlighting, autocomplete, and history.
+    - [ ] add `senars init` command to scaffold new projects/plugins.
+    - [ ] Create a "Dashboard Mode" TUI showing real-time metrics, focus contents, and active goals.
+- [ ] **Web UI Revolution (The "Visualizer")**
+    - [ ] Complete the React-based Web UI (`ui/`) to be a full-featured IDE.
+    - [ ] **Live Derivation Graph**: Force-directed graph visualization of reasoning steps in real-time.
+    - [ ] **Interactive Inspector**: Click on any node to see its truth value, confidence, and origin (evidence trace).
+    - [ ] "Time Travel" debugging: Scrub back through reasoning history.
+- [ ] **Deploy-Anywhere**
+    - [ ] **Docker** image (official, optimized).
+    - [ ] **NPM** global binary for instant access (`npx senars`).
+    - [ ] **Edge-Ready** build for Cloudflare Workers / Vercel Edge.
 
+## Phase 3: Applicability & "Killer App" Demos (The "Value" Phase)
 
----
+**Goal**: Prove SeNARS can solve problems that pure LLMs or pure Logic cannot.
 
+- [ ] **Personal Knowledge Assistant (PKA)**
+    - [ ] A local-first agent that ingests user notes/docs (Markdown, PDF).
+    - [ ] Uses SeNARS to find contradictions, infer missing links, and answer "Why?" questions.
+    - [ ] *Why SeNARS?* Proven consistency over time (unlike LLM context window amnesia).
+- [ ] **Autonomous Coding Agent (The "Architect")**
+    - [ ] An agent that maintains a "Mental Model" of a codebase structure.
+    - [ ] Can answer high-level architectural questions ("If I change X, what breaks?").
+    - [ ] Reasoning-guided refactoring (planning steps before editing).
+- [ ] **Game AI Director**
+    - [ ] A Unity/Godot plugin demo controlling NPC narratives.
+    - [ ] NPCs that have long-term memory, goals, and consistent personalities using SeNARS logic.
 
-## Phase 7: RLFP — Reinforcement Learning from Preferences
+## Phase 4: Research Superpowers (The "Discovery" Phase)
 
-> **Goal**: Learn reasoning preferences from human feedback  
-> **Effort**: ~1 week  
-> **Prereqs**: Phase 4 (Tracing), Phase 5 (TensorFunctor)
+**Goal**: Become the de-facto standard implementation for NAL and Neuro-Symbolic research.
 
-### 7.1 Trajectory Logger (Complete Skeleton)
+- [ ] **RLFP (Reinforcement Learning from Preferences) Workbench**
+    - [ ] A specialized UI for human-in-the-loop training.
+    - [ ] "Thumps Up/Down" interface for reasoning paths.
+    - [ ] Visual policy inspection (heatmaps of attention allocation).
+- [ ] **Gym Integration**
+    - [ ] OpenAI Gym / PettingZoo wrappers for standard RL environments.
+    - [ ] Benchmark SeNARS against standard RL baselines (PPO, DQN) on logic-heavy tasks.
+- [ ] **Tensor Logic Explorer**
+    - [ ] Visualizer for the Truth-Tensor bridge (see symbolic truth mapping to high-dimensional space).
+    - [ ] Interactive "Differentiable Logic" playground.
 
-**File**: `agent/src/rlfp/ReasoningTrajectoryLogger.js`  
-**Effort**: 4 hours
+## Phase 5: Ecosystem & Community (The "Growth" Phase)
 
-Subscribe to agent events, capture full reasoning traces using DerivationTracer.
+**Goal**: Enable a self-sustaining community of creators.
 
-### 7.2 Preference Collector
-
-**File**: `agent/src/rlfp/PreferenceCollector.js`  
-**Effort**: 4 hours
-
-A/B comparison UI, preference recording.
-
-### 7.3 RLFP Learner with Tensor Support
-
-**File**: `agent/src/rlfp/RLFPLearner.js`  
-**Effort**: 2 days
-
-```javascript
-class RLFPLearner {
-    constructor(tensorFunctor);
-    
-    // Reward model (neural via TensorFunctor)
-    rewardModel(trajectory) → score;
-    
-    // Preference learning
-    trainRewardModel(preferences: Preference[]);
-    
-    // Policy update
-    updatePolicy(trajectory, reward);
-}
-```
-
-**Leverages TensorFunctor for**:
-- Neural reward model (`mlp(trajectory_embedding, score)`)
-- Gradient-based policy optimization
-- Differentiable NAL (experimental)
-
-### 7.4 Integration Loop
-
-**Effort**: 1 day
-
-```javascript
-async function rlfpLoop(agent) {
-    const logger = new ReasoningTrajectoryLogger(agent.eventBus);
-    const collector = new PreferenceCollector();
-    const learner = new RLFPLearner(tensorFunctor);
-    
-    while (true) {
-        const traj1 = await runTask(agent, task);
-        const traj2 = await runTask(agent, task, { variant: true });
-        
-        const preference = await collector.collect(traj1, traj2);
-        await learner.trainRewardModel([preference]);
-    }
-}
-```
-
-### Phase 7 Total: ~1 week
+- [ ] **SeNARS Plugin Registry**
+    - [ ] Standardized manifest format for plugins (custom rules, I/O adapters, strategies).
+    - [ ] `senars install <plugin>` cli command.
+- [ ] **Knowledge Market**
+    - [ ] Shareable "Knowledge Books" (serialized Narsese ontologies).
+    - [ ] e.g., "Common Sense Physics", "Medical Diagnostics Basic", "Software Design Patterns".
+- [ ] **Language Bindings**
+    - [ ] **Python Bridge** (essential for ML researchers).
+    - [ ] Rust Core (long-term rewrite target for max perf?).
 
 ---
 
-## Phase 8: Interactive — Demo Runner & Playground
+## Immediate Next Steps (The "Now")
 
-> **Goal**: Visual debugging, heuristic tuning  
-> **Effort**: ~1 week  
-> **Prereqs**: Phase 4 (Tracing, Serialization)
-
-### 8.1 Enhanced Demo Runner
-
-**Extend**: `agent/src/demo/DemoWrapper.js`  
-**Effort**: 4-6 hours
-
-- 🟢 Color-coded output (Belief/Goal/Question)
-- 🔴 Duplicate detection
-- Filtering by punctuation/priority/depth
-- Problem domains: logic, causal, goals, analogy, variables
-
-### 8.2 Web Playground
-
-**Location**: `ui/src/pages/Playground.jsx`  
-**Effort**: 3-4 days
-
-- InputPanel (Narsese editor)
-- BeliefsPanel (real-time)
-- TraceViewer (mermaid from DerivationTracer)
-- MemoryGraph (D3 visualization)
-- ControlPanel (Step/Run/Pause)
-
-**Leverages**: Existing `ui/src/components/`, `WebSocketManager.js`
-
-### Phase 8 Total: ~1 week
-
----
-
-## Phase 9: Scale — Advanced Indexing
-
-> **Goal**: Support 100K+ concepts  
-> **Effort**: 1-2 weeks  
-> **Optional** — defer until needed
-
-```javascript
-class TermIndex {
-    findByPattern(pattern) → Term[];
-    findByOperator(op) → Term[];
-    findSimilar(term, k) → Term[];
-    topK(k, filter?) → Term[];
-}
-```
-
-| Scale | Strategy |
-|-------|----------|
-| <10K | In-memory Map |
-| 10K-100K | Trie + B-Tree + LRU |
-| 100K-1M | Web Workers |
-| 1M+ | External store |
-
----
-
-## Phase 10: Temporal — NAL-7 (Deferred)
-
-> **Prerequisite**: Temporal representation spec
-
-| Task | Effort |
-|------|--------|
-| Representation spec | 1 week |
-| Operators: `=/>`, `=\>`, `=\|>` | 1 week |
-| TemporalBuffer | 1 week |
-| NAL-7 rules | 1 week |
-| CausalStrategy | 4 hours |
-
----
-
-## ML Technique Priority
-
-| Technique | Phase | Prereqs | Benefit |
-|-----------|-------|---------|---------|
-| **TensorFunctor** | 5 | Unifier ✅ | Neural ops as terms |
-| **RLFP** | 6 | Phase 6 | Preference learning |
-| **Hopfield** | 6+ | Embeddings ✅ | Associative retrieval |
-| **Bayesian** | 6+ | None | Principled uncertainty |
-| **GNN** | 8+ | Indexing | Graph learning |
-| **Differentiable Logic** | 6+ | Phase 6 | End-to-end training |
-
----
-
-## Ecosystem Status
-
-| Component | Status | Phase |
-|-----------|--------|-------|
-| MCP Server | ✅ | Done |
-| Demo System | ✅ | Done (enhance in 7) |
-| Knowledge System | ✅ | Done |
-| RLFP | Skeleton | 6 |
-| WebSocket API | ✅ | Done |
-| REPL | ✅ | Done |
-| Tools | ✅ | Done |
-| Web Playground | ❌ | 7 |
-| TensorFunctor | ❌ | 5 |
-
----
-
-## Domain Applications
-
-| Domain | Requirements | Phase Ready |
-|--------|-------------|-------------|
-| **Legal** | Unification ✅ | Now |
-| **Education** | Tracing | 4 |
-| **Research** | RLFP | 6 |
-| **ML Research** | TensorFunctor | 5 |
-| **Medical** | Temporal | 9 |
-| **Game AI** | Temporal | 9 |
-
----
-
-## Speculative / Long-Term
-
-| Item | Prereqs |
-|------|---------|
-| Neuromorphic NARS | Phase 9 |
-| Embodied Reasoning | Phase 9 |
-| Distributed Multi-Agent | WebSocket ✅ |
-| Self-Modifying Architecture | Phase 6 |
-| Proof-Carrying Code | Phase 6 |
-| Attention-Guided Inference | Embeddings ✅ |
-| Belief Compression | Phase 8 |
-| Active Learning | Phase 4, 6 |
-| Rule Induction | Phase 4, 5 |
-
----
-
-## Leverage Shortcuts
-
-| Task | Naive | Actual |
-|------|-------|--------|
-| Tracing | 1 week | **3 hrs** |
-| Serialization | 3 days | **2 hrs** |
-| Demo Runner | 3-4 days | **4-6 hrs** |
-| RLFP | 1 week | **1 week** (after Phase 5) |
-| MCP Server | 1 week | **0** (done!) |
-
----
-
-## Verification
-
-```bash
-npm test
-npm test -- --testPathPattern=TensorFunctor
-npm test -- --testPathPattern=DerivationTracer
-node agent/src/mcp/start-server.js
-node agent/src/demo/demoRunner.js
-node repl/src/Repl.js
-```
-
----
-
-## Key Files
-
-| Purpose | Location |
-|---------|----------|
-| NAR API | [NAR.js](file:///home/me/senars10/core/src/nar/NAR.js) |
-| Unifier | [Unifier.js](file:///home/me/senars10/core/src/term/Unifier.js) |
-| Strategies | [strategy/](file:///home/me/senars10/core/src/reason/strategy/) |
-| Events | [IntrospectionEvents.js](file:///home/me/senars10/core/src/util/IntrospectionEvents.js) |
-| MCP Server | [mcp/Server.js](file:///home/me/senars10/agent/src/mcp/Server.js) |
-| Demo System | [demo/](file:///home/me/senars10/agent/src/demo/) |
-| RLFP | [rlfp/](file:///home/me/senars10/agent/src/rlfp/) |
-| Subsystems | [agent/src/README.md](file:///home/me/senars10/agent/src/README.md) |
+1.  **Benchmark Baseline**: Establish current performance numbers.
+2.  **UI "Hello World"**: Get the `ui/` directory to a "deployable" state with basic graph viz.
+3.  **RLFP Prototype**: Implement the first end-to-end feedback loop.
