@@ -5,7 +5,7 @@
  */
 
 // Atom Caches
-const caches = {sym: new Map(), var: new Map(), exp: new Map()};
+const caches = { sym: new Map(), var: new Map(), exp: new Map() };
 
 export const sym = (name) => {
     if (caches.sym.has(name)) return caches.sym.get(name);
@@ -47,7 +47,8 @@ export const exp = (operator, components) => {
 
     if (caches.exp.has(key)) return caches.exp.get(key);
 
-    const name = `(${opStr} ${components.map(c => c.name || c).join(' ')})`;
+    const compStr = components.map(c => c.name || c).join(' ');
+    const name = `(${opStr}${compStr ? ' ' + compStr : ''})`;
     const atom = {
         type: 'compound', name, operator: op, components: Object.freeze([...components]),
         toString: () => name,
@@ -85,7 +86,7 @@ export const flattenList = (list) => {
         elements.push(curr.components[0]);
         curr = curr.components[1];
     }
-    return {elements, tail: curr};
+    return { elements, tail: curr };
 };
 
 export const constructList = (elements, tail) => {

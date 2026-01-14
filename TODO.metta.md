@@ -86,7 +86,7 @@ metta/src/
 - [x] **Reduce.js**: Strict adherence to reduction loop ✅
     - [x] Non-deterministic reduction (superposition) support implemented (Generator-based)
     - [x] Pre-existing lambda evaluation issues fixed (16 stdlib tests passing)
-    - Gap: Output formatting must match `hyperon` REPL
+    - [x] Output formatting matches `hyperon` REPL (via `Formatter.js`) ✅
 
 #### Minimal MeTTa Instructions (ground/minimal)
 

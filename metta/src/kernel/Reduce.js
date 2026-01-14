@@ -261,16 +261,23 @@ const reduceSubcomponentsND = (expr, space, ground, limit) => {
 
     // Reduce components
     for (let i = 0; i < comps.length; i++) {
-        const vars = [...stepYield(comps[i], space, ground, limit)];
-        if (vars.length) {
+        const stepResults = [...stepYield(comps[i], space, ground, limit)];
+        let variants = [];
+
+        if (stepResults.length > 0) {
+            variants = stepResults.filter(s => !s.deadEnd).map(s => s.reduced);
+        } else if (isExpression(comps[i]) && comps[i].components.length) {
+            variants = reduceSubcomponentsND(comps[i], space, ground, limit);
+        }
+
+        if (variants.length) {
             const res = [];
-            for (const { reduced, deadEnd } of vars) {
-                if (deadEnd) continue;
+            for (const reduced of variants) {
                 const newComps = [...comps];
                 newComps[i] = reduced;
                 res.push(exp(op, newComps));
             }
-            if (res.length) return res; // Use first reducible component branch strategy
+            if (res.length) return res;
         }
     }
 

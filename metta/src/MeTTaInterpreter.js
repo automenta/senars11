@@ -14,12 +14,14 @@ import { reduce, reduceND, step, match } from './kernel/Reduce.js';
 import { Space } from './kernel/Space.js';
 import { Term } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
+import { Formatter } from './kernel/Formatter.js';
 import { loadStdlib } from './stdlib/StdlibLoader.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
         if (reasoner && typeof reasoner === 'object' && !Object.keys(options).length) { options = reasoner; reasoner = null; }
         const opts = options || {};
+        opts.maxReductionSteps = opts.maxReductionSteps || 1000;
         if (!opts.termFactory) opts.termFactory = new TermFactory();
 
         super(opts, 'MeTTaInterpreter', opts.eventBus, opts.termFactory);
@@ -76,7 +78,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         reg('&add-atom', (atom) => { this.space.add(atom); return atom; });
         reg('&rm-atom', (atom) => { this.space.remove(atom); return atom; });
 
-        reg('&println', (...args) => { console.log(...args.map(a => a.toString?.() ?? a)); return sym('()'); });
+        reg('&println', (...args) => { console.log(...args.map(a => Formatter.toHyperonString(a))); return sym('()'); });
 
         reg('&length', (list) => sym(isList(list) ? flattenList(list).elements.length.toString() : '0'));
 
@@ -183,9 +185,15 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             const res = [];
             for (let i = 0; i < exprs.length; i++) {
                 const e = exprs[i];
-                if (e.name === '!' && i + 1 < exprs.length) { res.push(this.evaluate(exprs[++i])); continue; }
+                if (e.name === '!' && i + 1 < exprs.length) {
+                    const evalRes = this.evaluate(exprs[++i]);
+                    if (Array.isArray(evalRes)) res.push(...evalRes);
+                    else res.push(evalRes);
+                    continue;
+                }
                 this._processExpression(e, res);
             }
+            res.toString = () => Formatter.formatResult(res);
             return res;
         });
     }
@@ -197,17 +205,26 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     _processExpression(expr, results) {
         if ((expr.operator === '=' || expr.operator?.name === '=') && expr.components?.length === 2) {
             this.space.addRule(expr.components[0], expr.components[1]);
-            results?.push(expr);
+            if (results) results.push(expr);
         } else {
-            const res = results ? this.evaluate(expr) : expr;
-            if (results) results.push(res);
-            this.space.add(res);
+            if (results) {
+                const evalRes = this.evaluate(expr);
+                if (Array.isArray(evalRes)) {
+                    results.push(...evalRes);
+                    evalRes.forEach(r => this.space.add(r));
+                } else {
+                    results.push(evalRes);
+                    this.space.add(evalRes);
+                }
+            } else {
+                this.space.add(expr);
+            }
         }
     }
 
     evaluate(atom) {
         return this.trackOperation('evaluate', () => {
-            const res = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            const res = reduceND(atom, this.space, this.ground, this.config.maxReductionSteps);
             const steps = this._mettaMetrics.get('reductionSteps') || 0;
             this._mettaMetrics.set('reductionSteps', steps + 1);
             return res;
@@ -219,7 +236,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
     query(pattern, template) {
         const p = typeof pattern === 'string' ? this.parser.parse(pattern) : pattern;
         const t = typeof template === 'string' ? this.parser.parse(template) : template;
-        return match(this.space, p, t);
+        const res = match(this.space, p, t);
+        res.toString = () => Formatter.formatResult(res);
+        return res;
     }
 
     getStats() {
