@@ -1,3 +1,8 @@
+/**
+ * MeTTaRuleAdapter.js - Adapter for MeTTa rules in SeNARS
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
+ */
+
 import {Rule} from '@senars/core/src/reason/Rule.js';
 import {Unify} from '../kernel/Unify.js';
 
@@ -13,6 +18,9 @@ export class MeTTaRuleAdapter extends Rule {
         this.components = ruleTerm.components;
     }
 
+    /**
+     * Apply the rule asynchronously
+     */
     async applyAsync(primaryPremise, secondaryPremise, context) {
         if (!this.components || this.components.length < 2) return [];
 

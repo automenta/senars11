@@ -6,6 +6,9 @@
 
 import {Term} from './kernel/Term.js';
 
+/**
+ * Type constructor factory functions
+ */
 export const TypeConstructors = {
     Base: (name) => ({kind: 'Base', name}),
     Arrow: (from, to) => ({kind: 'Arrow', from, to}),
@@ -35,19 +38,27 @@ export class TypeSystem {
         this.nextTypeVarId = 0;
     }
 
+    /**
+     * Generate a fresh type variable
+     */
     freshTypeVar() {
         return TypeConstructors.TypeVar(this.nextTypeVarId++);
     }
 
+    /**
+     * Infer the type of a term
+     */
     inferType(term, context = {}) {
         if (!term) return this.freshTypeVar();
 
         if (term.type === 'atom') {
+            // Handle variable atoms
             if (term.name?.match(/^[?$]/)) {
                 const name = term.name.substring(1);
                 return context[name] || this.freshTypeVar();
             }
 
+            // Handle constant atoms
             if (term.name) {
                 if (!isNaN(parseFloat(term.name))) return TypeConstructors.Number;
                 if (/^(True|False|true|false)$/.test(term.name)) return TypeConstructors.Bool;
@@ -56,10 +67,12 @@ export class TypeSystem {
             }
         }
 
+        // Handle compound terms (expressions)
         if (term.type === 'compound' && term.operator) {
             const opType = this.inferType(term.operator, context);
             const argTypes = term.components.map(arg => this.inferType(arg, context));
 
+            // If operator is a function type and we have exactly one argument that unifies with the domain
             if (opType.kind === 'Arrow' && argTypes.length === 1 && this.unifyTypes(argTypes[0], opType.from)) {
                 return opType.to;
             }
@@ -68,10 +81,16 @@ export class TypeSystem {
         return this.freshTypeVar();
     }
 
+    /**
+     * Check if a term has a specific type
+     */
     checkType(term, expectedType, context = {}) {
         return this.unifyTypes(this.inferType(term, context), expectedType);
     }
 
+    /**
+     * Unify two types
+     */
     unifyTypes(t1, t2) {
         if (t1 === t2) return true;
         if (t1.kind === 'TypeVar') return this.bindTypeVar(t1, t2);
@@ -91,16 +110,22 @@ export class TypeSystem {
                     t1.params.length === t2.params.length &&
                     t1.params.every((p, i) => this.unifyTypes(p, t2.params[i]));
             default:
-                return false; // Simple structural equality for others handled by kind check above?
+                return false;
         }
     }
 
+    /**
+     * Bind a type variable to a type
+     */
     bindTypeVar(v, t) {
         if (this.occursCheck(v, t)) return false;
         this.substitution.set(v.index, t);
         return true;
     }
 
+    /**
+     * Check if a type variable occurs in a type (to prevent infinite types)
+     */
     occursCheck(v, t) {
         if (t.kind === 'TypeVar') return t.index === v.index;
         if (t.kind === 'Arrow') return this.occursCheck(v, t.from) || this.occursCheck(v, t.to);
@@ -109,17 +134,35 @@ export class TypeSystem {
         return false;
     }
 
+    /**
+     * Apply substitutions to a type
+     */
     applySubstitution(type) {
         if (type.kind === 'TypeVar') {
             const subst = this.substitution.get(type.index);
             return subst ? this.applySubstitution(subst) : type;
         }
-        if (type.kind === 'Arrow') return TypeConstructors.Arrow(this.applySubstitution(type.from), this.applySubstitution(type.to));
-        if (type.kind === 'List') return TypeConstructors.List(this.applySubstitution(type.element));
-        if (type.kind === 'TypeCtor') return TypeConstructors.TypeCtor(type.name, type.params.map(p => this.applySubstitution(p)));
+        if (type.kind === 'Arrow') {
+            return TypeConstructors.Arrow(
+                this.applySubstitution(type.from),
+                this.applySubstitution(type.to)
+            );
+        }
+        if (type.kind === 'List') {
+            return TypeConstructors.List(this.applySubstitution(type.element));
+        }
+        if (type.kind === 'TypeCtor') {
+            return TypeConstructors.TypeCtor(
+                type.name,
+                type.params.map(p => this.applySubstitution(p))
+            );
+        }
         return type;
     }
 
+    /**
+     * Generate type constraints for a term
+     */
     generateConstraints(term, context = {}) {
         const constraints = [];
         if (term.type === 'compound' && term.operator) {
@@ -138,16 +181,27 @@ export class TypeSystem {
         return constraints;
     }
 
+    /**
+     * Solve type constraints
+     */
     solveConstraints(constraints) {
         return constraints.every(c => this.unifyTypes(c.type1, c.type2));
     }
 
+    /**
+     * Infer type with constraint solving
+     */
     inferWithConstraints(term, context = {}) {
         const constraints = this.generateConstraints(term, context);
-        if (!this.solveConstraints(constraints)) throw new Error(`Type inference failed: ${term.toString()}`);
+        if (!this.solveConstraints(constraints)) {
+            throw new Error(`Type inference failed: ${term.toString()}`);
+        }
         return this.applySubstitution(this.inferType(term, context));
     }
 
+    /**
+     * Convert a type to string representation
+     */
     typeToString(type) {
         if (!type) return 'Unknown';
         switch (type.kind) {
@@ -183,14 +237,23 @@ export class TypeChecker {
         this.typeSystem = typeSystem || new TypeSystem();
     }
 
+    /**
+     * Infer the type of a term
+     */
     infer(term, context = {}) {
         return this.typeSystem.inferWithConstraints(term, context);
     }
 
+    /**
+     * Check if a term has a specific type
+     */
     check(term, expectedType, context = {}) {
         return this.typeSystem.checkType(term, expectedType, context);
     }
 
+    /**
+     * Unify two types and return the resulting substitution
+     */
     unify(type1, type2) {
         const tempSystem = new TypeSystem();
         tempSystem.substitution = new Map(this.typeSystem.substitution);
@@ -198,6 +261,9 @@ export class TypeChecker {
         return tempSystem.unifyTypes(type1, type2) ? tempSystem.substitution : null;
     }
 
+    /**
+     * Convert a type to string representation
+     */
     typeToString(type) {
         return this.typeSystem.typeToString(type);
     }

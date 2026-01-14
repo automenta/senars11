@@ -1,6 +1,5 @@
 ; MeTTa Standard Library - Core Module
 ; Basic control flow, binding, and lambda functions
-; ~60 LOC
 
 ; ===== Conditional Branching =====
 

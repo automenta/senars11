@@ -1,6 +1,7 @@
 /**
  * MeTTaInterpreter.js - Main Interpreter
  * Components wiring and standard library loading.
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
@@ -19,9 +20,13 @@ import { loadStdlib } from './stdlib/StdlibLoader.js';
 
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
-        if (reasoner && typeof reasoner === 'object' && !Object.keys(options).length) { options = reasoner; reasoner = null; }
-        const opts = options || {};
-        opts.maxReductionSteps = opts.maxReductionSteps || 1000;
+        // Normalize arguments: if reasoner is actually options object, swap
+        if (reasoner && typeof reasoner === 'object' && !Object.keys(options).length) {
+            options = reasoner;
+            reasoner = null;
+        }
+
+        const opts = { maxReductionSteps: 1000, ...options };
         if (!opts.termFactory) opts.termFactory = new TermFactory();
 
         super(opts, 'MeTTaInterpreter', opts.eventBus, opts.termFactory);
@@ -34,57 +39,102 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.typeChecker = new TypeChecker(this.typeSystem);
         this.memoCache = new MemoizationCache(opts.cacheCapacity || 1000);
 
+        this._initializeOperations();
+        this._initializeBridge();
+        this._loadStandardLibrary();
+    }
+
+    /**
+     * Initialize all operation sets in proper order
+     */
+    _initializeOperations() {
         this.registerAdvancedOps();
         this.registerMinimalOps();
-
-        // Override HOF operations with interpreter-aware versions
         this.registerHofOps();
+    }
 
-        const bridge = this.reasoner?.bridge || opts.bridge;
-        if (bridge?.registerPrimitives) bridge.registerPrimitives(this.ground);
-
-        if (this.config.loadStdlib !== false) {
-            try { loadStdlib(this, this.config); } catch (e) { console.warn("Stdlib load failed:", e.message); }
+    /**
+     * Register bridge primitives if available
+     */
+    _initializeBridge() {
+        const bridge = this.reasoner?.bridge || this.config.bridge;
+        if (bridge?.registerPrimitives) {
+            bridge.registerPrimitives(this.ground);
         }
     }
 
+    /**
+     * Load standard library if enabled
+     */
+    _loadStandardLibrary() {
+        if (this.config.loadStdlib !== false) {
+            try {
+                loadStdlib(this, this.config);
+            } catch (e) {
+                console.warn("Stdlib load failed:", e.message);
+            }
+        }
+    }
+
+    /**
+     * Register advanced operations that extend the core functionality
+     */
     registerAdvancedOps() {
         const { sym, exp, var: v, isList, flattenList } = Term;
         const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
 
-        reg('&subst', (a, b, c) => c ? Unify.subst(c, a.name ? { [a.name]: b } : {}) : Unify.subst(a, bindingsAtomToObj(b)), { lazy: true });
+        // Substitution operations
+        reg('&subst', (a, b, c) =>
+            c ? Unify.subst(c, a.name ? { [a.name]: b } : {}) : Unify.subst(a, bindingsAtomToObj(b)),
+            { lazy: true }
+        );
 
-        reg('&let', (vari, val, body) => Unify.subst(body, vari?.name ? { [vari.name]: val } : {}), { lazy: true });
+        reg('&let', (vari, val, body) =>
+            Unify.subst(body, vari?.name ? { [vari.name]: val } : {}),
+            { lazy: true }
+        );
 
+        // Unification operations
         reg('&unify', (pat, term) => {
             const b = Unify.unify(pat, term);
             return b ? objToBindingsAtom(b) : sym('False');
         });
 
+        // Matching operations
         reg('&match', (s, p, t) => this._listify(match(this.space, p, t)), { lazy: true });
         reg('&query', (p, t) => this._listify(match(this.space, p, t)));
 
+        // Type operations
         reg('&type-of', (atom) => {
             const res = match(this.space, exp(':', [atom, v('type')]), v('type'));
             return res.length ? res[0] : sym('Atom');
         });
 
         reg('&type-infer', (term) => {
-            try { return sym(this.typeChecker?.typeToString(this.typeChecker.infer(term, {})) || 'Unknown'); }
-            catch { return sym('Error'); }
+            try {
+                return sym(this.typeChecker?.typeToString(this.typeChecker.infer(term, {})) || 'Unknown');
+            } catch {
+                return sym('Error');
+            }
         });
 
         reg('&type-check', (t, type) => sym(this.typeChecker ? 'True' : 'False'));
 
+        // Space operations
         reg('&get-atoms', () => this._listify(this.space.all()));
-
         reg('&add-atom', (atom) => { this.space.add(atom); return atom; });
         reg('&rm-atom', (atom) => { this.space.remove(atom); return atom; });
 
-        reg('&println', (...args) => { console.log(...args.map(a => Formatter.toHyperonString(a))); return sym('()'); });
+        // I/O operations
+        reg('&println', (...args) => {
+            console.log(...args.map(a => Formatter.toHyperonString(a)));
+            return sym('()');
+        });
 
+        // List operations
         reg('&length', (list) => sym(isList(list) ? flattenList(list).elements.length.toString() : '0'));
 
+        // Control flow operations
         reg('&if', (cond, thenB, elseB) => {
             const res = reduce(cond, this.space, this.ground);
             if (res.name === 'True') return reduce(thenB, this.space, this.ground);
@@ -94,14 +144,33 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         reg('&let*', (binds, body) => this._handleLetStar(binds, body), { lazy: true });
 
-        // Higher-Order Fast
-        reg('&map-fast', (fn, list) => this._listify(this._flattenList(list).map(el => reduce(exp(fn, [el]), this.space, this.ground))), { lazy: true });
+        // Higher-order function operations
+        reg('&map-fast', (fn, list) =>
+            this._listify(this._flattenList(list).map(el =>
+                reduce(exp(fn, [el]), this.space, this.ground)
+            )),
+            { lazy: true }
+        );
 
-        reg('&filter-fast', (pred, list) => this._listify(this._flattenList(list).filter(el => this._truthy(reduce(exp(pred, [el]), this.space, this.ground)))), { lazy: true });
+        reg('&filter-fast', (pred, list) =>
+            this._listify(this._flattenList(list).filter(el =>
+                this._truthy(reduce(exp(pred, [el]), this.space, this.ground))
+            )),
+            { lazy: true }
+        );
 
-        reg('&foldl-fast', (fn, init, list) => this._flattenList(list).reduce((acc, el) => reduce(exp(fn, [acc, el]), this.space, this.ground), init), { lazy: true });
+        reg('&foldl-fast', (fn, init, list) =>
+            this._flattenList(list).reduce((acc, el) =>
+                reduce(exp(fn, [acc, el]), this.space, this.ground),
+                init
+            ),
+            { lazy: true }
+        );
     }
 
+    /**
+     * Register higher-order function operations with interpreter awareness
+     */
     registerHofOps() {
         const { sym, exp, isExpression } = Term;
         const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
@@ -143,15 +212,23 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         }, { lazy: true });
     }
 
+    /**
+     * Register minimal core operations
+     */
     registerMinimalOps() {
         const { sym, exp, isExpression } = Term;
         const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
 
-        reg('eval', (atom) => step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache).reduced, { lazy: true });
+        reg('eval', (atom) =>
+            step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache).reduced,
+            { lazy: true }
+        );
 
         reg('chain', (atom, vari, templ) => {
             const res = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-            return (res.name === 'Empty' || (isExpression(res) && res.operator?.name === 'Error')) ? res : Unify.subst(templ, { [vari.name]: res });
+            return (res.name === 'Empty' || (isExpression(res) && res.operator?.name === 'Error'))
+                ? res
+                : Unify.subst(templ, { [vari.name]: res });
         }, { lazy: true });
 
         reg('unify', (atom, pat, thenB, elseB) => {
@@ -160,21 +237,32 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         }, { lazy: true });
 
         reg('function', (body) => {
-            let curr = body, limit = this.config.maxReductionSteps || 1000;
+            let curr = body;
+            const limit = this.config.maxReductionSteps || 1000;
+
             for (let i = 0; i < limit; i++) {
                 const res = step(curr, this.space, this.ground, limit, this.memoCache);
                 const red = res.reduced;
-                if (isExpression(red) && red.operator?.name === 'return') return red.components[0] || sym('()');
+
+                if (isExpression(red) && red.operator?.name === 'return') {
+                    return red.components[0] || sym('()');
+                }
+
                 if (red === curr || red.equals?.(curr)) break;
-                curr = red;
                 if (!res.applied) break;
+
+                curr = red;
             }
+
             return exp(sym('Error'), [body, sym('NoReturn')]);
         }, { lazy: true });
 
         reg('return', (val) => exp(sym('return'), [val]), { lazy: true });
 
-        reg('collapse-bind', (atom) => this._listify(reduceND(atom, this.space, this.ground, this.config.maxReductionSteps)), { lazy: true });
+        reg('collapse-bind', (atom) =>
+            this._listify(reduceND(atom, this.space, this.ground, this.config.maxReductionSteps)),
+            { lazy: true }
+        );
 
         reg('superpose-bind', (collapsed) => {
             const items = this._flattenList(collapsed);
@@ -185,17 +273,30 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         reg('noeval', (atom) => atom, { lazy: true });
     }
 
+    /**
+     * Convert array to list representation
+     */
     _listify(arr) {
-        return arr.length ? Term.exp(':', [arr[0], this._listify(arr.slice(1))]) : Term.sym('()');
+        return arr.length
+            ? Term.exp(':', [arr[0], this._listify(arr.slice(1))])
+            : Term.sym('()');
     }
 
+    /**
+     * Handle let* sequential bindings
+     */
     _handleLetStar(bindings, body) {
         const { flattenList, sym, exp } = Term;
         let pairs = [];
 
-        if (bindings.operator?.name === ':') pairs = flattenList(bindings).elements;
-        else if (bindings.type === 'compound') pairs = [bindings.operator, ...bindings.components];
-        else if (bindings.name !== '()') { console.error('Invaild &let* bindings', bindings); return body; }
+        if (bindings.operator?.name === ':') {
+            pairs = flattenList(bindings).elements;
+        } else if (bindings.type === 'compound') {
+            pairs = [bindings.operator, ...bindings.components];
+        } else if (bindings.name !== '()') {
+            console.error('Invalid &let* bindings', bindings);
+            return body;
+        }
 
         if (!pairs.length) return reduce(body, this.space, this.ground);
 
@@ -209,43 +310,73 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         if (!v || !val) return body;
 
-        const inner = rest.length ? exp(sym('let*'), [exp(rest[0], rest.slice(1)), body]) : body;
+        const inner = rest.length
+            ? exp(sym('let*'), [exp(rest[0], rest.slice(1)), body])
+            : body;
+
         return reduce(exp(sym('let'), [v, val, inner]), this.space, this.ground);
     }
 
+    /**
+     * Flatten list structure to array
+     */
     _flattenList(atom) {
         if (!atom || atom.name === '()') return [];
-        if (atom.operator?.name === ':') return [atom.components[0], ...this._flattenList(atom.components[1])];
+        if (atom.operator?.name === ':') {
+            return [atom.components[0], ...this._flattenList(atom.components[1])];
+        }
         return [atom];
     }
 
+    /**
+     * Determine truthiness of an atom
+     */
     _truthy(atom) {
-        return atom && atom.name !== 'False' && atom.name !== '()' && atom.name !== 'Empty';
+        return atom &&
+               atom.name !== 'False' &&
+               atom.name !== '()' &&
+               atom.name !== 'Empty';
     }
 
+    /**
+     * Execute a program string
+     */
     run(code) {
         return this.trackOperation('run', () => {
             const exprs = this.parser.parseProgram(code);
             const res = [];
+
             for (let i = 0; i < exprs.length; i++) {
                 const e = exprs[i];
+
                 if (e.name === '!' && i + 1 < exprs.length) {
                     const evalRes = this.evaluate(exprs[++i]);
                     if (Array.isArray(evalRes)) res.push(...evalRes);
                     else res.push(evalRes);
                     continue;
                 }
+
                 this._processExpression(e, res);
             }
+
             res.toString = () => Formatter.formatResult(res);
             return res;
         });
     }
 
+    /**
+     * Load code into the space without evaluating
+     */
     load(code) {
-        return this.parser.parseProgram(code).map(e => { this._processExpression(e, null); return { term: e }; });
+        return this.parser.parseProgram(code).map(e => {
+            this._processExpression(e, null);
+            return { term: e };
+        });
     }
 
+    /**
+     * Process a single expression (add rule or evaluate)
+     */
     _processExpression(expr, results) {
         if ((expr.operator === '=' || expr.operator?.name === '=') && expr.components?.length === 2) {
             this.space.addRule(expr.components[0], expr.components[1]);
@@ -266,6 +397,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         }
     }
 
+    /**
+     * Evaluate an atom with non-deterministic reduction
+     */
     evaluate(atom) {
         return this.trackOperation('evaluate', () => {
             const res = reduceND(atom, this.space, this.ground, this.config.maxReductionSteps);
@@ -275,8 +409,16 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         });
     }
 
-    step(atom) { return step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache); }
+    /**
+     * Perform a single reduction step
+     */
+    step(atom) {
+        return step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+    }
 
+    /**
+     * Query the space for matching patterns
+     */
     query(pattern, template) {
         const p = typeof pattern === 'string' ? this.parser.parse(pattern) : pattern;
         const t = typeof template === 'string' ? this.parser.parse(template) : template;
@@ -285,12 +427,18 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         return res;
     }
 
+    /**
+     * Get interpreter statistics
+     */
     getStats() {
         return {
             space: this.space.getStats(),
             groundedAtoms: { count: this.ground.getOperations().length },
             reductionEngine: { maxSteps: this.config.maxReductionSteps || 10000 },
-            typeSystem: { count: this.typeSystem ? 1 : 0, typeVariables: this.typeSystem?.nextTypeVarId || 0 },
+            typeSystem: {
+                count: this.typeSystem ? 1 : 0,
+                typeVariables: this.typeSystem?.nextTypeVarId || 0
+            },
             groundOps: this.ground.getOperations().length,
             ...super.getStats()
         };

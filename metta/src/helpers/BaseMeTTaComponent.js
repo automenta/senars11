@@ -1,6 +1,7 @@
 /**
  * BaseMeTTaComponent.js - Base class for MeTTa subsystems
  * Extends SeNARS BaseComponent with MeTTa-specific functionality
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
 import {BaseComponent} from '@senars/core/src/util/BaseComponent.js';
@@ -20,8 +21,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Emit MeTTa-namespaced event
-     * @param {string} eventName - Event name (without 'metta:' prefix)
-     * @param {Object} data - Event data
      */
     emitMeTTaEvent(eventName, data) {
         this.emitEvent(`metta:${eventName}`, {
@@ -33,9 +32,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Update metrics for an operation
-     * @param {string} metricKey - Metric key
-     * @param {number} duration - Operation duration in ms
-     * @private
      */
     _updateMetrics(metricKey, duration) {
         const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0};
@@ -50,8 +46,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Record operation error in metrics
-     * @param {string} metricKey - Metric key
-     * @private
      */
     _recordError(metricKey) {
         const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0};
@@ -60,9 +54,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Track a MeTTa operation with timing and metrics
-     * @param {string} opName - Operation name
-     * @param {Function} fn - Operation function
-     * @returns {*} Operation result
      */
     trackOperation(opName, fn) {
         const start = Date.now();
@@ -89,9 +80,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Track async operation
-     * @param {string} opName - Operation name
-     * @param {Function} fn - Async operation function
-     * @returns {Promise<*>} Operation result
      */
     async trackOperationAsync(opName, fn) {
         const start = Date.now();
@@ -111,7 +99,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Get MeTTa-specific metrics
-     * @returns {Object} Metrics object
      */
     getMeTTaMetrics() {
         return Object.fromEntries(
@@ -128,7 +115,6 @@ export class BaseMeTTaComponent extends BaseComponent {
 
     /**
      * Get comprehensive stats including base and MeTTa metrics
-     * @returns {Object} Combined stats
      */
     getStats() {
         return {

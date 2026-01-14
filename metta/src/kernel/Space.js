@@ -14,6 +14,9 @@ export class Space {
         this._stats = {adds: 0, removes: 0, queries: 0, indexedLookups: 0};
     }
 
+    /**
+     * Add an atom to the space
+     */
     add(atom) {
         if (!atom) throw new Error("Cannot add null/undefined atom");
         if (!this.atoms.has(atom)) {
@@ -24,6 +27,9 @@ export class Space {
         return this;
     }
 
+    /**
+     * Remove an atom from the space
+     */
     remove(atom) {
         if (this.atoms.has(atom)) {
             this.atoms.delete(atom);
@@ -34,10 +40,16 @@ export class Space {
         return false;
     }
 
+    /**
+     * Check if an atom exists in the space
+     */
     has(atom) {
         return this.atoms.has(atom);
     }
 
+    /**
+     * Get all atoms in the space
+     */
     all() {
         const rulesAsAtoms = this.rules
             .filter(r => typeof r.result !== 'function')
@@ -45,6 +57,9 @@ export class Space {
         return [...this.atoms, ...rulesAsAtoms];
     }
 
+    /**
+     * Add a rule to the space
+     */
     addRule(pattern, result) {
         if (!pattern) throw new Error("Pattern cannot be null");
         const rule = {pattern, result};
@@ -53,24 +68,39 @@ export class Space {
         return this;
     }
 
+    /**
+     * Get all rules in the space
+     */
     getRules() {
         return [...this.rules];
     }
 
+    /**
+     * Get rules for a specific functor
+     */
     rulesFor(functor) {
         this._stats.indexedLookups++;
         const name = this._getFunctorName(functor);
         return name ? (this.functorIndex.get(name) || []) : [...this.rules];
     }
 
+    /**
+     * Get the number of atoms in the space
+     */
     size() {
         return this.atoms.size;
     }
 
+    /**
+     * Get the number of atoms in the space (alias for size)
+     */
     getAtomCount() {
         return this.atoms.size;
     }
 
+    /**
+     * Get statistics about the space
+     */
     getStats() {
         return {
             ...this._stats,
@@ -81,15 +111,24 @@ export class Space {
         };
     }
 
+    /**
+     * Get statistics about the space (alias for getStats)
+     */
     stats() {
         return this.getStats();
     }
 
+    /**
+     * Query the space for atoms matching a pattern
+     */
     query(pattern) {
         this._stats.queries++;
         return Array.from(this.atoms).filter(atom => atom.equals?.(pattern));
     }
 
+    /**
+     * Clear all atoms and rules from the space
+     */
     clear() {
         this.atoms.clear();
         this.rules = [];
@@ -97,8 +136,11 @@ export class Space {
         this._stats = {adds: 0, removes: 0, queries: 0, indexedLookups: 0};
     }
 
-    // === Private ===
+    // === Private Methods ===
 
+    /**
+     * Get the functor name from a term
+     */
     _getFunctorName(functor) {
         if (typeof functor === 'string') return functor;
         if (isSymbol(functor)) return functor.name;
@@ -106,10 +148,16 @@ export class Space {
         return null;
     }
 
+    /**
+     * Index an atom
+     */
     _indexAtom(atom) {
         this._indexItem(atom, atom);
     }
 
+    /**
+     * Remove an atom from the index
+     */
     _deindexAtom(atom) {
         if (!isExpression(atom)) return;
         const name = this._getFunctorName(atom.operator);
@@ -123,6 +171,9 @@ export class Space {
         }
     }
 
+    /**
+     * Index an item with a pattern
+     */
     _indexItem(item, pattern) {
         if (!isExpression(pattern)) return;
         const name = this._getFunctorName(pattern.operator);

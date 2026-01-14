@@ -1,6 +1,5 @@
 ; MeTTa Standard Library - Match Module
 ; Non-deterministic pattern matching
-; ~40 LOC
 
 ; ===== Pattern Matching =====
 

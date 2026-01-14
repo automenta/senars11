@@ -1,8 +1,19 @@
+/**
+ * Bindings.js - Utilities for converting between binding objects and binding atoms
+ * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
+ */
+
 import {Term} from './Term.js';
 
+/**
+ * Convert a binding object to a binding atom
+ */
 export const objToBindingsAtom = (bindings = {}) =>
     Term.exp('Bindings', Object.entries(bindings).map(([k, v]) => Term.exp('Pair', [Term.var(k), v])));
 
+/**
+ * Convert a binding atom to a binding object
+ */
 export const bindingsAtomToObj = (bindingsAtom) => {
     const bindings = {};
     if (bindingsAtom?.operator?.name === 'Bindings') {

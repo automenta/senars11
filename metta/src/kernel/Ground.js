@@ -16,43 +16,70 @@ export class Ground {
 
     // === Core API ===
 
+    /**
+     * Register a new operation
+     */
     register(name, fn, options = {}) {
         this.operations.set(this._normalize(name), { fn, options });
         return this;
     }
 
+    /**
+     * Check if an operation exists
+     */
     has(name) {
         return this.operations.has(this._normalize(name));
     }
 
+    /**
+     * Check if an operation is lazy
+     */
     isLazy(name) {
         return !!this.operations.get(this._normalize(name))?.options?.lazy;
     }
 
+    /**
+     * Execute an operation
+     */
     execute(name, ...args) {
         const norm = this._normalize(name);
         if (!this.operations.has(norm)) throw new Error(`Operation ${name} not found`);
         return this.operations.get(norm).fn(...args);
     }
 
+    /**
+     * Get all registered operation names
+     */
     getOperations() {
         return Array.from(this.operations.keys());
     }
 
+    /**
+     * Alias for getOperations
+     */
     list() {
         return this.getOperations();
     }
 
+    /**
+     * Clear all operations
+     */
     clear() {
         this.operations.clear();
     }
 
+    /**
+     * Normalize operation name (ensure it starts with &)
+     */
     _normalize(name) {
         return name.startsWith('&') ? name : `&${name}`;
     }
 
     // === Registration ===
 
+    /**
+     * Register all core operations
+     */
     _registerCoreOperations() {
         this._registerArithmeticOps();
         this._registerComparisonOps();
@@ -82,6 +109,9 @@ export class Ground {
         this._registerMetaprogrammingOps();
     }
 
+    /**
+     * Register metaprogramming operations that require interpreter context
+     */
     _registerMetaprogrammingOps() {
         // These operations require access to the Space, provided via interpreter context
         // They will be overridden by Interpreter to provide actual space access
@@ -123,6 +153,9 @@ export class Ground {
 
     // === Implementation Helpers ===
 
+    /**
+     * Convert an atom to a number
+     */
     _atomToNum(atom) {
         if (typeof atom === 'number') return atom;
         if (atom?.name) {
@@ -132,6 +165,9 @@ export class Ground {
         return null;
     }
 
+    /**
+     * Require numeric arguments
+     */
     _requireNums(args, count = null) {
         if (count !== null && args.length !== count) throw new Error(`Expected ${count} args`);
         const nums = args.map(a => this._atomToNum(a));
@@ -139,10 +175,16 @@ export class Ground {
         return nums;
     }
 
+    /**
+     * Convert a boolean value to a symbolic representation
+     */
     _bool(val) {
         return sym(val ? 'True' : 'False');
     }
 
+    /**
+     * Determine the truthiness of a value
+     */
     _truthy(val) {
         if (!val) return false;
         if (val.name) {
@@ -154,8 +196,56 @@ export class Ground {
         return Boolean(val);
     }
 
+    /**
+     * Flatten an expression to an array of its components
+     */
+    _flattenExpr(expr) {
+        // Early return for empty list symbol to prevent it being included in results
+        if (!expr || expr.name === '()') return [];
+        if (!isExpression(expr)) return [expr];
+
+        // Special handling for list structure (: head tail)
+        if (expr.operator?.name === ':') {
+            const result = [];
+            if (expr.components && expr.components.length > 0) {
+                // Add first component (head)
+                const head = expr.components[0];
+                if (head && head.name !== '()') result.push(head);
+
+                // Recursively flatten tail
+                if (expr.components.length > 1) {
+                    result.push(...this._flattenExpr(expr.components[1]));
+                }
+            }
+            return result;
+        }
+
+        // For other expressions, flatten all parts
+        const result = [];
+        if (expr.operator) result.push(expr.operator);
+        if (expr.components) {
+            for (const comp of expr.components) {
+                if (comp.name !== '()') {
+                    result.push(...this._flattenExpr(comp));
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Convert an array to a list representation
+     */
+    _listify(arr) {
+        if (!arr || arr.length === 0) return sym('()');
+        return exp(sym(':'), [arr[0], this._listify(arr.slice(1))]);
+    }
+
     // === Operation Groups ===
 
+    /**
+     * Register arithmetic operations
+     */
     _registerArithmeticOps() {
         const reduceOp = (fn, init) => (...args) => {
             if (args.length === 0) return sym(String(init));
@@ -192,6 +282,9 @@ export class Ground {
         });
     }
 
+    /**
+     * Register comparison operations
+     */
     _registerComparisonOps() {
         const cmp = fn => (...args) => {
             const [a, b] = this._requireNums(args, 2);
@@ -207,12 +300,18 @@ export class Ground {
         this.register('&!=', (a, b) => this._bool(!(a?.equals ? a.equals(b) : a === b)));
     }
 
+    /**
+     * Register logical operations
+     */
     _registerLogicalOps() {
         this.register('&and', (...args) => this._bool(args.every(a => this._truthy(a))));
         this.register('&or', (...args) => this._bool(args.some(a => this._truthy(a))));
         this.register('&not', a => this._bool(!this._truthy(a)));
     }
 
+    /**
+     * Register list operations
+     */
     _registerListOps() {
         this.register('&first', lst => lst?.components?.[0] ?? lst?.[0] ?? null);
         this.register('&rest', lst => {
@@ -226,11 +325,17 @@ export class Ground {
         });
     }
 
+    /**
+     * Register string operations
+     */
     _registerStringOps() {
         this.register('&str-concat', (a, b) => String(a) + String(b));
         this.register('&to-string', a => String(a));
     }
 
+    /**
+     * Register I/O operations
+     */
     _registerIOOps() {
         this.register('&print', (...args) => {
             console.log(args.map(a => a?.name ?? String(a)).join(' '));
@@ -242,6 +347,9 @@ export class Ground {
         });
     }
 
+    /**
+     * Register space operations
+     */
     _registerSpaceOps() {
         this.register('&add-atom', (s, a) => {
             s.add(a);
@@ -251,6 +359,9 @@ export class Ground {
         this.register('&get-atoms', s => this._listify(s.all()));
     }
 
+    /**
+     * Register introspection operations
+     */
     _registerIntrospectionOps() {
         const sti = new Map();
         this.register('&get-sti', a => sym(String(sti.get(a.toString()) || 0)));
@@ -264,6 +375,9 @@ export class Ground {
         }));
     }
 
+    /**
+     * Register type operations
+     */
     _registerTypeOps() {
         // Get metatype of an atom
         this.register('&get-metatype', (atom) => {
@@ -286,6 +400,9 @@ export class Ground {
         this.register('&type-unify', (t1, t2, i) => sym(i?.typeChecker?.unify(t1, t2) ? 'Success' : 'Failure'));
     }
 
+    /**
+     * Register budget/priority operations
+     */
     _registerBudgetOps() {
         // Budget priority operations
         this.register('&or-priority', (p1, p2) => {
@@ -314,6 +431,9 @@ export class Ground {
         );
     }
 
+    /**
+     * Register expression manipulation operations
+     */
     _registerExpressionOps() {
         // === cons-atom: construct expression from head + tail ===
         this.register('&cons-atom', (head, tail) => {
@@ -369,6 +489,9 @@ export class Ground {
         });
     }
 
+    /**
+     * Register mathematical operations
+     */
     _registerMathOps() {
         const toNum = (atom) => parseFloat(atom?.name) || 0;
         const toSym = (n) => sym(String(Number.isInteger(n) ? n : n.toFixed(12).replace(/\.?0+$/, '')));
@@ -431,6 +554,9 @@ export class Ground {
         });
     }
 
+    /**
+     * Register set operations
+     */
     _registerSetOps() {
         const toSet = (expr) => new Set(this._flattenExpr(expr).map(x => x.toString()));
         const toKey = (x) => x.toString();
@@ -479,6 +605,9 @@ export class Ground {
         this.register('&set-size', (expr) => sym(String(toSet(expr).size)));
     }
 
+    /**
+     * Register higher-order function operations (placeholder implementations)
+     */
     _registerHOFOps() {
         // Placeholder implementations - will be overridden by MeTTaInterpreter with interpreter context
         // These are fallback implementations that throw errors if called without interpreter context
@@ -494,44 +623,5 @@ export class Ground {
         this.register('foldl-atom-fast', (list, init, aVar, bVar, opFn) => {
             throw new Error('foldl-atom-fast requires interpreter context');
         }, { lazy: true });
-    }
-
-    _flattenExpr(expr) {
-        // Early return for empty list symbol to prevent it being included in results
-        if (!expr || expr.name === '()') return [];
-        if (!isExpression(expr)) return [expr];
-
-        // Special handling for list structure (: head tail)
-        if (expr.operator?.name === ':') {
-            const result = [];
-            if (expr.components && expr.components.length > 0) {
-                // Add first component (head)
-                const head = expr.components[0];
-                if (head && head.name !== '()') result.push(head);
-
-                // Recursively flatten tail
-                if (expr.components.length > 1) {
-                    result.push(...this._flattenExpr(expr.components[1]));
-                }
-            }
-            return result;
-        }
-
-        // For other expressions, flatten all parts
-        const result = [];
-        if (expr.operator) result.push(expr.operator);
-        if (expr.components) {
-            for (const comp of expr.components) {
-                if (comp.name !== '()') {
-                    result.push(...this._flattenExpr(comp));
-                }
-            }
-        }
-        return result;
-    }
-
-    _listify(arr) {
-        if (!arr || arr.length === 0) return sym('()');
-        return exp(sym(':'), [arr[0], this._listify(arr.slice(1))]);
     }
 }

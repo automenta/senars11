@@ -1,6 +1,5 @@
 ; MeTTa Standard Library - List Module
 ; List manipulation and higher-order functions
-; ~50 LOC
 
 ; ===== List Construction =====
 

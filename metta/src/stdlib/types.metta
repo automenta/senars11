@@ -1,6 +1,5 @@
 ; MeTTa Standard Library - Types Module
 ; Type annotations and type checking
-; ~50 LOC
 
 ; ===== Type Declarations =====
 
