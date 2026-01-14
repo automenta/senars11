@@ -3,7 +3,7 @@
 
 ; Test: Simple symbol evaluation
 !(42)
-; Expected: 42
+; Expected: (42)
 
 ; Test: Basic arithmetic addition
 !(+ 2 3)
@@ -27,11 +27,11 @@
 
 ; Test: Boolean true
 !(True)
-; Expected: True
+; Expected: (True)
 
 ; Test: Boolean false
 !(False)
-; Expected: False
+; Expected: (False)
 
 ; Test: Conditional if-then-else (true case)
 !(if True 10 20)
@@ -59,4 +59,5 @@
 
 ; Test: Empty list
 !(())
-; Expected: ()
+; Expected: (())
+

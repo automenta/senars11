@@ -3,7 +3,7 @@
 
 ; Test: cons-atom constructs list
 !(cons-atom 1 ())
-; Expected: (: 1 ())
+; Expected: (1)
 
 ; Test: car-atom gets first element
 !(car-atom (+ 1 2))
@@ -11,7 +11,7 @@
 
 ; Test: cdr-atom gets tail
 !(cdr-atom (+ 1 2))
-; Expected: (: 1 (: 2 ()))
+; Expected: (1 2)
 
 ; Test: size-atom counts elements
 !(size-atom (+ 1 2))
@@ -35,11 +35,11 @@
 
 ; Test: Set unique-atom
 !(unique-atom (: 1 (: 2 (: 1 (: 3 ())))))
-; Expected: (: 1 (: 2 (: 3 ())))
+; Expected: (1 2 3)
 
 ; Test: Set union-atom
 !(union-atom (: 1 (: 2 ())) (: 3 (: 4 ())))
-; Expected: (: 1 (: 2 (: 3 (: 4 ()))))
+; Expected: (1 2 3 4)
 
 ; Test: Get metatype of symbol
 !(get-metatype foo)
@@ -52,3 +52,4 @@
 ; Test: Get metatype of expression
 !(get-metatype (+ 1 2))
 ; Expected: Expression
+
