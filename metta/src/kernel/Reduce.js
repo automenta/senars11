@@ -103,7 +103,7 @@ const flattenList = (expr) => {
 function* executeGroundedOpND(atom, opName, space, ground, limit) {
     const args = atom.components;
     if (ground.isLazy(opName)) {
-        try { yield { reduced: ground.execute(opName, ...args), applied: true }; } catch { }
+        try { yield { reduced: ground.execute(opName, ...args), applied: true }; } catch (e) { console.error('Lazy op error', opName, e); }
         return;
     }
 
@@ -111,13 +111,13 @@ function* executeGroundedOpND(atom, opName, space, ground, limit) {
     if (variants.some(v => v.length === 0)) return;
 
     for (const combo of cartesianProduct(variants)) {
-        try { yield { reduced: ground.execute(opName, ...combo), applied: true }; } catch { }
+        try { yield { reduced: ground.execute(opName, ...combo), applied: true }; } catch (e) { console.error('Grounded op error', opName, e); }
     }
 }
 
 function* executeGroundedOpWithArgsND(atom, opName, args, space, ground, limit) {
     if (ground.isLazy(opName)) {
-        try { yield { reduced: ground.execute(opName, ...args), applied: true }; } catch { }
+        try { yield { reduced: ground.execute(opName, ...args), applied: true }; } catch (e) { console.error('Lazy op args error', opName, e); }
         return;
     }
 
@@ -125,7 +125,7 @@ function* executeGroundedOpWithArgsND(atom, opName, args, space, ground, limit) 
     if (variants.some(v => v.length === 0)) return;
 
     for (const combo of cartesianProduct(variants)) {
-        try { yield { reduced: ground.execute(opName, ...combo), applied: true }; } catch { }
+        try { yield { reduced: ground.execute(opName, ...combo), applied: true }; } catch (e) { console.error('Grounded op args error', opName, e); }
     }
 }
 

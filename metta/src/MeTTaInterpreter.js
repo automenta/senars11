@@ -37,6 +37,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         this.registerAdvancedOps();
         this.registerMinimalOps();
 
+        // Override HOF operations with interpreter-aware versions
+        this.registerHofOps();
+
         const bridge = this.reasoner?.bridge || opts.bridge;
         if (bridge?.registerPrimitives) bridge.registerPrimitives(this.ground);
 
@@ -97,6 +100,47 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         reg('&filter-fast', (pred, list) => this._listify(this._flattenList(list).filter(el => this._truthy(reduce(exp(pred, [el]), this.space, this.ground)))), { lazy: true });
 
         reg('&foldl-fast', (fn, init, list) => this._flattenList(list).reduce((acc, el) => reduce(exp(fn, [acc, el]), this.space, this.ground), init), { lazy: true });
+    }
+
+    registerHofOps() {
+        const { sym, exp, isExpression } = Term;
+        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
+
+        // Override HOF operations with interpreter-aware versions
+        reg('map-atom-fast', (list, varName, transformFn) => {
+            const elements = this.ground._flattenExpr(list);
+            const mapped = elements.map(el => reduce(
+                Unify.subst(transformFn, { [varName.name]: el }),
+                this.space,
+                this.ground,
+                this.config.maxReductionSteps,
+                this.memoCache
+            ));
+            return this.ground._listify(mapped);
+        }, { lazy: true });
+
+        reg('filter-atom-fast', (list, varName, predFn) => {
+            const elements = this.ground._flattenExpr(list);
+            const filtered = elements.filter(el => {
+                const res = reduce(
+                    Unify.subst(predFn, { [varName.name]: el }),
+                    this.space,
+                    this.ground,
+                    this.config.maxReductionSteps,
+                    this.memoCache
+                );
+                return this.ground._truthy(res);
+            });
+            return this.ground._listify(filtered);
+        }, { lazy: true });
+
+        reg('foldl-atom-fast', (list, init, aVar, bVar, opFn) => {
+            const elements = this.ground._flattenExpr(list);
+            return elements.reduce((acc, el) => {
+                const substituted = Unify.subst(Unify.subst(opFn, { [aVar.name]: acc }), { [bVar.name]: el });
+                return reduce(substituted, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
+            }, init);
+        }, { lazy: true });
     }
 
     registerMinimalOps() {

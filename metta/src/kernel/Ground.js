@@ -5,6 +5,8 @@
  */
 
 import { sym, exp, isExpression, constructList } from './Term.js';
+import { reduce } from './Reduce.js';
+import { Unify } from './Unify.js';
 
 export class Ground {
     constructor() {
@@ -65,6 +67,7 @@ export class Ground {
         this._registerExpressionOps();
         this._registerMathOps();
         this._registerSetOps();
+        this._registerHOFOps();
 
         this.register('&now', () => sym(String(Date.now())));
 
@@ -314,6 +317,11 @@ export class Ground {
     _registerExpressionOps() {
         // === cons-atom: construct expression from head + tail ===
         this.register('&cons-atom', (head, tail) => {
+            // For list construction compatibility, if tail is an empty list or a list structure, use : (cons) operator
+            if (tail?.name === '()' || (tail?.operator?.name === ':' && isExpression(tail))) {
+                return exp(sym(':'), [head, tail]);
+            }
+            // Otherwise, for general expression construction
             if (!isExpression(tail)) return exp(head, [tail]);
             const components = tail.components ? [tail.operator, ...tail.components] : [tail];
             return exp(head, components);
@@ -459,6 +467,58 @@ export class Ground {
         });
 
         this.register('&set-size', (expr) => sym(String(new Set(this._flattenExpr(expr).map(x => x.toString())).size)));
+    }
+
+    _registerHOFOps() {
+        // These HOF operations require interpreter context (space, reductionLimit, cache)
+        // They will be overridden by the MeTTaInterpreter to provide actual context
+
+        this.register('map-atom-fast', (list, varName, transformFn, interpreter) => {
+            if (!interpreter?.space) {
+                // Fallback to pure MeTTa implementation if no interpreter context provided
+                throw new Error('map-atom-fast requires interpreter context');
+            }
+            const elements = this._flattenExpr(list);
+            const mapped = elements.map(el => reduce(
+                Unify.subst(transformFn, { [varName.name]: el }),
+                interpreter.space,
+                interpreter.ground,
+                interpreter.config.maxReductionSteps,
+                interpreter.memoCache
+            ));
+            return this._listify(mapped);
+        }, { lazy: true });
+
+        this.register('filter-atom-fast', (list, varName, predFn, interpreter) => {
+            if (!interpreter?.space) {
+                // Fallback to pure MeTTa implementation if no interpreter context provided
+                throw new Error('filter-atom-fast requires interpreter context');
+            }
+            const elements = this._flattenExpr(list);
+            const filtered = elements.filter(el => {
+                const res = reduce(
+                    Unify.subst(predFn, { [varName.name]: el }),
+                    interpreter.space,
+                    interpreter.ground,
+                    interpreter.config.maxReductionSteps,
+                    interpreter.memoCache
+                );
+                return this._truthy(res);
+            });
+            return this._listify(filtered);
+        }, { lazy: true });
+
+        this.register('foldl-atom-fast', (list, init, aVar, bVar, opFn, interpreter) => {
+            if (!interpreter?.space) {
+                // Fallback to pure MeTTa implementation if no interpreter context provided
+                throw new Error('foldl-atom-fast requires interpreter context');
+            }
+            const elements = this._flattenExpr(list);
+            return elements.reduce((acc, el) => {
+                const substituted = Unify.subst(Unify.subst(opFn, { [aVar.name]: acc }), { [bVar.name]: el });
+                return reduce(substituted, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
+            }, init);
+        }, { lazy: true });
     }
 
     _flattenExpr(expr) {

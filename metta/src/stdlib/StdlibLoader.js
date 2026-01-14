@@ -5,7 +5,7 @@
 
 import { createRequire } from 'module';
 
-const DEFAULT_MODULES = ['core', 'list', 'match', 'types'];
+const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'hof'];
 
 export class StdlibLoader {
     constructor(interpreter, options = {}) {

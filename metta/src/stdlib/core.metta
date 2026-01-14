@@ -94,3 +94,16 @@
 (= (get-atoms $s) (^ &get-atoms $s))
 (= (add-atom $x) (^ &add-atom $x))
 (= (rm-atom $x) (^ &rm-atom $x))
+
+; Expression Operations
+(= (cons-atom $h $t) (^ &cons-atom $h $t))
+(= (decons-atom $e) (^ &decons-atom $e))
+(= (car-atom $e) (^ &car-atom $e))
+(= (cdr-atom $e) (^ &cdr-atom $e))
+(= (size-atom $e) (^ &size-atom $e))
+(= (index-atom $e $i) (^ &index-atom $e $i))
+
+; Type Operations
+(= (get-metatype $a) (^ &get-metatype $a))
+(= (get-type $a) (^ &get-type $a))
+(= (is-function $t) (^ &is-function $t))
