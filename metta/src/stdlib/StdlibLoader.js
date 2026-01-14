@@ -1,9 +1,11 @@
 /**
  * StdlibLoader.js - Standard Library Loader
- * Handles module loading for Node.js and Browser environments.
+ * Handles module loading using platform adapters
  */
 
-import { createRequire } from 'module';
+import { ENV, getEnvironment } from '../platform/env.js';
+import { FileLoader } from '../platform/node/FileLoader.js';
+import { VirtualFS } from '../platform/browser/VirtualFS.js';
 
 const DEFAULT_MODULES = ['core', 'list', 'match', 'types', 'hof'];
 
@@ -11,14 +13,43 @@ export class StdlibLoader {
     constructor(interpreter, options = {}) {
         this.interpreter = interpreter;
         this.options = options;
-        this.stdlibDir = options.stdlibDir || '';
         this.modules = options.modules || DEFAULT_MODULES;
-        this.virtualFiles = options.virtualFiles || {};
         this.loadedModules = new Set();
+
+        // Create adapter synchronously
+        this.adapter = this._createAdapter(options);
     }
 
+    /**
+     * Create appropriate file system adapter based on environment
+     */
+    _createAdapter(options) {
+        if (options.adapter) {
+            return options.adapter; // User-provided adapter
+        }
+
+        const env = getEnvironment();
+
+        if (env === 'node') {
+            return new FileLoader({
+                baseDir: options.stdlibDir,
+                searchPaths: options.searchPaths
+            });
+        } else if (env === 'browser' || env === 'worker') {
+            return new VirtualFS({
+                files: options.virtualFiles || {}
+            });
+        } else {
+            throw new Error(`Unsupported environment: ${env}`);
+        }
+    }
+
+    /**
+     * Load all configured modules
+     */
     load() {
         const stats = { loaded: [], failed: [], atomsAdded: 0 };
+
         for (const mod of this.modules) {
             try {
                 const res = this.loadModule(mod);
@@ -30,49 +61,42 @@ export class StdlibLoader {
                 console.warn(`Failed to load '${mod}': ${err.message}`);
             }
         }
+
         return stats;
     }
 
+    /**
+     * Load a single module
+     */
     loadModule(name) {
-        let content = '';
         const fileName = `${name}.metta`;
 
-        if (this.virtualFiles[fileName]) {
-            content = this.virtualFiles[fileName];
-        } else if (typeof process !== 'undefined' && process.versions?.node) {
-            try {
-                const require = createRequire(import.meta.url);
-                const fs = require('fs');
-                const path = require('path');
-                const { fileURLToPath } = require('url');
-
-                const currentDir = path.dirname(fileURLToPath(import.meta.url));
-                const primary = this.stdlibDir || currentDir;
-                const paths = this.options.searchPaths || [primary];
-                if (!paths.includes(primary)) paths.unshift(primary);
-
-                let filePath = null;
-                for (const dir of paths) {
-                    const p = path.join(dir, fileName);
-                    if (fs.existsSync(p)) { filePath = p; break; }
-                }
-
-                if (!filePath) throw new Error(`Module '${name}' not found in: ${paths.join(', ')}`);
-                content = fs.readFileSync(filePath, 'utf-8');
-            } catch (e) {
-                throw new Error(e.message.startsWith('Module') ? e.message : `FS load failed for '${name}': ${e.message}`);
-            }
-        } else {
-            throw new Error(`Module '${name}' not found (virtual/fs unavailable)`);
+        if (!this.adapter.exists(fileName)) {
+            throw new Error(`Module '${name}' not found`);
         }
 
+        const content = this.adapter.read(fileName);
         const sizeBefore = this.interpreter.space?.size?.() ?? 0;
         this.interpreter.load(content);
-        return { module: name, atomCount: (this.interpreter.space?.size?.() ?? 0) - sizeBefore };
+
+        return {
+            module: name,
+            atomCount: (this.interpreter.space?.size?.() ?? 0) - sizeBefore
+        };
     }
 
     getLoadedModules() { return Array.from(this.loadedModules); }
-    reload() { this.loadedModules.clear(); return this.load(); }
+
+    reload() {
+        this.loadedModules.clear();
+        return this.load();
+    }
 }
 
-export const loadStdlib = (interpreter, options) => new StdlibLoader(interpreter, options).load();
+/**
+ * Convenience function to load stdlib
+ */
+export const loadStdlib = (interpreter, options) => {
+    const loader = new StdlibLoader(interpreter, options);
+    return loader.load();
+};
