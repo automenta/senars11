@@ -120,6 +120,42 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
         reg('&type-check', (t, type) => sym(this.typeChecker ? 'True' : 'False'));
 
+        // Context-dependent type operations
+        reg('get-type', (atom, space) => {
+            const s = space || this.space;
+            const typePattern = exp(sym(':'), [atom, v('type')]);
+            const results = match(s, typePattern, v('type'));
+            return results.length ? results[0] : sym('%Undefined%');
+        }, { lazy: true });
+
+        reg('match-types', (t1, t2, thenBranch, elseBranch) => {
+            // Handle %Undefined% and Atom as wildcards
+            if (t1.name === '%Undefined%' || t2.name === '%Undefined%' ||
+                t1.name === 'Atom' || t2.name === 'Atom') {
+                return thenBranch;
+            }
+            const bindings = Unify.unify(t1, t2);
+            return bindings !== null ? thenBranch : elseBranch;
+        }, { lazy: true });
+
+        reg('assert-type', (atom, expectedType, space) => {
+            const s = space || this.space;
+            const actualType = this.ground.execute('&get-type', atom, s);
+
+            // No type info = pass through
+            if (actualType.name === '%Undefined%') return atom;
+
+            // Unify actual and expected types
+            const bindings = Unify.unify(actualType, expectedType);
+            if (bindings !== null) return atom;
+
+            // Type mismatch - return error
+            return exp(sym('Error'), [
+                atom,
+                exp(sym('TypeError'), [expectedType, actualType])
+            ]);
+        }, { lazy: true });
+
         // Space operations
         reg('&get-atoms', () => this._listify(this.space.all()));
         reg('&add-atom', (atom) => { this.space.add(atom); return atom; });
@@ -333,9 +369,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     _truthy(atom) {
         return atom &&
-               atom.name !== 'False' &&
-               atom.name !== '()' &&
-               atom.name !== 'Empty';
+            atom.name !== 'False' &&
+            atom.name !== '()' &&
+            atom.name !== 'Empty';
     }
 
     /**

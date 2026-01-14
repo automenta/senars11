@@ -3,12 +3,12 @@
  * Testing the changes made during the cleanup and refactoring process
  */
 
-import { MeTTaInterpreter } from '../src/MeTTaInterpreter.js';
-import { TypeSystem, TypeChecker } from '../src/TypeSystem.js';
-import { Term } from '../src/kernel/Term.js';
-import { Space } from '../src/kernel/Space.js';
-import { Ground } from '../src/kernel/Ground.js';
-import { Parser } from '../src/Parser.js';
+import { MeTTaInterpreter } from '../../../metta/src/MeTTaInterpreter.js';
+import { TypeSystem, TypeChecker } from '../../../metta/src/TypeSystem.js';
+import { Term } from '../../../metta/src/kernel/Term.js';
+import { Space } from '../../../metta/src/kernel/Space.js';
+import { Ground } from '../../../metta/src/kernel/Ground.js';
+import { Parser } from '../../../metta/src/Parser.js';
 
 describe('MeTTa Refactored Components', () => {
     describe('MeTTaInterpreter', () => {
@@ -52,7 +52,7 @@ describe('MeTTa Refactored Components', () => {
         test('should create fresh type variables', () => {
             const tv1 = typeSystem.freshTypeVar();
             const tv2 = typeSystem.freshTypeVar();
-            
+
             expect(tv1.kind).toBe('TypeVar');
             expect(tv2.kind).toBe('TypeVar');
             expect(tv1.index).toBe(0);
@@ -63,7 +63,7 @@ describe('MeTTa Refactored Components', () => {
             const numType = typeSystem.inferType(Term.sym('42'));
             const boolType = typeSystem.inferType(Term.sym('True'));
             const varType = typeSystem.inferType(Term.var('x'));
-            
+
             expect(typeSystem.typeToString(numType)).toBe('Number');
             expect(typeSystem.typeToString(boolType)).toBe('Bool');
         });
@@ -71,7 +71,7 @@ describe('MeTTa Refactored Components', () => {
         test('should unify compatible types', () => {
             const type1 = typeSystem.freshTypeVar();
             const type2 = typeSystem.freshTypeVar();
-            
+
             // Should be able to unify two fresh type variables
             const unified = typeSystem.unifyTypes(type1, type2);
             expect(unified).toBe(true);
@@ -82,7 +82,7 @@ describe('MeTTa Refactored Components', () => {
         test('should create symbols correctly', () => {
             const sym1 = Term.sym('test');
             const sym2 = Term.sym('test');
-            
+
             // Should be the same object due to interning
             expect(sym1).toBe(sym2);
             expect(sym1.name).toBe('test');
@@ -92,7 +92,7 @@ describe('MeTTa Refactored Components', () => {
         test('should create variables correctly', () => {
             const var1 = Term.var('x');
             const var2 = Term.var('x');
-            
+
             // Should be the same object due to interning
             expect(var1).toBe(var2);
             expect(var1.name).toBe('$x');
@@ -100,7 +100,7 @@ describe('MeTTa Refactored Components', () => {
 
         test('should create expressions correctly', () => {
             const expr = Term.exp(Term.sym('+'), [Term.sym('1'), Term.sym('2')]);
-            
+
             expect(expr.type).toBe('compound');
             expect(expr.operator.name).toBe('+');
             expect(expr.components.length).toBe(2);
@@ -111,7 +111,7 @@ describe('MeTTa Refactored Components', () => {
         test('should check if atom is variable correctly', () => {
             const variable = Term.var('x');
             const symbol = Term.sym('x');
-            
+
             expect(Term.isVar(variable)).toBe(true);
             expect(Term.isVar(symbol)).toBe(false);
         });
@@ -119,7 +119,7 @@ describe('MeTTa Refactored Components', () => {
         test('should check if atom is expression correctly', () => {
             const expr = Term.exp(Term.sym('+'), [Term.sym('1'), Term.sym('2')]);
             const symbol = Term.sym('x');
-            
+
             expect(Term.isExpression(expr)).toBe(true);
             expect(Term.isExpression(symbol)).toBe(false);
         });
@@ -135,7 +135,7 @@ describe('MeTTa Refactored Components', () => {
         test('should add and retrieve atoms', () => {
             const atom = Term.sym('test_atom');
             space.add(atom);
-            
+
             expect(space.has(atom)).toBe(true);
             expect(space.size()).toBe(1);
         });
@@ -143,7 +143,7 @@ describe('MeTTa Refactored Components', () => {
         test('should remove atoms', () => {
             const atom = Term.sym('test_atom');
             space.add(atom);
-            
+
             const removed = space.remove(atom);
             expect(removed).toBe(true);
             expect(space.has(atom)).toBe(false);
@@ -153,10 +153,10 @@ describe('MeTTa Refactored Components', () => {
         test('should store and retrieve rules', () => {
             const pattern = Term.sym('p');
             const result = Term.sym('r');
-            
+
             space.addRule(pattern, result);
             const rules = space.getRules();
-            
+
             expect(rules.length).toBe(1);
             expect(rules[0].pattern).toBe(pattern);
             expect(rules[0].result).toBe(result);
@@ -172,7 +172,7 @@ describe('MeTTa Refactored Components', () => {
 
         test('should register and execute operations', () => {
             ground.register('test-op', (x) => Term.sym(`result_${x.name}`));
-            
+
             expect(ground.has('test-op')).toBe(true);
             const result = ground.execute('test-op', Term.sym('input'));
             expect(result.name).toBe('result_input');
@@ -186,7 +186,7 @@ describe('MeTTa Refactored Components', () => {
         test('should determine if operations are lazy', () => {
             ground.register('lazy-op', () => Term.sym('result'), { lazy: true });
             ground.register('eager-op', () => Term.sym('result'), { lazy: false });
-            
+
             expect(ground.isLazy('lazy-op')).toBe(true);
             expect(ground.isLazy('eager-op')).toBe(false);
         });
@@ -225,7 +225,7 @@ describe('MeTTa Refactored Components', () => {
             expect(result.type).toBe('compound');
             expect(result.operator.name).toBe('+');
             expect(result.components.length).toBe(2);
-            
+
             const nested = result.components[0];
             expect(nested.type).toBe('compound');
             expect(nested.operator.name).toBe('*');
