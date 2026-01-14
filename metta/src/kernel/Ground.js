@@ -338,10 +338,11 @@ export class Ground {
         });
 
         // === car-atom: first element ===
-        this.register('&car-atom', (expr) => {
-            if (!isExpression(expr)) return exp(sym('Error'), [expr, sym('NotExpression')]);
-            return expr.operator || exp(sym('Error'), [expr, sym('EmptyExpression')]);
-        });
+        this.register('&car-atom', (expr) =>
+            !isExpression(expr)
+                ? exp(sym('Error'), [expr, sym('NotExpression')])
+                : expr.operator || exp(sym('Error'), [expr, sym('EmptyExpression')])
+        );
 
         // === cdr-atom: tail elements ===
         this.register('&cdr-atom', (expr) => {
@@ -352,10 +353,11 @@ export class Ground {
         });
 
         // === size-atom: count elements ===
-        this.register('&size-atom', (expr) => {
-            if (!isExpression(expr)) return sym('1');
-            return sym(String(1 + (expr.components?.length || 0)));
-        });
+        this.register('&size-atom', (expr) =>
+            isExpression(expr)
+                ? sym(String(1 + (expr.components?.length || 0)))
+                : sym('1')
+        );
 
         // === index-atom: get element by index ===
         this.register('&index-atom', (expr, idx) => {
@@ -374,24 +376,33 @@ export class Ground {
         const binary = (fn) => (a, b) => toSym(fn(toNum(a), toNum(b)));
 
         // Transcendental functions
-        this.register('&pow-math', binary(Math.pow));
-        this.register('&sqrt-math', unary(Math.sqrt));
-        this.register('&abs-math', unary(Math.abs));
-        this.register('&log-math', binary((base, x) => Math.log(x) / Math.log(base)));
+        Object.entries({
+            '&pow-math': Math.pow,
+            '&log-math': (base, x) => Math.log(x) / Math.log(base)
+        }).forEach(([name, fn]) => this.register(name, binary(fn)));
+
+        Object.entries({
+            '&sqrt-math': Math.sqrt,
+            '&abs-math': Math.abs
+        }).forEach(([name, fn]) => this.register(name, unary(fn)));
 
         // Rounding functions
-        this.register('&trunc-math', unary(Math.trunc));
-        this.register('&ceil-math', unary(Math.ceil));
-        this.register('&floor-math', unary(Math.floor));
-        this.register('&round-math', unary(Math.round));
+        Object.entries({
+            '&trunc-math': Math.trunc,
+            '&ceil-math': Math.ceil,
+            '&floor-math': Math.floor,
+            '&round-math': Math.round
+        }).forEach(([name, fn]) => this.register(name, unary(fn)));
 
         // Trigonometry
-        this.register('&sin-math', unary(Math.sin));
-        this.register('&asin-math', unary(Math.asin));
-        this.register('&cos-math', unary(Math.cos));
-        this.register('&acos-math', unary(Math.acos));
-        this.register('&tan-math', unary(Math.tan));
-        this.register('&atan-math', unary(Math.atan));
+        Object.entries({
+            '&sin-math': Math.sin,
+            '&asin-math': Math.asin,
+            '&cos-math': Math.cos,
+            '&acos-math': Math.acos,
+            '&tan-math': Math.tan,
+            '&atan-math': Math.atan
+        }).forEach(([name, fn]) => this.register(name, unary(fn)));
 
         // Validation
         this.register('&isnan-math', (x) => {
@@ -404,120 +415,84 @@ export class Ground {
         });
 
         // Aggregate operations
-        this.register('&min-atom', (expr) => {
+        const aggregateOp = (fn, errLabel) => (expr) => {
             const elements = this._flattenExpr(expr);
-            const nums = elements.map(e => parseFloat(e?.name)).filter(n => !isNaN(n));
-            if (nums.length === 0) return exp(sym('Error'), [expr, sym('EmptyOrNonNumeric')]);
-            return sym(String(Math.min(...nums)));
-        });
-        this.register('&max-atom', (expr) => {
-            const elements = this._flattenExpr(expr);
-            const nums = elements.map(e => parseFloat(e?.name)).filter(n => !isNaN(n));
-            if (nums.length === 0) return exp(sym('Error'), [expr, sym('EmptyOrNonNumeric')]);
-            return sym(String(Math.max(...nums)));
-        });
+            const nums = elements.map(toNum).filter(n => !Number.isNaN(n));
+            if (nums.length === 0) return exp(sym('Error'), [expr, sym(errLabel)]);
+            return toSym(fn(...nums));
+        };
+
+        this.register('&min-atom', aggregateOp((...nums) => Math.min(...nums), 'EmptyOrNonNumeric'));
+        this.register('&max-atom', aggregateOp((...nums) => Math.max(...nums), 'EmptyOrNonNumeric'));
         this.register('&sum-atom', (expr) => {
             const elements = this._flattenExpr(expr);
-            const sum = elements.reduce((s, e) => s + (parseFloat(e?.name) || 0), 0);
-            return sym(String(sum));
+            const sum = elements.reduce((s, e) => s + toNum(e), 0);
+            return toSym(sum);
         });
     }
 
     _registerSetOps() {
+        const toSet = (expr) => new Set(this._flattenExpr(expr).map(x => x.toString()));
+        const toKey = (x) => x.toString();
+
         this.register('&unique-atom', (expr) => {
             const seen = new Set();
-            const result = [];
-            for (const el of this._flattenExpr(expr)) {
-                const key = el.toString();
-                if (!seen.has(key)) { seen.add(key); result.push(el); }
-            }
+            const result = this._flattenExpr(expr).filter(el => {
+                const key = toKey(el);
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
             return this._listify(result);
         });
 
-        this.register('&union-atom', (a, b) => {
-            const setA = this._flattenExpr(a);
-            const setB = this._flattenExpr(b);
-            return this._listify([...setA, ...setB]);
-        });
+        this.register('&union-atom', (a, b) =>
+            this._listify([...this._flattenExpr(a), ...this._flattenExpr(b)])
+        );
 
         this.register('&intersection-atom', (a, b) => {
-            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
-            return this._listify(this._flattenExpr(a).filter(x => setB.has(x.toString())));
+            const setB = toSet(b);
+            return this._listify(this._flattenExpr(a).filter(x => setB.has(toKey(x))));
         });
 
         this.register('&subtraction-atom', (a, b) => {
-            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
-            return this._listify(this._flattenExpr(a).filter(x => !setB.has(x.toString())));
+            const setB = toSet(b);
+            return this._listify(this._flattenExpr(a).filter(x => !setB.has(toKey(x))));
         });
 
         // BEYOND PARITY
         this.register('&symmetric-diff-atom', (a, b) => {
-            const setA = new Set(this._flattenExpr(a).map(x => x.toString()));
-            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
+            const setA = toSet(a);
+            const setB = toSet(b);
             const result = [
-                ...this._flattenExpr(a).filter(x => !setB.has(x.toString())),
-                ...this._flattenExpr(b).filter(x => !setA.has(x.toString()))
+                ...this._flattenExpr(a).filter(x => !setB.has(toKey(x))),
+                ...this._flattenExpr(b).filter(x => !setA.has(toKey(x)))
             ];
             return this._listify(result);
         });
 
         this.register('&is-subset', (a, b) => {
-            const setB = new Set(this._flattenExpr(b).map(x => x.toString()));
-            return this._bool(this._flattenExpr(a).every(x => setB.has(x.toString())));
+            const setB = toSet(b);
+            return this._bool(this._flattenExpr(a).every(x => setB.has(toKey(x))));
         });
 
-        this.register('&set-size', (expr) => sym(String(new Set(this._flattenExpr(expr).map(x => x.toString())).size)));
+        this.register('&set-size', (expr) => sym(String(toSet(expr).size)));
     }
 
     _registerHOFOps() {
-        // These HOF operations require interpreter context (space, reductionLimit, cache)
-        // They will be overridden by the MeTTaInterpreter to provide actual context
+        // Placeholder implementations - will be overridden by MeTTaInterpreter with interpreter context
+        // These are fallback implementations that throw errors if called without interpreter context
 
-        this.register('map-atom-fast', (list, varName, transformFn, interpreter) => {
-            if (!interpreter?.space) {
-                // Fallback to pure MeTTa implementation if no interpreter context provided
-                throw new Error('map-atom-fast requires interpreter context');
-            }
-            const elements = this._flattenExpr(list);
-            const mapped = elements.map(el => reduce(
-                Unify.subst(transformFn, { [varName.name]: el }),
-                interpreter.space,
-                interpreter.ground,
-                interpreter.config.maxReductionSteps,
-                interpreter.memoCache
-            ));
-            return this._listify(mapped);
+        this.register('map-atom-fast', (list, varName, transformFn) => {
+            throw new Error('map-atom-fast requires interpreter context');
         }, { lazy: true });
 
-        this.register('filter-atom-fast', (list, varName, predFn, interpreter) => {
-            if (!interpreter?.space) {
-                // Fallback to pure MeTTa implementation if no interpreter context provided
-                throw new Error('filter-atom-fast requires interpreter context');
-            }
-            const elements = this._flattenExpr(list);
-            const filtered = elements.filter(el => {
-                const res = reduce(
-                    Unify.subst(predFn, { [varName.name]: el }),
-                    interpreter.space,
-                    interpreter.ground,
-                    interpreter.config.maxReductionSteps,
-                    interpreter.memoCache
-                );
-                return this._truthy(res);
-            });
-            return this._listify(filtered);
+        this.register('filter-atom-fast', (list, varName, predFn) => {
+            throw new Error('filter-atom-fast requires interpreter context');
         }, { lazy: true });
 
-        this.register('foldl-atom-fast', (list, init, aVar, bVar, opFn, interpreter) => {
-            if (!interpreter?.space) {
-                // Fallback to pure MeTTa implementation if no interpreter context provided
-                throw new Error('foldl-atom-fast requires interpreter context');
-            }
-            const elements = this._flattenExpr(list);
-            return elements.reduce((acc, el) => {
-                const substituted = Unify.subst(Unify.subst(opFn, { [aVar.name]: acc }), { [bVar.name]: el });
-                return reduce(substituted, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
-            }, init);
+        this.register('foldl-atom-fast', (list, init, aVar, bVar, opFn) => {
+            throw new Error('foldl-atom-fast requires interpreter context');
         }, { lazy: true });
     }
 
