@@ -38,9 +38,14 @@ const unifyCompounds = (t1, t2, bindings, adapter) => {
 
     const op1 = adapter.getOperator(t1);
     const op2 = adapter.getOperator(t2);
-    if (op1 !== op2) return null;
 
+    // Unify operators instead of identity check to support variable operators
+    // (e.g., in lambda patterns like ((λ $x $x) 5) where operator is an expression)
     let current = bindings;
+    const opResult = unify(op1, op2, current, adapter);
+    if (!opResult) return null;
+    current = opResult;
+
     for (let i = 0; i < comps1.length; i++) {
         const result = unify(comps1[i], comps2[i], current, adapter);
         if (!result) return null;
