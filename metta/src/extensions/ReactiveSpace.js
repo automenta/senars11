@@ -92,11 +92,8 @@ export class ReactiveSpace extends Space {
      * Get observer count
      */
     getObserverCount() {
-        let count = 0;
-        for (const observers of this.observers.values()) {
-            count += observers.length;
-        }
-        return count;
+        return Array.from(this.observers.values())
+            .reduce((count, observers) => count + observers.length, 0);
     }
 
     // === Private Methods ===
@@ -157,11 +154,9 @@ export class ReactiveSpace extends Space {
         const observers = this.observers.get(key);
         if (observers) {
             const filtered = observers.filter(o => o.id !== id);
-            if (filtered.length === 0) {
-                this.observers.delete(key);
-            } else {
-                this.observers.set(key, filtered);
-            }
+            filtered.length === 0
+                ? this.observers.delete(key)
+                : this.observers.set(key, filtered);
         }
     }
 }

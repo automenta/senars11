@@ -35,19 +35,12 @@ export class Formatter {
 
     static formatResult(results) {
         // Results from superpose/nd-reduce are arrays of atoms
-        if (Array.isArray(results)) {
-            return `[${results.map(Formatter.toHyperonString).join(', ')}]`;
-        }
-        return Formatter.toHyperonString(results);
+        return Array.isArray(results)
+            ? `[${results.map(Formatter.toHyperonString).join(', ')}]`
+            : Formatter.toHyperonString(results);
     }
 }
 
 // Helper to check if it's a list structure we want to pretty print
 // We want to pretty print (: ...) but only if it eventually ends in ()
-function isListDeep(atom) {
-    if (!isList(atom)) return false;
-    // We could do a full traversal check, but flattenList inside toHyperonString handles the structure.
-    // The main distinction is: Do we treat (: A B) as a list to format?
-    // MeTTa usually treats (: ...) as the list constructor.
-    return true;
-}
+const isListDeep = (atom) => isList(atom);

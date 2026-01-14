@@ -15,13 +15,13 @@ export const objToBindingsAtom = (bindings = {}) =>
  * Convert a binding atom to a binding object
  */
 export const bindingsAtomToObj = (bindingsAtom) => {
+    if (bindingsAtom?.operator?.name !== 'Bindings') return {};
+
     const bindings = {};
-    if (bindingsAtom?.operator?.name === 'Bindings') {
-        bindingsAtom.components.forEach(pair => {
-            if (pair?.operator?.name === 'Pair' && pair.components.length === 2 && pair.components[0].name) {
-                bindings[pair.components[0].name] = pair.components[1];
-            }
-        });
-    }
+    bindingsAtom.components.forEach(pair => {
+        if (pair?.operator?.name === 'Pair' && pair.components.length === 2 && pair.components[0].name) {
+            bindings[pair.components[0].name] = pair.components[1];
+        }
+    });
     return bindings;
 };

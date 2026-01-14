@@ -50,7 +50,8 @@ class Tokenizer {
         let inComment = false;
 
         const push = () => {
-            if (current.trim()) tokens.push(current.trim());
+            const trimmed = current.trim();
+            if (trimmed) tokens.push(trimmed);
             current = '';
         };
 
