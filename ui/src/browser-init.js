@@ -9,6 +9,9 @@ import { ExampleBrowser } from './components/ExampleBrowser.js';
 import { DerivationTree } from './components/DerivationTree.js';
 import { MemoryInspector } from './components/MemoryInspector.js';
 import { SettingsPanel } from './components/SettingsPanel.js';
+import { ConsolePanel } from './components/ConsolePanel.js';
+
+console.log('--- browser-init.js loading ---');
 
 cytoscape.use(fcose);
 window.cytoscape = cytoscape;
@@ -44,51 +47,41 @@ const LAYOUT_CONFIG = {
             width: 60,
             componentState: { label: 'Graph' }
         }, {
-            type: 'column',
+            type: 'stack',
             width: 40,
-            content: [{
-                type: 'component',
-                componentName: 'logComponent',
-                title: 'SYSTEM LOGS',
-                height: 40,
-                componentState: { label: 'Logs' }
-            }, {
-                type: 'stack',
-                height: 60,
-                content: [
-                     {
-                        type: 'component',
-                        componentName: 'replComponent',
-                        title: 'CONTROL / REPL',
-                        isClosable: false
-                     },
-                     {
-                        type: 'component',
-                        componentName: 'derivationComponent',
-                        title: 'DERIVATION TREE'
-                     },
-                     {
-                        type: 'component',
-                        componentName: 'memoryComponent',
-                        title: 'MEMORY INSPECTOR'
-                     },
-                     {
-                        type: 'component',
-                        componentName: 'metricsComponent',
-                        title: 'METRICS'
-                     },
-                     {
-                        type: 'component',
-                        componentName: 'examplesComponent',
-                        title: 'EXAMPLES'
-                     },
-                     {
-                        type: 'component',
-                        componentName: 'settingsComponent',
-                        title: 'SETTINGS'
-                     }
-                ]
-            }]
+            content: [
+                {
+                    type: 'component',
+                    componentName: 'consoleComponent',
+                    title: 'CONSOLE',
+                    isClosable: false
+                },
+                {
+                    type: 'component',
+                    componentName: 'derivationComponent',
+                    title: 'DERIVATION TREE'
+                },
+                {
+                    type: 'component',
+                    componentName: 'memoryComponent',
+                    title: 'MEMORY INSPECTOR'
+                },
+                {
+                    type: 'component',
+                    componentName: 'metricsComponent',
+                    title: 'METRICS'
+                },
+                {
+                    type: 'component',
+                    componentName: 'examplesComponent',
+                    title: 'EXAMPLES'
+                },
+                {
+                    type: 'component',
+                    componentName: 'settingsComponent',
+                    title: 'SETTINGS'
+                }
+            ]
         }]
     }
 };
@@ -123,53 +116,6 @@ function createGraphComponent(app, container) {
         const btn = controls.querySelector(`#${UIConfig.ELEMENT_IDS[id]}`);
         if(btn) app.uiElements.register(id, btn);
     });
-
-    // We need to handle layout buttons manually or extend SeNARSUI to handle them
-    // For now, we'll let GraphPanel or similar handle it via event delegation if we move logic there
-}
-
-function createLogComponent(app, container) {
-    const el = document.createElement('div');
-    el.className = 'panel-container';
-    el.id = UIConfig.ELEMENT_IDS.logView;
-
-    el.innerHTML = `<div class="logs-container" id="${UIConfig.ELEMENT_IDS.logsContainer}"></div>`;
-    container.element.appendChild(el);
-    app.uiElements.register('logsContainer', el.querySelector(`#${UIConfig.ELEMENT_IDS.logsContainer}`));
-}
-
-function createReplComponent(app, container) {
-    const el = document.createElement('div');
-    el.className = 'panel-container';
-
-    el.innerHTML = `
-        <div class="panel-header" style="justify-content: flex-end; padding: 4px;">
-             <div class="control-toolbar" style="display:flex; gap:4px;">
-                <button class="icon-btn" id="${UIConfig.ELEMENT_IDS.btnPlayPause}" title="Play/Pause">▶</button>
-                <button class="icon-btn" id="${UIConfig.ELEMENT_IDS.btnStep}" title="Single Step">⏯</button>
-                <button class="icon-btn" id="${UIConfig.ELEMENT_IDS.btnReset}" title="Reset System">🔄</button>
-             </div>
-        </div>
-        <div style="flex: 1;"></div>
-        <div class="input-section" style="padding: 10px; background: var(--bg-header); border-top: 1px solid var(--border-color);">
-            <div class="input-mode-toggle" style="margin-bottom:8px;">
-                <label class="mode-option" style="margin-right:10px; color:var(--text-muted); font-size:11px;">
-                    <input type="radio" name="input-mode" value="narsese" id="${UIConfig.ELEMENT_IDS.inputModeNarsese}" checked> NARSESE
-                </label>
-                <label class="mode-option" style="color:var(--text-muted); font-size:11px;">
-                    <input type="radio" name="input-mode" value="agent" id="${UIConfig.ELEMENT_IDS.inputModeAgent}"> AGENT
-                </label>
-            </div>
-            <div class="input-group" style="display:flex; gap:4px;">
-                <input type="text" id="${UIConfig.ELEMENT_IDS.commandInput}" placeholder="Input command..." autocomplete="off" style="flex:1;">
-                <button id="${UIConfig.ELEMENT_IDS.sendButton}">SEND</button>
-            </div>
-        </div>`;
-
-    container.element.appendChild(el);
-
-    const ids = ['commandInput', 'sendButton', 'btnPlayPause', 'btnStep', 'btnReset', 'inputModeNarsese', 'inputModeAgent'];
-    ids.forEach(id => app.uiElements.register(id, el.querySelector(`#${UIConfig.ELEMENT_IDS[id]}`)));
 }
 
 function createMetricsComponent(app, container) {
@@ -204,9 +150,16 @@ async function start() {
 
     // Register Core Components
     layout.registerComponentFactoryFunction('graphComponent', (c) => createGraphComponent(app, c));
-    layout.registerComponentFactoryFunction('logComponent', (c) => createLogComponent(app, c));
-    layout.registerComponentFactoryFunction('replComponent', (c) => createReplComponent(app, c));
     layout.registerComponentFactoryFunction('metricsComponent', (c) => createMetricsComponent(app, c));
+
+    // Consolidated Console
+    layout.registerComponentFactoryFunction('consoleComponent', (container) => {
+        const el = document.createElement('div');
+        el.className = 'panel-container';
+        container.element.appendChild(el);
+        const comp = new ConsolePanel(el);
+        comp.initialize(app);
+    });
 
     // Register New / Auxiliary Components
     layout.registerComponentFactoryFunction('derivationComponent', (container) => {

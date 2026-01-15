@@ -1,0 +1,37 @@
+.cytoscape-container {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 157, 0.1));
+}
+
+.cytoscape-container canvas {
+    filter: contrast(1.1) brightness(1.1);
+}
+
+/* Scanline Effect */
+.console-wrapper::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    z-index: 2;
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+}
+
+/* CRT Flicker */
+@keyframes flicker {
+    0% { opacity: 0.99; }
+    5% { opacity: 0.95; }
+    10% { opacity: 0.99; }
+    15% { opacity: 0.99; }
+    20% { opacity: 0.95; }
+    25% { opacity: 0.99; }
+    100% { opacity: 0.99; }
+}
+
+.console-wrapper {
+    animation: flicker 0.15s infinite;
+}

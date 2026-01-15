@@ -35,7 +35,7 @@ export const GraphConfig = {
                 selector: 'node',
                 style: {
                     'background-color': colors.CONCEPT,
-                    'label': 'data(label)',
+                    'label': (ele) => ele.data('label') || ele.data('term') || ele.id(),
                     'color': colors.TEXT,
                     'text-valign': 'bottom',
                     'text-halign': 'center',
