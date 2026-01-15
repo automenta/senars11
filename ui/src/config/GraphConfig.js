@@ -1,125 +1,178 @@
-import {DESIGN_TOKENS} from '@senars/core';
-
 export const GraphConfig = {
     DEFAULT_NODE_WEIGHT: 50,
     TASK_NODE_WEIGHT: 30,
     QUESTION_NODE_WEIGHT: 40,
 
-    // Re-export colors from shared design tokens
-    GRAPH_COLORS: {
-        NODE_COLOR: DESIGN_TOKENS.colors.concept,
-        CONCEPT_COLOR: DESIGN_TOKENS.colors.concept,
-        TASK_COLOR: DESIGN_TOKENS.colors.task,
-        QUESTION_COLOR: DESIGN_TOKENS.colors.question,
-        EDGE_COLOR: DESIGN_TOKENS.colors.edge
+    // Hackerish Palette (Matching style.css)
+    COLORS: {
+        CONCEPT: '#00bcd4',   // Cyan
+        TASK: '#ffcc00',      // Amber
+        QUESTION: '#aa00ff',  // Purple
+        EDGE: '#555555',      // Grey
+        HIGHLIGHT: '#00ff9d', // Neon Green
+        DIM: '#222222',       // Dark Grey
+        INHERITANCE: '#00bcd4',
+        SIMILARITY: '#2196f3',
+        IMPLICATION: '#ff4444', // Red
+        TEXT: '#e0e0e0'
     },
 
     getGraphStyle() {
-        const {
-            concept,
-            task,
-            question,
-            edge,
-            inheritance,
-            similarity,
-            implication,
-            relation,
-            highlight
-        } = DESIGN_TOKENS.colors;
-
-        const highContrast = DESIGN_TOKENS.colorsHighContrast;
+        const colors = GraphConfig.COLORS;
         const isHighContrast = document.body.classList.contains('high-contrast');
 
-        const colors = isHighContrast ? highContrast : DESIGN_TOKENS.colors;
+        // Overrides for High Contrast
+        if (isHighContrast) {
+            colors.CONCEPT = '#00ffff';
+            colors.TASK = '#ffff00';
+            colors.QUESTION = '#ff00ff';
+            colors.EDGE = '#ffffff';
+            colors.TEXT = '#ffffff';
+        }
 
         return [
             {
                 selector: 'node',
                 style: {
-                    'background-color': colors.concept,
+                    'background-color': colors.CONCEPT,
                     'label': 'data(label)',
-                    'color': '#ffffff',
+                    'color': colors.TEXT,
                     'text-valign': 'bottom',
                     'text-halign': 'center',
                     'text-margin-y': 5,
-                    'font-size': '14px',
-                    'font-weight': 'bold',
-                    'text-background-color': '#000000',
-                    'text-background-opacity': 0.7,
-                    'text-background-padding': 4,
-                    'width': 'mapData(weight, 0, 100, 20, 80)',
-                    'height': 'mapData(weight, 0, 100, 20, 80)',
-                    'border-width': 2,
-                    'border-color': colors.concept
+                    'font-family': 'JetBrains Mono, monospace', // Hackerish font
+                    'font-size': '12px',
+                    'text-transform': 'uppercase',
+                    'font-weight': 'normal',
+                    'text-background-color': '#0a0a0c',
+                    'text-background-opacity': 0.8,
+                    'text-background-padding': 3,
+                    'width': 'mapData(weight, 0, 100, 20, 60)',
+                    'height': 'mapData(weight, 0, 100, 20, 60)',
+                    'border-width': 1,
+                    'border-color': colors.CONCEPT,
+                    'ghost': 'yes',
+                    'ghost-offset-x': 0,
+                    'ghost-offset-y': 0,
+                    'ghost-opacity': 0.5,
+                    'transition-property': 'background-color, border-color, width, height, opacity',
+                    'transition-duration': '0.3s'
                 }
             },
             {
                 selector: 'edge',
                 style: {
-                    'width': 2,
-                    'line-color': colors.relation,
-                    'target-arrow-color': colors.relation,
+                    'width': 1,
+                    'line-color': colors.EDGE,
+                    'target-arrow-color': colors.EDGE,
                     'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier'
+                    'curve-style': 'bezier',
+                    'arrow-scale': 0.8,
+                    'opacity': 0.6
                 }
             },
-            {selector: 'node[type = "concept"]', style: {'background-color': colors.concept}},
-            {selector: 'node[type = "task"]', style: {'background-color': colors.task}},
-            {selector: 'node[type = "question"]', style: {'background-color': colors.question}},
+            // Node Types
+            {selector: 'node[type = "concept"]', style: {'background-color': colors.CONCEPT, 'border-color': colors.CONCEPT}},
+            {selector: 'node[type = "task"]', style: {'background-color': colors.TASK, 'border-color': colors.TASK, 'shape': 'rectangle'}},
+            {selector: 'node[type = "question"]', style: {'background-color': colors.QUESTION, 'border-color': colors.QUESTION, 'shape': 'diamond'}},
+
+            // Edge Types
             {
                 selector: 'edge[type = "inheritance"]',
-                style: {'line-color': colors.inheritance, 'target-arrow-color': colors.inheritance}
+                style: {'line-color': colors.INHERITANCE, 'target-arrow-color': colors.INHERITANCE}
             },
             {
                 selector: 'edge[type = "similarity"]',
-                style: {'line-color': colors.similarity, 'target-arrow-color': colors.similarity}
+                style: {'line-color': colors.SIMILARITY, 'target-arrow-color': colors.SIMILARITY, 'line-style': 'dashed'}
             },
             {
                 selector: 'edge[type = "implication"]',
-                style: {'line-color': colors.implication, 'target-arrow-color': colors.implication}
+                style: {'line-color': colors.IMPLICATION, 'target-arrow-color': colors.IMPLICATION}
             },
-            // Explicitly handle "Other" relations to ensure they are gray (or high contrast equivalent)
+
+            // Interaction States
             {
-                selector: 'edge[type != "inheritance"][type != "similarity"][type != "implication"]',
-                 style: {
-                    'line-color': colors.relation,
-                    'target-arrow-color': colors.relation
+                selector: ':selected',
+                style: {
+                    'border-width': 2,
+                    'border-color': '#ffffff',
+                    'overlay-opacity': 0
                 }
             },
-            // Keyboard navigation highlight
             {
                 selector: '.keyboard-selected',
                 style: {
-                    'border-width': 6,
-                    'border-color': colors.highlight,
-                    'border-style': 'solid',
-                    'z-index': 9999
+                    'border-width': 2,
+                    'border-color': colors.HIGHLIGHT,
+                    'shadow-blur': 10,
+                    'shadow-color': colors.HIGHLIGHT
+                }
+            },
+
+            // Trace Mode Styles
+            {
+                selector: '.trace-highlight',
+                style: {
+                    'border-width': 3,
+                    'border-color': colors.HIGHLIGHT,
+                    'line-color': colors.HIGHLIGHT,
+                    'target-arrow-color': colors.HIGHLIGHT,
+                    'z-index': 9999,
+                    'opacity': 1,
+                    'width': 3 // Thicker edges
+                }
+            },
+            {
+                selector: '.trace-dim',
+                style: {
+                    'opacity': 0.1,
+                    'z-index': 0,
+                    'label': '' // Hide labels of dimmed nodes
                 }
             }
         ];
     },
 
-    getGraphLayout: () => ({
-        name: 'fcose', // Changed from cose to fcose per plan
-        animate: true,
-        animationDuration: 300,
-        refresh: 20,
-        fit: true,
-        padding: 30,
-        randomize: false,
-        componentSpacing: 100,
-        nodeRepulsion: 400000,
-        nodeOverlap: 20,
-        idealEdgeLength: 100,
-        edgeElasticity: 100,
-        nestingFactor: 5,
-        gravity: 80,
-        numIter: 1000,
-        initialTemp: 200,
-        coolingFactor: 0.95,
-        minTemp: 1.0,
-        tile: true, // Specific to fcose
-        tilingPaddingVertical: 10,
-        tilingPaddingHorizontal: 10
-    })
+    OVERRIDES: {},
+
+    getGraphLayout: (layoutName = 'fcose') => {
+        const layouts = {
+            fcose: {
+                name: 'fcose',
+                animate: true,
+                animationDuration: 500,
+                refresh: 20,
+                fit: true,
+                padding: 30,
+                randomize: false,
+                componentSpacing: 100,
+                nodeRepulsion: 450000,
+                idealEdgeLength: 100,
+                edgeElasticity: 0.45,
+                nestingFactor: 0.1,
+                gravity: 0.25,
+                numIter: 2500,
+                tile: true,
+                tilingPaddingVertical: 10,
+                tilingPaddingHorizontal: 10,
+                ...GraphConfig.OVERRIDES
+            },
+            grid: {
+                name: 'grid',
+                animate: true,
+                padding: 30
+            },
+            circle: {
+                name: 'circle',
+                animate: true,
+                padding: 30
+            },
+            concentric: {
+                name: 'concentric',
+                animate: true,
+                padding: 30
+            }
+        };
+        return layouts[layoutName] || layouts.fcose;
+    }
 };

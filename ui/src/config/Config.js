@@ -37,8 +37,8 @@ export class Config {
         return GraphConfig.getGraphStyle();
     }
 
-    static getGraphLayout() {
-        return GraphConfig.getGraphLayout();
+    static getGraphLayout(name) {
+        return GraphConfig.getGraphLayout(name);
     }
 
     static getConstants() {

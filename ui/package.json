@@ -16,14 +16,18 @@
     "test:graph": "CI=true playwright test tests/e2e/graph.spec.js --reporter=list",
     "test:production": "CI=true playwright test tests/e2e/production.spec.js --reporter=list",
     "test:verification": "CI=true playwright test tests/e2e/verification.spec.js --reporter=list",
-    "build:ide": "esbuild src/browser-init.js --bundle --format=iife --platform=browser --outfile=browser-bundle.js --loader:.js=jsx --alias:fs/promises=./src/shims/mock-node.js --alias:fs=./src/shims/mock-node.js --alias:path=./src/shims/mock-node.js --alias:child_process=./src/shims/mock-node.js --alias:os=./src/shims/mock-node.js --alias:crypto=./src/shims/mock-node.js --alias:url=./src/shims/mock-node.js --alias:node:readline=./src/shims/mock-node.js --alias:node:util=./src/shims/mock-node.js --alias:node:path=./src/shims/mock-node.js --alias:node:os=./src/shims/mock-node.js --alias:node:crypto=./src/shims/mock-node.js --alias:stream=./src/shims/mock-node.js --alias:node:async_hooks=./src/shims/mock-node.js --alias:node:process=./src/shims/mock-node.js --alias:tty=./src/shims/mock-node.js --alias:module=./src/shims/mock-node.js --alias:node:module=./src/shims/mock-node.js --alias:events=./src/shims/events-shim.js --alias:buffer=./src/shims/mock-node.js --define:import.meta.url=\"''\" --inject:./src/shims/process-shim.js",
+    "build:ide": "esbuild src/browser-init.js --bundle --format=iife --platform=browser --outfile=browser-bundle.js --loader:.js=jsx --alias:fs/promises=./src/shims/mock-node.js --alias:fs=./src/shims/mock-node.js --alias:path=./src/shims/mock-node.js --alias:child_process=./src/shims/mock-node.js --alias:os=./src/shims/mock-node.js --alias:crypto=./src/shims/mock-node.js --alias:url=./src/shims/mock-node.js --alias:node:readline=./src/shims/mock-node.js --alias:node:util=./src/shims/mock-node.js --alias:node:path=./src/shims/mock-node.js --alias:node:os=./src/shims/mock-node.js --alias:node:crypto=./src/shims/mock-node.js --alias:stream=./src/shims/mock-node.js --alias:node:async_hooks=./src/shims/mock-node.js --alias:node:process=./src/shims/mock-node.js --alias:tty=./src/shims/mock-node.js --alias:module=./src/shims/mock-node.js --alias:node:module=./src/shims/mock-node.js --alias:events=./src/shims/events-shim.js --alias:buffer=./src/shims/mock-node.js --alias:worker_threads=./src/shims/mock-node.js --define:import.meta.url=\"''\" --inject:./src/shims/process-shim.js",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
     "@senars/agent": "^1.0.0",
     "@senars/core": "^1.0.0",
+    "cose-base": "^1.0.3",
+    "cytoscape": "^3.33.1",
+    "cytoscape-fcose": "^2.2.0",
     "golden-layout": "^2.6.0",
+    "layout-base": "^1.0.2",
     "ws": "^8.18.3"
   },
   "devDependencies": {
