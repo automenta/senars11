@@ -22,7 +22,7 @@ export function registerParallelOps(interpreter) {
         if (!interpreter.workerPool) {
             interpreter.workerPool = new WorkerPool(
                 interpreter.config.workerScript || (ENV.isNode ?
-                    (new URL('../../platform/node/metta-worker.js', import.meta.url).pathname) :
+                    (new URL('../platform/node/metta-worker.js', import.meta.url).pathname) :
                     '/metta-worker.js'),
                 interpreter.config.workerPoolSize || 4
             );
