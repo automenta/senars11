@@ -172,17 +172,51 @@ input[type="text"]:focus, select:focus {
     transition: background 0.1s;
 }
 
-.log-entry:hover {
-    background: rgba(255,255,255,0.03);
+.log-entry {
+    border-left: 2px solid transparent;
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    border-radius: 0 2px 2px 0;
+    transition: background 0.1s, transform 0.2s;
+    animation: fadeIn 0.2s ease-out;
 }
 
-.type-input { border-color: var(--text-muted); color: var(--text-muted); }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-5px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.log-entry:hover {
+    background: rgba(255,255,255,0.03);
+    border-left-color: rgba(255, 255, 255, 0.2);
+}
+
+.type-input { border-color: var(--text-muted); color: var(--text-muted); font-style: italic; }
 .type-info { border-color: var(--accent-info); }
 .type-success { border-color: var(--accent-primary); }
 .type-warning { border-color: var(--accent-warn); }
 .type-error { border-color: var(--accent-error); }
 .type-concept { border-color: var(--concept-color); }
 .type-task { border-color: var(--task-color); }
+
+/* Narsese Syntax Highlighting */
+.nars-structure { color: #888; font-weight: bold; }
+.nars-copula { color: var(--accent-secondary); font-weight: bold; }
+.nars-truth { color: #ff8800; font-family: var(--font-mono); }
+.nars-variable { color: #ff77aa; font-style: italic; }
+.nars-operator { color: var(--accent-primary); font-weight: bold; }
+.nars-punctuation { color: var(--accent-warn); font-size: 1.2em; font-weight: bold; }
+
+/* Interactive Embedded Graph */
+.embedded-graph-wrapper {
+    background: rgba(0,0,0,0.3);
+    margin-top: 5px;
+    border-radius: 4px;
+    transition: transform 0.2s;
+}
+.embedded-graph-wrapper:hover {
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.1);
+}
 
 /* Graph Controls Overlay */
 .graph-overlay-controls {

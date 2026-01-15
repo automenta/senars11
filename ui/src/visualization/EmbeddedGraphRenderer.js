@@ -66,6 +66,25 @@ export class EmbeddedGraphRenderer {
                 userPanningEnabled: true
             });
 
+            // Interaction: Tap/Click Node
+            cy.on('tap', 'node', (e) => {
+                const node = e.target;
+                const id = node.id();
+                // Dispatch event to show details or inspect
+                document.dispatchEvent(new CustomEvent('senars:command', {
+                    detail: { command: `/inspect ${id}` }
+                }));
+
+                // Visual feedback
+                node.animate({
+                    style: { 'background-color': '#fff' },
+                    duration: 100
+                }).animate({
+                    style: { 'background-color': '#666' }, // Reset to default-ish (actual style depends on class)
+                    duration: 200
+                });
+            });
+
             // Re-layout after render to ensure fit
             setTimeout(() => {
                 cy.resize();
