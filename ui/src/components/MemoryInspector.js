@@ -114,7 +114,7 @@ export class MemoryInspector extends Component {
         const quality = c.budget?.quality?.toFixed(2) || '0.00';
 
         return `
-            <tr>
+            <tr data-id="${c.id}" class="memory-row">
                 <td class="col-term" title="${c.term}">${c.term}</td>
                 <td class="col-type">${c.type || 'CONCEPT'}</td>
                 <td class="col-val" style="color:${this._colorVal(c.budget?.priority)}">${priority}</td>

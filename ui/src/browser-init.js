@@ -105,9 +105,37 @@ function createGraphComponent(app, container) {
         <button id="btn-layout-fcose" title="Force Directed" style="font-size:10px">F</button>
         <button id="btn-layout-grid" title="Grid Layout" style="font-size:10px">G</button>
         <button id="btn-layout-circle" title="Circle Layout" style="font-size:10px">C</button>
+        <div style="height:1px; background:var(--border-color); margin:2px 0;"></div>
+        <div style="font-size:10px; color:#aaa; margin-bottom:2px;">FILTER</div>
+        <label title="Show Tasks" style="display:flex; align-items:center; font-size:10px; gap:4px; color:#aaa;">
+            <input type="checkbox" id="filter-show-tasks" checked> Tasks
+        </label>
+        <label title="Show Concepts" style="display:flex; align-items:center; font-size:10px; gap:4px; color:#aaa;">
+            <input type="checkbox" id="filter-show-concepts" checked> Concepts
+        </label>
     `;
 
     container.element.append(el, controls);
+
+    // Bind Filters (Hacky binding as app not fully ready, but GraphManager listens later?)
+    // Actually GraphManager attaches to DOM elements if we register them?
+    // Or we just add listeners here that call app.graphManager?
+    // app.graphManager isn't available inside this factory function easily synchronously before app init.
+    // But we can use event delegation or look up the instance later.
+
+    // Better approach: Dispatch events that GraphManager listens to, similar to Settings.
+
+    controls.addEventListener('change', (e) => {
+        if (e.target.id.startsWith('filter-')) {
+            const showTasks = controls.querySelector('#filter-show-tasks').checked;
+            const showConcepts = controls.querySelector('#filter-show-concepts').checked;
+
+            // Dispatch event for GraphManager
+            document.dispatchEvent(new CustomEvent('senars:graph:filter', {
+                detail: { showTasks, showConcepts }
+            }));
+        }
+    });
 
     // Register basic graph controls
     const ids = ['btnZoomIn', 'btnZoomOut', 'btnFit', 'refreshGraph'];

@@ -21,8 +21,32 @@ export class GraphManager {
         this.traceMode = false;
         this.tracedNode = null;
 
+        // Filter State
+        this.filters = {
+            minPriority: 0,
+            showTasks: true,
+            showConcepts: true
+        };
+
         this.contextMenu = null;
         this.kbState = { index: 0, selectedNode: null };
+
+        // Listen for integration events
+        document.addEventListener('senars:concept:select', (e) => {
+            const { id } = e.detail;
+            if(id) {
+                const node = this.cy?.getElementById(id);
+                if(node && node.length) {
+                    this.highlightNode(node);
+                    this.animateGlow(id, 1.0);
+                }
+            }
+        });
+
+        // Listen for filter events
+        document.addEventListener('senars:graph:filter', (e) => {
+            this.applyFilters(e.detail);
+        });
     }
 
     setUpdatesEnabled(enabled) {
