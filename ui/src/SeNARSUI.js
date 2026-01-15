@@ -39,6 +39,9 @@ export class SeNARSUI {
         this.lmActivityIndicator = null;
         this.exampleBrowser = null;
 
+        // Registry for external components (e.g., from GoldenLayout)
+        this.components = {};
+
         this.uiEventHandlers = null;
 
         // Only call initialize if no connection adapter is provided (for backward compatibility)
@@ -165,6 +168,11 @@ export class SeNARSUI {
                 handler(message.payload);
             } else {
                 this.graphManager.updateFromMessage(message);
+
+                // Forward snapshot to Memory Inspector
+                if (message.type === 'memorySnapshot' && this.components.memoryInspector) {
+                    this.components.memoryInspector.update(message.payload);
+                }
             }
 
         } catch (error) {
@@ -229,6 +237,13 @@ export class SeNARSUI {
     }
 
     _handleTrace(msg) {
-        // Trace handled by ActivityLogPanel subscription or unified logging
+        // Forward to DerivationTree if registered
+        if (this.components.derivationTree) {
+            this.components.derivationTree.addDerivation(msg.payload);
+        }
+    }
+
+    registerComponent(name, instance) {
+        this.components[name] = instance;
     }
 }

@@ -91,6 +91,20 @@ export const Buffer = {
     byteLength: (str) => str.length
 };
 
+// worker_threads
+export class Worker extends EventEmitter {
+    constructor(path, options) {
+        super();
+        this.path = path;
+        this.options = options;
+        console.warn('Worker threads not supported in browser environment');
+    }
+    postMessage(msg) { }
+    terminate() { }
+}
+export const parentPort = new EventEmitter();
+export const isMainThread = true;
+
 export default {
     readFile, writeFile, access, stat, mkdir, readdir, rm, constants, promises,
     readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, statSync,
@@ -102,5 +116,6 @@ export default {
     AsyncLocalStorage, AsyncResource,
     styleText, stripVTControlCharacters, promisify, callbackify, debuglog, types, inspect,
     createRequire, builtinModules,
-    EventEmitter, Buffer
+    EventEmitter, Buffer,
+    Worker, parentPort, isMainThread
 };
