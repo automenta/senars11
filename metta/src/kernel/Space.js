@@ -51,10 +51,16 @@ export class Space {
      * Get all atoms in the space
      */
     all() {
-        const rulesAsAtoms = this.rules
+        return [...this.atoms, ...this._getRulesAsAtoms()];
+    }
+
+    /**
+     * Get rules as atoms
+     */
+    _getRulesAsAtoms() {
+        return this.rules
             .filter(r => typeof r.result !== 'function')
             .map(r => exp(sym('='), [r.pattern, r.result]));
-        return [...this.atoms, ...rulesAsAtoms];
     }
 
     /**

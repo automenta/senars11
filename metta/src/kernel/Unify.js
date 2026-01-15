@@ -55,25 +55,25 @@ const substituteInList = (term, bindings) => {
 const unifyLists = (t1, t2, bindings) => {
     const f1 = flattenList(t1);
     const f2 = flattenList(t2);
-    const len = Math.min(f1.elements.length, f2.elements.length);
-    let curr = bindings;
+    const minLen = Math.min(f1.elements.length, f2.elements.length);
 
-    // Unify elements up to the minimum length
-    for (let i = 0; i < len; i++) {
-        const b = unifiedUnify(f1.elements[i], f2.elements[i], curr);
+    // Unify common elements
+    let currBindings = bindings;
+    for (let i = 0; i < minLen; i++) {
+        const b = unifiedUnify(f1.elements[i], f2.elements[i], currBindings);
         if (!b) return null;
-        curr = b;
+        currBindings = b;
     }
 
     // Handle remaining elements
-    const t1Remainder = f1.elements.length > len
-        ? constructList(f1.elements.slice(len), f1.tail)
+    const t1Remainder = f1.elements.length > minLen
+        ? constructList(f1.elements.slice(minLen), f1.tail)
         : f1.tail;
-    const t2Remainder = f2.elements.length > len
-        ? constructList(f2.elements.slice(len), f2.tail)
+    const t2Remainder = f2.elements.length > minLen
+        ? constructList(f2.elements.slice(minLen), f2.tail)
         : f2.tail;
 
-    return unifiedUnify(t1Remainder, t2Remainder, curr);
+    return unifiedUnify(t1Remainder, t2Remainder, currBindings);
 };
 
 /**

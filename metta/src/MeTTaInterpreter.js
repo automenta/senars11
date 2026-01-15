@@ -122,21 +122,34 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         const { flattenList, sym, exp } = Term;
 
         // Extract pairs based on binding structure
-        const pairs = bindings.operator?.name === ':' ? flattenList(bindings).elements :
-                     bindings.type === 'compound' ? [bindings.operator, ...bindings.components] :
-                     bindings.name !== '()' ? (console.error('Invalid &let* bindings', bindings), []) : [];
-
+        const pairs = this._extractLetStarPairs(bindings);
         if (!pairs.length) return reduce(body, this.space, this.ground);
 
         const [first, ...rest] = pairs;
         if (!first?.components?.length) return body;
 
         // Extract variable and value
-        const [v, val] = first.operator?.name === ':' ? first.components : [first.operator, first.components[0]];
+        const [v, val] = this._extractVarAndValue(first);
         if (!v || !val) return body;
 
         const inner = rest.length ? exp(sym('let*'), [exp(rest[0], rest.slice(1)), body]) : body;
         return reduce(exp(sym('let'), [v, val, inner]), this.space, this.ground);
+    }
+
+    /**
+     * Extract pairs from let* bindings based on structure
+     */
+    _extractLetStarPairs(bindings) {
+        return bindings.operator?.name === ':' ? flattenList(bindings).elements :
+               bindings.type === 'compound' ? [bindings.operator, ...bindings.components] :
+               bindings.name !== '()' ? (console.error('Invalid &let* bindings', bindings), []) : [];
+    }
+
+    /**
+     * Extract variable and value from a binding pair
+     */
+    _extractVarAndValue(binding) {
+        return binding.operator?.name === ':' ? binding.components : [binding.operator, binding.components[0]];
     }
 
     /**

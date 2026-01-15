@@ -51,7 +51,7 @@ class Tokenizer {
 
         const push = () => {
             const trimmed = current.trim();
-            trimmed && tokens.push(trimmed);
+            if (trimmed) tokens.push(trimmed);
             current = '';
         };
 
@@ -74,32 +74,33 @@ class Tokenizer {
                 continue;
             }
 
-            if (char === '"' || char === "'") {
-                push();
-                inString = true;
-                quoteChar = char;
-                current += char;
-                continue;
-            }
+            switch (char) {
+                case '"':
+                case "'":
+                    push();
+                    inString = true;
+                    quoteChar = char;
+                    current += char;
+                    break;
 
-            if (char === ';') {
-                push();
-                inComment = true;
-                continue;
-            }
+                case ';':
+                    push();
+                    inComment = true;
+                    break;
 
-            if (char === '(' || char === ')') {
-                push();
-                tokens.push(char);
-                continue;
-            }
+                case '(':
+                case ')':
+                    push();
+                    tokens.push(char);
+                    break;
 
-            if (/\s/.test(char)) {
-                push();
-                continue;
+                default:
+                    if (/\s/.test(char)) {
+                        push();
+                    } else {
+                        current += char;
+                    }
             }
-
-            current += char;
         }
 
         push();

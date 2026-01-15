@@ -51,31 +51,50 @@ export class TypeSystem {
     inferType(term, context = {}) {
         if (!term) return this.freshTypeVar();
 
+        // Handle atomic terms
         if (term.type === 'atom') {
-            // Handle variable atoms
-            if (term.name?.match(/^[?$]/)) {
-                const name = term.name.substring(1);
-                return context[name] || this.freshTypeVar();
-            }
-
-            // Handle constant atoms
-            if (term.name) {
-                if (!isNaN(parseFloat(term.name))) return TypeConstructors.Number;
-                if (/^(True|False|true|false)$/.test(term.name)) return TypeConstructors.Bool;
-                if (term.name.startsWith('"')) return TypeConstructors.String;
-                return TypeConstructors.Atom;
-            }
+            return this._inferAtomType(term, context);
         }
 
         // Handle compound terms (expressions)
         if (term.type === 'compound' && term.operator) {
-            const opType = this.inferType(term.operator, context);
-            const argTypes = term.components.map(arg => this.inferType(arg, context));
+            return this._inferCompoundType(term, context);
+        }
 
-            // If operator is a function type and we have exactly one argument that unifies with the domain
-            if (opType.kind === 'Arrow' && argTypes.length === 1 && this.unifyTypes(argTypes[0], opType.from)) {
-                return opType.to;
-            }
+        return this.freshTypeVar();
+    }
+
+    /**
+     * Infer type for atomic terms
+     */
+    _inferAtomType(term, context) {
+        // Handle variable atoms
+        if (term.name?.match(/^[?$]/)) {
+            const name = term.name.substring(1);
+            return context[name] || this.freshTypeVar();
+        }
+
+        // Handle constant atoms
+        if (term.name) {
+            if (!isNaN(parseFloat(term.name))) return TypeConstructors.Number;
+            if (/^(True|False|true|false)$/.test(term.name)) return TypeConstructors.Bool;
+            if (term.name.startsWith('"')) return TypeConstructors.String;
+            return TypeConstructors.Atom;
+        }
+
+        return this.freshTypeVar();
+    }
+
+    /**
+     * Infer type for compound terms
+     */
+    _inferCompoundType(term, context) {
+        const opType = this.inferType(term.operator, context);
+        const argTypes = term.components.map(arg => this.inferType(arg, context));
+
+        // If operator is a function type and we have exactly one argument that unifies with the domain
+        if (opType.kind === 'Arrow' && argTypes.length === 1 && this.unifyTypes(argTypes[0], opType.from)) {
+            return opType.to;
         }
 
         return this.freshTypeVar();
@@ -97,15 +116,26 @@ export class TypeSystem {
         if (t2.kind === 'TypeVar') return this.bindTypeVar(t2, t1);
         if (t1.kind !== t2.kind) return false;
 
+        return this._unifyByKind(t1, t2);
+    }
+
+    /**
+     * Unify two types by their kind
+     */
+    _unifyByKind(t1, t2) {
         switch (t1.kind) {
-            case 'Base': return t1.name === t2.name;
-            case 'Arrow': return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
-            case 'List': return this.unifyTypes(t1.element, t2.element);
+            case 'Base':
+                return t1.name === t2.name;
+            case 'Arrow':
+                return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
+            case 'List':
+                return this.unifyTypes(t1.element, t2.element);
             case 'TypeCtor':
                 return t1.name === t2.name &&
                     t1.params.length === t2.params.length &&
                     t1.params.every((p, i) => this.unifyTypes(p, t2.params[i]));
-            default: return false;
+            default:
+                return false;
         }
     }
 
@@ -138,6 +168,13 @@ export class TypeSystem {
             return subst ? this.applySubstitution(subst) : type;
         }
 
+        return this._applySubstitutionByKind(type);
+    }
+
+    /**
+     * Apply substitutions to a type based on its kind
+     */
+    _applySubstitutionByKind(type) {
         switch (type.kind) {
             case 'Arrow':
                 return TypeConstructors.Arrow(
@@ -151,7 +188,8 @@ export class TypeSystem {
                     type.name,
                     type.params.map(p => this.applySubstitution(p))
                 );
-            default: return type;
+            default:
+                return type;
         }
     }
 
@@ -199,20 +237,37 @@ export class TypeSystem {
      */
     typeToString(type) {
         if (!type) return 'Unknown';
+        return this._typeToStringByKind(type);
+    }
+
+    /**
+     * Convert a type to string representation based on its kind
+     */
+    _typeToStringByKind(type) {
         switch (type.kind) {
-            case 'Base': return type.name;
-            case 'Arrow': return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
-            case 'List': return `(List ${this.typeToString(type.element)})`;
-            case 'Maybe': return `(Maybe ${this.typeToString(type.type)})`;
-            case 'Either': return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
-            case 'Vector': return `(Vector ${type.length})`;
-            case 'Fin': return `(Fin ${type.n})`;
-            case 'TypeVar': return `t${type.index}`;
-            case 'Forall': return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
+            case 'Base':
+                return type.name;
+            case 'Arrow':
+                return `(${this.typeToString(type.from)} -> ${this.typeToString(type.to)})`;
+            case 'List':
+                return `(List ${this.typeToString(type.element)})`;
+            case 'Maybe':
+                return `(Maybe ${this.typeToString(type.type)})`;
+            case 'Either':
+                return `(Either ${this.typeToString(type.left)} ${this.typeToString(type.right)})`;
+            case 'Vector':
+                return `(Vector ${type.length})`;
+            case 'Fin':
+                return `(Fin ${type.n})`;
+            case 'TypeVar':
+                return `t${type.index}`;
+            case 'Forall':
+                return `(∀ ${type.varName} ${this.typeToString(type.type)})`;
             case 'TypeCtor':
                 const params = type.params.map(p => this.typeToString(p)).join(' ');
                 return `(${type.name}${params ? ' ' + params : ''})`;
-            default: return 'Unknown';
+            default:
+                return 'Unknown';
         }
     }
 }
