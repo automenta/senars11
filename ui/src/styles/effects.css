@@ -1,12 +1,12 @@
 .cytoscape-container {
-    filter: drop-shadow(0 0 10px rgba(0, 255, 157, 0.1));
+    filter: drop-shadow(0 0 5px rgba(0, 255, 157, 0.05)); /* Reduced bloom */
 }
 
 .cytoscape-container canvas {
-    filter: contrast(1.1) brightness(1.1);
+    filter: contrast(1.05) brightness(1.05);
 }
 
-/* Scanline Effect */
+/* Scanline Effect - Subtle */
 .console-wrapper::before {
     content: " ";
     display: block;
@@ -15,21 +15,21 @@
     left: 0;
     bottom: 0;
     right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.02) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.01), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.01));
     z-index: 2;
     background-size: 100% 2px, 3px 100%;
     pointer-events: none;
 }
 
-/* CRT Flicker */
+/* CRT Flicker - Barely perceptible */
 @keyframes flicker {
-    0% { opacity: 0.99; }
-    5% { opacity: 0.95; }
-    10% { opacity: 0.99; }
-    15% { opacity: 0.99; }
-    20% { opacity: 0.95; }
-    25% { opacity: 0.99; }
-    100% { opacity: 0.99; }
+    0% { opacity: 0.995; }
+    5% { opacity: 0.99; }
+    10% { opacity: 0.995; }
+    15% { opacity: 0.995; }
+    20% { opacity: 0.99; }
+    25% { opacity: 0.995; }
+    100% { opacity: 0.995; }
 }
 
 .console-wrapper {
