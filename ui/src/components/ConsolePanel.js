@@ -1,5 +1,6 @@
 import { Component } from './Component.js';
 import { UIConfig } from '../config/UIConfig.js';
+import { EmbeddedGraphRenderer } from '../visualization/EmbeddedGraphRenderer.js';
 
 export class ConsolePanel extends Component {
     constructor(container) {
@@ -67,5 +68,37 @@ export class ConsolePanel extends Component {
             const event = new CustomEvent('senars:voice:toggle');
             document.dispatchEvent(event);
         });
+
+        // Listen for embedded graph requests
+        document.addEventListener('senars:console:embed-graph', (e) => {
+            this.addEmbeddedGraph(e.detail);
+        });
+    }
+
+    addEmbeddedGraph(data) {
+        const logsContainer = this.container.querySelector(`#${UIConfig.ELEMENT_IDS.logsContainer}`);
+        if (!logsContainer) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'log-entry embedded-graph-wrapper';
+        wrapper.style.padding = '5px';
+        wrapper.style.borderLeft = '2px solid var(--accent-info)';
+
+        const title = document.createElement('div');
+        title.style.color = 'var(--text-muted)';
+        title.style.marginBottom = '5px';
+        title.textContent = `Graph Snapshot: ${data.title || 'Unknown'}`;
+
+        const graphContainer = document.createElement('div');
+
+        wrapper.appendChild(title);
+        wrapper.appendChild(graphContainer);
+        logsContainer.appendChild(wrapper);
+
+        // Render graph
+        EmbeddedGraphRenderer.render(graphContainer, data);
+
+        // Scroll to bottom
+        logsContainer.scrollTop = logsContainer.scrollHeight;
     }
 }
