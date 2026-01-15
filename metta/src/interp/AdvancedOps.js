@@ -98,16 +98,18 @@ export function registerAdvancedOps(interpreter) {
     });
 
     // List operations
+    const formatNum = n => sym(String(n));
+
     reg('&length', (list) => {
         // Count elements in a list structure
-        if (list?.name === '()') return sym('0'); // Empty list
+        if (list?.name === '()') return formatNum(0); // Empty list
         if (list?.operator?.name === ':' && list?.components) {
             // It's a list structure like (: head tail), flatten it and count
             const flattened = interpreter.ground._flattenExpr(list);
-            return sym(String(flattened.length));
+            return formatNum(flattened.length);
         }
         // For other expressions, count components
-        return sym(String(list?.components ? list.components.length + 1 : 1)); // +1 for operator, or 1 for single atom
+        return formatNum(list?.components ? list.components.length + 1 : 1); // +1 for operator, or 1 for single atom
     });
 
     // Control flow operations

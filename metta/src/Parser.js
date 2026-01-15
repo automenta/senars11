@@ -51,7 +51,7 @@ class Tokenizer {
 
         const push = () => {
             const trimmed = current.trim();
-            if (trimmed) tokens.push(trimmed);
+            trimmed && tokens.push(trimmed);
             current = '';
         };
 

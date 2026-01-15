@@ -125,14 +125,18 @@ export class SeNARSBridge extends BaseMeTTaComponent {
         return this.trackOperation('getSystemStats', () => {
             const concepts = this.reasoner?.memory?.getAllConcepts?.() ?? [];
             const stis = concepts.map(c => c.budget?.sti ?? 0).filter(s => s > 0);
+            const avgSti = stis.length ? (stis.reduce((a, b) => a + b, 0) / stis.length).toFixed(2) : '0';
+            const maxSti = Math.max(...stis, 0).toFixed(2);
+            const minSti = stis.length ? Math.min(...stis).toFixed(2) : '0';
+            const memUsage = process.memoryUsage ? (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2) : '0';
 
             return {
                 atomCount: this.mettaInterpreter?.space?.size?.() ?? 0,
                 conceptCount: concepts.length,
-                avgSTI: stis.length ? (stis.reduce((a, b) => a + b, 0) / stis.length).toFixed(2) : 0,
-                maxSTI: Math.max(...stis, 0).toFixed(2),
-                minSTI: stis.length ? Math.min(...stis).toFixed(2) : 0,
-                memoryMB: process.memoryUsage ? (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2) : 0
+                avgSTI: avgSti,
+                maxSTI: maxSti,
+                minSTI: minSti,
+                memoryMB: memUsage
             };
         });
     }

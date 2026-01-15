@@ -15,6 +15,8 @@ export function registerComparisonOps(registry) {
     registry.register('&<=', cmp((a, b) => a <= b));
     registry.register('&>=', cmp((a, b) => a >= b));
 
-    registry.register('&==', (a, b) => OperationHelpers.bool(a?.equals ? a.equals(b) : a === b));
-    registry.register('&!=', (a, b) => OperationHelpers.bool(!(a?.equals ? a.equals(b) : a === b)));
+    const eqCheck = (a, b) => a?.equals ? a.equals(b) : a === b;
+
+    registry.register('&==', (a, b) => OperationHelpers.bool(eqCheck(a, b)));
+    registry.register('&!=', (a, b) => OperationHelpers.bool(!eqCheck(a, b)));
 }
