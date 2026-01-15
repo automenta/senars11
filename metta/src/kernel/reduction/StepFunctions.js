@@ -199,13 +199,11 @@ function* cartesianProduct(arrays) {
     }
 
     const [head, ...tail] = arrays;
+    const tailProducts = tail.length ? cartesianProduct(tail) : [[]];
+
     for (const h of head) {
-        if (tail.length === 0) {
-            yield [h];
-        } else {
-            for (const t of cartesianProduct(tail)) {
-                yield [h, ...t];
-            }
+        for (const t of tailProducts) {
+            yield [h, ...t];
         }
     }
 }

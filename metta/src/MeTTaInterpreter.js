@@ -140,9 +140,15 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * Extract pairs from let* bindings based on structure
      */
     _extractLetStarPairs(bindings) {
-        return bindings.operator?.name === ':' ? flattenList(bindings).elements :
-               bindings.type === 'compound' ? [bindings.operator, ...bindings.components] :
-               bindings.name !== '()' ? (console.error('Invalid &let* bindings', bindings), []) : [];
+        if (bindings.operator?.name === ':') {
+            return flattenList(bindings).elements;
+        } else if (bindings.type === 'compound') {
+            return [bindings.operator, ...bindings.components];
+        } else if (bindings.name !== '()') {
+            console.error('Invalid &let* bindings', bindings);
+            return [];
+        }
+        return [];
     }
 
     /**
@@ -216,9 +222,13 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             if (results) results.push(expr);
         } else if (results) {
             const evalRes = this.evaluate(expr);
-            Array.isArray(evalRes)
-                ? (results.push(...evalRes), evalRes.forEach(r => this.space.add(r)))
-                : (results.push(evalRes), this.space.add(evalRes));
+            if (Array.isArray(evalRes)) {
+                results.push(...evalRes);
+                evalRes.forEach(r => this.space.add(r));
+            } else {
+                results.push(evalRes);
+                this.space.add(evalRes);
+            }
         } else {
             this.space.add(expr);
         }

@@ -14,6 +14,10 @@ export const reduceND = (atom, space, ground, limit = 100) => {
 
     while (queue.length) {
         const { atom: curr, steps } = queue.shift();
+
+        // Skip if curr is undefined/null
+        if (!curr) continue;
+
         const str = curr.toString();
 
         // Avoid revisiting the same atom
@@ -33,10 +37,10 @@ export const reduceND = (atom, space, ground, limit = 100) => {
                 any = true;
                 if (!deadEnd) queue.push({ atom: reduced, steps: steps + 1 });
             }
-        } else if (isExpression(curr) && curr.components.length) {
+        } else if (isExpression(curr) && curr.components?.length) {
             // If no direct reductions, try reducing subcomponents
             const sub = reduceSubcomponentsND(curr, space, ground, limit - steps);
-            if (sub.length) {
+            if (sub?.length) {
                 for (const expr of sub) {
                     if (!expr.equals(curr)) {
                         queue.push({ atom: expr, steps: steps + 1 });
@@ -63,7 +67,7 @@ const reduceSubcomponentsND = (expr, space, ground, limit) => {
         const stepResults = [...stepYieldInternal(comps[i], space, ground, limit)];
         let variants = stepResults.length > 0
             ? stepResults.filter(s => !s.deadEnd).map(s => s.reduced)
-            : isExpression(comps[i]) && comps[i].components.length
+            : isExpression(comps[i]) && comps[i].components?.length
                 ? reduceSubcomponentsND(comps[i], space, ground, limit)
                 : [];
 
@@ -100,6 +104,10 @@ export const reduceNDAsync = async (atom, space, ground, limit = 100) => {
 
     while (queue.length) {
         const { atom: curr, steps } = queue.shift();
+
+        // Skip if curr is undefined/null
+        if (!curr) continue;
+
         const str = curr.toString();
 
         if (visited.has(str)) continue;
@@ -125,9 +133,9 @@ export const reduceNDAsync = async (atom, space, ground, limit = 100) => {
                 any = true;
                 if (!deadEnd) queue.push({ atom: reduced, steps: steps + 1 });
             }
-        } else if (isExpression(curr) && curr.components.length) {
+        } else if (isExpression(curr) && curr.components?.length) {
             const sub = await reduceSubcomponentsNDAsync(curr, space, ground, limit - steps);
-            if (sub.length) {
+            if (sub?.length) {
                 for (const expr of sub) {
                     if (!expr.equals(curr)) {
                         queue.push({ atom: expr, steps: steps + 1 });
@@ -160,7 +168,7 @@ const reduceSubcomponentsNDAsync = async (expr, space, ground, limit) => {
 
         let variants = stepResults.length > 0
             ? stepResults.filter(s => !s.deadEnd).map(s => s.reduced)
-            : isExpression(comps[i]) && comps[i].components.length
+            : isExpression(comps[i]) && comps[i].components?.length
                 ? await reduceSubcomponentsNDAsync(comps[i], space, ground, limit)
                 : [];
 

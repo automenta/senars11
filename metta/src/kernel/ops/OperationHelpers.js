@@ -41,8 +41,9 @@ export class OperationHelpers {
         if (!val) return false;
         if (!val.name) return Boolean(val);
 
-        if (['False', 'false', 'null', 'Nil'].includes(val.name)) return false;
-        if (['True', 'true'].includes(val.name)) return true;
+        const name = val.name.toLowerCase();
+        if (['false', 'null', 'nil'].includes(name)) return false;
+        if (name === 'true') return true;
 
         const num = parseFloat(val.name);
         return !isNaN(num) ? num !== 0 : true;

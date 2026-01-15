@@ -73,12 +73,36 @@ export class Ground extends CoreRegistry {
      * Register all core operations
      */
     _registerCoreOperations() {
+        // Register core operation categories
+        this._registerBasicOps();
+        this._registerAdvancedOps();
+
+        // Register utility operations
+        this.register('&now', () => sym(String(Date.now())));
+
+        // Register placeholder operations
+        this._registerPlaceholders();
+
+        // Register metaprogramming operations (require interpreter context)
+        registerMetaprogrammingOps(this);
+    }
+
+    /**
+     * Register basic operations
+     */
+    _registerBasicOps() {
         registerArithmeticOps(this);
         registerComparisonOps(this);
         registerLogicalOps(this);
         registerListOps(this);
         registerStringOps(this);
         registerIOOps(this);
+    }
+
+    /**
+     * Register advanced operations
+     */
+    _registerAdvancedOps() {
         registerSpaceOps(this);
         registerIntrospectionOps(this);
         registerTypeOps(this);
@@ -87,17 +111,16 @@ export class Ground extends CoreRegistry {
         registerMathOps(this);
         registerSetOps(this);
         registerHOFOps(this);
+    }
 
-        this.register('&now', () => sym(String(Date.now())));
-
-        // Placeholders (overridden by Interpreter)
+    /**
+     * Register placeholder operations
+     */
+    _registerPlaceholders() {
         ['&subst', '&match', '&type-of'].forEach(op =>
             this.register(op, () => {
                 throw new Error(`${op} should be provided by Interpreter`);
             })
         );
-
-        // Metaprogramming operations (require interpreter context)
-        registerMetaprogrammingOps(this);
     }
 }

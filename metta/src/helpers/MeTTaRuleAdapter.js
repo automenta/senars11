@@ -25,11 +25,13 @@ export class MeTTaRuleAdapter extends Rule {
         if (!this.components || this.components.length < 2) return [];
 
         const [condition, resultTemplate] = this.components;
-        const p1Term = primaryPremise.term;
+        const p1Term = primaryPremise?.term;
         const p2Term = secondaryPremise?.term;
 
+        if (!p1Term) return []; // Primary premise is required
+
         // Construct input term for unification based on arity
-        const inputTerm = secondaryPremise
+        const inputTerm = secondaryPremise && p2Term
             ? {operator: 'Pair', components: [p1Term, p2Term], name: 'Pair', isCompound: true}
             : p1Term;
 

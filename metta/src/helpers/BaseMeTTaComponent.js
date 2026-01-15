@@ -34,12 +34,15 @@ export class BaseMeTTaComponent extends BaseComponent {
      * Update metrics for an operation
      */
     _updateMetrics(metricKey, duration) {
-        const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0};
+        const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0, avgTime: 0, lastDuration: 0};
+        const newCount = current.count + 1;
+        const newTotal = current.totalTime + duration;
+
         this._mettaMetrics.set(metricKey, {
-            ...current,
-            count: current.count + 1,
-            totalTime: current.totalTime + duration,
-            avgTime: (current.totalTime + duration) / (current.count + 1),
+            count: newCount,
+            totalTime: newTotal,
+            errors: current.errors,
+            avgTime: newTotal / newCount,
             lastDuration: duration
         });
     }
@@ -48,8 +51,11 @@ export class BaseMeTTaComponent extends BaseComponent {
      * Record operation error in metrics
      */
     _recordError(metricKey) {
-        const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0};
-        this._mettaMetrics.set(metricKey, {...current, errors: current.errors + 1});
+        const current = this._mettaMetrics.get(metricKey) ?? {count: 0, totalTime: 0, errors: 0, avgTime: 0, lastDuration: 0};
+        this._mettaMetrics.set(metricKey, {
+            ...current,
+            errors: current.errors + 1
+        });
     }
 
     /**

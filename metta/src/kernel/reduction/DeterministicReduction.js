@@ -19,7 +19,7 @@ export const reduce = (atom, space, ground, limit = 10000, cache = null) => {
             let curr = frame.term;
             // Apply reductions iteratively until no more can be applied
             while (ctx.steps < ctx.limit) {
-                const { reduced, applied } = stepInternal(curr, space, ground, limit, cache);
+                const { reduced, applied } = stepInternal?.(curr, space, ground, limit, cache) ?? { reduced: curr, applied: false };
                 if (applied) {
                     curr = reduced;
                     ctx.steps++;
@@ -118,7 +118,7 @@ export const reduceAsync = async (atom, space, ground, limit = 10000, cache = nu
             let curr = frame.term;
             // Apply reductions iteratively until no more can be applied
             while (ctx.steps < ctx.limit) {
-                const { reduced: rawReduced, applied } = stepInternal(curr, space, ground, limit, cache);
+                const { reduced: rawReduced, applied } = stepInternal?.(curr, space, ground, limit, cache) ?? { reduced: curr, applied: false };
                 let reduced = rawReduced;
 
                 if (reduced instanceof Promise) {

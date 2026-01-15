@@ -12,21 +12,8 @@ describe('MeTTa Type System Tests', () => {
         }
     });
 
-    // Setup type inference rules for literals (mocking smart type system)
+    // Setup type annotations for basic types
     beforeEach(() => {
-        const typeRules = `
-            (= (typeof $x) (if (is-number $x) Number (super)))
-            (= (typeof $x) (if (is-string $x) String (super)))
-            (= (typeof $x) (if (is-bool $x) Bool (super)))
-            
-            (= (is-number $x) (^ &is-number $x))
-            (= (is-string $x) (^ &is-string $x))
-            (= (is-bool $x) (^ &is-bool $x))
-            
-            ; Fallback
-            (= (typeof $x) Atom)
-        `;
-
         const manualTypes = `
             (: 42 Number)
             (: "hello" String)

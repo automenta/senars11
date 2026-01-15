@@ -60,9 +60,8 @@ const unifyLists = (t1, t2, bindings) => {
     // Unify common elements
     let currBindings = bindings;
     for (let i = 0; i < minLen; i++) {
-        const b = unifiedUnify(f1.elements[i], f2.elements[i], currBindings);
-        if (!b) return null;
-        currBindings = b;
+        currBindings = unifiedUnify(f1.elements[i], f2.elements[i], currBindings);
+        if (!currBindings) return null;
     }
 
     // Handle remaining elements

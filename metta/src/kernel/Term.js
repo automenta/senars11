@@ -121,7 +121,7 @@ export const isExpression = (a) => a?.type === 'compound';
 /**
  * Check if an atom is a list
  */
-export const isList = (a) => isExpression(a) && a.operator?.name === ':' && a.components.length === 2;
+export const isList = (a) => isExpression(a) && a.operator?.name === ':' && a.components?.length === 2;
 
 /**
  * Flatten a list to an array
