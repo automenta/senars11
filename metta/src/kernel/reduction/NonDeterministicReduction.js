@@ -61,21 +61,18 @@ const reduceSubcomponentsND = (expr, space, ground, limit) => {
     // Try reducing each component
     for (let i = 0; i < comps.length; i++) {
         const stepResults = [...stepYieldInternal(comps[i], space, ground, limit)];
-        let variants = [];
-
-        if (stepResults.length > 0) {
-            variants = stepResults.filter(s => !s.deadEnd).map(s => s.reduced);
-        } else if (isExpression(comps[i]) && comps[i].components.length) {
-            variants = reduceSubcomponentsND(comps[i], space, ground, limit);
-        }
+        let variants = stepResults.length > 0
+            ? stepResults.filter(s => !s.deadEnd).map(s => s.reduced)
+            : isExpression(comps[i]) && comps[i].components.length
+                ? reduceSubcomponentsND(comps[i], space, ground, limit)
+                : [];
 
         if (variants.length) {
-            const res = [];
-            for (const reduced of variants) {
+            const res = variants.map(reduced => {
                 const newComps = [...comps];
                 newComps[i] = reduced;
-                res.push(exp(op, newComps));
-            }
+                return exp(op, newComps);
+            });
             if (res.length) return res;
         }
     }
@@ -84,11 +81,9 @@ const reduceSubcomponentsND = (expr, space, ground, limit) => {
     if (op && isExpression(op)) {
         const vars = [...stepYieldInternal(op, space, ground, limit)];
         if (vars.length) {
-            const res = [];
-            for (const { reduced, deadEnd } of vars) {
-                if (deadEnd) continue;
-                res.push(exp(reduced, comps));
-            }
+            const res = vars
+                .filter(({ deadEnd }) => !deadEnd)
+                .map(({ reduced }) => exp(reduced, comps));
             if (res.length) return res;
         }
     }
@@ -163,21 +158,18 @@ const reduceSubcomponentsNDAsync = async (expr, space, ground, limit) => {
             stepResults.push(r);
         }
 
-        let variants = [];
-
-        if (stepResults.length > 0) {
-            variants = stepResults.filter(s => !s.deadEnd).map(s => s.reduced);
-        } else if (isExpression(comps[i]) && comps[i].components.length) {
-            variants = await reduceSubcomponentsNDAsync(comps[i], space, ground, limit);
-        }
+        let variants = stepResults.length > 0
+            ? stepResults.filter(s => !s.deadEnd).map(s => s.reduced)
+            : isExpression(comps[i]) && comps[i].components.length
+                ? await reduceSubcomponentsNDAsync(comps[i], space, ground, limit)
+                : [];
 
         if (variants.length) {
-            const res = [];
-            for (const reduced of variants) {
+            const res = variants.map(reduced => {
                 const newComps = [...comps];
                 newComps[i] = reduced;
-                res.push(exp(op, newComps));
-            }
+                return exp(op, newComps);
+            });
             if (res.length) return res;
         }
     }
@@ -192,11 +184,9 @@ const reduceSubcomponentsNDAsync = async (expr, space, ground, limit) => {
         }
 
         if (vars.length) {
-            const res = [];
-            for (const { reduced, deadEnd } of vars) {
-                if (deadEnd) continue;
-                res.push(exp(reduced, comps));
-            }
+            const res = vars
+                .filter(({ deadEnd }) => !deadEnd)
+                .map(({ reduced }) => exp(reduced, comps));
             if (res.length) return res;
         }
     }

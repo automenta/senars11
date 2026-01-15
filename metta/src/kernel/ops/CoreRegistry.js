@@ -38,8 +38,9 @@ export class CoreRegistry {
      */
     execute(name, ...args) {
         const norm = this._normalize(name);
-        if (!this.operations.has(norm)) throw new OperationNotFoundError(name);
-        return this.operations.get(norm).fn(...args);
+        const op = this.operations.get(norm);
+        if (!op) throw new OperationNotFoundError(name);
+        return op.fn(...args);
     }
 
     /**

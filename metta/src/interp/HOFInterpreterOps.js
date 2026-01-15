@@ -40,7 +40,7 @@ export function registerHofOps(interpreter) {
     reg('foldl-atom-fast', (list, init, aVar, bVar, opFn) => {
         const elements = interpreter.ground._flattenExpr(list);
         return elements.reduce((acc, el) => {
-            const substituted = Unify.subst(Unify.subst(opFn, { [aVar.name]: acc }), { [bVar.name]: el });
+            const substituted = Unify.subst(opFn, { [aVar.name]: acc, [bVar.name]: el });
             return reduce(substituted, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
         }, init);
     }, { lazy: true });

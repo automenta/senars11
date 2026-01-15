@@ -35,51 +35,37 @@ export class Ground extends CoreRegistry {
     /**
      * Convert an atom to a number
      */
-    _atomToNum(atom) {
-        return OperationHelpers.atomToNum(atom);
-    }
+    _atomToNum(atom) { return OperationHelpers.atomToNum(atom); }
 
     /**
      * Require numeric arguments
      */
-    _requireNums(args, count = null) {
-        return OperationHelpers.requireNums(args, count);
-    }
+    _requireNums(args, count = null) { return OperationHelpers.requireNums(args, count); }
 
     /**
      * Convert a boolean value to a symbolic representation
      */
-    _bool(val) {
-        return OperationHelpers.bool(val);
-    }
+    _bool(val) { return OperationHelpers.bool(val); }
 
     /**
      * Determine the truthiness of a value
      */
-    _truthy(val) {
-        return OperationHelpers.truthy(val);
-    }
+    _truthy(val) { return OperationHelpers.truthy(val); }
 
     /**
      * Flatten an expression to an array of its components
      */
-    _flattenExpr(expr) {
-        return OperationHelpers.flattenExpr(expr);
-    }
+    _flattenExpr(expr) { return OperationHelpers.flattenExpr(expr); }
 
     /**
      * Convert an array to a list representation
      */
-    _listify(arr) {
-        return OperationHelpers.listify(arr);
-    }
+    _listify(arr) { return OperationHelpers.listify(arr); }
 
     /**
      * Check if an atom represents a list
      */
-    _isList(atom) {
-        return OperationHelpers.isList(atom);
-    }
+    _isList(atom) { return OperationHelpers.isList(atom); }
 
     // === Registration ===
 
