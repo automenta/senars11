@@ -29,7 +29,7 @@ export const sym = (name) => {
 /**
  * Create a variable atom
  */
-export const var_ = (name) => {
+export const variable = (name) => {
     const n = name.replace(/^[\?\$]/, '');
     const fullName = `$${n}`;
 
@@ -70,10 +70,17 @@ export const exp = (operator, components) => {
         components: Object.freeze([...components]),
         toString: () => name,
         equals: function (other) {
-            return other?.type === 'compound' &&
-                other.components.length === this.components.length &&
-                (this.operator.equals ? this.operator.equals(other.operator) : this.operator === other.operator) &&
-                this.components.every((c, i) => c.equals(other.components[i]));
+            if (other?.type !== 'compound' ||
+                other.components.length !== this.components.length ||
+                !(this.operator.equals ? this.operator.equals(other.operator) : this.operator === other.operator)) {
+                return false;
+            }
+            for (let i = 0; i < this.components.length; i++) {
+                if (!this.components[i].equals(other.components[i])) {
+                    return false;
+                }
+            }
+            return true;
         }
     };
 
@@ -91,7 +98,7 @@ export const equals = (a, b) => (a === b && a !== null) || (!!a && !!b && a.equa
  */
 export const clone = (atom) => {
     if (!atom) return atom;
-    if (atom.type === 'atom') return atom.operator === null ? sym(atom.name) : var_(atom.name);
+    if (atom.type === 'atom') return atom.operator === null ? sym(atom.name) : variable(atom.name);
     if (atom.type === 'compound') return exp(atom.operator, atom.components.map(clone));
     return atom;
 };
@@ -111,7 +118,6 @@ export const isSymbol = (a) => a?.type === 'atom' && !a.operator && !/^[?$]/.tes
  */
 export const isExpression = (a) => a?.type === 'compound';
 
-// List Utilities
 /**
  * Check if an atom is a list
  */
@@ -135,7 +141,7 @@ export const flattenList = (list) => {
 /**
  * Construct a list from an array
  */
-export const constructList = (elements, tail) => {
+export const constructList = (elements, tail = sym('()')) => {
     let res = tail;
     for (let i = elements.length - 1; i >= 0; i--) {
         res = exp(sym(':'), [elements[i], res]);
@@ -143,10 +149,15 @@ export const constructList = (elements, tail) => {
     return res;
 };
 
+
+// Direct exports for backward compatibility
+export const var_ = variable;
+
 // Legacy/Test Compatibility
 export const Term = {
     sym,
-    var: var_,
+    var: variable,
+    var_: variable,  // Maintain backward compatibility
     exp,
     equals,
     clone,

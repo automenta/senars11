@@ -4,7 +4,10 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
+// Local imports
 import { isVariable, isExpression, isList, flattenList, constructList, exp } from './Term.js';
+
+// External imports
 import * as UnifyCore from '../../../core/src/term/UnifyCore.js';
 
 /**
@@ -40,11 +43,7 @@ const safeSubstitute = (term, bindings) => {
 
     if (isExpression(term)) {
         if (isList(term)) {
-            const { elements, tail } = flattenList(term);
-            const subEls = elements.map(e => safeSubstitute(e, bindings));
-            const subTail = safeSubstitute(tail, bindings);
-            if (subTail === tail && subEls.every((e, i) => e === elements[i])) return term;
-            return constructList(subEls, subTail);
+            return substituteInList(term, bindings);
         }
 
         const op = typeof term.operator === 'object'
@@ -57,6 +56,17 @@ const safeSubstitute = (term, bindings) => {
     }
 
     return term;
+};
+
+/**
+ * Helper function to substitute in list structures
+ */
+const substituteInList = (term, bindings) => {
+    const { elements, tail } = flattenList(term);
+    const subEls = elements.map(e => safeSubstitute(e, bindings));
+    const subTail = safeSubstitute(tail, bindings);
+    if (subTail === tail && subEls.every((e, i) => e === elements[i])) return term;
+    return constructList(subEls, subTail);
 };
 
 /**

@@ -81,10 +81,9 @@ export class OperationHelpers {
      * Convert an array to a list representation
      */
     static listify(arr) {
-        if (!arr || arr.length === 0) return sym('()');
-        return constructList(arr, sym('()'));
+        return arr && arr.length ? constructList(arr, sym('()')) : sym('()');
     }
-    
+
     /**
      * Check if an atom represents a list
      */

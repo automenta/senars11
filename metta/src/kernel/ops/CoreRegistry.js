@@ -4,6 +4,7 @@
 
 import { sym, exp } from '../../kernel/Term.js';
 import { Unify } from '../../kernel/Unify.js';
+import { OperationNotFoundError } from '../../errors/MeTTaErrors.js';
 
 export class CoreRegistry {
     constructor() {
@@ -37,7 +38,7 @@ export class CoreRegistry {
      */
     execute(name, ...args) {
         const norm = this._normalize(name);
-        if (!this.operations.has(norm)) throw new Error(`Operation ${name} not found`);
+        if (!this.operations.has(norm)) throw new OperationNotFoundError(name);
         return this.operations.get(norm).fn(...args);
     }
 

@@ -2,6 +2,7 @@
  * AdvancedOps.js - Advanced interpreter operations
  */
 
+// Kernel imports
 import { Term } from '../kernel/Term.js';
 import { Unify } from '../kernel/Unify.js';
 import { objToBindingsAtom, bindingsAtomToObj } from '../kernel/Bindings.js';
@@ -112,9 +113,9 @@ export function registerAdvancedOps(interpreter) {
 
     // Control flow operations
     reg('&if', (cond, thenB, elseB) => {
-        const res = reduce(cond, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
-        if (res.name === 'True') return reduce(thenB, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
-        if (res.name === 'False') return reduce(elseB, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
+        const res = interpreter._reduceDeterministic(cond);
+        if (res.name === 'True') return interpreter._reduceDeterministic(thenB);
+        if (res.name === 'False') return interpreter._reduceDeterministic(elseB);
         return exp('if', [res, thenB, elseB]);
     }, { lazy: true });
 
@@ -123,21 +124,21 @@ export function registerAdvancedOps(interpreter) {
     // Higher-order function operations
     reg('&map-fast', (fn, list) =>
         interpreter._listify(interpreter.ground._flattenExpr(list).map(el =>
-            reduce(exp(fn, [el]), interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache)
+            interpreter._reduceDeterministic(exp(fn, [el]))
         )),
         { lazy: true }
     );
 
     reg('&filter-fast', (pred, list) =>
         interpreter._listify(interpreter.ground._flattenExpr(list).filter(el =>
-            interpreter.ground._truthy(reduce(exp(pred, [el]), interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache))
+            interpreter.ground._truthy(interpreter._reduceDeterministic(exp(pred, [el])))
         )),
         { lazy: true }
     );
 
     reg('&foldl-fast', (fn, init, list) =>
         interpreter.ground._flattenExpr(list).reduce((acc, el) =>
-            reduce(exp(fn, [acc, el]), interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache),
+            interpreter._reduceDeterministic(exp(fn, [acc, el])),
             init
         ),
         { lazy: true }
@@ -151,7 +152,7 @@ export function registerAdvancedOps(interpreter) {
         let result = elements[0]; // Start with first element as accumulator
         for (let i = 1; i < elements.length; i++) {
             const substOp = Unify.subst(op, { [accVar.name]: result, [elVar.name]: elements[i] });
-            result = reduce(substOp, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps, interpreter.memoCache);
+            result = interpreter._reduceDeterministic(substOp);
         }
         return result;
     }, { lazy: true });

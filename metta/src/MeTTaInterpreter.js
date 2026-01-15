@@ -4,24 +4,36 @@
  * Following AGENTS.md: Elegant, Consolidated, Consistent, Organized, Deeply deduplicated
  */
 
+// Standard library imports
 import { TermFactory } from '@senars/core/src/term/TermFactory.js';
+
+// Local imports grouped by category
+// Core components
 import { BaseMeTTaComponent } from './helpers/BaseMeTTaComponent.js';
 import { Parser } from './Parser.js';
 import { TypeChecker, TypeSystem } from './TypeSystem.js';
+
+// Kernel components
 import { objToBindingsAtom, bindingsAtomToObj } from './kernel/Bindings.js';
 import { Ground } from './kernel/Ground.js';
 import { MemoizationCache } from './kernel/MemoizationCache.js';
 import { reduce, reduceND, step, match, reduceAsync, reduceNDAsync } from './kernel/Reduce.js';
-import { ReactiveSpace } from './extensions/ReactiveSpace.js';
 import { Space } from './kernel/Space.js';
 import { Term, isList, flattenList, isExpression } from './kernel/Term.js';
 import { Unify } from './kernel/Unify.js';
 import { Formatter } from './kernel/Formatter.js';
+
+// Extensions
+import { ReactiveSpace } from './extensions/ReactiveSpace.js';
+
+// Standard library
 import { loadStdlib } from './stdlib/StdlibLoader.js';
+
+// Platform
 import { WorkerPool } from './platform/WorkerPool.js';
 import { ENV } from './platform/env.js';
 
-// Import modular operations
+// Operations
 import { registerAdvancedOps } from './interp/AdvancedOps.js';
 import { registerReactiveOps } from './interp/ReactiveOps.js';
 import { registerParallelOps } from './interp/ParallelOps.js';
@@ -58,11 +70,8 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * Initialize all operation sets in proper order
      */
     _initializeOperations() {
-        registerAdvancedOps(this);
-        registerReactiveOps(this);
-        registerParallelOps(this);
-        registerMinimalOps(this);
-        registerHofOps(this);
+        [registerAdvancedOps, registerReactiveOps, registerParallelOps, registerMinimalOps, registerHofOps]
+            .forEach(registerFn => registerFn(this));
     }
 
     /**
@@ -70,9 +79,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      */
     _initializeBridge() {
         const bridge = this.reasoner?.bridge || this.config.bridge;
-        if (bridge?.registerPrimitives) {
-            bridge.registerPrimitives(this.ground);
-        }
+        bridge?.registerPrimitives?.(this.ground);
     }
 
     /**
@@ -115,13 +122,15 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         const { flattenList, sym, exp } = Term;
 
         // Extract pairs based on binding structure
-        const pairs = bindings.operator?.name === ':'
-            ? flattenList(bindings).elements
-            : bindings.type === 'compound'
-                ? [bindings.operator, ...bindings.components]
-                : bindings.name !== '()'
-                    ? (console.error('Invalid &let* bindings', bindings), [])
-                    : [];
+        const pairs = (() => {
+            if (bindings.operator?.name === ':') return flattenList(bindings).elements;
+            if (bindings.type === 'compound') return [bindings.operator, ...bindings.components];
+            if (bindings.name !== '()') {
+                console.error('Invalid &let* bindings', bindings);
+                return [];
+            }
+            return [];
+        })();
 
         if (!pairs.length) return reduce(body, this.space, this.ground);
 
@@ -229,6 +238,13 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
             this._mettaMetrics.set('reductionSteps', steps + 1);
             return res;
         });
+    }
+
+    /**
+     * Helper method to perform deterministic reduction with common parameters
+     */
+    _reduceDeterministic(atom) {
+        return reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
     }
 
     /**
