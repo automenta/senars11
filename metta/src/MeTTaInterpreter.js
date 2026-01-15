@@ -21,6 +21,13 @@ import { loadStdlib } from './stdlib/StdlibLoader.js';
 import { WorkerPool } from './platform/WorkerPool.js';
 import { ENV } from './platform/env.js';
 
+// Import modular operations
+import { registerAdvancedOps } from './interp/AdvancedOps.js';
+import { registerReactiveOps } from './interp/ReactiveOps.js';
+import { registerParallelOps } from './interp/ParallelOps.js';
+import { registerHofOps } from './interp/HOFInterpreterOps.js';
+import { registerMinimalOps } from './interp/MinimalOps.js';
+
 export class MeTTaInterpreter extends BaseMeTTaComponent {
     constructor(reasoner, options = {}) {
         // Normalize arguments: if reasoner is actually options object, swap
@@ -51,11 +58,11 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * Initialize all operation sets in proper order
      */
     _initializeOperations() {
-        this.registerAdvancedOps();
-        this.registerReactiveOps();
-        this.registerParallelOps();
-        this.registerMinimalOps();
-        this.registerHofOps();
+        registerAdvancedOps(this);
+        registerReactiveOps(this);
+        registerParallelOps(this);
+        registerMinimalOps(this);
+        registerHofOps(this);
     }
 
     /**
@@ -81,305 +88,16 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         }
     }
 
-    /**
-     * Register advanced operations that extend the core functionality
-     */
-    registerAdvancedOps() {
-        const { sym, exp, var: v } = Term;
-        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
 
-        // Substitution operations
-        reg('&subst', (a, b, c) =>
-            c ? Unify.subst(c, a.name ? { [a.name]: b } : {}) : Unify.subst(a, bindingsAtomToObj(b)),
-            { lazy: true }
-        );
-
-        reg('&let', (vari, val, body) =>
-            Unify.subst(body, vari?.name ? { [vari.name]: val } : {}),
-            { lazy: true }
-        );
-
-        // Unification operations
-        reg('&unify', (pat, term) => {
-            const b = Unify.unify(pat, term);
-            return b ? objToBindingsAtom(b) : sym('False');
-        });
-
-        // Matching operations
-        reg('&match', (s, p, t) => this._listify(match(this.space, p, t)), { lazy: true });
-        reg('&query', (p, t) => this._listify(match(this.space, p, t)));
-
-        // Type operations
-        reg('&type-of', (atom) => {
-            const res = match(this.space, exp(':', [atom, v('type')]), v('type'));
-            return res.length ? res[0] : sym('Atom');
-        });
-
-        reg('&type-infer', (term) => {
-            try {
-                return sym(this.typeChecker?.typeToString(this.typeChecker.infer(term, {})) || 'Unknown');
-            } catch {
-                return sym('Error');
-            }
-        });
-
-        reg('&type-check', (t, type) => sym(this.typeChecker ? 'True' : 'False'));
-
-        // Context-dependent type operations
-        reg('get-type', (atom, space) => {
-            const s = space || this.space;
-            const typePattern = exp(sym(':'), [atom, v('type')]);
-            const results = match(s, typePattern, v('type'));
-            return results.length ? results[0] : sym('%Undefined%');
-        }, { lazy: true });
-
-        reg('match-types', (t1, t2, thenBranch, elseBranch) => {
-            // Handle %Undefined% and Atom as wildcards
-            if (t1.name === '%Undefined%' || t2.name === '%Undefined%' ||
-                t1.name === 'Atom' || t2.name === 'Atom') {
-                return thenBranch;
-            }
-            const bindings = Unify.unify(t1, t2);
-            return bindings !== null ? thenBranch : elseBranch;
-        }, { lazy: true });
-
-        reg('assert-type', (atom, expectedType, space) => {
-            const s = space || this.space;
-            const actualType = this.ground.execute('&get-type', atom, s);
-
-            // No type info = pass through
-            if (actualType.name === '%Undefined%') return atom;
-
-            // Unify actual and expected types
-            const bindings = Unify.unify(actualType, expectedType);
-            if (bindings !== null) return atom;
-
-            // Type mismatch - return error
-            return exp(sym('Error'), [
-                atom,
-                exp(sym('TypeError'), [expectedType, actualType])
-            ]);
-        }, { lazy: true });
-
-        // Space operations
-        reg('&get-atoms', () => this._listify(this.space.all()));
-        reg('&add-atom', (atom) => { this.space.add(atom); return atom; });
-        reg('&rm-atom', (atom) => { this.space.remove(atom); return atom; });
-
-        // I/O operations
-        reg('&println', (...args) => {
-            console.log(...args.map(a => Formatter.toHyperonString(a)));
-            return sym('()');
-        });
-
-        // List operations
-        reg('&length', (list) => sym(isList(list) ? flattenList(list).elements.length.toString() : '0'));
-
-        // Control flow operations
-        reg('&if', (cond, thenB, elseB) => {
-            const res = reduce(cond, this.space, this.ground);
-            if (res.name === 'True') return reduce(thenB, this.space, this.ground);
-            if (res.name === 'False') return reduce(elseB, this.space, this.ground);
-            return exp('if', [res, thenB, elseB]);
-        }, { lazy: true });
-
-        reg('&let*', (binds, body) => this._handleLetStar(binds, body), { lazy: true });
-
-        // Higher-order function operations
-        reg('&map-fast', (fn, list) =>
-            this._listify(this._flattenToList(list).map(el =>
-                reduce(exp(fn, [el]), this.space, this.ground)
-            )),
-            { lazy: true }
-        );
-
-        reg('&filter-fast', (pred, list) =>
-            this._listify(this._flattenToList(list).filter(el =>
-                this._truthy(reduce(exp(pred, [el]), this.space, this.ground))
-            )),
-            { lazy: true }
-        );
-
-        reg('&foldl-fast', (fn, init, list) =>
-            this._flattenToList(list).reduce((acc, el) =>
-                reduce(exp(fn, [acc, el]), this.space, this.ground),
-                init
-            ),
-            { lazy: true }
-        );
-    }
-
-    /**
-     * Register reactive operations
-     */
-    registerReactiveOps() {
-        const { sym, exp } = Term;
-        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
-
-        reg('&get-event-log', (sinceAtom) => {
-            const since = sinceAtom ? (parseInt(sinceAtom.name) || 0) : 0;
-            const log = this.space.getEventLog?.(since) || [];
-
-            return this._listify(log.map(e => {
-                let dataAtom = e.data;
-                if (e.event === 'addRule') {
-                    // Convert rule object to (= pattern result)
-                    dataAtom = exp(sym('='), [e.data.pattern, e.data.result]);
-                }
-
-                return exp(sym('Event'), [
-                    sym(e.event),
-                    dataAtom,
-                    sym(String(e.timestamp))
-                ]);
-            }));
-        }, { lazy: true });
-
-        reg('&clear-event-log', () => {
-            this.space.clearEventLog?.();
-            return sym('()');
-        });
-    }
 
     /**
      * Register parallel evaluation operations
      */
-    registerParallelOps() {
-        const { sym, exp } = Term;
-        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
 
-        reg('&map-parallel', async (listRaw, vari, templ) => {
-            let list = listRaw;
-            if (listRaw) {
-                const evalRes = await this.evaluateAsync(listRaw);
-                if (evalRes && evalRes.length > 0) list = evalRes[0];
-            }
-
-            const items = this._flattenToList(list);
-            if (!this.workerPool) {
-                this.workerPool = new WorkerPool(
-                    this.config.workerScript || (ENV.isNode ?
-                        (new URL('./platform/node/metta-worker.js', import.meta.url).pathname) :
-                        '/metta-worker.js'),
-                    this.config.workerPoolSize || 4
-                );
-            }
-
-            const results = await this.workerPool.mapParallel(items, item => {
-                const subst = Unify.subst(templ, { [vari.name]: item });
-                return { code: `!${subst.toString()}` };
-            });
-
-            return this._listify(results.map(r => {
-                const parsed = this.parser.parse(r);
-                return parsed || sym('()');
-            }));
-        }, { lazy: true });
-    }
-
-    /**
-     * Register higher-order function operations with interpreter awareness
-     */
-    registerHofOps() {
-        const { sym, exp, isExpression } = Term;
-        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
-
-        // Override HOF operations with interpreter-aware versions
-        reg('map-atom-fast', (list, varName, transformFn) => {
-            const elements = this.ground._flattenExpr(list);
-            const mapped = elements.map(el => reduce(
-                Unify.subst(transformFn, { [varName.name]: el }),
-                this.space,
-                this.ground,
-                this.config.maxReductionSteps,
-                this.memoCache
-            ));
-            return this.ground._listify(mapped);
-        }, { lazy: true });
-
-        reg('filter-atom-fast', (list, varName, predFn) => {
-            const elements = this.ground._flattenExpr(list);
-            const filtered = elements.filter(el =>
-                this.ground._truthy(reduce(
-                    Unify.subst(predFn, { [varName.name]: el }),
-                    this.space,
-                    this.ground,
-                    this.config.maxReductionSteps,
-                    this.memoCache
-                ))
-            );
-            return this.ground._listify(filtered);
-        }, { lazy: true });
-
-        reg('foldl-atom-fast', (list, init, aVar, bVar, opFn) => {
-            const elements = this.ground._flattenExpr(list);
-            return elements.reduce((acc, el) => {
-                const substituted = Unify.subst(Unify.subst(opFn, { [aVar.name]: acc }), { [bVar.name]: el });
-                return reduce(substituted, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-            }, init);
-        }, { lazy: true });
-    }
 
     /**
      * Register minimal core operations
      */
-    registerMinimalOps() {
-        const { sym, exp, isExpression } = Term;
-        const reg = (n, fn, opts) => this.ground.register(n, fn, opts);
-
-        reg('eval', (atom) =>
-            step(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache).reduced,
-            { lazy: true }
-        );
-
-        reg('chain', (atom, vari, templ) => {
-            const res = reduce(atom, this.space, this.ground, this.config.maxReductionSteps, this.memoCache);
-            return (res.name === 'Empty' || (isExpression(res) && res.operator?.name === 'Error'))
-                ? res
-                : Unify.subst(templ, { [vari.name]: res });
-        }, { lazy: true });
-
-        reg('unify', (atom, pat, thenB, elseB) => {
-            const b = Unify.unify(atom, pat);
-            return b ? Unify.subst(thenB, b) : elseB;
-        }, { lazy: true });
-
-        reg('function', (body) => {
-            let curr = body;
-            const limit = this.config.maxReductionSteps || 1000;
-
-            for (let i = 0; i < limit; i++) {
-                const res = step(curr, this.space, this.ground, limit, this.memoCache);
-                const red = res.reduced;
-
-                if (isExpression(red) && red.operator?.name === 'return') {
-                    return red.components[0] || sym('()');
-                }
-
-                if (red === curr || red.equals?.(curr)) break;
-                if (!res.applied) break;
-
-                curr = red;
-            }
-
-            return exp(sym('Error'), [body, sym('NoReturn')]);
-        }, { lazy: true });
-
-        reg('return', (val) => exp(sym('return'), [val]), { lazy: true });
-
-        reg('collapse-bind', (atom) =>
-            this._listify(reduceND(atom, this.space, this.ground, this.config.maxReductionSteps)),
-            { lazy: true }
-        );
-
-        reg('superpose-bind', (collapsed) => {
-            const items = this._flattenToList(collapsed);
-            return items.length === 1 ? items[0] : exp(sym('superpose'), items);
-        });
-
-        reg('context-space', () => this.space, { lazy: true });
-        reg('noeval', (atom) => atom, { lazy: true });
-    }
 
     /**
      * Convert array to list representation

@@ -1,0 +1,233 @@
+/**
+ * StepFunctions.js - Single-step reduction functions
+ */
+
+import { isExpression, exp, isList, flattenList } from '../../kernel/Term.js';
+import { Unify } from '../../kernel/Unify.js';
+
+/**
+ * Yield possible reductions for an atom
+ */
+export function* stepYield(atom, space, ground, limit = 10000, cache = null) {
+    if (!isExpression(atom)) return;
+
+    // Check cache first
+    const cached = cache?.get?.(atom);
+    if (cached !== undefined) {
+        yield { reduced: cached, applied: true };
+        return;
+    }
+
+    const opName = atom.operator?.name;
+    const comps = atom.components;
+
+    // Handle superposition
+    if (opName === 'superpose' && comps?.length > 0) {
+        const arg = comps[0];
+        if (isExpression(arg)) {
+            let alts = [];
+
+            // If it's a list structure, flatten it
+            if (isList(arg)) {
+                const flattened = flattenList(arg);
+                alts = flattened.elements;
+            } else {
+                // If it's a simple expression, treat operator and components as alternatives
+                alts = [arg.operator, ...arg.components];
+            }
+
+            if (alts.length === 0) {
+                yield { reduced: null, applied: true, deadEnd: true };
+                return;
+            }
+            for (const alt of alts) yield { reduced: alt, applied: true };
+            return;
+        }
+        if (arg.name === '()') {
+            yield { reduced: null, applied: true, deadEnd: true };
+            return;
+        }
+    }
+
+    // Handle grounded operations
+    if (opName && ground.has(opName)) {
+        let applied = false;
+        for (const res of executeGroundedOpND(atom, opName, space, ground, limit)) {
+            if (res.applied) {
+                applied = true;
+                cache?.set(atom, res.reduced);
+                yield res;
+            }
+        }
+        if (applied) return;
+    }
+
+    // Handle explicit grounded call (^)
+    if (opName === '^' && comps?.[0]?.name && ground.has(comps[0].name)) {
+        const op = comps[0].name;
+        const args = comps.slice(1);
+        let applied = false;
+        for (const res of executeGroundedOpWithArgsND(atom, op, args, space, ground, limit)) {
+            if (res.applied) {
+                applied = true;
+                cache?.set(atom, res.reduced);
+                yield res;
+            }
+        }
+        if (applied) return;
+    }
+
+    // Handle rule matching
+    for (const rule of space.rulesFor(atom)) {
+        if (!rule.pattern) continue;
+        const bindings = Unify.unify(rule.pattern, atom);
+        if (bindings) {
+            yield {
+                reduced: typeof rule.result === 'function'
+                    ? rule.result(bindings)
+                    : Unify.subst(rule.result, bindings),
+                applied: true
+            };
+        }
+    }
+}
+
+/**
+ * Perform a single reduction step
+ */
+export const step = (atom, space, ground, limit, cache) => {
+    const gen = stepYield(atom, space, ground, limit, cache);
+    const { value, done } = gen.next();
+    if (!done) {
+        return value.deadEnd
+            ? { reduced: exp(atom.operator || atom, []), applied: true }
+            : value;
+    }
+    return { reduced: atom, applied: false };
+};
+
+// Internal function for non-deterministic reduction within ND context
+let reduceNDInternalFunc = null;
+
+// Function to set the internal reference
+export const setReduceNDInternalReference = (ndReduceFunc) => {
+    reduceNDInternalFunc = ndReduceFunc;
+};
+
+/**
+ * Execute a grounded operation with non-deterministic evaluation
+ */
+export function* executeGroundedOpND(atom, opName, space, ground, limit) {
+    const args = atom.components;
+
+    // If operation is lazy, execute directly without reducing arguments
+    if (ground.isLazy(opName)) {
+        try {
+            yield { reduced: ground.execute(opName, ...args), applied: true };
+        } catch (e) {
+            console.error('Lazy op error', opName, e);
+        }
+        return;
+    }
+
+    // Special handling for certain operations that need deterministic evaluation of arguments
+    // For example, &if should evaluate the condition deterministically first
+    if (opName === '&if' && args.length >= 3) {
+        // Evaluate the condition deterministically first
+        const conditionResult = reduceDeterministicInternal(args[0], space, ground, limit, null);
+
+        // Then evaluate the appropriate branch based on the condition
+        if (conditionResult.name === 'True') {
+            yield { reduced: reduceDeterministicInternal(args[1], space, ground, limit, null), applied: true };
+        } else if (conditionResult.name === 'False') {
+            yield { reduced: reduceDeterministicInternal(args[2], space, ground, limit, null), applied: true };
+        } else {
+            // If condition is not clearly True/False, return the original expression
+            yield { reduced: atom, applied: false };
+        }
+        return;
+    }
+
+    // Reduce arguments first to get all possible values
+    const variants = args.map(arg => reduceNDInternalFunc(arg, space, ground, limit));
+
+    // If any argument has no results, return nothing
+    if (variants.some(v => v.length === 0)) return;
+
+    // Generate all combinations of argument values
+    for (const combo of cartesianProduct(variants)) {
+        try {
+            yield { reduced: ground.execute(opName, ...combo), applied: true };
+        } catch (e) {
+            console.error('Grounded op error', opName, e);
+        }
+    }
+}
+
+/**
+ * Execute a grounded operation with specific arguments
+ */
+export function* executeGroundedOpWithArgsND(atom, opName, args, space, ground, limit) {
+    if (ground.isLazy(opName)) {
+        try {
+            yield { reduced: ground.execute(opName, ...args), applied: true };
+        } catch (e) {
+            console.error('Lazy op args error', opName, e);
+        }
+        return;
+    }
+
+    const variants = args.map(arg => reduceNDInternalFunc(arg, space, ground, limit));
+    if (variants.some(v => v.length === 0)) return;
+
+    for (const combo of cartesianProduct(variants)) {
+        try {
+            yield { reduced: ground.execute(opName, ...combo), applied: true };
+        } catch (e) {
+            console.error('Grounded op args error', opName, e);
+        }
+    }
+}
+
+/**
+ * Generate Cartesian product of arrays
+ */
+function* cartesianProduct(arrays) {
+    if (arrays.length === 0) {
+        yield [];
+        return;
+    }
+
+    const [head, ...tail] = arrays;
+    for (const h of head) {
+        if (tail.length === 0) {
+            yield [h];
+        } else {
+            for (const t of cartesianProduct(tail)) {
+                yield [h, ...t];
+            }
+        }
+    }
+}
+
+/**
+ * Check if an atom is a grounded call
+ */
+export const isGroundedCall = (atom, ground) => {
+    if (!isExpression(atom)) return false;
+    const op = atom.operator?.name;
+    return (op && ground.has(op)) ||
+        (op === '^' && atom.components?.[0]?.name && ground.has(atom.components[0].name));
+};
+
+/**
+ * Match atoms in space against a pattern
+ */
+export const match = (space, pattern, template) => {
+    const res = [];
+    for (const cand of space.all()) {
+        const bind = Unify.unify(pattern, cand);
+        if (bind) res.push(Unify.subst(template, bind));
+    }
+    return res;
+};
