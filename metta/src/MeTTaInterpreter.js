@@ -122,15 +122,9 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         const { flattenList, sym, exp } = Term;
 
         // Extract pairs based on binding structure
-        const pairs = (() => {
-            if (bindings.operator?.name === ':') return flattenList(bindings).elements;
-            if (bindings.type === 'compound') return [bindings.operator, ...bindings.components];
-            if (bindings.name !== '()') {
-                console.error('Invalid &let* bindings', bindings);
-                return [];
-            }
-            return [];
-        })();
+        const pairs = bindings.operator?.name === ':' ? flattenList(bindings).elements :
+                     bindings.type === 'compound' ? [bindings.operator, ...bindings.components] :
+                     bindings.name !== '()' ? (console.error('Invalid &let* bindings', bindings), []) : [];
 
         if (!pairs.length) return reduce(body, this.space, this.ground);
 
@@ -138,16 +132,10 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
         if (!first?.components?.length) return body;
 
         // Extract variable and value
-        const [v, val] = first.operator?.name === ':'
-            ? first.components
-            : [first.operator, first.components[0]];
-
+        const [v, val] = first.operator?.name === ':' ? first.components : [first.operator, first.components[0]];
         if (!v || !val) return body;
 
-        const inner = rest.length
-            ? exp(sym('let*'), [exp(rest[0], rest.slice(1)), body])
-            : body;
-
+        const inner = rest.length ? exp(sym('let*'), [exp(rest[0], rest.slice(1)), body]) : body;
         return reduce(exp(sym('let'), [v, val, inner]), this.space, this.ground);
     }
 
@@ -182,8 +170,7 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
 
                 if (e.name === '!' && i + 1 < exprs.length) {
                     const evalRes = this.evaluate(exprs[++i]);
-                    if (Array.isArray(evalRes)) res.push(...evalRes);
-                    else res.push(evalRes);
+                    Array.isArray(evalRes) ? res.push(...evalRes) : res.push(evalRes);
                     continue;
                 }
 
@@ -209,22 +196,18 @@ export class MeTTaInterpreter extends BaseMeTTaComponent {
      * Process a single expression (add rule or evaluate)
      */
     _processExpression(expr, results) {
-        if ((expr.operator === '=' || expr.operator?.name === '=') && expr.components?.length === 2) {
+        const isRule = (expr.operator === '=' || expr.operator?.name === '=') && expr.components?.length === 2;
+
+        if (isRule) {
             this.space.addRule(expr.components[0], expr.components[1]);
             if (results) results.push(expr);
+        } else if (results) {
+            const evalRes = this.evaluate(expr);
+            Array.isArray(evalRes)
+                ? (results.push(...evalRes), evalRes.forEach(r => this.space.add(r)))
+                : (results.push(evalRes), this.space.add(evalRes));
         } else {
-            if (results) {
-                const evalRes = this.evaluate(expr);
-                if (Array.isArray(evalRes)) {
-                    results.push(...evalRes);
-                    evalRes.forEach(r => this.space.add(r));
-                } else {
-                    results.push(evalRes);
-                    this.space.add(evalRes);
-                }
-            } else {
-                this.space.add(expr);
-            }
+            this.space.add(expr);
         }
     }
 

@@ -3,6 +3,7 @@
  */
 
 import { Term } from '../kernel/Term.js';
+import { Unify } from '../kernel/Unify.js';
 import { step, reduce, reduceND } from '../kernel/Reduce.js';
 
 export function registerMinimalOps(interpreter) {

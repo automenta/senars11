@@ -95,10 +95,7 @@ export class SeNARSBridge extends BaseMeTTaComponent {
         this.trackOperation(`setConcept${type.toUpperCase()}`, () => {
             const term = atom?.toString?.() ?? String(atom);
             const c = this.reasoner?.memory?.getConcept?.(term);
-            if (c?.budget) {
-                c.budget[type] = value;
-                this.emitMeTTaEvent(`${type}-updated`, {concept: term, [type]: value});
-            }
+            if (c?.budget) c.budget[type] = value, this.emitMeTTaEvent(`${type}-updated`, {concept: term, [type]: value});
         });
     }
 

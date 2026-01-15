@@ -95,22 +95,17 @@ export class TypeSystem {
         if (t1 === t2) return true;
         if (t1.kind === 'TypeVar') return this.bindTypeVar(t1, t2);
         if (t2.kind === 'TypeVar') return this.bindTypeVar(t2, t1);
-
         if (t1.kind !== t2.kind) return false;
 
         switch (t1.kind) {
-            case 'Base':
-                return t1.name === t2.name;
-            case 'Arrow':
-                return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
-            case 'List':
-                return this.unifyTypes(t1.element, t2.element);
+            case 'Base': return t1.name === t2.name;
+            case 'Arrow': return this.unifyTypes(t1.from, t2.from) && this.unifyTypes(t1.to, t2.to);
+            case 'List': return this.unifyTypes(t1.element, t2.element);
             case 'TypeCtor':
                 return t1.name === t2.name &&
                     t1.params.length === t2.params.length &&
                     t1.params.every((p, i) => this.unifyTypes(p, t2.params[i]));
-            default:
-                return false;
+            default: return false;
         }
     }
 
@@ -156,8 +151,7 @@ export class TypeSystem {
                     type.name,
                     type.params.map(p => this.applySubstitution(p))
                 );
-            default:
-                return type;
+            default: return type;
         }
     }
 

@@ -141,12 +141,9 @@ class InternalParser {
      * Parse a single atom or expression
      */
     parse() {
-        if (this.finished) {
-            throw new Error("Unexpected end of input");
-        }
+        if (this.finished) throw new Error("Unexpected end of input");
 
         const token = this.peek();
-
         if (token === '(') return this.parseExpression();
 
         this.consume();
@@ -158,9 +155,7 @@ class InternalParser {
      * Parse an expression (list of atoms enclosed in parentheses)
      */
     parseExpression() {
-        if (this.consume() !== '(') {
-            throw new Error("Expected '(' at start of expression");
-        }
+        if (this.consume() !== '(') throw new Error("Expected '(' at start of expression");
 
         if (!this.finished && this.peek() === ')') {
             this.consume();
@@ -176,9 +171,7 @@ class InternalParser {
             }
         }
 
-        if (this.finished) {
-            throw new Error("Unexpected end of input, expected ')'");
-        }
+        if (this.finished) throw new Error("Unexpected end of input, expected ')'");
 
         this.consume(); // Skip ')'
 

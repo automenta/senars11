@@ -107,8 +107,7 @@ export function registerAdvancedOps(interpreter) {
             return sym(String(flattened.length));
         }
         // For other expressions, count components
-        if (list?.components) return sym(String(list.components.length + 1)); // +1 for operator
-        return sym('1'); // Single atom
+        return sym(String(list?.components ? list.components.length + 1 : 1)); // +1 for operator, or 1 for single atom
     });
 
     // Control flow operations
