@@ -5,6 +5,8 @@ import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
 import { GraphManager } from './visualization/GraphManager.js';
+import { MessageFilter, MESSAGE_CATEGORIES, categorizeMessage } from './repl/MessageFilter.js';
+import { NotebookManager, CodeCell, ResultCell } from './repl/NotebookManager.js';
 
 console.log('--- SeNARS IDE loading ---');
 
@@ -22,6 +24,8 @@ class SeNARSIDE {
         this.connectionMode = 'local'; // 'local' or 'remote'
         this.components = new Map();
         this.graphManager = null;
+        this.messageFilter = new MessageFilter();
+        this.notebook = null; // Initialized when REPL is created
 
         // State
         this.cycleCount = 0;
@@ -177,11 +181,61 @@ class SeNARSIDE {
         statusBar.appendChild(stats);
         replContainer.appendChild(statusBar);
 
-        // Messages container
-        const messagesContainer = document.createElement('div');
-        messagesContainer.id = 'repl-messages';
-        messagesContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.9em;';
-        replContainer.appendChild(messagesContainer);
+        // Filter toolbar
+        const filterToolbar = document.createElement('div');
+        filterToolbar.className = 'filter-toolbar';
+        filterToolbar.style.cssText = 'padding: 8px; background: #2d2d2d; border-bottom: 1px solid #333; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;';
+
+        // Search input
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = '🔍 Search messages...';
+        searchInput.style.cssText = 'flex: 1; min-width: 150px; background: #1e1e1e; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;';
+        searchInput.oninput = (e) => {
+            this.messageFilter.setSearchTerm(e.target.value);
+            this.filterMessages();
+        };
+
+        // Category filter buttons
+        const categoryButtons = document.createElement('div');
+        categoryButtons.style.cssText = 'display: flex; gap: 4px; flex-wrap: wrap;';
+
+
+        Object.entries(MESSAGE_CATEGORIES).forEach(([id, cat]) => {
+            const btn = document.createElement('button');
+            btn.dataset.category = id;
+            btn.innerHTML = `${cat.icon} ${cat.label}`;
+            btn.style.cssText = `
+                padding: 4px 8px;
+                background: ${this.messageFilter.isCategoryVisible(id) ? cat.color : '#333'};
+                color: ${this.messageFilter.isCategoryVisible(id) ? '#000' : '#888'};
+                border: none;
+                cursor: pointer;
+                border-radius: 3px;
+                font-size: 0.85em;
+                font-weight: ${this.messageFilter.isCategoryVisible(id) ? 'bold' : 'normal'};
+                transition: all 0.2s;
+            `;
+            btn.onclick = () => {
+                this.messageFilter.toggleCategory(id);
+                this.updateFilterButtons();
+                this.filterMessages();
+            };
+            categoryButtons.appendChild(btn);
+        });
+
+        filterToolbar.appendChild(searchInput);
+        filterToolbar.appendChild(categoryButtons);
+        replContainer.appendChild(filterToolbar);
+
+        // Notebook container (cells go here)
+        const notebookContainer = document.createElement('div');
+        notebookContainer.id = 'repl-notebook';
+        notebookContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 10px;';
+        replContainer.appendChild(notebookContainer);
+
+        // Initialize notebook manager
+        this.notebook = new NotebookManager(notebookContainer);
 
         // Input area
         const inputArea = document.createElement('div');
@@ -201,8 +255,49 @@ class SeNARSIDE {
         });
 
         const buttonBar = document.createElement('div');
-        buttonBar.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+        buttonBar.style.cssText = 'display: flex; gap: 8px; margin-top: 8px; align-items: center;';
 
+        // Reasoner controls
+        const reasonerControls = document.createElement('div');
+        reasonerControls.style.cssText = 'display: flex; gap: 4px; margin-right: 12px; padding-right: 12px; border-right: 1px solid #444;';
+
+        const startBtn = document.createElement('button');
+        startBtn.innerHTML = '▶️';
+        startBtn.title = 'Start reasoner';
+        startBtn.onclick = () => this.controlReasoner('start');
+        startBtn.style.cssText = 'padding: 6px 10px; background: #0e639c; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        const pauseBtn = document.createElement('button');
+        pauseBtn.innerHTML = '⏸️';
+        pauseBtn.title = 'Pause reasoner';
+        pauseBtn.onclick = () => this.controlReasoner('pause');
+        pauseBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        const stopBtn = document.createElement('button');
+        stopBtn.innerHTML = '⏹️';
+        stopBtn.title = 'Stop reasoner';
+        stopBtn.onclick = () => this.controlReasoner('stop');
+        stopBtn.style.cssText = 'padding: 6px 10px; background: #b30000; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        const stepBtn = document.createElement('button');
+        stepBtn.innerHTML = '⏭️';
+        stepBtn.title = 'Step reasoner';
+        stepBtn.onclick = () => this.controlReasoner('step');
+        stepBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.innerHTML = '🔄';
+        resetBtn.title = 'Reset reasoner';
+        resetBtn.onclick = () => this.controlReasoner('reset');
+        resetBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        reasonerControls.appendChild(startBtn);
+        reasonerControls.appendChild(pauseBtn);
+        reasonerControls.appendChild(stopBtn);
+        reasonerControls.appendChild(stepBtn);
+        reasonerControls.appendChild(resetBtn);
+
+        // Input controls
         const runButton = document.createElement('button');
         runButton.textContent = '▶️ Run (Ctrl+Enter)';
         runButton.onclick = () => this.executeInput();
@@ -213,6 +308,7 @@ class SeNARSIDE {
         clearButton.onclick = () => this.clearREPL();
         clearButton.style.cssText = 'padding: 6px 12px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
 
+        buttonBar.appendChild(reasonerControls);
         buttonBar.appendChild(runButton);
         buttonBar.appendChild(clearButton);
 
@@ -222,7 +318,7 @@ class SeNARSIDE {
 
         this.components.set('repl', {
             container: replContainer,
-            messages: messagesContainer,
+            notebook: notebookContainer,
             input: inputBox,
             modeIndicator,
             cycleCount: document.getElementById('cycle-count'),
@@ -284,11 +380,9 @@ class SeNARSIDE {
         this.saveSettings();
 
         // Add welcome message
-        this.addREPLMessage({
-            type: 'system',
-            content: `🚀 Connected in ${mode} mode`,
-            timestamp: Date.now()
-        });
+        if (this.notebook) {
+            this.notebook.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
+        }
     }
 
     updateModeIndicator() {
@@ -301,7 +395,6 @@ class SeNARSIDE {
     }
 
     showConnectionModal() {
-        // Simple prompt for now, can be enhanced later
         const switchTo = this.connectionMode === 'local' ? 'remote' : 'local';
         if (confirm(`Switch to ${switchTo} mode?`)) {
             this.switchMode(switchTo);
@@ -314,70 +407,70 @@ class SeNARSIDE {
         this.messageCount++;
         this.updateStats();
 
-        // Add to REPL
-        this.addREPLMessage(message);
+        // Create result cell
+        if (this.notebook) {
+            const category = categorizeMessage(message);
+            const content = message.payload?.result || message.content || JSON.stringify(message.payload);
+            this.notebook.createResultCell(content, category);
+        }
 
-        // Update cycle count if available
+        // Update cycle count
         if (message.payload?.cycle) {
             this.cycleCount = message.payload.cycle;
             this.updateStats();
         }
     }
 
-    addREPLMessage(message) {
-        const repl = this.components.get('repl');
-        if (!repl) return;
-
-        const messageEl = document.createElement('div');
-        messageEl.className = 'repl-message';
-        messageEl.style.cssText = 'margin-bottom: 10px; padding: 8px; border-left: 3px solid #0e639c; background: rgba(14, 99, 156, 0.1);';
-
-        const timestamp = new Date(message.timestamp || Date.now()).toLocaleTimeString();
-        const type = message.type || 'unknown';
-        const content = message.payload?.result || message.content || JSON.stringify(message.payload);
-
-        messageEl.innerHTML = `
-            <div style="font-size: 0.8em; color: #888; margin-bottom: 4px;">[${timestamp}] ${type}</div>
-            <div style="white-space: pre-wrap;">${this.escapeHtml(content)}</div>
-        `;
-
-        repl.messages.appendChild(messageEl);
-        repl.messages.scrollTop = repl.messages.scrollHeight;
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = String(text);
-        return div.innerHTML;
-    }
-
     executeInput() {
         const repl = this.components.get('repl');
-        if (!repl) return;
+        if (!repl || !this.notebook) return;
 
         const input = repl.input.value.trim();
         if (!input) return;
 
-        // Add user input to REPL
-        this.addREPLMessage({
-            type: 'user-input',
-            content: input,
-            timestamp: Date.now()
+        // Create and execute a code cell
+        const codeCell = this.notebook.createCodeCell(input, (content) => {
+            if (this.connection?.isConnected()) {
+                this.connection.sendMessage('agent/input', { text: content });
+            }
         });
-
-        // Send to connection
-        if (this.connection && this.connection.isConnected()) {
-            this.connection.sendMessage('agent/input', { text: input });
-        }
+        codeCell.execute();
 
         // Clear input
         repl.input.value = '';
     }
 
     clearREPL() {
-        const repl = this.components.get('repl');
-        if (repl) {
-            repl.messages.innerHTML = '';
+        if (this.notebook) {
+            this.notebook.clear();
+        }
+    }
+
+    controlReasoner(action) {
+        console.log('Reasoner control:', action);
+
+        if (!this.connection?.isConnected()) {
+            if (this.notebook) {
+                this.notebook.createResultCell('⚠️ Not connected', 'system');
+            }
+            return;
+        }
+
+        // Send control command
+        this.connection.sendMessage(`control/${action}`, {});
+
+        // Visual feedback
+        if (this.notebook) {
+            this.notebook.createResultCell(`🎛️ Reasoner ${action}`, 'system');
+        }
+
+        // Update state
+        this.isRunning = action === 'start';
+        if (action === 'stop' || action === 'pause') this.isRunning = false;
+        if (action === 'reset') {
+            this.cycleCount = 0;
+            this.messageCount = 0;
+            this.updateStats();
         }
     }
 
@@ -392,6 +485,8 @@ class SeNARSIDE {
             repl.messageCount.textContent = this.messageCount;
         }
     }
+
+
 
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
