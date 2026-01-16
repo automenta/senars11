@@ -316,37 +316,42 @@ export class NotebookManager {
      * @param {string} path - Path to demo file (e.g., 'examples/metta/basics/arithmetic.metta')
      * @param {Object} options - Loading options
      * @param {boolean} options.clearFirst - Clear existing cells before loading
-     * @param {boolean} options.autoRun - Execute cells automatically after loading
+     * @param {boolean} options.autoRun - Execute cell automatically after loading
      */
     async loadDemoFile(path, options = {}) {
         const { clearFirst = false, autoRun = false } = options;
 
         if (clearFirst) this.clear();
 
-        // Fetch demo file content
-        const response = await fetch(`/${path}`);
-        if (!response.ok) throw new Error(`Failed to load demo: ${path}`);
-        const content = await response.text();
+        try {
+            // Fetch demo file content
+            const response = await fetch(`/${path}`);
+            if (!response.ok) throw new Error(`Failed to load demo: ${path}`);
+            const content = await response.text();
 
-        // Parse into lines, skip empty and comments
-        const lines = content.split('\n')
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith(';') && !line.startsWith('//'));
+            // Create single cell with entire demo content
+            const cell = this.createCodeCell(content.trim());
 
-        // Create cells for each line
-        for (const line of lines) {
-            const cell = this.createCodeCell(line);
+            // Auto-run if requested
             if (autoRun) {
-                // Small delay between executions to avoid overwhelming
+                // Small delay to ensure cell is rendered
                 await new Promise(resolve => setTimeout(resolve, 100));
                 cell.execute();
             }
-        }
 
-        // Add info message
-        this.createResultCell(
-            `📚 Loaded demo: ${path.split('/').pop()} (${lines.length} statements)`,
-            'system'
-        );
+            // Add success message
+            const fileName = path.split('/').pop();
+            const lineCount = content.trim().split('\n').length;
+            this.createResultCell(
+                `📚 Loaded demo: ${fileName} (${lineCount} lines)`,
+                'system'
+            );
+        } catch (error) {
+            this.createResultCell(
+                `❌ Failed to load demo: ${error.message}`,
+                'system'
+            );
+            throw error;
+        }
     }
 }
