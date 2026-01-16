@@ -10,6 +10,7 @@ import { DerivationTree } from './components/DerivationTree.js';
 import { MessageFilter, categorizeMessage } from './repl/MessageFilter.js';
 import { NotebookManager } from './repl/NotebookManager.js';
 import { FilterToolbar } from './repl/FilterToolbar.js';
+import { DemoLibrary } from './components/DemoLibrary.js';
 
 console.log('--- SeNARS IDE loading ---');
 
@@ -170,7 +171,13 @@ class SeNARSIDE {
         clearButton.onclick = () => this.clearREPL();
         clearButton.style.cssText = 'padding: 6px 12px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
 
-        buttonBar.append(reasonerControls, runButton, clearButton);
+        const demoButton = document.createElement('button');
+        demoButton.innerHTML = '📚 Load Demo';
+        demoButton.title = 'Browse demo library (Ctrl+Shift+D)';
+        demoButton.onclick = () => this.showDemoLibrary();
+        demoButton.style.cssText = 'padding: 6px 12px; background: #5c2d91; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        buttonBar.append(reasonerControls, runButton, clearButton, demoButton);
         inputArea.append(inputBox, buttonBar);
         replContainer.appendChild(inputArea);
 
@@ -194,7 +201,7 @@ class SeNARSIDE {
         this.components.set('graph', { container: graphContainer, panel });
 
         container.on('resize', () => {
-             panel.graphManager?.cy && (panel.graphManager.cy.resize(), panel.graphManager.cy.fit());
+            panel.graphManager?.cy && (panel.graphManager.cy.resize(), panel.graphManager.cy.fit());
         });
     }
 
@@ -341,7 +348,63 @@ class SeNARSIDE {
                 e.preventDefault();
                 this.clearREPL();
             }
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                this.showDemoLibrary();
+            }
         });
+    }
+
+    showDemoLibrary() {
+        // Create modal backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; display: flex;
+            align-items: center; justify-content: center;
+        `;
+
+        const modalContainer = document.createElement('div');
+        modalContainer.style.cssText = `
+            width: 900px; max-width: 90vw; height: 80vh; background: #1e1e1e;
+            border: 1px solid #3c3c3c; border-radius: 8px; overflow: hidden;
+            display: flex; flex-direction: column;
+        `;
+
+        const demoLib = new DemoLibrary(modalContainer, async (path, options) => {
+            // Close modal
+            document.body.removeChild(backdrop);
+
+            // Load demo
+            try {
+                await this.notebook.loadDemoFile(path, options);
+            } catch (error) {
+                this.notebook.createResultCell(
+                    `❌ Error loading demo: ${error.message}`,
+                    'system'
+                );
+            }
+        });
+
+        demoLib.initialize();
+
+        backdrop.appendChild(modalContainer);
+        document.body.appendChild(backdrop);
+
+        // Click backdrop to close
+        backdrop.onclick = (e) => {
+            if (e.target === backdrop) document.body.removeChild(backdrop);
+        };
+
+        // ESC to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                document.body.removeChild(backdrop);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 }
 
