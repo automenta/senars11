@@ -4,7 +4,9 @@ import { GoldenLayout } from 'golden-layout';
 import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
-import { GraphManager } from './visualization/GraphManager.js';
+import { GraphPanel } from './components/GraphPanel.js';
+import { MemoryInspector } from './components/MemoryInspector.js';
+import { DerivationTree } from './components/DerivationTree.js';
 import { MessageFilter, categorizeMessage } from './repl/MessageFilter.js';
 import { NotebookManager } from './repl/NotebookManager.js';
 import { FilterToolbar } from './repl/FilterToolbar.js';
@@ -275,25 +277,49 @@ class SeNARSIDE {
     createGraphComponent(container) {
         const graphContainer = container.element;
         graphContainer.style.backgroundColor = '#1e1e1e';
-        graphContainer.innerHTML = '<div style="padding: 20px; color: #888;">Knowledge Graph (Coming soon)</div>';
+        // Clear placeholder
+        graphContainer.innerHTML = '';
 
-        this.components.set('graph', { container: graphContainer });
+        const panel = new GraphPanel(graphContainer);
+        panel.initialize();
+
+        this.components.set('graph', { container: graphContainer, panel });
+
+        // Handle resize
+        container.on('resize', () => {
+             // GraphPanel doesn't expose resize, but GraphManager usually handles it via Cytoscape
+             // We can force it if needed, but Cytoscape usually needs explicit resize call
+             if (panel.graphManager && panel.graphManager.cy) {
+                 panel.graphManager.cy.resize();
+                 panel.graphManager.cy.fit();
+             }
+        });
     }
 
     createMemoryComponent(container) {
         const memoryContainer = container.element;
         memoryContainer.style.backgroundColor = '#1e1e1e';
-        memoryContainer.innerHTML = '<div style="padding: 20px; color: #888;">Memory Inspector (Coming soon)</div>';
+        memoryContainer.innerHTML = '';
 
-        this.components.set('memory', { container: memoryContainer });
+        const panel = new MemoryInspector(memoryContainer);
+        panel.initialize();
+
+        this.components.set('memory', { container: memoryContainer, panel });
     }
 
     createDerivationComponent(container) {
         const derivationContainer = container.element;
         derivationContainer.style.backgroundColor = '#1e1e1e';
-        derivationContainer.innerHTML = '<div style="padding: 20px; color: #888;">Derivation Tracer (Coming soon)</div>';
+        derivationContainer.innerHTML = '';
 
-        this.components.set('derivation', { container: derivationContainer });
+        const panel = new DerivationTree(derivationContainer);
+        panel.initialize();
+
+        this.components.set('derivation', { container: derivationContainer, panel });
+
+        container.on('resize', () => {
+             panel.resize && panel.resize();
+        });
     }
 
     async switchMode(mode) {
@@ -365,6 +391,24 @@ class SeNARSIDE {
         if (message.payload?.cycle) {
             this.cycleCount = message.payload.cycle;
             this.updateStats();
+        }
+
+        // Forward to components
+        try {
+            const graphComp = this.components.get('graph');
+            if (graphComp?.panel) graphComp.panel.update(message);
+
+            const memComp = this.components.get('memory');
+            if (memComp?.panel && message.type === 'memorySnapshot') {
+                memComp.panel.update(message.payload);
+            }
+
+            const derComp = this.components.get('derivation');
+            if (derComp?.panel && message.type === 'reasoning:derivation') {
+                derComp.panel.addDerivation(message.payload);
+            }
+        } catch (e) {
+            console.error('Error updating components:', e);
         }
     }
 
