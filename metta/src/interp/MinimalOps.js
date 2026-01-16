@@ -26,10 +26,6 @@ export function registerMinimalOps(interpreter) {
     reg('superpose-weighted', createSuperposeWeightedOp(interpreter), { lazy: true });
     reg('collapse-n', createCollapseNOp(interpreter), { lazy: true });
 
-    // Kept for backward compatibility if needed, otherwise removed.
-    // reg('collapse-bind', createCollapseBindOp(interpreter), { lazy: true });
-    // reg('superpose-bind', createSuperposeBindOp(interpreter), { lazy: true });
-
     reg('context-space', createContextSpaceOp(interpreter), { lazy: true });
     reg('noeval', createNoEvalOp(interpreter), { lazy: true });
 }
@@ -154,10 +150,18 @@ function createCollapseOp(interpreter) {
  * Create the superpose operation
  */
 function createSuperposeOp(interpreter) {
-    const { sym, exp } = Term;
+    const { sym, exp, isList, flattenList, isExpression } = Term;
 
     return (listAtom) => {
-        const elements = interpreter.ground._flattenExpr(listAtom);
+        let elements = [];
+        if (isList(listAtom)) {
+             elements = flattenList(listAtom).elements;
+        } else if (isExpression(listAtom)) {
+             elements = [listAtom.operator, ...listAtom.components];
+        } else {
+             elements = [listAtom];
+        }
+
         if (elements.length === 0) return sym('Empty');
         if (elements.length === 1) return elements[0];
         // Return wrapped for ND reduction to pick up
@@ -169,9 +173,18 @@ function createSuperposeOp(interpreter) {
  * Create the superpose-weighted operation
  */
 function createSuperposeWeightedOp(interpreter) {
+    const { sym, exp, isList, flattenList, isExpression } = Term;
+
     return (weightedList) => {
-        // List of (weight value) pairs
-        const items = interpreter.ground._flattenExpr(weightedList);
+        let items = [];
+        if (isList(weightedList)) {
+             items = flattenList(weightedList).elements;
+        } else if (isExpression(weightedList)) {
+             items = [weightedList.operator, ...weightedList.components];
+        } else {
+             items = [weightedList];
+        }
+
         const weighted = items.map(item => ({
             weight: parseFloat(item.components?.[0]?.name) || 1,
             value: item.components?.[1] || item

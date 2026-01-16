@@ -14,7 +14,6 @@ export class Space {
         // Multi-level indexing for O(1) average lookup
         this.functorIndex = new Map();      // functor -> rules
         this.arityIndex = new Map();         // functor+arity -> rules
-        this.signatureIndex = new Map();     // functor+arg1+arg2 -> rules
 
         this._stats = {
             adds: 0, removes: 0, queries: 0,
@@ -109,13 +108,8 @@ export class Space {
         const functor = this._getFunctorName(term.operator);
         const arity = term.components?.length || 0;
 
-        // Try most specific index first
-        const sigKey = this._getSignatureKey(term);
-        if (sigKey && this.signatureIndex.has(sigKey)) {
-            return this.signatureIndex.get(sigKey);
-        }
-
-        // Fall back to arity index
+        // Use arity index (functor + arity)
+        // This is safe because rules matching 'term' must have the same arity
         const arityKey = `${functor}/${arity}`;
         if (this.arityIndex.has(arityKey)) {
             return this.arityIndex.get(arityKey);
@@ -181,7 +175,6 @@ export class Space {
         this.rules = [];
         this.functorIndex.clear();
         this.arityIndex.clear();
-        this.signatureIndex.clear();
         this._stats = {adds: 0, removes: 0, queries: 0, indexedLookups: 0, fullScans: 0};
     }
 
@@ -195,22 +188,6 @@ export class Space {
         if (isSymbol(functor)) return functor.name;
         if (isExpression(functor)) return this._getFunctorName(functor.operator);
         return null;
-    }
-
-    /**
-     * Get signature key for indexing
-     */
-    _getSignatureKey(pattern) {
-        const functor = this._getFunctorName(pattern.operator);
-        const args = pattern.components || [];
-
-        // Only index if first args are constants (not variables)
-        const constArgs = args.slice(0, 2)
-            .filter(a => !isVariable(a))
-            .map(a => a.name || a.toString());
-
-        if (constArgs.length === 0) return null;
-        return `${functor}/${constArgs.join('/')}`;
     }
 
     /**
@@ -231,13 +208,6 @@ export class Space {
             const arityKey = `${functor}/${arity}`;
             if (!this.arityIndex.has(arityKey)) this.arityIndex.set(arityKey, []);
             this.arityIndex.get(arityKey).push(item);
-
-            // Level 3: Signature index (first 2 constant args)
-            const sigKey = this._getSignatureKey(pattern);
-            if (sigKey) {
-                if (!this.signatureIndex.has(sigKey)) this.signatureIndex.set(sigKey, []);
-                this.signatureIndex.get(sigKey).push(item);
-            }
         }
     }
 
@@ -254,11 +224,6 @@ export class Space {
 
              const arityKey = `${functor}/${arity}`;
              this._removeFromMap(this.arityIndex, arityKey, item);
-
-             const sigKey = this._getSignatureKey(pattern);
-             if (sigKey) {
-                 this._removeFromMap(this.signatureIndex, sigKey, item);
-             }
          }
     }
 

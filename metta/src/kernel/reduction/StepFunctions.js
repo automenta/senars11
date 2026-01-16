@@ -21,8 +21,8 @@ export function* stepYield(atom, space, ground, limit = 10000, cache = null) {
     const opName = atom.operator?.name;
     const comps = atom.components;
 
-    // Handle superposition
-    if ((opName === 'superpose' || opName === 'superpose-internal') && comps?.length > 0) {
+    // Handle superposition (internal primitive)
+    if (opName === 'superpose-internal' && comps?.length > 0) {
         const arg = comps[0];
         if (isExpression(arg)) {
             let alts = [];
@@ -33,6 +33,7 @@ export function* stepYield(atom, space, ground, limit = 10000, cache = null) {
                 alts = flattened.elements;
             } else {
                 // If it's a simple expression, treat operator and components as alternatives
+                // This corresponds to how MinimalOps constructs it from (A B) -> [A, B]
                 alts = [arg.operator, ...arg.components];
             }
 
