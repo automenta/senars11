@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SeNARS 1.0 Offline IDE</title>
+    <title>SeNARS UI2</title>
 
     <!-- GoldenLayout Styles -->
     <link type="text/css" rel="stylesheet" href="libs/goldenlayout-base.css" />
@@ -41,8 +41,30 @@
 <body>
     <div id="layout-root"></div>
 
-    <!-- Bundle Script (Built by esbuild) -->
-    <script src="browser-bundle.js"></script>
+    <div class="notification-container" id="notification-container"></div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal hidden" id="confirmation-modal">
+        <div class="modal-content">
+            <h3>Confirm Reset</h3>
+            <p>Are you sure you want to reset the system? This cannot be undone.</p>
+            <div class="modal-buttons">
+                <button class="primary-btn" id="btn-confirm-reset">Yes, Reset</button>
+                <button class="secondary-btn" id="btn-cancel-reset">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inject WebSocket configuration from server
+        window.WEBSOCKET_CONFIG = {
+            port: '{{WEBSOCKET_PORT}}',
+            host: window.location.hostname || 'localhost'
+        };
+    </script>
+
+    <!-- App Bundle -->
+    <script type="module" src="/src/main-online.js"></script>
 </body>
 
 </html>
