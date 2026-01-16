@@ -1,7 +1,4 @@
 import { Component } from './Component.js';
-// Cytoscape should be available globally or imported.
-// Assuming it is available as window.cytoscape or needs import if module.
-// ui/src/main-ide.js sets window.cytoscape.
 
 export class DerivationTree extends Component {
     constructor(container) {
@@ -14,7 +11,6 @@ export class DerivationTree extends Component {
     initialize() {
         if (!this.container) return;
 
-        // CSS
         const style = document.createElement('style');
         style.textContent = `
             .dt-container { display: flex; width: 100%; height: 100%; }
@@ -56,47 +52,23 @@ export class DerivationTree extends Component {
                     {
                         selector: 'node',
                         style: {
-                            'background-color': '#222',
-                            'label': 'data(label)',
-                            'color': '#e0e0e0',
-                            'font-family': 'monospace',
-                            'font-size': '10px',
-                            'text-valign': 'center',
-                            'text-halign': 'center',
-                            'text-wrap': 'wrap',
-                            'width': 'label',
-                            'height': 'label',
-                            'padding': '10px',
-                            'shape': 'round-rectangle',
-                            'border-width': 1,
-                            'border-color': '#333'
+                            'background-color': '#222', 'label': 'data(label)', 'color': '#e0e0e0',
+                            'font-family': 'monospace', 'font-size': '10px', 'text-valign': 'center', 'text-halign': 'center',
+                            'text-wrap': 'wrap', 'width': 'label', 'height': 'label', 'padding': '10px',
+                            'shape': 'round-rectangle', 'border-width': 1, 'border-color': '#333'
                         }
                     },
                     {
                         selector: 'node[type="rule"]',
-                        style: {
-                            'background-color': '#333',
-                            'border-color': '#00bcd4', // Cyan
-                            'color': '#00bcd4'
-                        }
+                        style: {'background-color': '#333', 'border-color': '#00bcd4', 'color': '#00bcd4'}
                     },
                     {
                         selector: 'node[type="conclusion"]',
-                        style: {
-                            'border-color': '#00ff9d', // Green
-                            'color': '#00ff9d',
-                            'font-weight': 'bold'
-                        }
+                        style: {'border-color': '#00ff9d', 'color': '#00ff9d', 'font-weight': 'bold'}
                     },
                     {
                         selector: 'edge',
-                        style: {
-                            'width': 1,
-                            'line-color': '#444',
-                            'target-arrow-color': '#444',
-                            'target-arrow-shape': 'triangle',
-                            'curve-style': 'bezier'
-                        }
+                        style: {'width': 1, 'line-color': '#444', 'target-arrow-color': '#444', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier'}
                     }
                 ],
                 layout: { name: 'grid' }
@@ -108,14 +80,10 @@ export class DerivationTree extends Component {
 
     addDerivation(data) {
         if (!data) return;
-
-        // Add timestamp if missing
         if (!data.timestamp) data.timestamp = new Date().toLocaleTimeString();
 
-        this.history.unshift(data); // Newest first
+        this.history.unshift(data);
         this.renderHistory();
-
-        // Auto-select if it's the first one or we are in "live" mode (logic for live mode omitted for now, just auto select)
         this.selectDerivation(data);
     }
 
@@ -123,17 +91,14 @@ export class DerivationTree extends Component {
         if (!this.historyList) return;
         this.historyList.innerHTML = '';
 
-        this.history.forEach((item, index) => {
+        this.history.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'dt-history-item';
-            if (this.selectedDerivation === item) div.classList.add('active');
-
+            div.className = `dt-history-item ${this.selectedDerivation === item ? 'active' : ''}`;
             div.innerHTML = `
                 <div class="dt-rule">${item.rule || 'Unknown Rule'}</div>
                 <div class="dt-term" title="${item.derived?.term}">${item.derived?.term || '...'}</div>
                 <div class="dt-time">${item.timestamp}</div>
             `;
-
             div.onclick = () => this.selectDerivation(item);
             this.historyList.appendChild(div);
         });
@@ -141,30 +106,23 @@ export class DerivationTree extends Component {
 
     selectDerivation(data) {
         this.selectedDerivation = data;
-        this.renderHistory(); // Update active class
+        this.renderHistory();
         this.renderGraph(data);
     }
 
     renderGraph(data) {
-        if (!this.cy) return;
+        if (!this.cy || !data?.derived) return;
         this.cy.elements().remove();
 
         const { input, knowledge, derived, rule } = data;
-        if (!derived) return;
-
         const ruleId = 'rule';
 
-        this.cy.add({
-            group: 'nodes',
-            data: { id: ruleId, label: rule || 'Rule', type: 'rule' }
-        });
+        this.cy.add({ group: 'nodes', data: { id: ruleId, label: rule || 'Rule', type: 'rule' } });
 
         const addTermNode = (termData, type) => {
             if (!termData) return null;
-            // Simple hash for ID to avoid duplicates if we were merging, but here we clear graph
             const id = 'node_' + Math.random().toString(36).substr(2, 9);
             const label = termData.term || 'Unknown';
-
             this.cy.add({
                 group: 'nodes',
                 data: {
@@ -191,11 +149,8 @@ export class DerivationTree extends Component {
         }
 
         this.cy.layout({
-            name: 'breadthfirst',
-            directed: true,
-            padding: 50,
-            spacingFactor: 1.5,
-            animate: true
+            name: 'breadthfirst', directed: true, padding: 50,
+            spacingFactor: 1.5, animate: true
         }).run();
     }
 

@@ -16,27 +16,19 @@ console.log('--- SeNARS IDE loading ---');
 cytoscape.use(fcose);
 window.cytoscape = cytoscape;
 
-/**
- * Unified SeNARS IDE
- * Supports both Local (in-browser) and Remote (WebSocket) modes
- */
 class SeNARSIDE {
     constructor() {
         this.layout = null;
         this.connection = null;
-        this.connectionMode = 'local'; // 'local' or 'remote'
+        this.connectionMode = 'local';
         this.components = new Map();
         this.graphManager = null;
         this.messageFilter = new MessageFilter();
-        this.notebook = null; // Initialized when REPL is created
+        this.notebook = null;
         this.filterToolbar = null;
-
-        // State
         this.cycleCount = 0;
         this.messageCount = 0;
         this.isRunning = false;
-
-        // Load saved settings
         this.loadSettings();
     }
 
@@ -58,16 +50,9 @@ class SeNARSIDE {
 
     async initialize() {
         console.log('Initializing SeNARS IDE...');
-
-        // Set up layout
         this.setupLayout();
-
-        // Initialize connection (starts in local mode by default)
         await this.switchMode(this.connectionMode);
-
-        // Set up keyboard shortcuts
         this.setupKeyboardShortcuts();
-
         console.log(`SeNARS IDE initialized in ${this.connectionMode} mode`);
     }
 
@@ -80,92 +65,41 @@ class SeNARSIDE {
 
         this.layout = new GoldenLayout(layoutRoot);
 
-        // Register components
-        this.layout.registerComponentFactoryFunction('replComponent', (container) => {
-            return this.createREPLComponent(container);
-        });
+        const factories = {
+            'replComponent': (c) => this.createREPLComponent(c),
+            'graphComponent': (c) => this.createGraphComponent(c),
+            'memoryComponent': (c) => this.createMemoryComponent(c),
+            'derivationComponent': (c) => this.createDerivationComponent(c)
+        };
 
-        this.layout.registerComponentFactoryFunction('graphComponent', (container) => {
-            return this.createGraphComponent(container);
-        });
+        Object.entries(factories).forEach(([k, v]) => this.layout.registerComponentFactoryFunction(k, v));
 
-        this.layout.registerComponentFactoryFunction('memoryComponent', (container) => {
-            return this.createMemoryComponent(container);
-        });
-
-        this.layout.registerComponentFactoryFunction('derivationComponent', (container) => {
-            return this.createDerivationComponent(container);
-        });
-
-        // Define layout configuration
-        const layoutConfig = {
-            settings: {
-                hasHeaders: true,
-                constrainDragToContainer: true,
-                reorderEnabled: true,
-                selectionEnabled: false,
-                showPopoutIcon: false,
-                showMaximiseIcon: true,
-                showCloseIcon: false
-            },
-            dimensions: {
-                borderWidth: 2,
-                minItemHeight: 100,
-                minItemWidth: 200,
-                headerHeight: 24
-            },
+        this.layout.loadLayout({
+            settings: { hasHeaders: true, constrainDragToContainer: true, reorderEnabled: true, selectionEnabled: false, showPopoutIcon: false, showMaximiseIcon: true, showCloseIcon: false },
+            dimensions: { borderWidth: 2, minItemHeight: 100, minItemWidth: 200, headerHeight: 24 },
             root: {
                 type: 'row',
                 content: [
+                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 60 },
                     {
-                        type: 'component',
-                        componentName: 'replComponent',
-                        title: 'REPL',
-                        width: 60
-                    },
-                    {
-                        type: 'stack',
-                        width: 40,
+                        type: 'stack', width: 40,
                         content: [
-                            {
-                                type: 'component',
-                                componentName: 'graphComponent',
-                                title: 'KNOWLEDGE GRAPH',
-                                isClosable: false
-                            },
-                            {
-                                type: 'component',
-                                componentName: 'memoryComponent',
-                                title: 'MEMORY INSPECTOR'
-                            },
-                            {
-                                type: 'component',
-                                componentName: 'derivationComponent',
-                                title: 'DERIVATION TRACER'
-                            }
+                            { type: 'component', componentName: 'graphComponent', title: 'KNOWLEDGE GRAPH', isClosable: false },
+                            { type: 'component', componentName: 'memoryComponent', title: 'MEMORY INSPECTOR' },
+                            { type: 'component', componentName: 'derivationComponent', title: 'DERIVATION TRACER' }
                         ]
                     }
                 ]
             }
-        };
-
-        this.layout.loadLayout(layoutConfig);
-
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            this.layout.updateRootSize();
         });
+
+        window.addEventListener('resize', () => this.layout.updateRootSize());
     }
 
     createREPLComponent(container) {
         const replContainer = container.element;
-        replContainer.style.display = 'flex';
-        replContainer.style.flexDirection = 'column';
-        replContainer.style.height = '100%';
-        replContainer.style.backgroundColor = '#1e1e1e';
-        replContainer.style.color = '#d4d4d4';
+        Object.assign(replContainer.style, { display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#1e1e1e', color: '#d4d4d4' });
 
-        // Connection status bar
         const statusBar = document.createElement('div');
         statusBar.className = 'connection-status-bar';
         statusBar.style.cssText = 'padding: 8px; background: #252526; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;';
@@ -178,33 +112,21 @@ class SeNARSIDE {
         const stats = document.createElement('div');
         stats.id = 'connection-stats';
         stats.innerHTML = 'Cycles: <span id="cycle-count">0</span> | Messages: <span id="message-count">0</span>';
-        stats.style.fontSize = '0.9em';
-        stats.style.color = '#888';
+        Object.assign(stats.style, { fontSize: '0.9em', color: '#888' });
 
-        statusBar.appendChild(modeIndicator);
-        statusBar.appendChild(stats);
+        statusBar.append(modeIndicator, stats);
         replContainer.appendChild(statusBar);
 
-        // Filter toolbar
-        this.filterToolbar = new FilterToolbar(
-            this.messageFilter,
-            {
-                onFilterChange: () => this.filterMessages(),
-                onExport: () => this.exportLogs()
-            }
-        );
+        this.filterToolbar = new FilterToolbar(this.messageFilter, { onFilterChange: () => this.filterMessages(), onExport: () => this.exportLogs() });
         replContainer.appendChild(this.filterToolbar.render());
 
-        // Notebook container (cells go here)
         const notebookContainer = document.createElement('div');
         notebookContainer.id = 'repl-notebook';
         notebookContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 10px;';
         replContainer.appendChild(notebookContainer);
 
-        // Initialize notebook manager
         this.notebook = new NotebookManager(notebookContainer);
 
-        // Input area
         const inputArea = document.createElement('div');
         inputArea.style.cssText = 'padding: 10px; background: #252526; border-top: 1px solid #333;';
 
@@ -213,18 +135,11 @@ class SeNARSIDE {
         inputBox.placeholder = 'Enter Narsese or MeTTa...';
         inputBox.rows = 3;
         inputBox.style.cssText = 'width: 100%; background: #1e1e1e; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 8px; font-family: monospace; resize: vertical;';
-
-        inputBox.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                this.executeInput();
-            }
-        });
+        inputBox.addEventListener('keydown', (e) => (e.ctrlKey && e.key === 'Enter') && (e.preventDefault(), this.executeInput()));
 
         const buttonBar = document.createElement('div');
         buttonBar.style.cssText = 'display: flex; gap: 8px; margin-top: 8px; align-items: center;';
 
-        // Reasoner controls
         const reasonerControls = document.createElement('div');
         reasonerControls.style.cssText = 'display: flex; gap: 4px; margin-right: 12px; padding-right: 12px; border-right: 1px solid #444;';
 
@@ -245,7 +160,6 @@ class SeNARSIDE {
             createControlBtn('🔄', 'Reset reasoner', 'reset')
         );
 
-        // Input controls
         const runButton = document.createElement('button');
         runButton.textContent = '▶️ Run (Ctrl+Enter)';
         runButton.onclick = () => this.executeInput();
@@ -256,12 +170,8 @@ class SeNARSIDE {
         clearButton.onclick = () => this.clearREPL();
         clearButton.style.cssText = 'padding: 6px 12px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
 
-        buttonBar.appendChild(reasonerControls);
-        buttonBar.appendChild(runButton);
-        buttonBar.appendChild(clearButton);
-
-        inputArea.appendChild(inputBox);
-        inputArea.appendChild(buttonBar);
+        buttonBar.append(reasonerControls, runButton, clearButton);
+        inputArea.append(inputBox, buttonBar);
         replContainer.appendChild(inputArea);
 
         this.components.set('repl', {
@@ -277,22 +187,14 @@ class SeNARSIDE {
     createGraphComponent(container) {
         const graphContainer = container.element;
         graphContainer.style.backgroundColor = '#1e1e1e';
-        // Clear placeholder
         graphContainer.innerHTML = '';
 
         const panel = new GraphPanel(graphContainer);
         panel.initialize();
-
         this.components.set('graph', { container: graphContainer, panel });
 
-        // Handle resize
         container.on('resize', () => {
-             // GraphPanel doesn't expose resize, but GraphManager usually handles it via Cytoscape
-             // We can force it if needed, but Cytoscape usually needs explicit resize call
-             if (panel.graphManager && panel.graphManager.cy) {
-                 panel.graphManager.cy.resize();
-                 panel.graphManager.cy.fit();
-             }
+             panel.graphManager?.cy && (panel.graphManager.cy.resize(), panel.graphManager.cy.fit());
         });
     }
 
@@ -300,10 +202,8 @@ class SeNARSIDE {
         const memoryContainer = container.element;
         memoryContainer.style.backgroundColor = '#1e1e1e';
         memoryContainer.innerHTML = '';
-
         const panel = new MemoryInspector(memoryContainer);
         panel.initialize();
-
         this.components.set('memory', { container: memoryContainer, panel });
     }
 
@@ -311,56 +211,30 @@ class SeNARSIDE {
         const derivationContainer = container.element;
         derivationContainer.style.backgroundColor = '#1e1e1e';
         derivationContainer.innerHTML = '';
-
         const panel = new DerivationTree(derivationContainer);
         panel.initialize();
-
         this.components.set('derivation', { container: derivationContainer, panel });
-
-        container.on('resize', () => {
-             panel.resize && panel.resize();
-        });
+        container.on('resize', () => panel.resize?.());
     }
 
     async switchMode(mode) {
         console.log(`Switching to ${mode} mode...`);
-
-        // Disconnect existing connection
-        if (this.connection) {
-            this.connection.disconnect();
-        }
-
+        this.connection?.disconnect();
         this.connectionMode = mode;
 
-        if (mode === 'local') {
-            // Local mode: in-browser NAR
-            const localManager = new LocalConnectionManager();
-            this.connection = new ConnectionManager(localManager);
-            await this.connection.connect();
-        } else {
-            // Remote mode: WebSocket
-            const wsManager = new WebSocketManager();
-            this.connection = new ConnectionManager(wsManager);
-            await this.connection.connect();
-        }
+        const manager = mode === 'local' ? new LocalConnectionManager() : new WebSocketManager();
+        this.connection = new ConnectionManager(manager);
+        await this.connection.connect();
 
-        // Set up message handlers
         this.connection.subscribe('*', (message) => this.handleMessage(message));
-
-        // Update UI
         this.updateModeIndicator();
         this.saveSettings();
-
-        // Add welcome message
-        if (this.notebook) {
-            this.notebook.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
-        }
+        this.notebook?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
     }
 
     updateModeIndicator() {
         const repl = this.components.get('repl');
         if (!repl) return;
-
         const icon = this.connectionMode === 'local' ? '💻' : '🌐';
         const label = this.connectionMode === 'local' ? 'Local Mode' : 'Remote Mode';
         repl.modeIndicator.innerHTML = `<span style="cursor: pointer;" title="Click to switch mode">${icon} ${label}</span>`;
@@ -368,18 +242,14 @@ class SeNARSIDE {
 
     showConnectionModal() {
         const switchTo = this.connectionMode === 'local' ? 'remote' : 'local';
-        if (confirm(`Switch to ${switchTo} mode?`)) {
-            this.switchMode(switchTo);
-        }
+        confirm(`Switch to ${switchTo} mode?`) && this.switchMode(switchTo);
     }
 
     handleMessage(message) {
         console.log('Received message:', message);
-
         this.messageCount++;
         this.updateStats();
 
-        // Create result cell
         if (this.notebook) {
             const category = categorizeMessage(message);
             const content = message.payload?.result || message.content || JSON.stringify(message.payload);
@@ -387,26 +257,20 @@ class SeNARSIDE {
             this.notebook.createResultCell(content, category, viewMode);
         }
 
-        // Update cycle count
         if (message.payload?.cycle) {
             this.cycleCount = message.payload.cycle;
             this.updateStats();
         }
 
-        // Forward to components
         try {
             const graphComp = this.components.get('graph');
-            if (graphComp?.panel) graphComp.panel.update(message);
+            graphComp?.panel?.update(message);
 
             const memComp = this.components.get('memory');
-            if (memComp?.panel && message.type === 'memorySnapshot') {
-                memComp.panel.update(message.payload);
-            }
+            if (memComp?.panel && message.type === 'memorySnapshot') memComp.panel.update(message.payload);
 
             const derComp = this.components.get('derivation');
-            if (derComp?.panel && message.type === 'reasoning:derivation') {
-                derComp.panel.addDerivation(message.payload);
-            }
+            if (derComp?.panel && message.type === 'reasoning:derivation') derComp.panel.addDerivation(message.payload);
         } catch (e) {
             console.error('Error updating components:', e);
         }
@@ -419,8 +283,7 @@ class SeNARSIDE {
     exportLogs() {
         if (!this.notebook) return;
         const data = this.notebook.exportNotebook();
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -431,48 +294,30 @@ class SeNARSIDE {
 
     executeInput() {
         const repl = this.components.get('repl');
-        if (!repl || !this.notebook) return;
-
-        const input = repl.input.value.trim();
+        const input = repl?.input.value.trim();
         if (!input) return;
 
-        // Create and execute a code cell
-        const codeCell = this.notebook.createCodeCell(input, (content) => {
-            if (this.connection?.isConnected()) {
-                this.connection.sendMessage('agent/input', { text: content });
-            }
-        });
-        codeCell.execute();
+        this.notebook.createCodeCell(input, (content) => {
+            this.connection?.isConnected() && this.connection.sendMessage('agent/input', { text: content });
+        }).execute();
 
-        // Clear input
         repl.input.value = '';
     }
 
     clearREPL() {
-        if (this.notebook) {
-            this.notebook.clear();
-        }
+        this.notebook?.clear();
     }
 
     controlReasoner(action) {
         console.log('Reasoner control:', action);
-
         if (!this.connection?.isConnected()) {
-            if (this.notebook) {
-                this.notebook.createResultCell('⚠️ Not connected', 'system');
-            }
+            this.notebook?.createResultCell('⚠️ Not connected', 'system');
             return;
         }
 
-        // Send control command
         this.connection.sendMessage(`control/${action}`, {});
+        this.notebook?.createResultCell(`🎛️ Reasoner ${action}`, 'system');
 
-        // Visual feedback
-        if (this.notebook) {
-            this.notebook.createResultCell(`🎛️ Reasoner ${action}`, 'system');
-        }
-
-        // Update state
         this.isRunning = action === 'start';
         if (action === 'stop' || action === 'pause') this.isRunning = false;
         if (action === 'reset') {
@@ -484,22 +329,14 @@ class SeNARSIDE {
 
     updateStats() {
         const repl = this.components.get('repl');
-        if (!repl) return;
-
-        if (repl.cycleCount) {
-            repl.cycleCount.textContent = this.cycleCount;
-        }
-        if (repl.messageCount) {
-            repl.messageCount.textContent = this.messageCount;
+        if (repl) {
+            if (repl.cycleCount) repl.cycleCount.textContent = this.cycleCount;
+            if (repl.messageCount) repl.messageCount.textContent = this.messageCount;
         }
     }
 
-
-
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // Ctrl+Enter: Execute (handled in input box)
-            // Ctrl+L: Clear REPL
             if (e.ctrlKey && e.key === 'l') {
                 e.preventDefault();
                 this.clearREPL();
@@ -508,12 +345,9 @@ class SeNARSIDE {
     }
 }
 
-// Initialize on DOM loaded
 async function start() {
     const ide = new SeNARSIDE();
     await ide.initialize();
-
-    // Expose for debugging
     window.SeNARSIDE = ide;
 }
 

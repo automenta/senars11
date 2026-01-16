@@ -36,32 +36,23 @@ export class TaskCard extends Component {
             this._dispatchHover(false);
         });
 
-        div.addEventListener('click', (e) => {
-            if (this.task) {
-                const event = new CustomEvent('senars:task:select', {
-                     detail: { task: this.task }
-                });
-                document.dispatchEvent(event);
-            }
+        div.addEventListener('click', () => {
+            this.task && document.dispatchEvent(new CustomEvent('senars:task:select', {
+                 detail: { task: this.task }
+            }));
         });
 
-        // Content
-        const term = this.task.term || this.task.sentence?.term || 'unknown';
-        const truth = this.task.truth || this.task.sentence?.truth;
-        const punctuation = this.task.punctuation || '.';
+        const term = this.task.term ?? this.task.sentence?.term ?? 'unknown';
+        const truth = this.task.truth ?? this.task.sentence?.truth;
+        const punctuation = this.task.punctuation ?? '.';
 
-        const termHtml = NarseseHighlighter.highlight(term);
-
-        let truthStr = '';
-        if (truth) {
-            const f = truth.frequency !== undefined ? truth.frequency.toFixed(2) : '0.00';
-            const c = truth.confidence !== undefined ? truth.confidence.toFixed(2) : '0.00';
-            truthStr = `{${f} ${c}}`;
-        }
+        const truthStr = truth
+            ? `{${(truth.frequency ?? 0).toFixed(2)} ${(truth.confidence ?? 0).toFixed(2)}}`
+            : '';
 
         div.innerHTML = `
             <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                ${termHtml}<span class="nars-punctuation">${punctuation}</span>
+                ${NarseseHighlighter.highlight(term)}<span class="nars-punctuation">${punctuation}</span>
             </div>
             <div style="margin-left: 10px; color: var(--text-muted); font-size: 10px;">
                 ${truthStr}
@@ -73,11 +64,8 @@ export class TaskCard extends Component {
     }
 
     _dispatchHover(isHovering) {
-        if (this.task) {
-             const event = new CustomEvent('senars:task:hover', {
-                 detail: { task: this.task, hovering: isHovering }
-             });
-             document.dispatchEvent(event);
-        }
+        this.task && document.dispatchEvent(new CustomEvent('senars:task:hover', {
+             detail: { task: this.task, hovering: isHovering }
+         }));
     }
 }

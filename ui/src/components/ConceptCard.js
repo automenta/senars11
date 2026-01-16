@@ -31,34 +31,21 @@ export class ConceptCard extends Component {
             div.style.transform = 'translateX(0)';
         });
 
-        div.addEventListener('click', () => {
-             const event = new CustomEvent('senars:concept:select', {
-                 detail: { concept: this.concept, id: this.concept.id || this.concept.term } // Ensure ID is passed
-             });
-             document.dispatchEvent(event);
-        });
+        const id = this.concept.id ?? this.concept.term;
+        const detail = { concept: this.concept, id };
 
-        div.addEventListener('dblclick', () => {
-             const event = new CustomEvent('senars:concept:center', {
-                 detail: { concept: this.concept, id: this.concept.id || this.concept.term }
-             });
-             document.dispatchEvent(event);
-        });
+        div.addEventListener('click', () => document.dispatchEvent(new CustomEvent('senars:concept:select', { detail })));
+        div.addEventListener('dblclick', () => document.dispatchEvent(new CustomEvent('senars:concept:center', { detail })));
 
-        const term = this.concept.term || 'unknown';
-        const termHtml = NarseseHighlighter.highlight(term);
-
-        const priority = this.concept.budget?.priority || 0;
-        const taskCount = this.concept.tasks ? this.concept.tasks.length : (this.concept.taskCount || 0);
-
-        // Priority Bar
+        const term = this.concept.term ?? 'unknown';
+        const priority = this.concept.budget?.priority ?? 0;
+        const taskCount = this.concept.tasks?.length ?? this.concept.taskCount ?? 0;
         const priorityPercent = (priority * 100).toFixed(0);
-        const priorityColor = this._getPriorityColor(priority);
 
         div.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 5px;">
                 <div style="font-weight: bold; font-family: var(--font-mono); font-size: 12px; word-break: break-all;">
-                    ${termHtml}
+                    ${NarseseHighlighter.highlight(term)}
                 </div>
                 <div style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; font-size: 10px; color: var(--text-muted);">
                     ${taskCount} tasks
@@ -67,7 +54,7 @@ export class ConceptCard extends Component {
 
             <div style="display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text-muted);">
                 <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
-                    <div style="width: ${priorityPercent}%; height: 100%; background: ${priorityColor};"></div>
+                    <div style="width: ${priorityPercent}%; height: 100%; background: ${this._getPriorityColor(priority)};"></div>
                 </div>
                 <div>PRI: ${priority.toFixed(2)}</div>
             </div>
@@ -78,8 +65,6 @@ export class ConceptCard extends Component {
     }
 
     _getPriorityColor(val) {
-        if (val > 0.8) return 'var(--accent-primary)';
-        if (val > 0.5) return 'var(--accent-warn)';
-        return '#555';
+        return val > 0.8 ? 'var(--accent-primary)' : val > 0.5 ? 'var(--accent-warn)' : '#555';
     }
 }
