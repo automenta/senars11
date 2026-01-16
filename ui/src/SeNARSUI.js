@@ -142,7 +142,12 @@ export class SeNARSUI {
             },
             'lm:prompt:start': () => this.lmActivityIndicator && this.lmActivityIndicator.show(),
             'lm:prompt:complete': () => this.lmActivityIndicator && this.lmActivityIndicator.hide(),
-            'lm:error': (msg) => this.lmActivityIndicator && this.lmActivityIndicator.showError(msg.payload?.error ?? 'LM Error')
+            'lm:error': (msg) => this.lmActivityIndicator && this.lmActivityIndicator.showError(msg.payload?.error ?? 'LM Error'),
+            'visualization:embedded-graph': (msg) => {
+                document.dispatchEvent(new CustomEvent('senars:console:embed-graph', {
+                    detail: msg.payload
+                }));
+            }
         };
 
         Object.entries(handlers).forEach(([type, handler]) => this.connectionManager.subscribe(type, handler));
