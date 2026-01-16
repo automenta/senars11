@@ -315,6 +315,8 @@ export class GraphManager {
         }
 
         const typeValue = nodeType ?? type ?? 'concept';
+        const priority = nodeData.budget?.priority || 0;
+        const taskCount = nodeData.tasks ? nodeData.tasks.length : (nodeData.taskCount || 0);
 
         this.cy.add({
             group: 'nodes',
@@ -322,7 +324,8 @@ export class GraphManager {
                 id: nodeId,
                 label: displayLabel,
                 type: typeValue,
-                weight: weight ?? (truth?.confidence ? truth.confidence * 100 : 50),
+                weight: weight ?? (priority * 100), // Use priority for size
+                taskCount: taskCount,
                 fullData: nodeData
             }
         });

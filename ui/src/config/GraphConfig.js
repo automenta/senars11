@@ -72,7 +72,13 @@ export const GraphConfig = {
                 }
             },
             // Node Types
-            {selector: 'node[type = "concept"]', style: {'background-color': colors.CONCEPT, 'border-color': colors.CONCEPT}},
+            {
+                selector: 'node[type = "concept"]',
+                style: {
+                    'background-color': 'mapData(taskCount, 0, 20, ' + colors.CONCEPT + ', #ff00ff)',
+                    'border-color': colors.CONCEPT
+                }
+            },
             {selector: 'node[type = "task"]', style: {'background-color': colors.TASK, 'border-color': colors.TASK, 'shape': 'rectangle'}},
             {selector: 'node[type = "question"]', style: {'background-color': colors.QUESTION, 'border-color': colors.QUESTION, 'shape': 'diamond'}},
 
