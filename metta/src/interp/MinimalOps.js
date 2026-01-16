@@ -146,25 +146,26 @@ function createCollapseOp(interpreter) {
         interpreter._listify(reduceND(atom, interpreter.space, interpreter.ground, interpreter.config.maxReductionSteps));
 }
 
+const extractElements = (atom) => {
+    const { isList, flattenList, isExpression } = Term;
+    if (isList(atom)) return flattenList(atom).elements;
+    if (isExpression(atom)) return [atom.operator, ...atom.components];
+    return [atom];
+};
+
 /**
  * Create the superpose operation
  */
 function createSuperposeOp(interpreter) {
-    const { sym, exp, isList, flattenList, isExpression } = Term;
+    const { sym, exp } = Term;
 
     return (listAtom) => {
-        let elements = [];
-        if (isList(listAtom)) {
-             elements = flattenList(listAtom).elements;
-        } else if (isExpression(listAtom)) {
-             elements = [listAtom.operator, ...listAtom.components];
-        } else {
-             elements = [listAtom];
+        const elements = extractElements(listAtom);
+        // Handle empty list: (superpose ()) should produce no results
+        if (elements.length === 0 || (elements.length === 1 && elements[0].name === '()')) {
+            return exp(sym('superpose-internal'), [sym('()')]);
         }
-
-        if (elements.length === 0) return sym('Empty');
         if (elements.length === 1) return elements[0];
-        // Return wrapped for ND reduction to pick up
         return exp(sym('superpose-internal'), elements);
     };
 }
@@ -173,24 +174,13 @@ function createSuperposeOp(interpreter) {
  * Create the superpose-weighted operation
  */
 function createSuperposeWeightedOp(interpreter) {
-    const { sym, exp, isList, flattenList, isExpression } = Term;
-
     return (weightedList) => {
-        let items = [];
-        if (isList(weightedList)) {
-             items = flattenList(weightedList).elements;
-        } else if (isExpression(weightedList)) {
-             items = [weightedList.operator, ...weightedList.components];
-        } else {
-             items = [weightedList];
-        }
-
+        const items = extractElements(weightedList);
         const weighted = items.map(item => ({
             weight: parseFloat(item.components?.[0]?.name) || 1,
             value: item.components?.[1] || item
         }));
 
-        // Sample based on weights
         const totalWeight = weighted.reduce((s, w) => s + w.weight, 0);
         let random = Math.random() * totalWeight;
         for (const { weight, value } of weighted) {

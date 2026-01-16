@@ -22,32 +22,19 @@ export function* stepYield(atom, space, ground, limit = 10000, cache = null) {
     const comps = atom.components;
 
     // Handle superposition (internal primitive)
+    // superpose creates (superpose-internal A B C...) where each component is an alternative
     if (opName === 'superpose-internal' && comps?.length > 0) {
-        const arg = comps[0];
-        if (isExpression(arg)) {
-            let alts = [];
-
-            // If it's a list structure, flatten it
-            if (isList(arg)) {
-                const flattened = flattenList(arg);
-                alts = flattened.elements;
-            } else {
-                // If it's a simple expression, treat operator and components as alternatives
-                // This corresponds to how MinimalOps constructs it from (A B) -> [A, B]
-                alts = [arg.operator, ...arg.components];
-            }
-
-            if (alts.length === 0) {
-                yield { reduced: null, applied: true, deadEnd: true };
-                return;
-            }
-            for (const alt of alts) yield { reduced: alt, applied: true };
-            return;
-        }
-        if (arg.name === '()') {
+        // Handle empty superpose
+        if (comps.length === 1 && comps[0].name === '()') {
             yield { reduced: null, applied: true, deadEnd: true };
             return;
         }
+
+        // Each component is an alternative - yield them all
+        for (const alt of comps) {
+            yield { reduced: alt, applied: true };
+        }
+        return;
     }
 
     // Handle grounded operations
