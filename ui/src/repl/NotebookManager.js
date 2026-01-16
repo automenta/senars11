@@ -1,3 +1,5 @@
+import { VIEW_MODES, MESSAGE_CATEGORIES } from './MessageFilter.js';
+
 /**
  * Base class for REPL cells
  */
@@ -140,9 +142,10 @@ export class CodeCell extends REPLCell {
  * Result cell for output display
  */
 export class ResultCell extends REPLCell {
-    constructor(content, category = 'result') {
+    constructor(content, category = 'result', viewMode = VIEW_MODES.FULL) {
         super('result', content);
         this.category = category;
+        this.viewMode = viewMode;
     }
 
     render() {
@@ -150,31 +153,107 @@ export class ResultCell extends REPLCell {
         cell.className = 'repl-cell result-cell';
         cell.dataset.cellId = this.id;
         cell.dataset.category = this.category;
-        cell.style.cssText = `
-            margin-bottom: 12px;
-            padding: 10px;
-            border-left: 3px solid #00ff88;
-            background: rgba(0, 255, 136, 0.1);
-            border-radius: 4px;
-        `;
-
-        // Result header
-        const header = document.createElement('div');
-        header.style.cssText = 'font-size: 0.85em; color: #888; margin-bottom: 6px;';
-        const timestamp = new Date(this.timestamp).toLocaleTimeString();
-        header.textContent = `✨ Result [${timestamp}]`;
-
-        // Result content
-        const contentDiv = document.createElement('div');
-        contentDiv.style.cssText = 'white-space: pre-wrap; font-family: monospace; color: #d4d4d4;';
-        contentDiv.textContent = this.content;
-
-        cell.appendChild(header);
-        cell.appendChild(contentDiv);
 
         this.element = cell;
-
+        this.updateViewMode(this.viewMode);
         return cell;
+    }
+
+    updateViewMode(mode) {
+        this.viewMode = mode;
+        if (!this.element) return;
+
+        const catInfo = MESSAGE_CATEGORIES[this.category] || MESSAGE_CATEGORIES.unknown;
+        const color = catInfo.color || '#00ff88';
+        const icon = catInfo.icon || '✨';
+        const label = catInfo.label || 'Result';
+        const timestamp = new Date(this.timestamp).toLocaleTimeString();
+
+        this.element.innerHTML = '';
+        this.element.style.display = 'block'; // Reset
+
+        if (mode === VIEW_MODES.HIDDEN) {
+             this.element.style.display = 'none';
+             return;
+        }
+
+        if (mode === VIEW_MODES.COMPACT) {
+             this.element.style.cssText = `
+                margin-bottom: 4px;
+                padding: 4px 8px;
+                border-left: 3px solid ${color};
+                background: rgba(0,0,0,0.2);
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                font-size: 0.9em;
+            `;
+            this.element.title = "Click to expand";
+            this.element.onclick = () => this.updateViewMode(VIEW_MODES.FULL);
+
+            const badge = document.createElement('span');
+            badge.style.color = color;
+            badge.innerHTML = `${icon} ${label}`;
+
+            const preview = document.createElement('span');
+            preview.style.cssText = 'color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;';
+            // Simple preview: first 50 chars of content
+            let previewText = typeof this.content === 'string' ? this.content : JSON.stringify(this.content);
+            if (previewText.length > 80) previewText = previewText.substring(0, 80) + '...';
+            preview.textContent = previewText;
+
+            this.element.appendChild(badge);
+            this.element.appendChild(preview);
+        } else { // FULL
+             this.element.onclick = null;
+             this.element.style.cssText = `
+                margin-bottom: 12px;
+                padding: 10px;
+                border-left: 3px solid ${color};
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 4px;
+            `;
+
+            // Result header
+            const header = document.createElement('div');
+            header.style.cssText = 'font-size: 0.85em; color: #888; margin-bottom: 6px; display: flex; justify-content: space-between;';
+
+            const left = document.createElement('span');
+            left.style.color = color;
+            left.innerHTML = `${icon} ${label}`;
+
+            const right = document.createElement('span');
+            right.textContent = timestamp;
+
+            // Allow collapsing back to compact
+            const collapseBtn = document.createElement('span');
+            collapseBtn.innerHTML = ' 🔽';
+            collapseBtn.style.cursor = 'pointer';
+            collapseBtn.title = 'Collapse';
+            collapseBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.updateViewMode(VIEW_MODES.COMPACT);
+            };
+            left.appendChild(collapseBtn);
+
+            header.appendChild(left);
+            header.appendChild(right);
+
+            // Result content
+            const contentDiv = document.createElement('div');
+            contentDiv.style.cssText = 'white-space: pre-wrap; font-family: monospace; color: #d4d4d4; overflow-x: auto;';
+
+            if (typeof this.content === 'object') {
+                 contentDiv.textContent = JSON.stringify(this.content, null, 2);
+            } else {
+                 contentDiv.textContent = this.content;
+            }
+
+            this.element.appendChild(header);
+            this.element.appendChild(contentDiv);
+        }
     }
 }
 
@@ -201,9 +280,24 @@ export class NotebookManager {
         return this.addCell(cell);
     }
 
-    createResultCell(content, category = 'result') {
-        const cell = new ResultCell(content, category);
+    createResultCell(content, category = 'result', viewMode = VIEW_MODES.FULL) {
+        const cell = new ResultCell(content, category, viewMode);
         return this.addCell(cell);
+    }
+
+    applyFilter(messageFilter) {
+        this.cells.forEach(cell => {
+            if (cell instanceof ResultCell) {
+                // We construct a fake message object to pass to getMessageViewMode
+                // because filter logic might need content for search
+                const fakeMsg = {
+                    type: cell.category,
+                    content: cell.content
+                };
+                const mode = messageFilter.getMessageViewMode(fakeMsg);
+                cell.updateViewMode(mode);
+            }
+        });
     }
 
     removeCell(cell) {

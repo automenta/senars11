@@ -5,7 +5,7 @@ import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
 import { GraphManager } from './visualization/GraphManager.js';
-import { MessageFilter, MESSAGE_CATEGORIES, categorizeMessage } from './repl/MessageFilter.js';
+import { MessageFilter, MESSAGE_CATEGORIES, categorizeMessage, VIEW_MODES } from './repl/MessageFilter.js';
 import { NotebookManager, CodeCell, ResultCell } from './repl/NotebookManager.js';
 
 console.log('--- SeNARS IDE loading ---');
@@ -204,21 +204,13 @@ class SeNARSIDE {
         Object.entries(MESSAGE_CATEGORIES).forEach(([id, cat]) => {
             const btn = document.createElement('button');
             btn.dataset.category = id;
-            btn.innerHTML = `${cat.icon} ${cat.label}`;
-            btn.style.cssText = `
-                padding: 4px 8px;
-                background: ${this.messageFilter.isCategoryVisible(id) ? cat.color : '#333'};
-                color: ${this.messageFilter.isCategoryVisible(id) ? '#000' : '#888'};
-                border: none;
-                cursor: pointer;
-                border-radius: 3px;
-                font-size: 0.85em;
-                font-weight: ${this.messageFilter.isCategoryVisible(id) ? 'bold' : 'normal'};
-                transition: all 0.2s;
-            `;
+            btn.className = 'filter-btn'; // for easy selection
+
+            this.updateFilterButtonStyle(btn, id, this.messageFilter.getCategoryMode(id));
+
             btn.onclick = () => {
-                this.messageFilter.toggleCategory(id);
-                this.updateFilterButtons();
+                const newMode = this.messageFilter.cycleCategoryMode(id);
+                this.updateFilterButtonStyle(btn, id, newMode);
                 this.filterMessages();
             };
             categoryButtons.appendChild(btn);
@@ -326,6 +318,28 @@ class SeNARSIDE {
         });
     }
 
+    updateFilterButtonStyle(btn, categoryId, mode) {
+        const cat = MESSAGE_CATEGORIES[categoryId];
+        const isHidden = mode === VIEW_MODES.HIDDEN;
+        const isCompact = mode === VIEW_MODES.COMPACT;
+
+        btn.innerHTML = `${cat.icon} ${cat.label} ${isCompact ? '🔹' : isHidden ? '👁️‍🗨️' : ''}`;
+
+        btn.style.cssText = `
+            padding: 4px 8px;
+            background: ${!isHidden ? cat.color : '#333'};
+            color: ${!isHidden ? '#000' : '#888'};
+            border: 1px solid ${!isHidden ? cat.color : '#444'};
+            opacity: ${isHidden ? '0.6' : '1'};
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: ${!isHidden ? 'bold' : 'normal'};
+            transition: all 0.2s;
+            text-decoration: ${isHidden ? 'line-through' : 'none'};
+        `;
+    }
+
     createGraphComponent(container) {
         const graphContainer = container.element;
         graphContainer.style.backgroundColor = '#1e1e1e';
@@ -411,7 +425,8 @@ class SeNARSIDE {
         if (this.notebook) {
             const category = categorizeMessage(message);
             const content = message.payload?.result || message.content || JSON.stringify(message.payload);
-            this.notebook.createResultCell(content, category);
+            const viewMode = this.messageFilter.getMessageViewMode(message);
+            this.notebook.createResultCell(content, category, viewMode);
         }
 
         // Update cycle count
@@ -419,6 +434,23 @@ class SeNARSIDE {
             this.cycleCount = message.payload.cycle;
             this.updateStats();
         }
+    }
+
+    filterMessages() {
+        if (this.notebook) {
+            this.notebook.applyFilter(this.messageFilter);
+        }
+    }
+
+    updateFilterButtons() {
+        // This is not really needed if we update buttons individually on click
+        // But useful if filters are loaded/changed externally
+        const btns = document.querySelectorAll('.filter-btn');
+        btns.forEach(btn => {
+            const id = btn.dataset.category;
+            const mode = this.messageFilter.getCategoryMode(id);
+            this.updateFilterButtonStyle(btn, id, mode);
+        });
     }
 
     executeInput() {
