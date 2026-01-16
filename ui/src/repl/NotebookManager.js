@@ -40,7 +40,11 @@ export class CodeCell extends REPLCell {
             border-radius: 4px;
             background: #1e1e1e;
             overflow: hidden;
+            transition: border-color 0.2s;
         `;
+
+        // Auto-hide toolbar logic could go here, but focusing on simple cleaner look first
+        // Or make it look more like a standard IDE input
 
         this.element.appendChild(this._createToolbar());
         this.element.appendChild(this._createEditor());
@@ -97,6 +101,9 @@ export class CodeCell extends REPLCell {
                 this.execute();
             }
         });
+
+        editor.addEventListener('focus', () => this.element.style.borderColor = '#007acc');
+        editor.addEventListener('blur', () => this.element.style.borderColor = '#3c3c3c');
 
         this.editor = editor;
         return editor;
@@ -160,19 +167,20 @@ export class ResultCell extends REPLCell {
 
     _renderCompact(catInfo, color) {
         this.element.style.cssText = `
-            margin-bottom: 4px; padding: 4px 8px; border-left: 3px solid ${color};
-            background: rgba(0,0,0,0.2); border-radius: 4px; display: flex;
-            align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em;
+            margin-bottom: 2px; padding: 2px 6px; border-left: 3px solid ${color};
+            background: rgba(0,0,0,0.2); border-radius: 2px; display: flex;
+            align-items: center; gap: 8px; cursor: pointer; font-size: 0.85em;
         `;
         this.element.title = "Click to expand";
         this.element.onclick = () => this.updateViewMode(VIEW_MODES.FULL);
 
         const badge = document.createElement('span');
         badge.style.color = color;
-        badge.innerHTML = `${catInfo.icon || '✨'} ${catInfo.label || 'Result'}`;
+        // Just icon, no label for super compact
+        badge.innerHTML = `${catInfo.icon || '✨'}`;
 
         const preview = document.createElement('span');
-        preview.style.cssText = 'color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;';
+        preview.style.cssText = 'color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; opacity: 0.8;';
 
         let previewText = typeof this.content === 'string' ? this.content : JSON.stringify(this.content);
         if (previewText.length > 80) previewText = previewText.substring(0, 80) + '...';
@@ -184,60 +192,55 @@ export class ResultCell extends REPLCell {
     _renderFull(catInfo, color) {
         this.element.onclick = null;
         this.element.style.cssText = `
-            margin-bottom: 12px; padding: 10px; border-left: 3px solid ${color};
-            background: rgba(255, 255, 255, 0.03); border-radius: 4px;
+            margin-bottom: 8px; padding: 8px; border-left: 3px solid ${color};
+            background: rgba(255, 255, 255, 0.03); border-radius: 4px; position: relative;
         `;
 
-        this.element.appendChild(this._createHeader(color, catInfo));
+        // Minimal header: just interactions
+        const actions = document.createElement('div');
+        actions.className = 'cell-actions';
+        actions.style.cssText = `
+            position: absolute; top: 4px; right: 4px; opacity: 0; transition: opacity 0.2s;
+            display: flex; gap: 6px; background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 3px;
+        `;
+
+        this.element.onmouseenter = () => actions.style.opacity = '1';
+        this.element.onmouseleave = () => actions.style.opacity = '0';
+
+        const collapseBtn = this._createActionBtn('🔽', 'Collapse', () => this.updateViewMode(VIEW_MODES.COMPACT));
+
+        const copyBtn = this._createActionBtn('📋', 'Copy', (e) => {
+             const text = typeof this.content === 'object' ? JSON.stringify(this.content, null, 2) : this.content;
+             navigator.clipboard.writeText(text);
+             copyBtn.innerHTML = '✅';
+             setTimeout(() => copyBtn.innerHTML = '📋', 1500);
+        });
+
+        // Info tooltip or popover could go here
+        const infoBtn = this._createActionBtn('ℹ️', 'Details', () => {
+             alert(`Type: ${catInfo.label}\nTime: ${new Date(this.timestamp).toLocaleString()}\nCategory: ${this.category}`);
+        });
+
+        actions.append(copyBtn, infoBtn, collapseBtn);
+        this.element.appendChild(actions);
 
         const contentDiv = document.createElement('div');
-        contentDiv.style.cssText = 'white-space: pre-wrap; font-family: monospace; color: #d4d4d4; overflow-x: auto;';
+        contentDiv.style.cssText = 'white-space: pre-wrap; font-family: monospace; color: #d4d4d4; overflow-x: auto; font-size: 0.95em;';
         contentDiv.textContent = typeof this.content === 'object' ? JSON.stringify(this.content, null, 2) : this.content;
 
         this.element.appendChild(contentDiv);
     }
 
-    _createHeader(color, catInfo) {
-        const header = document.createElement('div');
-        header.style.cssText = 'font-size: 0.85em; color: #888; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;';
-
-        const left = document.createElement('span');
-        left.style.color = color;
-        left.innerHTML = `${catInfo.icon || '✨'} ${catInfo.label || 'Result'}`;
-
-        const collapseBtn = document.createElement('span');
-        collapseBtn.innerHTML = ' 🔽';
-        collapseBtn.style.cursor = 'pointer';
-        collapseBtn.title = 'Collapse';
-        collapseBtn.onclick = (e) => {
+    _createActionBtn(icon, title, onClick) {
+        const btn = document.createElement('button');
+        btn.innerHTML = icon;
+        btn.title = title;
+        btn.style.cssText = 'background: transparent; border: none; cursor: pointer; color: #ccc; font-size: 1em; padding: 0 2px;';
+        btn.onclick = (e) => {
             e.stopPropagation();
-            this.updateViewMode(VIEW_MODES.COMPACT);
+            onClick(e);
         };
-        left.appendChild(collapseBtn);
-
-        const right = document.createElement('div');
-        right.style.display = 'flex';
-        right.style.gap = '8px';
-        right.style.alignItems = 'center';
-
-        const copyBtn = document.createElement('button');
-        copyBtn.innerHTML = '📋';
-        copyBtn.title = 'Copy to clipboard';
-        copyBtn.style.cssText = 'background: transparent; border: none; cursor: pointer; color: #666; font-size: 1.1em; padding: 0;';
-        copyBtn.onclick = (e) => {
-             e.stopPropagation();
-             const text = typeof this.content === 'object' ? JSON.stringify(this.content, null, 2) : this.content;
-             navigator.clipboard.writeText(text);
-             copyBtn.innerHTML = '✅';
-             setTimeout(() => copyBtn.innerHTML = '📋', 1500);
-        };
-
-        const timeSpan = document.createElement('span');
-        timeSpan.textContent = new Date(this.timestamp).toLocaleTimeString();
-
-        right.append(copyBtn, timeSpan);
-        header.append(left, right);
-        return header;
+        return btn;
     }
 }
 
