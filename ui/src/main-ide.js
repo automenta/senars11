@@ -54,6 +54,12 @@ class SeNARSIDE {
         this.setupLayout();
         await this.switchMode(this.connectionMode);
         this.setupKeyboardShortcuts();
+
+        // Welcome cells
+        if (this.notebook && this.notebook.cells.length === 0) {
+            this.notebook.createMarkdownCell("# Welcome to SeNARS IDE v1.0\n\nDouble-click this cell to edit.\n- **Local Mode**: Runs entirely in browser\n- **Remote Mode**: Connects to backend\n- **Widgets**: Interactive tools");
+        }
+
         console.log(`SeNARS IDE initialized in ${this.connectionMode} mode`);
     }
 
@@ -177,7 +183,35 @@ class SeNARSIDE {
         demoButton.onclick = () => this.showDemoLibrary();
         demoButton.style.cssText = 'padding: 6px 12px; background: #5c2d91; color: white; border: none; cursor: pointer; border-radius: 3px;';
 
-        buttonBar.append(reasonerControls, runButton, clearButton, demoButton);
+        // Extra Tools
+        const extraTools = document.createElement('div');
+        extraTools.style.cssText = 'display: flex; gap: 4px; border-left: 1px solid #444; padding-left: 12px; margin-left: 12px;';
+
+        const addMdBtn = document.createElement('button');
+        addMdBtn.innerHTML = '📝 Text';
+        addMdBtn.title = 'Add Markdown Cell';
+        addMdBtn.onclick = () => this.notebook.createMarkdownCell('Double-click to edit...');
+        addMdBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        const addWidgetBtn = document.createElement('button');
+        addWidgetBtn.innerHTML = '🧩 Graph';
+        addWidgetBtn.title = 'Add Graph Widget';
+        addWidgetBtn.onclick = () => this.notebook.createWidgetCell('GraphWidget', [
+            { id: 'a', label: 'Concept A' },
+            { id: 'b', label: 'Concept B' },
+            { source: 'a', target: 'b', label: 'relates' }
+        ]);
+        addWidgetBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        const addSliderBtn = document.createElement('button');
+        addSliderBtn.innerHTML = '🎚️ Slider';
+        addSliderBtn.title = 'Add Truth Slider';
+        addSliderBtn.onclick = () => this.notebook.createWidgetCell('TruthSlider', { frequency: 0.5, confidence: 0.9 });
+        addSliderBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
+
+        extraTools.append(addMdBtn, addWidgetBtn, addSliderBtn);
+
+        buttonBar.append(reasonerControls, runButton, clearButton, demoButton, extraTools);
         inputArea.append(inputBox, buttonBar);
         replContainer.appendChild(inputArea);
 
