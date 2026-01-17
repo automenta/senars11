@@ -2,6 +2,7 @@ import { VIEW_MODES, MESSAGE_CATEGORIES } from './MessageFilter.js';
 import { TruthSlider } from '../components/widgets/TruthSlider.js';
 import { SimpleGraphWidget } from '../components/widgets/SimpleGraphWidget.js';
 import { ChartWidget } from '../components/widgets/ChartWidget.js';
+import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
 import { marked } from 'marked';
 
 /**
@@ -44,6 +45,7 @@ export class CodeCell extends REPLCell {
     constructor(content = '', onExecute = null) {
         super('code', content);
         this.onExecute = onExecute;
+        this.isEditing = true;
     }
 
     render() {
@@ -59,19 +61,40 @@ export class CodeCell extends REPLCell {
             transition: border-color 0.2s;
         `;
 
-        // Render editor first, then toolbar (optional preference, but matches standard notebook style usually)
-        // Wait, Jupyter puts toolbar on top or side. Let's keep toolbar on top.
-        // But we must ensure content is set in DOM for tests to find it.
-
         this.element.appendChild(this._createToolbar());
-        this.element.appendChild(this._createEditor());
 
-        // Ensure content is visible in a way Playwright can easily see "to_contain_text"
-        // The textarea contains the value, but "to_contain_text" on the container might not recurse into textarea value?
-        // Playwright's to_contain_text checks textContent. Textarea value is NOT textContent.
-        // We should verify the textarea value or add a read-only view.
+        this.editorContainer = document.createElement('div');
+        this.element.appendChild(this.editorContainer);
+        this.updateMode();
 
         return this.element;
+    }
+
+    updateMode() {
+        this.editorContainer.innerHTML = '';
+        if (this.isEditing) {
+            this.editorContainer.appendChild(this._createEditor());
+            requestAnimationFrame(() => this.editor?.focus());
+        } else {
+            this.editorContainer.appendChild(this._createPreview());
+        }
+    }
+
+    _createPreview() {
+        const preview = document.createElement('div');
+        preview.className = 'code-preview';
+        preview.innerHTML = NarseseHighlighter.highlight(this.content);
+        preview.style.cssText = `
+            padding: 10px; font-family: monospace; font-size: 0.95em;
+            color: #d4d4d4; white-space: pre-wrap; cursor: pointer;
+            border-left: 2px solid transparent;
+        `;
+        preview.title = 'Double-click to edit';
+        preview.ondblclick = () => {
+            this.isEditing = true;
+            this.updateMode();
+        };
+        return preview;
     }
 
     _createToolbar() {
@@ -88,11 +111,19 @@ export class CodeCell extends REPLCell {
         label.textContent = '💻 Code';
         label.style.color = '#888';
 
-        const runBtn = this._createButton('▶️', 'Run cell', '#0e639c', () => this.execute());
-        const deleteBtn = this._createButton('🗑️', 'Delete cell', '#b30000', () => this.delete());
+        const runBtn = this._createButton('▶️', 'Run', '#0e639c', () => this.execute());
+
+        const toggleBtn = this._createButton(this.isEditing ? '👁️' : '✏️', 'Toggle View', '#333', () => {
+            this.isEditing = !this.isEditing;
+            this.updateMode();
+            // Update button label
+            toggleBtn.innerHTML = this.isEditing ? '👁️' : '✏️';
+        });
+
+        const deleteBtn = this._createButton('🗑️', 'Delete', '#b30000', () => this.delete());
         deleteBtn.style.marginLeft = 'auto';
 
-        toolbar.append(label, runBtn, deleteBtn);
+        toolbar.append(label, runBtn, toggleBtn, deleteBtn);
         return toolbar;
     }
 
@@ -110,13 +141,19 @@ export class CodeCell extends REPLCell {
         editor.className = 'cell-editor';
         editor.value = this.content;
         editor.placeholder = 'Enter Narsese or MeTTa...';
-        editor.rows = 3;
+        editor.rows = Math.max(3, this.content.split('\n').length);
         editor.style.cssText = `
             width: 100%; background: #1e1e1e; color: #d4d4d4; border: none; padding: 10px;
-            font-family: monospace; font-size: 0.95em; resize: vertical; outline: none;
+            font-family: monospace; font-size: 0.95em; resize: vertical; outline: none; display: block;
         `;
 
-        editor.addEventListener('input', (e) => this.content = e.target.value);
+        editor.addEventListener('input', (e) => {
+            this.content = e.target.value;
+            // Auto resize
+            editor.style.height = 'auto';
+            editor.style.height = editor.scrollHeight + 'px';
+        });
+
         editor.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
@@ -133,6 +170,8 @@ export class CodeCell extends REPLCell {
 
     execute() {
         if (this.onExecute && this.content.trim()) {
+            this.isEditing = false;
+            this.updateMode();
             this.onExecute(this.content, this);
         }
     }
@@ -245,7 +284,12 @@ export class ResultCell extends REPLCell {
 
         const contentDiv = document.createElement('div');
         contentDiv.style.cssText = 'white-space: pre-wrap; font-family: monospace; color: #d4d4d4; overflow-x: auto; font-size: 0.95em;';
-        contentDiv.textContent = typeof this.content === 'object' ? JSON.stringify(this.content, null, 2) : this.content;
+
+        if (typeof this.content === 'string') {
+            contentDiv.innerHTML = NarseseHighlighter.highlight(this.content);
+        } else {
+            contentDiv.textContent = JSON.stringify(this.content, null, 2);
+        }
 
         this.element.appendChild(contentDiv);
     }

@@ -69,7 +69,10 @@ export class REPLPanel extends Component {
 
     handleExecution(command) {
         // Create code cell first
-        this.notebookManager.createCodeCell(command);
+        const cell = this.notebookManager.createCodeCell(command);
+        // Switch to view mode (highlighted) as it is a submitted command
+        cell.isEditing = false;
+        cell.updateMode();
 
         // Execute via app command processor
         if (this.app && this.app.commandProcessor) {
