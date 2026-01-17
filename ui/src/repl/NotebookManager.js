@@ -249,6 +249,7 @@ export class MarkdownCell extends REPLCell {
     constructor(content = '') {
         super('markdown', content);
         this.isEditing = false;
+        this.onUpdate = null; // Callback for updates
     }
 
     render() {
@@ -285,6 +286,7 @@ export class MarkdownCell extends REPLCell {
         saveBtn.onclick = () => {
             this.content = textarea.value;
             this.toggleEdit(false);
+            this.onUpdate?.();
         };
 
         this.editorDiv.append(textarea, saveBtn);
@@ -371,12 +373,15 @@ export class NotebookManager {
     constructor(container) {
         this.container = container;
         this.cells = [];
+        this.saveTimeout = null;
+        this.storageKey = 'senars-notebook-content';
     }
 
     addCell(cell) {
         this.cells.push(cell);
         this.container.appendChild(cell.render());
         this.scrollToBottom();
+        this.triggerSave();
         return cell;
     }
 
@@ -387,15 +392,22 @@ export class NotebookManager {
     }
 
     createResultCell(content, category = 'result', viewMode = VIEW_MODES.FULL) {
+        // Result cells are transient usually, but we might want to save them?
+        // For now, let's save them too.
         return this.addCell(new ResultCell(content, category, viewMode));
     }
 
     createMarkdownCell(content = '') {
-        return this.addCell(new MarkdownCell(content));
+        const cell = new MarkdownCell(content);
+        cell.onUpdate = () => this.triggerSave();
+        cell.onDelete = (c) => this.removeCell(c);
+        return this.addCell(cell);
     }
 
     createWidgetCell(type, data = {}) {
-        return this.addCell(new WidgetCell(type, data));
+        const cell = new WidgetCell(type, data);
+        cell.onDelete = (c) => this.removeCell(c);
+        return this.addCell(cell);
     }
 
     applyFilter(messageFilter) {
@@ -411,11 +423,13 @@ export class NotebookManager {
         const index = this.cells.indexOf(cell);
         if (index > -1) this.cells.splice(index, 1);
         cell.destroy();
+        this.triggerSave();
     }
 
     clear() {
         this.cells.forEach(cell => cell.destroy());
         this.cells = [];
+        this.triggerSave();
     }
 
     scrollToBottom() {
@@ -429,7 +443,10 @@ export class NotebookManager {
                 content: cell.content,
                 timestamp: cell.timestamp
             };
-            if (cell.type === 'result') data.category = cell.category;
+            if (cell.type === 'result') {
+                data.category = cell.category;
+                data.viewMode = cell.viewMode;
+            }
             if (cell.type === 'widget') data.widgetType = cell.widgetType;
             return data;
         });
@@ -439,10 +456,46 @@ export class NotebookManager {
         this.clear();
         data.forEach(d => {
             if (d.type === 'code') this.createCodeCell(d.content);
-            else if (d.type === 'result') this.createResultCell(d.content, d.category);
+            else if (d.type === 'result') this.createResultCell(d.content, d.category, d.viewMode);
             else if (d.type === 'markdown') this.createMarkdownCell(d.content);
             else if (d.type === 'widget') this.createWidgetCell(d.widgetType, d.content);
         });
+        // Clear save timeout to avoid immediate save of imported content (redundant)
+        // But actually we might want to save it as the new state.
+        this.triggerSave();
+    }
+
+    triggerSave() {
+        if (this.saveTimeout) clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => this.saveToStorage(), 1000); // Save after 1s of inactivity
+    }
+
+    saveToStorage() {
+        try {
+            const data = this.exportNotebook();
+            // Filter out transient simulation data if needed, but for now save all
+            // Maybe limit size?
+            if (data.length > 500) data.splice(0, data.length - 500); // Keep last 500 cells
+            localStorage.setItem(this.storageKey, JSON.stringify(data));
+        } catch (e) {
+            console.warn('Failed to save notebook', e);
+        }
+    }
+
+    loadFromStorage() {
+        try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (Array.isArray(data) && data.length > 0) {
+                    this.importNotebook(data);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load notebook', e);
+        }
+        return false;
     }
 
     /**

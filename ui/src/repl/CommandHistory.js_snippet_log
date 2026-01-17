@@ -1,0 +1,14 @@
+    getPrevious(currentInput) {
+        console.log(`getPrevious: ptr=${this.pointer} len=${this.history.length} input=${currentInput}`);
+        // If we are at the "new input" line (pointer == length), save current input
+        if (this.pointer === this.history.length) {
+            this.tempInput = currentInput;
+        }
+
+        if (this.pointer > 0) {
+            this.pointer--;
+            console.log(`  -> returning ${this.history[this.pointer]} (new ptr=${this.pointer})`);
+            return this.history[this.pointer];
+        }
+        return null;
+    }

@@ -1,0 +1,16 @@
+    getPrevious(currentInput) {
+        // If we are at the "new input" line (pointer == length), save current input
+        if (this.pointer === this.history.length) {
+            this.tempInput = currentInput;
+        }
+
+        if (this.pointer > 0) {
+            this.pointer--;
+            return this.history[this.pointer];
+        }
+        // If pointer is 0, we are at the oldest command.
+        // Return null or current?
+        // If we return null, we don't change input.
+        // If we stay at 0, we return history[0] again?
+        return this.history[0]; // Maybe return the oldest command again?
+    }

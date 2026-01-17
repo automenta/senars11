@@ -1,0 +1,28 @@
+    _handleKeydown(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            this.execute();
+        } else if (e.key === 'ArrowUp') {
+            // Only if cursor is at start of first line to avoid messing with multiline editing
+            if (this.inputBox.selectionStart === 0 && this.inputBox.selectionEnd === 0) {
+                // e.preventDefault(); // <-- MAYBE THIS IS NEEDED? YES.
+                // But wait, if I prevent default, cursor won't move up. That's fine if we replace content.
+                // If I don't prevent default, cursor moves to start of line 0 (which is where it is).
+                // Issue might be: pointer events?
+
+                const prev = this.history.getPrevious(this.inputBox.value);
+                if (prev !== null) {
+                    e.preventDefault(); // Prevent cursor movement if we are changing history
+                    this.inputBox.value = prev;
+                }
+            }
+        } else if (e.key === 'ArrowDown') {
+            if (this.inputBox.selectionStart === this.inputBox.value.length) {
+                const next = this.history.getNext();
+                if (next !== null) {
+                    e.preventDefault();
+                    this.inputBox.value = next;
+                }
+            }
+        }
+    }

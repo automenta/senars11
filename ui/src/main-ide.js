@@ -10,6 +10,7 @@ import { DerivationTree } from './components/DerivationTree.js';
 import { MessageFilter, categorizeMessage } from './repl/MessageFilter.js';
 import { NotebookManager } from './repl/NotebookManager.js';
 import { FilterToolbar } from './repl/FilterToolbar.js';
+import { REPLInput } from './repl/REPLInput.js';
 import { DemoLibrary } from './components/DemoLibrary.js';
 
 console.log('--- SeNARS IDE loading ---');
@@ -55,8 +56,8 @@ class SeNARSIDE {
         await this.switchMode(this.connectionMode);
         this.setupKeyboardShortcuts();
 
-        // Welcome cells
-        if (this.notebook && this.notebook.cells.length === 0) {
+        // Load persisted state or show welcome
+        if (this.notebook && !this.notebook.loadFromStorage()) {
             this.notebook.createMarkdownCell("# Welcome to SeNARS IDE v1.0\n\nDouble-click this cell to edit.\n- **Local Mode**: Runs entirely in browser\n- **Remote Mode**: Connects to backend\n- **Widgets**: Interactive tools");
         }
 
@@ -135,97 +136,21 @@ class SeNARSIDE {
 
         this.notebook = new NotebookManager(notebookContainer);
 
-        const inputArea = document.createElement('div');
-        inputArea.style.cssText = 'padding: 10px; background: #252526; border-top: 1px solid #333;';
+        const inputContainer = document.createElement('div');
+        replContainer.appendChild(inputContainer);
 
-        const inputBox = document.createElement('textarea');
-        inputBox.id = 'repl-input';
-        inputBox.placeholder = 'Enter Narsese or MeTTa...';
-        inputBox.rows = 3;
-        inputBox.style.cssText = 'width: 100%; background: #1e1e1e; color: #d4d4d4; border: 1px solid #3c3c3c; padding: 8px; font-family: monospace; resize: vertical;';
-        inputBox.addEventListener('keydown', (e) => (e.ctrlKey && e.key === 'Enter') && (e.preventDefault(), this.executeInput()));
-
-        const buttonBar = document.createElement('div');
-        buttonBar.style.cssText = 'display: flex; gap: 8px; margin-top: 8px; align-items: center;';
-
-        const reasonerControls = document.createElement('div');
-        reasonerControls.style.cssText = 'display: flex; gap: 4px; margin-right: 12px; padding-right: 12px; border-right: 1px solid #444;';
-
-        const createControlBtn = (icon, title, action, bg = '#333', color = 'white') => {
-            const btn = document.createElement('button');
-            btn.innerHTML = icon;
-            btn.title = title;
-            btn.onclick = () => this.controlReasoner(action);
-            btn.style.cssText = `padding: 6px 10px; background: ${bg}; color: ${color}; border: none; cursor: pointer; border-radius: 3px;`;
-            return btn;
-        };
-
-        reasonerControls.append(
-            createControlBtn('▶️', 'Start reasoner', 'start', '#0e639c'),
-            createControlBtn('⏸️', 'Pause reasoner', 'pause'),
-            createControlBtn('⏹️', 'Stop reasoner', 'stop', '#b30000'),
-            createControlBtn('⏭️', 'Step reasoner', 'step'),
-            createControlBtn('🔄', 'Reset reasoner', 'reset')
-        );
-
-        const runButton = document.createElement('button');
-        runButton.textContent = '▶️ Run (Ctrl+Enter)';
-        runButton.onclick = () => this.executeInput();
-        runButton.style.cssText = 'padding: 6px 12px; background: #0e639c; color: white; border: none; cursor: pointer; border-radius: 3px;';
-
-        const clearButton = document.createElement('button');
-        clearButton.textContent = '🗑️ Clear';
-        clearButton.onclick = () => this.clearREPL();
-        clearButton.style.cssText = 'padding: 6px 12px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
-
-        const demoButton = document.createElement('button');
-        demoButton.innerHTML = '📚 Load Demo';
-        demoButton.title = 'Browse demo library (Ctrl+Shift+D)';
-        demoButton.onclick = () => this.showDemoLibrary();
-        demoButton.style.cssText = 'padding: 6px 12px; background: #5c2d91; color: white; border: none; cursor: pointer; border-radius: 3px;';
-
-        // Extra Tools
-        const extraTools = document.createElement('div');
-        extraTools.style.cssText = 'display: flex; gap: 4px; border-left: 1px solid #444; padding-left: 12px; margin-left: 12px;';
-
-        const addMdBtn = document.createElement('button');
-        addMdBtn.innerHTML = '📝 Text';
-        addMdBtn.title = 'Add Markdown Cell';
-        addMdBtn.onclick = () => this.notebook.createMarkdownCell('Double-click to edit...');
-        addMdBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
-
-        const addWidgetBtn = document.createElement('button');
-        addWidgetBtn.innerHTML = '🧩 Graph';
-        addWidgetBtn.title = 'Add Graph Widget';
-        addWidgetBtn.onclick = () => this.notebook.createWidgetCell('GraphWidget', [
-            { id: 'a', label: 'Concept A' },
-            { id: 'b', label: 'Concept B' },
-            { source: 'a', target: 'b', label: 'relates' }
-        ]);
-        addWidgetBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
-
-        const addSliderBtn = document.createElement('button');
-        addSliderBtn.innerHTML = '🎚️ Slider';
-        addSliderBtn.title = 'Add Truth Slider';
-        addSliderBtn.onclick = () => this.notebook.createWidgetCell('TruthSlider', { frequency: 0.5, confidence: 0.9 });
-        addSliderBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
-
-        const simBtn = document.createElement('button');
-        simBtn.innerHTML = '⚡ Simulation';
-        simBtn.title = 'Run Epic Simulation';
-        simBtn.style.cssText = 'padding: 6px 10px; background: #00ff9d; color: #000; border: none; cursor: pointer; border-radius: 3px; font-weight: bold;';
-        simBtn.onclick = () => this.runEpicSimulation();
-
-        extraTools.append(addMdBtn, addWidgetBtn, addSliderBtn, simBtn);
-
-        buttonBar.append(reasonerControls, runButton, clearButton, demoButton, extraTools);
-        inputArea.append(inputBox, buttonBar);
-        replContainer.appendChild(inputArea);
+        this.replInput = new REPLInput(inputContainer, {
+            onExecute: (text) => this.executeInput(text),
+            onClear: () => this.clearREPL(),
+            onDemo: () => this.showDemoLibrary(),
+            onExtraAction: (action) => this.handleExtraAction(action)
+        });
+        this.replInput.render();
 
         this.components.set('repl', {
             container: replContainer,
             notebook: notebookContainer,
-            input: inputBox,
+            input: this.replInput,
             modeIndicator,
             cycleCount: document.getElementById('cycle-count'),
             messageCount: document.getElementById('message-count')
@@ -340,16 +265,11 @@ class SeNARSIDE {
         URL.revokeObjectURL(url);
     }
 
-    executeInput() {
-        const repl = this.components.get('repl');
-        const input = repl?.input.value.trim();
-        if (!input) return;
-
-        this.notebook.createCodeCell(input, (content) => {
+    executeInput(text) {
+        if (!text) return;
+        this.notebook.createCodeCell(text, (content) => {
             this.connection?.isConnected() && this.connection.sendMessage('agent/input', { text: content });
         }).execute();
-
-        repl.input.value = '';
     }
 
     clearREPL() {
@@ -394,6 +314,27 @@ class SeNARSIDE {
                 this.showDemoLibrary();
             }
         });
+    }
+
+    handleExtraAction(action) {
+        switch (action) {
+            case 'markdown':
+                this.notebook.createMarkdownCell('Double-click to edit...');
+                break;
+            case 'graph':
+                this.notebook.createWidgetCell('GraphWidget', [
+                    { id: 'a', label: 'Concept A' },
+                    { id: 'b', label: 'Concept B' },
+                    { source: 'a', target: 'b', label: 'relates' }
+                ]);
+                break;
+            case 'slider':
+                this.notebook.createWidgetCell('TruthSlider', { frequency: 0.5, confidence: 0.9 });
+                break;
+            case 'simulation':
+                this.runEpicSimulation();
+                break;
+        }
     }
 
     runEpicSimulation() {
