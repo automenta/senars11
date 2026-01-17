@@ -87,11 +87,12 @@ class SeNARSIDE {
             root: {
                 type: 'row',
                 content: [
-                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 60 },
+                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 80 },
                     {
-                        type: 'stack', width: 40,
+                        type: 'stack', width: 20,
+                        isClosable: true,
                         content: [
-                            { type: 'component', componentName: 'graphComponent', title: 'KNOWLEDGE GRAPH', isClosable: false },
+                            { type: 'component', componentName: 'graphComponent', title: 'KNOWLEDGE GRAPH', isClosable: true },
                             { type: 'component', componentName: 'memoryComponent', title: 'MEMORY INSPECTOR' },
                             { type: 'component', componentName: 'derivationComponent', title: 'DERIVATION TRACER' }
                         ]
@@ -209,7 +210,13 @@ class SeNARSIDE {
         addSliderBtn.onclick = () => this.notebook.createWidgetCell('TruthSlider', { frequency: 0.5, confidence: 0.9 });
         addSliderBtn.style.cssText = 'padding: 6px 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 3px;';
 
-        extraTools.append(addMdBtn, addWidgetBtn, addSliderBtn);
+        const simBtn = document.createElement('button');
+        simBtn.innerHTML = '⚡ Simulation';
+        simBtn.title = 'Run Epic Simulation';
+        simBtn.style.cssText = 'padding: 6px 10px; background: #00ff9d; color: #000; border: none; cursor: pointer; border-radius: 3px; font-weight: bold;';
+        simBtn.onclick = () => this.runEpicSimulation();
+
+        extraTools.append(addMdBtn, addWidgetBtn, addSliderBtn, simBtn);
 
         buttonBar.append(reasonerControls, runButton, clearButton, demoButton, extraTools);
         inputArea.append(inputBox, buttonBar);
@@ -387,6 +394,59 @@ class SeNARSIDE {
                 this.showDemoLibrary();
             }
         });
+    }
+
+    runEpicSimulation() {
+        this.notebook.clear();
+        this.notebook.createMarkdownCell('# 🚀 System Simulation: Cognitive Load Test\n\nInitiating high-frequency inference simulation...');
+
+        // 1. Add Chart Widget
+        const chartCell = this.notebook.createWidgetCell('ChartWidget', {
+            type: 'line',
+            options: {
+                plugins: { title: { display: true, text: 'Real-time Inference Metrics' } }
+            }
+        });
+
+        // 2. Add Graph Widget
+        const graphCell = this.notebook.createWidgetCell('GraphWidget', [
+            { id: 'SELF', type: 'concept', val: 100, label: 'SELF' }
+        ]);
+
+        // 3. Simulate Activity
+        let tick = 0;
+        const interval = setInterval(() => {
+            tick++;
+
+            // Update Chart
+            const val = Math.sin(tick * 0.1) * 20 + 50 + Math.random() * 10;
+            const widget = chartCell.element.querySelector('canvas')?.__chartWidget; // Hack or need better way to get instance
+            // Actually, we don't have reference to widget instance from cell easily.
+            // Let's modify NotebookManager to return instance or allow access.
+            // For now, let's look up by cell ID or assume the cell has a way.
+
+            // Accessing the widget instance stored on the element (we need to update WidgetCell to store it)
+            if (chartCell.widgetInstance) {
+                chartCell.widgetInstance.updateData(new Date().toLocaleTimeString(), val);
+            }
+
+            // Update Graph
+            if (tick % 5 === 0 && graphCell.widgetInstance) {
+                const id = `NODE_${tick}`;
+                const source = tick > 5 ? `NODE_${tick-5}` : 'SELF';
+                graphCell.widgetInstance.updateData([
+                    { group: 'nodes', data: { id, label: `Concept ${tick}`, val: Math.random() * 50 + 10 } },
+                    { group: 'edges', data: { source, target: id, label: 'implies' } }
+                ]);
+            }
+
+            // Log messages
+            if (tick % 10 === 0) {
+                 this.notebook.createResultCell(`[SIM] Cycle ${tick}: Inference completed with confidence ${(Math.random()).toFixed(2)}`, 'reasoning', 'compact');
+            }
+
+            if (tick > 100) clearInterval(interval);
+        }, 200);
     }
 
     showDemoLibrary() {

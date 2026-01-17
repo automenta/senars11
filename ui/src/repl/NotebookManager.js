@@ -1,6 +1,7 @@
 import { VIEW_MODES, MESSAGE_CATEGORIES } from './MessageFilter.js';
 import { TruthSlider } from '../components/widgets/TruthSlider.js';
 import { SimpleGraphWidget } from '../components/widgets/SimpleGraphWidget.js';
+import { ChartWidget } from '../components/widgets/ChartWidget.js';
 import { marked } from 'marked';
 
 /**
@@ -322,6 +323,7 @@ export class WidgetCell extends REPLCell {
     constructor(widgetType, data = {}) {
         super('widget', data);
         this.widgetType = widgetType;
+        this.widgetInstance = null;
     }
 
     render() {
@@ -342,13 +344,18 @@ export class WidgetCell extends REPLCell {
         this.element.append(header, content);
 
         if (this.widgetType === 'TruthSlider') {
-            new TruthSlider(content, {
+            this.widgetInstance = new TruthSlider(content, {
                 frequency: this.content.frequency,
                 confidence: this.content.confidence,
                 onChange: (val) => console.log('Widget update:', val)
-            }).render();
+            });
+            this.widgetInstance.render();
         } else if (this.widgetType === 'GraphWidget') {
-            new SimpleGraphWidget(content, this.content).render();
+            this.widgetInstance = new SimpleGraphWidget(content, this.content);
+            this.widgetInstance.render();
+        } else if (this.widgetType === 'ChartWidget') {
+            this.widgetInstance = new ChartWidget(content, this.content);
+            this.widgetInstance.render();
         } else {
             content.innerHTML = `<div style="color:red">Unknown widget: ${this.widgetType}</div>`;
         }

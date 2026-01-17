@@ -24,6 +24,7 @@
   "dependencies": {
     "@senars/agent": "^1.0.0",
     "@senars/core": "^1.0.0",
+    "chart.js": "^4.5.1",
     "cose-base": "^1.0.3",
     "cytoscape": "^3.33.1",
     "cytoscape-fcose": "^2.2.0",
