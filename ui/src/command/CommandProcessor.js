@@ -22,7 +22,9 @@ export class CommandProcessor {
             ['/beliefs', ctx => this._listBeliefs(ctx), 'Show current beliefs'],
             ['/step', ctx => this._executeStep(ctx), 'Execute single reasoning step'],
             ['/run', ctx => this._executeRun(ctx), 'Start continuous execution'],
-            ['/stop', ctx => this._executeStop(ctx), 'Stop continuous execution']
+            ['/stop', ctx => this._executeStop(ctx), 'Stop continuous execution'],
+            ['/inspect', ctx => this._executeInspect(ctx), 'Inspect a term or node'],
+            ['/viz', ctx => this._executeViz(ctx), 'Visualize data (graph, chart, md)']
         ];
         commands.forEach(([cmd, handler, desc]) =>
             this.commandRegistry.registerCommand(cmd, handler, {description: desc})
@@ -82,6 +84,76 @@ export class CommandProcessor {
         return true;
     }
 
+    _executeInspect(ctx) {
+        const args = ctx.args || [];
+        if (args.length === 0) {
+            this.logger.log('Usage: /inspect <term>', 'error');
+            return false;
+        }
+
+        const term = args[0];
+        // For now, we mock fetching data or grab from GraphManager if available
+        if (this.graphManager && this.graphManager.cy) {
+            const node = this.graphManager.cy.getElementById(term);
+            const neighborhood = node.length ? node.neighborhood().add(node) : null;
+
+            if (neighborhood && neighborhood.length > 0) {
+                 // Convert to format for GraphWidget
+                 const graphData = [];
+                 neighborhood.nodes().forEach(n => {
+                     graphData.push({
+                         id: n.id(),
+                         label: n.data('label'),
+                         type: n.data('type'),
+                         val: n.data('weight') || 50
+                     });
+                 });
+                 neighborhood.edges().forEach(e => {
+                     graphData.push({
+                         source: e.data('source'),
+                         target: e.data('target'),
+                         label: e.data('label')
+                     });
+                 });
+
+                 this.logger.logWidget('GraphWidget', graphData);
+                 return true;
+            }
+        }
+
+        // Fallback: request from backend
+        this.webSocketManager.sendMessage('command.execute', { command: 'inspect', args: [term] });
+        return true;
+    }
+
+    _executeViz(ctx) {
+        const args = ctx.args || [];
+        if (args.length < 2) {
+            this.logger.log('Usage: /viz <type> <data_json_or_text>', 'error');
+            return false;
+        }
+
+        const type = args[0];
+        const dataStr = args.slice(1).join(' ');
+
+        try {
+            if (type === 'md' || type === 'markdown') {
+                this.logger.logMarkdown(dataStr);
+            } else if (type === 'graph') {
+                const data = JSON.parse(dataStr);
+                this.logger.logWidget('GraphWidget', data);
+            } else if (type === 'chart') {
+                const data = JSON.parse(dataStr);
+                this.logger.logWidget('ChartWidget', data);
+            } else {
+                this.logger.log(`Unknown visualization type: ${type}`, 'error');
+            }
+        } catch (e) {
+             this.logger.log(`Error parsing visualization data: ${e.message}`, 'error');
+        }
+        return true;
+    }
+
     processCommand(command, isDebug = false, mode = 'narsese') {
         const trimmedCommand = command?.trim();
         if (!trimmedCommand) return false;
@@ -109,11 +181,14 @@ export class CommandProcessor {
     _processDebugCommand(command) {
         const parts = command.split(' ');
         const cmd = parts[0].toLowerCase();
+
+        // Fix: args was missing in ctx for command registry execution
         const context = {
             webSocketManager: this.webSocketManager,
             logger: this.logger,
             graphManager: this.graphManager,
-            commandProcessor: this
+            commandProcessor: this,
+            args: parts.slice(1)
         };
 
         if (this.commandRegistry.commands.has(cmd)) {

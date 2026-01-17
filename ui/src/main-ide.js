@@ -265,10 +265,21 @@ class SeNARSIDE {
         this.updateStats();
 
         if (this.notebook) {
-            const category = categorizeMessage(message);
-            const content = message.payload?.result || message.content || JSON.stringify(message.payload);
-            const viewMode = this.messageFilter.getMessageViewMode(message);
-            this.notebook.createResultCell(content, category, viewMode);
+            if (message.type === 'visualization') {
+                const { type, data, content } = message.payload;
+                if (type === 'markdown') {
+                    this.notebook.createMarkdownCell(content || data);
+                } else if (type === 'graph' || type === 'chart') {
+                     // Map type to widget component name
+                     const widgetType = type === 'graph' ? 'GraphWidget' : 'ChartWidget';
+                     this.notebook.createWidgetCell(widgetType, data);
+                }
+            } else {
+                const category = categorizeMessage(message);
+                const content = message.payload?.result || message.content || JSON.stringify(message.payload);
+                const viewMode = this.messageFilter.getMessageViewMode(message);
+                this.notebook.createResultCell(content, category, viewMode);
+            }
         }
 
         if (message.payload?.cycle) {
