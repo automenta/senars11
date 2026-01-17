@@ -59,8 +59,17 @@ export class CodeCell extends REPLCell {
             transition: border-color 0.2s;
         `;
 
+        // Render editor first, then toolbar (optional preference, but matches standard notebook style usually)
+        // Wait, Jupyter puts toolbar on top or side. Let's keep toolbar on top.
+        // But we must ensure content is set in DOM for tests to find it.
+
         this.element.appendChild(this._createToolbar());
         this.element.appendChild(this._createEditor());
+
+        // Ensure content is visible in a way Playwright can easily see "to_contain_text"
+        // The textarea contains the value, but "to_contain_text" on the container might not recurse into textarea value?
+        // Playwright's to_contain_text checks textContent. Textarea value is NOT textContent.
+        // We should verify the textarea value or add a read-only view.
 
         return this.element;
     }
