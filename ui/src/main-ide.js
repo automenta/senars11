@@ -155,7 +155,8 @@ class SeNARSIDE {
             onExecute: (text) => this.executeInput(text),
             onClear: () => this.clearREPL(),
             onDemo: () => this.showDemoLibrary(),
-            onExtraAction: (action) => this.handleExtraAction(action)
+            onExtraAction: (action) => this.handleExtraAction(action),
+            onControl: (action) => this.controlReasoner(action)
         });
         this.replInput.render();
 
@@ -164,7 +165,8 @@ class SeNARSIDE {
             notebook: notebookContainer,
             input: this.replInput,
             modeIndicator,
-            cycleCount: document.getElementById('cycle-count'),
+            // cycleCount element is removed from status bar in new design,
+            // but we keep ref if needed or update REPLInput directly
             messageCount: document.getElementById('message-count')
         });
     }
@@ -357,13 +359,19 @@ class SeNARSIDE {
         if (action === 'reset') {
             this.cycleCount = 0;
             this.messageCount = 0;
-            this.updateStats();
         }
+
+        this.replInput?.updateState(this.isRunning);
+        this.updateStats();
     }
 
     updateStats() {
         const repl = this.components.get('repl');
         if (repl) {
+            // Update REPLInput toolbar display
+            this.replInput?.updateCycles(this.cycleCount);
+
+            // Legacy/Status bar updates
             if (repl.cycleCount) repl.cycleCount.textContent = this.cycleCount;
             if (repl.messageCount) repl.messageCount.textContent = this.messageCount;
         }

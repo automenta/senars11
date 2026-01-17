@@ -1,4 +1,5 @@
 import { CommandHistory } from './CommandHistory.js';
+import { SmartTextarea } from './SmartTextarea.js';
 
 export class REPLInput {
     constructor(container, options = {}) {
@@ -7,10 +8,14 @@ export class REPLInput {
         this.onClear = options.onClear || (() => {});
         this.onDemo = options.onDemo || (() => {});
         this.onExtraAction = options.onExtraAction || (() => {});
+        this.onControl = options.onControl || (() => {});
 
         this.history = new CommandHistory();
         this.element = null;
-        this.inputBox = null;
+        this.inputBox = null; // Will refer to SmartTextarea instance or element
+        this.controls = {};
+        this.isRunning = false;
+        this.cycleCount = 0;
     }
 
     render() {
@@ -18,34 +23,25 @@ export class REPLInput {
         this.element.className = 'repl-input-area';
         this.element.style.cssText = 'padding: 10px; background: #252526; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px;';
 
-        // Input Box
-        this.inputBox = document.createElement('textarea');
-        this.inputBox.id = 'repl-input';
-        this.inputBox.placeholder = 'Enter Narsese or MeTTa... (Ctrl+Enter to Run)';
-        this.inputBox.rows = 3;
-        this.inputBox.style.cssText = `
-            width: 100%;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            border: 1px solid #3c3c3c;
-            padding: 8px;
-            font-family: monospace;
-            resize: vertical;
-            outline: none;
-            border-radius: 2px;
-        `;
+        // Reasoner Controls (Top Bar)
+        const controlBar = this._createControlBar();
+        this.element.appendChild(controlBar);
 
-        // Focus style
-        this.inputBox.addEventListener('focus', () => this.inputBox.style.borderColor = '#0e639c');
-        this.inputBox.addEventListener('blur', () => this.inputBox.style.borderColor = '#3c3c3c');
+        // Input Box (SmartTextarea)
+        const inputContainer = document.createElement('div');
+        this.smartInput = new SmartTextarea(inputContainer, {
+            onExecute: () => this.execute()
+        });
+        this.smartInput.render();
+        this.inputBox = this.smartInput; // Use wrapper for history access compatibility
 
-        // Event Listeners
-        this.inputBox.addEventListener('keydown', (e) => this._handleKeydown(e));
+        // Event Listeners for history
+        this.smartInput.textarea.addEventListener('keydown', (e) => this._handleKeydown(e));
 
-        // Toolbar
-        const toolbar = this._createToolbar();
+        // Bottom Toolbar (Run, Demo, Widgets)
+        const toolbar = this._createBottomToolbar();
 
-        this.element.appendChild(this.inputBox);
+        this.element.appendChild(inputContainer);
         this.element.appendChild(toolbar);
 
         if (this.container) {
@@ -56,61 +52,55 @@ export class REPLInput {
         return this.element;
     }
 
-    _handleKeydown(e) {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            this.execute();
-        } else if (e.key === 'ArrowUp') {
-            // Only if cursor is at start of first line to avoid messing with multiline editing
-            if (this.inputBox.selectionStart === 0 && this.inputBox.selectionEnd === 0) {
-                const prev = this.history.getPrevious(this.inputBox.value);
-                if (prev !== null) {
-                    e.preventDefault();
-                    this.inputBox.value = prev;
-                    // Keep cursor at start to allow rapid history cycling
-                    this.inputBox.setSelectionRange(0, 0);
-                }
-            }
-        } else if (e.key === 'ArrowDown') {
-            if (this.inputBox.selectionStart === this.inputBox.value.length) {
-                const next = this.history.getNext();
-                if (next !== null) {
-                    e.preventDefault();
-                    this.inputBox.value = next;
-                }
-            }
-        }
+    _createControlBar() {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display: flex; gap: 6px; align-items: center; margin-bottom: 4px;';
+
+        const btnStyle = `padding: 4px 8px; background: #333; color: #fff; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 11px; display: flex; align-items: center; gap: 4px;`;
+
+        this.controls.playPause = document.createElement('button');
+        this.controls.playPause.innerHTML = '▶️ Run';
+        this.controls.playPause.style.cssText = btnStyle;
+        this.controls.playPause.onclick = () => this.onControl(this.isRunning ? 'stop' : 'start');
+
+        this.controls.step = document.createElement('button');
+        this.controls.step.innerHTML = '⏭️ Step';
+        this.controls.step.style.cssText = btnStyle;
+        this.controls.step.onclick = () => this.onControl('step');
+
+        this.controls.reset = document.createElement('button');
+        this.controls.reset.innerHTML = '🔄 Reset';
+        this.controls.reset.style.cssText = btnStyle;
+        this.controls.reset.onclick = () => confirm('Reset Memory?') && this.onControl('reset');
+
+        this.controls.cycleDisplay = document.createElement('span');
+        this.controls.cycleDisplay.style.cssText = 'margin-left: auto; font-family: monospace; font-size: 11px; color: #888;';
+        this.controls.cycleDisplay.textContent = 'Cycles: 0';
+
+        bar.append(this.controls.playPause, this.controls.step, this.controls.reset, this.controls.cycleDisplay);
+        return bar;
     }
 
-    _createToolbar() {
+    _createBottomToolbar() {
         const toolbar = document.createElement('div');
         toolbar.style.cssText = 'display: flex; gap: 8px; align-items: center; flex-wrap: wrap;';
 
-        const runBtn = this._createButton('▶️ Run (Ctrl+Enter)', '#0e639c', () => this.execute());
+        const runBtn = this._createButton('▶️ Execute (Ctrl+Enter)', '#0e639c', () => this.execute());
         const clearBtn = this._createButton('🗑️ Clear', '#333', () => this.onClear());
         const demoBtn = this._createButton('📚 Load Demo', '#5c2d91', () => this.onDemo());
         demoBtn.title = 'Browse demo library (Ctrl+Shift+D)';
 
-        // Extra tools container
         const extraTools = document.createElement('div');
         extraTools.style.cssText = 'display: flex; gap: 4px; border-left: 1px solid #444; padding-left: 12px; margin-left: auto;';
 
         const addMdBtn = this._createButton('📝 Text', '#333', () => this.onExtraAction('markdown'));
-        addMdBtn.title = 'Add Markdown Cell';
-
         const addGraphBtn = this._createButton('🧩 Graph', '#333', () => this.onExtraAction('graph'));
-        addGraphBtn.title = 'Add Graph Widget';
-
         const addSliderBtn = this._createButton('🎚️ Slider', '#333', () => this.onExtraAction('slider'));
-        addSliderBtn.title = 'Add Truth Slider';
-
         const simBtn = this._createButton('⚡ Simulation', '#00ff9d', () => this.onExtraAction('simulation'));
         simBtn.style.color = '#000';
         simBtn.style.fontWeight = 'bold';
-        simBtn.title = 'Run Epic Simulation';
 
         extraTools.append(addMdBtn, addGraphBtn, addSliderBtn, simBtn);
-
         toolbar.append(runBtn, clearBtn, demoBtn, extraTools);
         return toolbar;
     }
@@ -132,19 +122,59 @@ export class REPLInput {
         return btn;
     }
 
-    execute() {
-        const content = this.inputBox.value.trim();
-        if (!content) return;
+    updateState(isRunning) {
+        this.isRunning = isRunning;
+        if (this.controls.playPause) {
+            this.controls.playPause.innerHTML = isRunning ? '⏸️ Pause' : '▶️ Run';
+            this.controls.playPause.style.background = isRunning ? '#8f6e00' : '#333';
+        }
+        if (this.controls.step) {
+            this.controls.step.disabled = isRunning;
+            this.controls.step.style.opacity = isRunning ? 0.5 : 1;
+        }
+    }
 
+    updateCycles(count) {
+        this.cycleCount = count;
+        if (this.controls.cycleDisplay) {
+            this.controls.cycleDisplay.textContent = `Cycles: ${count}`;
+        }
+    }
+
+    _handleKeydown(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            this.execute();
+        } else if (e.key === 'ArrowUp') {
+            if (this.inputBox.selectionStart === 0 && this.inputBox.selectionEnd === 0) {
+                const prev = this.history.getPrevious(this.inputBox.getValue());
+                if (prev !== null) {
+                    e.preventDefault();
+                    this.inputBox.setValue(prev);
+                    this.inputBox.setSelectionRange(0, 0);
+                }
+            }
+        } else if (e.key === 'ArrowDown') {
+            if (this.inputBox.selectionStart === this.inputBox.getValue().length) {
+                const next = this.history.getNext();
+                if (next !== null) {
+                    e.preventDefault();
+                    this.inputBox.setValue(next);
+                }
+            }
+        }
+    }
+
+    execute() {
+        const content = this.inputBox.getValue().trim();
+        if (!content) return;
         this.history.add(content);
         this.onExecute(content);
-        this.inputBox.value = '';
-        // Need to reset pointer?
-        // CommandHistory.add() resets pointer to end.
+        this.inputBox.setValue('');
     }
 
     setValue(value) {
-        if (this.inputBox) this.inputBox.value = value;
+        if (this.inputBox) this.inputBox.setValue(value);
     }
 
     focus() {
