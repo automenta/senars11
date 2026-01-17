@@ -7,8 +7,11 @@ import { ConnectionManager } from './connection/ConnectionManager.js';
 import { GraphPanel } from './components/GraphPanel.js';
 import { MemoryInspector } from './components/MemoryInspector.js';
 import { DerivationTree } from './components/DerivationTree.js';
+import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
+import { CommandProcessor } from './command/CommandProcessor.js';
 import { MessageFilter, categorizeMessage } from './repl/MessageFilter.js';
 import { NotebookManager } from './repl/NotebookManager.js';
+import { NotebookLogger } from './repl/NotebookLogger.js';
 import { FilterToolbar } from './repl/FilterToolbar.js';
 import { REPLInput } from './repl/REPLInput.js';
 import { DemoLibrary } from './components/DemoLibrary.js';
@@ -27,6 +30,8 @@ class SeNARSIDE {
         this.graphManager = null;
         this.messageFilter = new MessageFilter();
         this.notebook = null;
+        this.notebookLogger = null;
+        this.commandProcessor = null;
         this.filterToolbar = null;
         this.cycleCount = 0;
         this.messageCount = 0;
@@ -77,7 +82,8 @@ class SeNARSIDE {
             'replComponent': (c) => this.createREPLComponent(c),
             'graphComponent': (c) => this.createGraphComponent(c),
             'memoryComponent': (c) => this.createMemoryComponent(c),
-            'derivationComponent': (c) => this.createDerivationComponent(c)
+            'derivationComponent': (c) => this.createDerivationComponent(c),
+            'metricsComponent': (c) => this.createMetricsComponent(c)
         };
 
         Object.entries(factories).forEach(([k, v]) => this.layout.registerComponentFactoryFunction(k, v));
@@ -88,14 +94,15 @@ class SeNARSIDE {
             root: {
                 type: 'row',
                 content: [
-                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 95 },
+                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 70 },
                     {
-                        type: 'stack', width: 5,
+                        type: 'stack', width: 30,
                         isClosable: true,
                         content: [
                             { type: 'component', componentName: 'graphComponent', title: 'KNOWLEDGE GRAPH', isClosable: true },
                             { type: 'component', componentName: 'memoryComponent', title: 'MEMORY INSPECTOR' },
-                            { type: 'component', componentName: 'derivationComponent', title: 'DERIVATION TRACER' }
+                            { type: 'component', componentName: 'derivationComponent', title: 'DERIVATION TRACER' },
+                            { type: 'component', componentName: 'metricsComponent', title: 'SYSTEM METRICS' }
                         ]
                     }
                 ]
@@ -139,6 +146,7 @@ class SeNARSIDE {
         replContainer.appendChild(notebookContainer);
 
         this.notebook = new NotebookManager(notebookContainer);
+        this.notebookLogger = new NotebookLogger(this.notebook);
 
         const inputContainer = document.createElement('div');
         replContainer.appendChild(inputContainer);
@@ -169,6 +177,8 @@ class SeNARSIDE {
         const panel = new GraphPanel(graphContainer);
         panel.initialize();
         this.components.set('graph', { container: graphContainer, panel });
+        this.graphManager = panel.graphManager;
+        if (this.commandProcessor) this.commandProcessor.graphManager = this.graphManager;
 
         container.on('resize', () => {
             panel.graphManager?.cy && (panel.graphManager.cy.resize(), panel.graphManager.cy.fit());
@@ -194,6 +204,15 @@ class SeNARSIDE {
         container.on('resize', () => panel.resize?.());
     }
 
+    createMetricsComponent(container) {
+        const metricsContainer = container.element;
+        metricsContainer.style.backgroundColor = '#1e1e1e';
+        metricsContainer.innerHTML = '';
+        const panel = new SystemMetricsPanel(metricsContainer);
+        panel.render();
+        this.components.set('metrics', { container: metricsContainer, panel });
+    }
+
     async switchMode(mode) {
         console.log(`Switching to ${mode} mode...`);
         this.connection?.disconnect();
@@ -201,9 +220,17 @@ class SeNARSIDE {
 
         const manager = mode === 'local' ? new LocalConnectionManager() : new WebSocketManager();
         this.connection = new ConnectionManager(manager);
-        await this.connection.connect();
+        await this.connection.connect(mode === 'remote' ? this.serverUrl : undefined);
 
         this.connection.subscribe('*', (message) => this.handleMessage(message));
+
+        // Update CommandProcessor with new connection
+        if (this.commandProcessor) {
+            this.commandProcessor.webSocketManager = this.connection;
+        } else {
+            this.commandProcessor = new CommandProcessor(this.connection, this.notebookLogger, this.graphManager);
+        }
+
         this.updateModeIndicator();
         this.saveSettings();
         this.notebook?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
@@ -218,8 +245,18 @@ class SeNARSIDE {
     }
 
     showConnectionModal() {
-        const switchTo = this.connectionMode === 'local' ? 'remote' : 'local';
-        confirm(`Switch to ${switchTo} mode?`) && this.switchMode(switchTo);
+        if (this.connectionMode === 'local') {
+            const defaultUrl = this.serverUrl || 'ws://localhost:3000';
+            const url = prompt('Enter Remote Server URL:', defaultUrl);
+            if (url !== null) {
+                this.serverUrl = url;
+                this.switchMode('remote');
+            }
+        } else {
+            if (confirm('Switch to Local Mode?')) {
+                this.switchMode('local');
+            }
+        }
     }
 
     handleMessage(message) {
@@ -248,6 +285,11 @@ class SeNARSIDE {
 
             const derComp = this.components.get('derivation');
             if (derComp?.panel && message.type === 'reasoning:derivation') derComp.panel.addDerivation(message.payload);
+
+            const metricsComp = this.components.get('metrics');
+            if (metricsComp?.panel && (message.type === 'metrics:update' || message.type === 'metrics.updated')) {
+                metricsComp.panel.update(message.payload);
+            }
         } catch (e) {
             console.error('Error updating components:', e);
         }
@@ -272,7 +314,16 @@ class SeNARSIDE {
     executeInput(text) {
         if (!text) return;
         this.notebook.createCodeCell(text, (content) => {
-            this.connection?.isConnected() && this.connection.sendMessage('agent/input', { text: content });
+            if (this.commandProcessor) {
+                // Determine mode (default to narsese, or agent if input starts with !)
+                // But CommandProcessor handles logic.
+                // If it starts with /, CommandProcessor handles it as debug command.
+                // Otherwise it sends as narseseInput or agent/input depending on mode param.
+                // Let's assume narsese for now, or maybe check content.
+                this.commandProcessor.processCommand(content, false, 'narsese');
+            } else if (this.connection?.isConnected()) {
+                this.connection.sendMessage('agent/input', { text: content });
+            }
         }).execute();
     }
 

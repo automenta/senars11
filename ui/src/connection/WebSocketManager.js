@@ -19,9 +19,10 @@ export class WebSocketManager extends ConnectionInterface {
     }
 
 
-    connect() {
+    connect(url) {
         try {
-            this.ws = new WebSocket(Config.getWebSocketUrl());
+            const wsUrl = url || Config.getWebSocketUrl();
+            this.ws = new WebSocket(wsUrl);
             this.ws.onopen = () => {
                 this.connectionStatus = 'connected';
                 this.reconnectAttempts = 0;
