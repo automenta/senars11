@@ -35,10 +35,9 @@ export class CommandHistory {
 
         if (this.pointer > 0) {
             this.pointer--;
-            console.log(`  -> returning ${this.history[this.pointer]} (new ptr=${this.pointer})`);
             return this.history[this.pointer];
         }
-        return null;
+        return this.history[0];
     }
 
     getNext() {
@@ -71,6 +70,8 @@ export class CommandHistory {
 
     _load() {
         try {
+            // Check if localStorage is available
+            if (typeof localStorage === 'undefined') return [];
             const saved = localStorage.getItem(this.storageKey);
             return saved ? JSON.parse(saved) : [];
         } catch (e) {

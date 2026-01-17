@@ -18,7 +18,7 @@ export class ChartWidget extends Component {
 
         const ctx = canvas.getContext('2d');
 
-        // Default cyberpunk config if not provided
+        // Default cyberpunk config
         const defaultConfig = {
             type: 'line',
             data: {
@@ -55,13 +55,28 @@ export class ChartWidget extends Component {
             }
         };
 
-        const finalConfig = { ...defaultConfig, ...this.config };
-
-        // Merge deep options if needed, but simple spread for now
-        if (this.config.data) finalConfig.data = this.config.data;
-        if (this.config.options) finalConfig.options = { ...defaultConfig.options, ...this.config.options };
+        const finalConfig = this._deepMerge(defaultConfig, this.config);
 
         this.chart = new Chart(ctx, finalConfig);
+    }
+
+    _deepMerge(target, source) {
+        if (typeof source !== 'object' || source === null) {
+            return source;
+        }
+
+        const result = Array.isArray(target) ? [...target] : { ...target };
+
+        for (const key in source) {
+            if (source.hasOwnProperty(key)) {
+                if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
+                    result[key] = this._deepMerge(result[key] || {}, source[key]);
+                } else {
+                    result[key] = source[key];
+                }
+            }
+        }
+        return result;
     }
 
     updateData(label, value, datasetIndex = 0) {

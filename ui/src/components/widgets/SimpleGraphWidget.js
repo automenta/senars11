@@ -22,38 +22,21 @@ export class SimpleGraphWidget extends Component {
         this.container.appendChild(graphDiv);
 
         // Defer initialization to ensure container is in DOM and has dimensions
-        setTimeout(() => this.initCy(graphDiv), 100);
+        // requestAnimationFrame is better than setTimeout for DOM updates
+        requestAnimationFrame(() => {
+            // Need a second frame for layout to compute dimensions properly
+            requestAnimationFrame(() => this.initCy(graphDiv));
+        });
     }
 
-    initCy(container) {
-        // Prepare vivid elements
-        const elements = this.data.map(d => {
-            if (d.source && d.target) {
-                return {
-                    group: 'edges',
-                    data: {
-                        id: d.id || `${d.source}-${d.target}`,
-                        source: d.source,
-                        target: d.target,
-                        label: d.label || ''
-                    }
-                };
-            }
-            return {
-                group: 'nodes',
-                data: {
-                    id: d.id,
-                    label: d.label || d.id,
-                    type: d.type || 'concept',
-                    val: d.val || 10
-                }
-            };
-        });
+    initCy(container, elements = null) {
+        // Use provided elements or convert from this.data
+        const elems = elements || this._convertData(this.data);
 
         try {
             this.cy = cytoscape({
                 container: container,
-                elements: elements,
+                elements: elems,
                 style: [
                     {
                         selector: 'node',
@@ -143,6 +126,31 @@ export class SimpleGraphWidget extends Component {
         }
     }
 
+    _convertData(data) {
+        return data.map(d => {
+            if (d.source && d.target) {
+                return {
+                    group: 'edges',
+                    data: {
+                        id: d.id || `${d.source}-${d.target}`,
+                        source: d.source,
+                        target: d.target,
+                        label: d.label || ''
+                    }
+                };
+            }
+            return {
+                group: 'nodes',
+                data: {
+                    id: d.id,
+                    label: d.label || d.id,
+                    type: d.type || 'concept',
+                    val: d.val || 10
+                }
+            };
+        });
+    }
+
     updateData(newElements) {
         if (!this.cy) return;
         this.cy.add(newElements);
@@ -150,7 +158,6 @@ export class SimpleGraphWidget extends Component {
     }
 
     expandView() {
-        // Simple modal implementation
         const backdrop = document.createElement('div');
         backdrop.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;justify-content:center;align-items:center;';
 
@@ -162,31 +169,25 @@ export class SimpleGraphWidget extends Component {
         closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10;background:#000;color:#fff;border:1px solid #555;padding:5px 10px;cursor:pointer;';
         closeBtn.onclick = () => document.body.removeChild(backdrop);
 
+        const content = document.createElement('div');
+        content.style.cssText = 'width:100%;height:100%;';
+        modal.appendChild(content);
+
         modal.appendChild(closeBtn);
         backdrop.appendChild(modal);
         document.body.appendChild(backdrop);
 
-        // Clone graph into modal
+        // Get current elements from the active instance
         const elements = this.cy.json().elements;
-        new SimpleGraphWidget(modal, []).render(); // Hacky: init empty then add
 
-        // Wait for render then add elements
-        setTimeout(() => {
-             // Find the cy instance inside the new widget?
-             // Ideally SimpleGraphWidget should be more reusable or return its instance.
-             // For now, let's just recreate cytoscape manually in the modal or trust the widget does it.
-             // But the new widget instance isn't returned by render().
+        // Use a new instance but initialize it manually to avoid race conditions with render()
+        // We bypass render() and call initCy directly after DOM update
+        const widget = new SimpleGraphWidget(modal, []);
 
-             // Let's just create a new widget instance properly
-             const widget = new SimpleGraphWidget(modal, []);
-             widget.render();
-             // Manually load elements after delay
-             setTimeout(() => {
-                 if (widget.cy) {
-                     widget.cy.add(elements);
-                     widget.cy.layout({ name: 'fcose' }).run();
-                 }
-             }, 200);
-        }, 100);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                widget.initCy(content, elements);
+            });
+        });
     }
 }

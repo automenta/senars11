@@ -88,9 +88,9 @@ class SeNARSIDE {
             root: {
                 type: 'row',
                 content: [
-                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 80 },
+                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 95 },
                     {
-                        type: 'stack', width: 20,
+                        type: 'stack', width: 5,
                         isClosable: true,
                         content: [
                             { type: 'component', componentName: 'graphComponent', title: 'KNOWLEDGE GRAPH', isClosable: true },
@@ -101,6 +101,10 @@ class SeNARSIDE {
                 ]
             }
         });
+
+        // Minimize the sidebar stack after initialization if possible, or rely on 95/5 split
+        // GoldenLayout doesn't have a simple 'startMinimized' config in the tree structure easily accessible
+        // without complex state. 5% width is effectively collapsed.
 
         window.addEventListener('resize', () => this.layout.updateRootSize());
     }
