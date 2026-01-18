@@ -191,6 +191,14 @@ export class GraphManager {
             const data = this._getNodeData(event.target);
             this.updateGraphDetails(data);
             this.callbacks.onNodeClick?.(data);
+
+            // Dispatch select event to sync with other UI components
+            if (data.fullData) {
+                document.dispatchEvent(new CustomEvent('senars:concept:select', {
+                    detail: { concept: data.fullData, id: data.id }
+                }));
+            }
+
             if (event.originalEvent.shiftKey) this.toggleTraceMode(data.id);
         });
 
@@ -317,6 +325,7 @@ export class GraphManager {
         const messageUpdates = {
             'concept.created': () => this.addNodeWithPayload(message.payload, false),
             'concept.added': () => this.addNodeWithPayload(message.payload, false),
+            'concept.updated': () => this.updateNode(message.payload),
             'task.added': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
             'task.input': () => this.addNodeWithPayload({...message.payload, nodeType: 'task'}, false),
             'question.answered': () => this.addQuestionNode(message.payload),
@@ -332,6 +341,58 @@ export class GraphManager {
 
     addNodeWithPayload(payload, runLayout = true) {
         if (payload) this.addNode(payload, runLayout);
+    }
+
+    updateNode(payload) {
+        if (!this.cy || !payload) return;
+        const nodeId = payload.id;
+        const node = this.cy.getElementById(nodeId);
+
+        if (node.length > 0) {
+            const priority = payload.budget?.priority ?? 0;
+            const taskCount = payload.tasks?.length ?? payload.taskCount ?? 0;
+            const weight = priority * 100;
+
+            node.data({
+                weight: weight,
+                taskCount: taskCount,
+                fullData: payload
+            });
+
+            // If truth updated, update label
+            if (payload.truth) {
+                let displayLabel = payload.term ?? payload.label ?? nodeId;
+                displayLabel += `\n{${(payload.truth.frequency ?? 0).toFixed(2)}, ${(payload.truth.confidence ?? 0).toFixed(2)}}`;
+                node.data('label', displayLabel);
+            }
+
+            this.animateUpdate(nodeId);
+        } else {
+            // If it doesn't exist, add it
+            this.addNode(payload, false);
+        }
+    }
+
+    animateUpdate(nodeId) {
+        const node = this.cy?.getElementById(nodeId);
+        if (!node?.length) return;
+
+        // Visual pulse to indicate update
+        // We use a safe default color if config style isn't readily parseable or available
+        const highlightColor = '#00ff9d';
+
+        node.animate({
+            style: {
+                'border-width': 4,
+                'border-color': highlightColor
+            },
+            duration: 150
+        }).animate({
+             style: {
+                'border-width': 1
+            },
+            duration: 350
+        });
     }
 
     addQuestionNode(payload) {
