@@ -80,7 +80,20 @@ export class Console extends Component {
             suggestions.forEach(s => {
                 const item = document.createElement('div');
                 item.style.cssText = 'padding: 5px 10px; cursor: pointer; color: var(--text-muted); font-family: monospace; border-bottom: 1px solid rgba(255,255,255,0.05);';
-                item.innerHTML = `<span style="color:var(--accent-primary)">${s.text}</span> <span style="font-size:0.8em; opacity:0.7">(${s.label})</span>`;
+
+                // Securely create content to prevent XSS and rendering issues with Narsese brackets
+                const textSpan = document.createElement('span');
+                textSpan.style.color = 'var(--accent-primary)';
+                textSpan.textContent = s.text;
+
+                const labelSpan = document.createElement('span');
+                labelSpan.style.fontSize = '0.8em';
+                labelSpan.style.opacity = '0.7';
+                labelSpan.textContent = ` (${s.label})`;
+
+                item.appendChild(textSpan);
+                item.appendChild(labelSpan);
+
                 item.addEventListener('click', () => {
                     this.inputElement.value = s.text;
                     this.inputElement.focus();
