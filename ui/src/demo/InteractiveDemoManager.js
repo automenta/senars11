@@ -1,3 +1,5 @@
+import { GuidanceOverlay } from '../utils/GuidanceOverlay.js';
+
 /**
  * InteractiveDemoManager extends demo capabilities to handle user interaction requests
  */
@@ -6,6 +8,7 @@ export class InteractiveDemoManager {
         this.demoManager = demoManager;
         this.logger = demoManager.logger;
         this.commandProcessor = demoManager.commandProcessor;
+        this.guidance = new GuidanceOverlay();
     }
 
     /**
@@ -14,6 +17,12 @@ export class InteractiveDemoManager {
      */
     handleDemoRequest(payload) {
         if (!payload) return;
+
+        // Handle Guidance Highlight
+        if (payload.type === 'ui_highlight') {
+            this.guidance.highlight(payload.selector, payload.message, payload.duration);
+            return;
+        }
 
         this.logger.log(`Demo Request: ${payload.prompt || 'Input required'}`, 'input', '❓');
 
