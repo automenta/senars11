@@ -99,10 +99,39 @@ export class LocalConnectionManager extends ConnectionInterface {
         if (this.metta && /^(!|\(|=\s)/.test(text)) {
             try {
                 const results = await this.metta.run(text);
-                results?.length && this.dispatchMessage({
-                    type: 'agent/result',
-                    payload: { result: results.map(r => r.toString()).join('\n') }
-                });
+                if (results?.length) {
+                    const output = results.map(r => r.toString()).join('\n');
+
+                    // Check for visualization magic string
+                    const vizMatch = output.match(/__VIZ__:(\w+):(.+)/s);
+                    // Check for UI command magic string: __UI__:command args...
+                    const uiMatch = output.match(/__UI__:(\S+)(?:\s+(.+))?/);
+
+                    if (vizMatch) {
+                        const [_, type, data] = vizMatch;
+                        try {
+                            const parsedData = (type === 'graph' || type === 'chart') ? JSON.parse(data) : data;
+                            this.dispatchMessage({
+                                type: 'visualization',
+                                payload: { type, data: parsedData, content: data }
+                            });
+                        } catch (e) {
+                            console.error('Failed to parse visualization data', e);
+                            this.dispatchMessage({ type: 'agent/result', payload: { result: output } });
+                        }
+                    } else if (uiMatch) {
+                         const [_, cmd, args] = uiMatch;
+                         this.dispatchMessage({
+                             type: 'ui-command',
+                             payload: { command: cmd, args: args ? args.trim() : '' }
+                         });
+                    } else {
+                        this.dispatchMessage({
+                            type: 'agent/result',
+                            payload: { result: output }
+                        });
+                    }
+                }
             } catch (e) {
                 this.dispatchMessage({ type: 'error', payload: { message: e.message } });
             }

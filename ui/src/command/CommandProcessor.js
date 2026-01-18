@@ -1,261 +1,170 @@
-import {Config} from '../config/Config.js';
-import {CommandRegistry} from '@senars/core';
-
 export class CommandProcessor {
-    constructor(webSocketManager, logger, graphManager = null) {
-        this.webSocketManager = webSocketManager;
-        this.logger = logger;
+    constructor(connectionManager, notebookLogger, graphManager) {
+        this.connection = connectionManager;
+        this.logger = notebookLogger;
         this.graphManager = graphManager;
-        this.history = [];
-        this.maxHistorySize = Config.getConstants().MAX_HISTORY_SIZE;
-        this.commandRegistry = new CommandRegistry({logger: this.logger});
-        this._registerUICommands();
+        this.layout = null; // Will be set via setLayout
+
+        this.commands = new Map([
+            ['help', { description: 'Show help', fn: (ctx) => this._executeHelp(ctx) }],
+            ['clear', { description: 'Clear console', fn: (ctx) => this._executeClear(ctx) }],
+            ['viz', { description: 'Visualization test', fn: (ctx) => this._executeViz(ctx) }],
+            ['inspect', { description: 'Inspect object', fn: (ctx) => this._executeInspect(ctx) }],
+            ['layout', { description: 'Change layout (full-repl, standard)', fn: (ctx) => this._executeLayout(ctx) }],
+            ['nodes', { description: 'Count nodes in graph', fn: (ctx) => this._executeNodes(ctx) }]
+        ]);
     }
 
-    _registerUICommands() {
-        const commands = [
-            ['/nodes', ctx => this._listNodes(ctx), 'List all nodes in graph'],
-            ['/tasks', ctx => this._listTasks(ctx), 'Show task nodes'],
-            ['/concepts', ctx => this._listConcepts(ctx), 'Show concept nodes'],
-            ['/refresh', ctx => this.executeRefresh(ctx), 'Request graph refresh'],
-            ['/goals', ctx => this._listGoals(ctx), 'Show current goals'],
-            ['/beliefs', ctx => this._listBeliefs(ctx), 'Show current beliefs'],
-            ['/step', ctx => this._executeStep(ctx), 'Execute single reasoning step'],
-            ['/run', ctx => this._executeRun(ctx), 'Start continuous execution'],
-            ['/stop', ctx => this._executeStop(ctx), 'Stop continuous execution'],
-            ['/inspect', ctx => this._executeInspect(ctx), 'Inspect a term or node'],
-            ['/viz', ctx => this._executeViz(ctx), 'Visualize data (graph, chart, md)']
-        ];
-        commands.forEach(([cmd, handler, desc]) =>
-            this.commandRegistry.registerCommand(cmd, handler, {description: desc})
-        );
+    setLayout(layout) {
+        this.layout = layout;
     }
 
-    getAvailableCommands() {
-        return this.commandRegistry.getCommandList();
-    }
+    processCommand(text, isSystem = false, mode = 'narsese') {
+        if (!text) return;
 
-    _listNodes(ctx) {
-        if (!this._validateGraphManager()) return;
-        const count = this.graphManager.getNodeCount();
-        this.logger.log(`Total nodes in graph: ${count}`, 'info', '📊');
-        return true;
-    }
+        if (text.startsWith('/')) {
+            const parts = text.slice(1).trim().split(/\s+/);
+            const cmdName = parts[0];
+            const args = parts.slice(1);
 
-    _listTasks(ctx) {
-        if (!this._validateGraphManager()) return;
-        const tasks = this.graphManager.getTaskNodes();
-        this.logger.log(`Task nodes: ${tasks.length}`, 'info', '📋');
-        return true;
-    }
-
-    _listConcepts(ctx) {
-        if (!this._validateGraphManager()) return;
-        const concepts = this.graphManager.getConceptNodes();
-        this.logger.log(`Concept nodes: ${concepts.length}`, 'info', '💡');
-        return true;
-    }
-
-    _listGoals(ctx) {
-        this.webSocketManager.sendMessage('command.execute', {command: 'goals', args: []});
-        return true;
-    }
-
-    _listBeliefs(ctx) {
-        this.webSocketManager.sendMessage('command.execute', {command: 'beliefs', args: []});
-        return true;
-    }
-
-    _executeStep(ctx) {
-        this.executeControlCommand('control/step', {});
-        this.logger.log('Single step executed', 'info', '⏯');
-        return true;
-    }
-
-    _executeRun(ctx) {
-        this.executeControlCommand('control/run', {});
-        this.logger.log('Continuous execution started', 'info', '▶️');
-        return true;
-    }
-
-    _executeStop(ctx) {
-        this.executeControlCommand('control/stop', {});
-        this.logger.log('Execution stopped', 'info', '⏸');
-        return true;
-    }
-
-    _executeInspect(ctx) {
-        const args = ctx.args || [];
-        if (args.length === 0) {
-            this.logger.log('Usage: /inspect <term>', 'error');
-            return false;
-        }
-
-        const term = args[0];
-        // For now, we mock fetching data or grab from GraphManager if available
-        if (this.graphManager && this.graphManager.cy) {
-            const node = this.graphManager.cy.getElementById(term);
-            const neighborhood = node.length ? node.neighborhood().add(node) : null;
-
-            if (neighborhood && neighborhood.length > 0) {
-                 // Convert to format for GraphWidget
-                 const graphData = [];
-                 neighborhood.nodes().forEach(n => {
-                     graphData.push({
-                         id: n.id(),
-                         label: n.data('label'),
-                         type: n.data('type'),
-                         val: n.data('weight') || 50
-                     });
-                 });
-                 neighborhood.edges().forEach(e => {
-                     graphData.push({
-                         source: e.data('source'),
-                         target: e.data('target'),
-                         label: e.data('label')
-                     });
-                 });
-
-                 this.logger.logWidget('GraphWidget', graphData);
-                 return true;
+            if (this.commands.has(cmdName)) {
+                this.commands.get(cmdName).fn({ args, text });
+            } else {
+                this.logger.log(`Unknown command: /${cmdName}`, 'error');
+            }
+        } else {
+            // Forward to connection
+             if (this.connection && this.connection.isConnected()) {
+                const type = mode === 'agent' || text.startsWith('!') ? 'agent/input' : 'narseseInput';
+                this.connection.sendMessage(type, { text });
+            } else {
+                this.logger.log('Not connected', 'error');
             }
         }
+    }
 
-        // Fallback: request from backend
-        this.webSocketManager.sendMessage('command.execute', { command: 'inspect', args: [term] });
+    _executeHelp(ctx) {
+        let helpText = 'Available commands:\n';
+        for (const [name, cmd] of this.commands) {
+            helpText += `- /${name}: ${cmd.description}\n`;
+        }
+        this.logger.log(helpText, 'info');
+        return true;
+    }
+
+    _executeClear(ctx) {
+        this.logger.clearLogs();
         return true;
     }
 
     _executeViz(ctx) {
-        const args = ctx.args || [];
-        if (args.length < 2) {
-            this.logger.log('Usage: /viz <type> <data_json_or_text>', 'error');
+        const type = ctx.args[0];
+        if (type === 'graph') {
+            this.logger.logWidget('GraphWidget', [
+                { id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { source: 'a', target: 'b', label: 'rel' }
+            ]);
+        } else if (type === 'markdown') {
+            this.logger.logMarkdown('# Hello\n\n**Bold** text.');
+        } else {
+            this.logger.log('Usage: /viz <graph|markdown>', 'info');
+        }
+        return true;
+    }
+
+    _executeNodes(ctx) {
+        if (this.graphManager) {
+            const count = this.graphManager.getNodeCount();
+            this.logger.log(`Graph has ${count} nodes`, 'info');
+        } else {
+            this.logger.log('Graph manager not available', 'error');
+        }
+        return true;
+    }
+
+    _executeInspect(ctx) {
+        this.logger.log('Inspect not implemented yet', 'info');
+        return true;
+    }
+
+    _executeLayout(ctx) {
+        if (!this.layout) {
+            this.logger.log('Layout manager not available', 'error');
             return false;
         }
 
-        const type = args[0];
-        const dataStr = args.slice(1).join(' ');
+        const mode = ctx.args && ctx.args[0];
+        if (!mode) {
+             this.logger.log('Usage: /layout <full-repl|standard>', 'error');
+             return false;
+        }
 
         try {
-            if (type === 'md' || type === 'markdown') {
-                this.logger.logMarkdown(dataStr);
-            } else if (type === 'graph') {
-                const data = JSON.parse(dataStr);
-                this.logger.logWidget('GraphWidget', data);
-            } else if (type === 'chart') {
-                const data = JSON.parse(dataStr);
-                this.logger.logWidget('ChartWidget', data);
-            } else {
-                this.logger.log(`Unknown visualization type: ${type}`, 'error');
+            const root = this.layout.root;
+            if (!root) return false;
+
+            const findItem = (item, name) => {
+                if (item.componentName === name) return item;
+                if (item.contentItems) {
+                    for (let c of item.contentItems) {
+                        const found = findItem(c, name);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const replItem = findItem(root, 'replComponent');
+
+            // Traverse up to find the Row that contains the REPL (or its stack) and the Sidebar
+            let currentItem = replItem;
+            let row = null;
+
+            // REPL might be in a Stack, which is in a Row
+            if (currentItem && currentItem.parent && currentItem.parent.type === 'stack') {
+                currentItem = currentItem.parent;
             }
+
+            if (currentItem && currentItem.parent && currentItem.parent.type === 'row') {
+                row = currentItem.parent;
+            }
+
+            if (row) {
+                 const itemIndex = row.contentItems.indexOf(currentItem);
+                 // Assuming REPL is on left (index 0) or right.
+                 // If itemIndex is 0, sidebar is 1. If itemIndex is 1, sidebar is 0.
+                 // But we need to be sure we found the main split.
+
+                 // For now, assume a 2-column layout as set up in main-ide.js
+                 const sidebarIndex = itemIndex === 0 ? 1 : 0;
+                 const sidebarItem = row.contentItems[sidebarIndex];
+
+                 if (sidebarItem) {
+                    // Helper to set width safely
+                    const setWidth = (item, w) => {
+                        if (item.config) item.config.width = w;
+                        else item.width = w;
+                    };
+
+                    if (mode === 'full-repl' || mode === 'collapse-sidebar') {
+                        setWidth(currentItem, 100);
+                        setWidth(sidebarItem, 0);
+                        this.layout.updateSize();
+                        this.logger.log('Layout: Full REPL', 'info', '🖥️');
+                        return true;
+                    } else if (mode === 'standard') {
+                        setWidth(currentItem, 70);
+                        setWidth(sidebarItem, 30);
+                        this.layout.updateSize();
+                        this.logger.log('Layout: Standard', 'info', '🖥️');
+                        return true;
+                    }
+                 }
+            }
+
+            this.logger.log(`Unknown layout mode: ${mode}`, 'error');
         } catch (e) {
-             this.logger.log(`Error parsing visualization data: ${e.message}`, 'error');
-        }
-        return true;
-    }
-
-    processCommand(command, isDebug = false, mode = 'narsese') {
-        const trimmedCommand = command?.trim();
-        if (!trimmedCommand) return false;
-
-        this._addToHistory(trimmedCommand);
-        this.logger.log(`> ${trimmedCommand}`, 'input', '⌨️');
-
-        if (trimmedCommand.startsWith('/')) {
-            this._processDebugCommand(trimmedCommand);
-            return true;
-        }
-
-        if (!this.webSocketManager.isConnected()) {
-            this.logger.log('Cannot send: Not connected', 'error', '❌');
-            return false;
-        }
-
-        this.webSocketManager.sendMessage(
-            mode === 'agent' ? 'agent/input' : 'narseseInput',
-            {input: trimmedCommand}
-        );
-        return true;
-    }
-
-    _processDebugCommand(command) {
-        const parts = command.split(' ');
-        const cmd = parts[0].toLowerCase();
-
-        // Fix: args was missing in ctx for command registry execution
-        const context = {
-            webSocketManager: this.webSocketManager,
-            logger: this.logger,
-            graphManager: this.graphManager,
-            commandProcessor: this,
-            args: parts.slice(1)
-        };
-
-        if (this.commandRegistry.commands.has(cmd)) {
-            this.commandRegistry.executeCommand(command, context);
-        } else if (this.webSocketManager.isConnected()) {
-            this.webSocketManager.sendMessage('command.execute', {
-                command: cmd.substring(1),
-                args: parts.slice(1)
-            });
-        } else {
-            this.logger.log('Cannot forward command: Not connected', 'error', '❌');
-        }
-    }
-
-    /**
-     * Register a new command with the command registry
-     */
-    registerCommand(command, handler) {
-        this.commandRegistry.registerCommand(command, handler);
-        return this;
-    }
-
-    /**
-     * Unregister a command from the command registry
-     */
-    unregisterCommand(command) {
-        return this.commandRegistry.unregisterCommand(command);
-    }
-
-    _addToHistory(command) {
-        this.history.push({command, timestamp: new Date(), status: 'sent'});
-        this.history.length > this.maxHistorySize && (this.history = this.history.slice(-this.maxHistorySize));
-    }
-
-    /**
-     * Get command history
-     */
-    getHistory(limit = 10) {
-        return this.history.slice(-limit);
-    }
-
-    /**
-     * Execute a control command
-     */
-    executeControlCommand(type, payload = {}) {
-        this.webSocketManager.sendMessage(type, payload);
-    }
-
-    /**
-     * Execute a refresh command
-     */
-    executeRefresh() {
-        this.executeControlCommand('control/refresh', {});
-        this.logger.log('Graph refresh requested', 'info', '🔄');
-    }
-
-    /**
-     * Execute a toggle live command
-     */
-    executeToggleLive() {
-        this.executeControlCommand('control/toggleLive', {});
-    }
-
-    _validateGraphManager() {
-        if (!this.graphManager) {
-            this.logger.log('Graph manager not initialized', 'error', '❌');
-            return false;
+            console.error('Layout error', e);
+            this.logger.log(`Failed to update layout: ${e.message}`, 'error');
         }
         return true;
     }

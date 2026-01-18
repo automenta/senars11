@@ -109,10 +109,6 @@ class SeNARSIDE {
             }
         });
 
-        // Minimize the sidebar stack after initialization if possible, or rely on 95/5 split
-        // GoldenLayout doesn't have a simple 'startMinimized' config in the tree structure easily accessible
-        // without complex state. 5% width is effectively collapsed.
-
         window.addEventListener('resize', () => this.layout.updateRootSize());
     }
 
@@ -165,8 +161,6 @@ class SeNARSIDE {
             notebook: notebookContainer,
             input: this.replInput,
             modeIndicator,
-            // cycleCount element is removed from status bar in new design,
-            // but we keep ref if needed or update REPLInput directly
             messageCount: document.getElementById('message-count')
         });
     }
@@ -228,9 +222,10 @@ class SeNARSIDE {
 
         // Update CommandProcessor with new connection
         if (this.commandProcessor) {
-            this.commandProcessor.webSocketManager = this.connection;
+            this.commandProcessor.connection = this.connection;
         } else {
             this.commandProcessor = new CommandProcessor(this.connection, this.notebookLogger, this.graphManager);
+            this.commandProcessor.setLayout(this.layout);
         }
 
         this.updateModeIndicator();
@@ -276,6 +271,22 @@ class SeNARSIDE {
                      const widgetType = type === 'graph' ? 'GraphWidget' : 'ChartWidget';
                      this.notebook.createWidgetCell(widgetType, data);
                 }
+            } else if (message.type === 'ui-command') {
+                const { command, args } = message.payload;
+                const fullCommand = `/${command} ${args}`;
+                this.notebookLogger.log(`System requested UI Command: ${fullCommand}`, 'system');
+                if (this.commandProcessor) {
+                    this.commandProcessor.processCommand(fullCommand, true);
+                }
+            } else if (message.type === 'agent/prompt') {
+                // Handle system asking for user input
+                const { question, id } = message.payload;
+                this.notebook.createPromptCell(question, (response) => {
+                     // Send response back
+                     if (this.connection) {
+                         this.connection.sendMessage('agent/response', { id, response });
+                     }
+                });
             } else {
                 const category = categorizeMessage(message);
                 const content = message.payload?.result || message.content || JSON.stringify(message.payload);
@@ -328,11 +339,6 @@ class SeNARSIDE {
         if (!text) return;
         this.notebook.createCodeCell(text, (content) => {
             if (this.commandProcessor) {
-                // Determine mode (default to narsese, or agent if input starts with !)
-                // But CommandProcessor handles logic.
-                // If it starts with /, CommandProcessor handles it as debug command.
-                // Otherwise it sends as narseseInput or agent/input depending on mode param.
-                // Let's assume narsese for now, or maybe check content.
                 this.commandProcessor.processCommand(content, false, 'narsese');
             } else if (this.connection?.isConnected()) {
                 this.connection.sendMessage('agent/input', { text: content });
@@ -435,12 +441,7 @@ class SeNARSIDE {
 
             // Update Chart
             const val = Math.sin(tick * 0.1) * 20 + 50 + Math.random() * 10;
-            const widget = chartCell.element.querySelector('canvas')?.__chartWidget; // Hack or need better way to get instance
-            // Actually, we don't have reference to widget instance from cell easily.
-            // Let's modify NotebookManager to return instance or allow access.
-            // For now, let's look up by cell ID or assume the cell has a way.
-
-            // Accessing the widget instance stored on the element (we need to update WidgetCell to store it)
+            // Hack to update: we don't have direct access to widget instance easily
             if (chartCell.widgetInstance) {
                 chartCell.widgetInstance.updateData(new Date().toLocaleTimeString(), val);
             }
@@ -501,12 +502,10 @@ class SeNARSIDE {
         backdrop.appendChild(modalContainer);
         document.body.appendChild(backdrop);
 
-        // Click backdrop to close
         backdrop.onclick = (e) => {
             if (e.target === backdrop) document.body.removeChild(backdrop);
         };
 
-        // ESC to close
         const escHandler = (e) => {
             if (e.key === 'Escape') {
                 document.body.removeChild(backdrop);
