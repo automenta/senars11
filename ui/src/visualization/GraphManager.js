@@ -1,5 +1,6 @@
 import {Config} from '../config/Config.js';
 import {ContextMenu} from '../components/ContextMenu.js';
+import {AutoLearner} from '../utils/AutoLearner.js';
 
 export class GraphManager {
     constructor(uiElements = null, callbacks = {}) {
@@ -16,9 +17,16 @@ export class GraphManager {
         this.filters = { minPriority: 0, showTasks: true, showConcepts: true };
         this.contextMenu = null;
         this.kbState = { index: 0, selectedNode: null };
+        this.autoLearner = new AutoLearner();
 
         document.addEventListener('senars:concept:select', (e) => {
-            const { id } = e.detail;
+            const { id, concept } = e.detail;
+
+            // Record interaction via AutoLearner
+            if (concept && concept.term) {
+                this.autoLearner.recordInteraction(concept.term, 1);
+            }
+
             if (id) {
                 const node = this.cy?.getElementById(id);
                 if (node?.length) {
@@ -259,13 +267,20 @@ export class GraphManager {
         const priority = nodeData.budget?.priority ?? 0;
         const taskCount = nodeData.tasks?.length ?? nodeData.taskCount ?? 0;
 
+        // Adjust weight based on learned preference
+        let finalWeight = weight ?? (priority * 100);
+        if (nodeData.term) {
+            const modifier = this.autoLearner.getConceptModifier(nodeData.term);
+            finalWeight += modifier; // Boost weight based on past interactions
+        }
+
         this.cy.add({
             group: 'nodes',
             data: {
                 id: nodeId,
                 label: displayLabel,
                 type: typeValue,
-                weight: weight ?? (priority * 100),
+                weight: Math.min(finalWeight, 100), // Cap at 100
                 taskCount: taskCount,
                 fullData: nodeData
             }
@@ -351,10 +366,15 @@ export class GraphManager {
         if (node.length > 0) {
             const priority = payload.budget?.priority ?? 0;
             const taskCount = payload.tasks?.length ?? payload.taskCount ?? 0;
-            const weight = priority * 100;
+            let weight = priority * 100;
+
+            if (payload.term) {
+                const modifier = this.autoLearner.getConceptModifier(payload.term);
+                weight += modifier;
+            }
 
             node.data({
-                weight: weight,
+                weight: Math.min(weight, 100),
                 taskCount: taskCount,
                 fullData: payload
             });
