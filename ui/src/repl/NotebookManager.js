@@ -1,7 +1,5 @@
 import { VIEW_MODES, MESSAGE_CATEGORIES } from './MessageFilter.js';
-import { TruthSlider } from '../components/widgets/TruthSlider.js';
-import { SimpleGraphWidget } from '../components/widgets/SimpleGraphWidget.js';
-import { ChartWidget } from '../components/widgets/ChartWidget.js';
+import { WidgetFactory } from '../components/widgets/WidgetFactory.js';
 import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
 import { SmartTextarea } from './SmartTextarea.js';
 import { ConceptCard } from '../components/ConceptCard.js';
@@ -570,33 +568,35 @@ export class WidgetCell extends REPLCell {
 
         this.element.append(header, content);
 
-        if (this.widgetType === 'TruthSlider') {
-            this.widgetInstance = new TruthSlider(content, {
-                frequency: this.content.frequency,
-                confidence: this.content.confidence,
-                onChange: (val) => console.log('Widget update:', val)
-            });
-            this.widgetInstance.render();
-        } else if (this.widgetType === 'GraphWidget') {
-            this.widgetInstance = new SimpleGraphWidget(content, this.content);
-            this.widgetInstance.render();
-        } else if (this.widgetType === 'ChartWidget') {
-            this.widgetInstance = new ChartWidget(content, this.content);
-            this.widgetInstance.render();
-        } else if (this.widgetType === 'SubNotebook') {
-             // Create a nested notebook
+        if (this.widgetType === 'SubNotebook') {
+             // SubNotebook is special, handles its own logic/creation for now
+             // Or we could create a SubNotebookWidget wrapper class and register it.
              const nestedManager = new NotebookManager(content, {
                  onExecute: (text, cell, options) => {
-                     // Pass through execution or handle locally?
-                     // For now, simple logging
                      console.log('Nested execution:', text);
                  }
              });
              this.widgetInstance = nestedManager;
-             // Add initial cell
              nestedManager.createCodeCell('(print "Hello Nested World")');
         } else {
-            content.innerHTML = `<div style="color:red">Unknown widget: ${this.widgetType}</div>`;
+            // Use WidgetFactory for standard widgets
+            // normalize config
+            let config = this.content;
+            if (this.widgetType === 'TruthSlider') {
+                config = {
+                    frequency: this.content.frequency,
+                    confidence: this.content.confidence,
+                    onChange: (val) => console.log('Widget update:', val)
+                };
+            }
+
+            this.widgetInstance = WidgetFactory.createWidget(this.widgetType, content, config);
+
+            if (this.widgetInstance) {
+                this.widgetInstance.render();
+            } else {
+                content.innerHTML = `<div style="color:red">Unknown widget: ${this.widgetType}</div>`;
+            }
         }
 
         return this.element;
