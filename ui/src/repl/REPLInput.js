@@ -29,14 +29,28 @@ export class REPLInput {
 
         // Input Box (SmartTextarea)
         const inputContainer = document.createElement('div');
+        inputContainer.style.position = 'relative'; // For badge positioning
+
         this.smartInput = new SmartTextarea(inputContainer, {
             onExecute: () => this.execute()
         });
         this.smartInput.render();
-        this.inputBox = this.smartInput; // Use wrapper for history access compatibility
+        this.inputBox = this.smartInput;
 
-        // Event Listeners for history
+        // Mode Badge
+        this.modeBadge = document.createElement('div');
+        this.modeBadge.style.cssText = `
+            position: absolute; bottom: 8px; right: 8px; z-index: 10;
+            font-size: 10px; color: rgba(255,255,255,0.3); font-family: monospace;
+            background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px;
+            pointer-events: none; transition: opacity 0.2s;
+        `;
+        this.modeBadge.textContent = 'NARS';
+        inputContainer.appendChild(this.modeBadge);
+
+        // Event Listeners for history & mode update
         this.smartInput.textarea.addEventListener('keydown', (e) => this._handleKeydown(e));
+        this.smartInput.textarea.addEventListener('input', () => this._updateModeBadge());
 
         // Bottom Toolbar (Run, Demo, Widgets)
         const toolbar = this._createBottomToolbar();
@@ -194,6 +208,14 @@ export class REPLInput {
         if (this.controls.cycleDisplay) {
             this.controls.cycleDisplay.textContent = `Cycles: ${count}`;
         }
+    }
+
+    _updateModeBadge() {
+        const text = this.inputBox.getValue().trim();
+        const isMetta = text.startsWith('(') || text.startsWith(';') || text.startsWith('!');
+        this.modeBadge.textContent = isMetta ? 'MeTTa' : 'NARS';
+        this.modeBadge.style.color = isMetta ? 'var(--metta-keyword, #c586c0)' : 'var(--nars-structure, #888)';
+        this.modeBadge.style.opacity = text.length > 0 ? 1 : 0.3;
     }
 
     _handleKeydown(e) {
