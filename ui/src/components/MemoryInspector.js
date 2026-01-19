@@ -1,4 +1,5 @@
 import { Component } from './Component.js';
+import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
 
 export class MemoryInspector extends Component {
     constructor(container) {
@@ -16,20 +17,21 @@ export class MemoryInspector extends Component {
         const style = document.createElement('style');
         style.textContent = `
             .memory-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 11px; }
-            .memory-table th { text-align: left; padding: 5px; background: #222; position: sticky; top: 0; cursor: pointer; user-select: none; }
-            .memory-table td { padding: 4px 5px; border-bottom: 1px solid #222; color: #aaa; }
-            .memory-table tr:hover td { background: #1a1a1a; color: #fff; }
-            .memory-table .col-term { color: var(--concept-color); }
+            .memory-table th { text-align: left; padding: 5px; background: var(--bg-header); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; cursor: pointer; user-select: none; color: var(--text-muted); text-transform: uppercase; }
+            .memory-table th:hover { color: var(--text-main); }
+            .memory-table td { padding: 4px 5px; border-bottom: 1px solid var(--border-color); color: #aaa; }
+            .memory-table tr:hover td { background: rgba(255,255,255,0.05); color: #fff; }
+            .memory-table .col-term { color: var(--text-main); }
             .memory-table .col-type { color: #888; font-size: 10px; text-transform: uppercase; }
-            .memory-table .col-val { text-align: right; }
+            .memory-table .col-val { text-align: right; font-family: var(--font-mono); }
         `;
         this.container.appendChild(style);
 
         this.container.style.overflow = 'auto';
         this.container.innerHTML += `
-            <div style="padding: 5px; position: sticky; top: 0; background: var(--bg-panel); z-index: 2; border-bottom: 1px solid #333; display: flex; gap: 5px;">
-                <input type="text" placeholder="Filter terms..." style="flex:1" id="memory-filter">
-                <button id="memory-refresh">Refresh</button>
+            <div style="padding: 5px; position: sticky; top: 0; background: var(--bg-panel); z-index: 2; border-bottom: 1px solid var(--border-color); display: flex; gap: 5px;">
+                <input type="text" placeholder="Filter terms..." style="flex:1; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-main); padding:4px;" id="memory-filter">
+                <button id="memory-refresh" style="font-size:10px;">REFRESH</button>
             </div>
             <div id="memory-table-container"></div>
         `;
@@ -113,9 +115,12 @@ export class MemoryInspector extends Component {
         const durability = c.budget?.durability?.toFixed(2) || '0.00';
         const quality = c.budget?.quality?.toFixed(2) || '0.00';
 
+        // Highlight Narsese in term column
+        const termHtml = NarseseHighlighter.highlight(c.term);
+
         return `
             <tr data-id="${c.id}" class="memory-row">
-                <td class="col-term" title="${c.term}">${c.term}</td>
+                <td class="col-term" title="${c.term}">${termHtml}</td>
                 <td class="col-type">${c.type || 'CONCEPT'}</td>
                 <td class="col-val" style="color:${this._colorVal(c.budget?.priority)}">${priority}</td>
                 <td class="col-val">${durability}</td>

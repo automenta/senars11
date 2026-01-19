@@ -53,29 +53,54 @@ export class DerivationTree extends Component {
                     {
                         selector: 'node',
                         style: {
-                            'background-color': '#333',
+                            'background-color': '#222',
                             'label': 'data(label)',
-                            'color': '#aaa',
-                            'font-family': 'monospace',
+                            'color': '#e0e0e0',
+                            'font-family': 'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace',
                             'font-size': '10px',
                             'text-valign': 'center',
                             'text-halign': 'center',
                             'text-wrap': 'wrap',
-                            'width': 60,  // Fixed width
-                            'height': 40, // Fixed height
+                            'width': 'label',
+                            'height': 'label',
+                            'padding': '10px',
                             'shape': 'round-rectangle',
                             'border-width': 1,
-                            'border-color': '#555'
+                            'border-color': '#333',
+                            'text-max-width': 150
+                        }
+                    },
+                    {
+                        selector: 'node[type="rule"]',
+                        style: {
+                            'background-color': '#333',
+                            'border-color': '#00bcd4', // Cyan for rules
+                            'color': '#00bcd4'
+                        }
+                    },
+                    {
+                        selector: 'node[type="conclusion"]',
+                        style: {
+                            'border-color': '#00ff9d', // Green for conclusion
+                            'color': '#00ff9d',
+                            'font-weight': 'bold'
+                        }
+                    },
+                    {
+                        selector: 'node[type="premise"]',
+                        style: {
+                            'border-color': '#aaa'
                         }
                     },
                     {
                         selector: 'edge',
                         style: {
-                            'width': 2,
+                            'width': 1,
                             'line-color': '#444',
                             'target-arrow-color': '#444',
                             'target-arrow-shape': 'triangle',
-                            'curve-style': 'bezier'
+                            'curve-style': 'bezier',
+                            'arrow-scale': 0.8
                         }
                     }
                 ],

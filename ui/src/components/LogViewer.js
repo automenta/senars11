@@ -1,5 +1,6 @@
 import {Component} from './Component.js';
 import {UI_CONSTANTS} from '@senars/core';
+import {NarseseHighlighter} from '../utils/NarseseHighlighter.js';
 
 /**
  * LogViewer component for displaying log entries with icons and formatting
@@ -78,7 +79,10 @@ export class LogViewer extends Component {
                 contentElement.appendChild(pre);
             }
         } else {
-            contentElement = this._createLogElement('div', 'log-entry-content', content);
+            // String content with Syntax Highlighting
+            contentElement = document.createElement('div');
+            contentElement.className = 'log-entry-content';
+            contentElement.innerHTML = NarseseHighlighter.highlight(content);
         }
 
         const timeElement = this._createLogElement('span', 'log-entry-time', timestamp, `time-${this.messageCounter}`);
