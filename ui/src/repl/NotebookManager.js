@@ -3,6 +3,7 @@ import { TruthSlider } from '../components/widgets/TruthSlider.js';
 import { SimpleGraphWidget } from '../components/widgets/SimpleGraphWidget.js';
 import { ChartWidget } from '../components/widgets/ChartWidget.js';
 import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
+import { SmartTextarea } from './SmartTextarea.js';
 import { ConceptCard } from '../components/ConceptCard.js';
 import { TaskCard } from '../components/TaskCard.js';
 import { marked } from 'marked';
@@ -49,6 +50,11 @@ export class CodeCell extends REPLCell {
         this.onExecute = onExecute;
         this.isEditing = true;
         this.executionCount = null;
+    }
+
+    destroy() {
+        this.smartEditor?.destroy();
+        super.destroy();
     }
 
     render() {
@@ -177,46 +183,34 @@ export class CodeCell extends REPLCell {
     }
 
     _createEditor() {
-        const editor = document.createElement('textarea');
-        editor.className = 'cell-editor';
-        editor.value = this.content;
-        editor.placeholder = 'Enter Narsese or MeTTa...';
-        editor.rows = Math.max(3, this.content.split('\n').length);
-        editor.style.cssText = `
-            width: 100%; background: #1e1e1e; color: #d4d4d4; border: none; padding: 10px;
-            font-family: monospace; font-size: 0.95em; resize: vertical; outline: none; display: block;
-        `;
+        const wrapper = document.createElement('div');
+        // wrapper.style.padding = '10px'; // SmartTextarea handles padding
 
-        editor.addEventListener('input', (e) => {
-            this.content = e.target.value;
-            // Auto resize
-            editor.style.height = 'auto';
-            editor.style.height = editor.scrollHeight + 'px';
+        this.smartEditor = new SmartTextarea(wrapper, {
+            rows: Math.max(3, this.content.split('\n').length),
+            autoResize: true,
+            onExecute: (text, opts) => this.execute(opts ? { advance: opts.shiftKey } : {})
         });
 
-        editor.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                this.execute();
-            }
-            if (e.shiftKey && e.key === 'Enter') {
-                e.preventDefault();
-                this.execute({ advance: true });
-            }
+        this.smartEditor.render();
+        this.smartEditor.setValue(this.content);
+
+        this.smartEditor.textarea.addEventListener('input', () => {
+             this.content = this.smartEditor.getValue();
         });
 
-        editor.addEventListener('focus', () => this.element.style.borderColor = '#007acc');
-        editor.addEventListener('blur', () => this.element.style.borderColor = '#3c3c3c');
+        // Border highlighting
+        this.smartEditor.textarea.addEventListener('focus', () => this.element.style.borderColor = '#007acc');
+        this.smartEditor.textarea.addEventListener('blur', () => this.element.style.borderColor = '#3c3c3c');
 
-        this.editor = editor;
-        return editor;
+        return wrapper;
     }
 
-    execute() {
+    execute(options = {}) {
         if (this.onExecute && this.content.trim()) {
             this.isEditing = false;
             this.updateMode();
-            this.onExecute(this.content, this);
+            this.onExecute(this.content, this, options);
             this._updateGutter();
         }
     }
@@ -229,7 +223,7 @@ export class CodeCell extends REPLCell {
     }
 
     focus() {
-        this.editor?.focus();
+        this.smartEditor?.focus();
     }
 }
 

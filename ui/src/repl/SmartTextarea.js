@@ -1,4 +1,5 @@
 import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
+import { AutocompleteManager } from './AutocompleteManager.js';
 
 export class SmartTextarea {
     constructor(container, options = {}) {
@@ -6,6 +7,8 @@ export class SmartTextarea {
         this.onExecute = options.onExecute || (() => {});
         this.value = '';
         this.rows = options.rows || 3;
+        this.autoResize = options.autoResize || false;
+        this.autocomplete = null;
     }
 
     render() {
@@ -77,19 +80,47 @@ export class SmartTextarea {
             .smart-textarea-input.highlight-mode::selection { background: rgba(255, 255, 255, 0.2); color: transparent; }
         `;
 
-        this.textarea.addEventListener('input', () => this.update());
+        this.textarea.addEventListener('input', (e) => {
+            this.update();
+            if (this.autoResize) this.adjustHeight();
+            this.autocomplete?.onInput(e);
+        });
         this.textarea.addEventListener('scroll', () => this.syncScroll());
         this.textarea.addEventListener('keydown', (e) => {
+            if (this.autocomplete?.onKeyDown(e)) return;
+
             if ((e.shiftKey && e.key === 'Enter') || (e.ctrlKey && e.key === 'Enter')) {
                 e.preventDefault();
-                this.onExecute(this.textarea.value);
+                this.onExecute(this.textarea.value, { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey });
             }
+        });
+        this.textarea.addEventListener('blur', () => {
+             setTimeout(() => this.autocomplete?.hide(), 200);
         });
 
         this.wrapper.append(style, this.backdrop, this.textarea);
         if (this.container) this.container.appendChild(this.wrapper);
 
+        this.autocomplete = new AutocompleteManager(this.textarea, this.wrapper);
+
+        if (this.autoResize) {
+             // Initial adjustment
+             requestAnimationFrame(() => this.adjustHeight());
+        }
+
         return this.wrapper;
+    }
+
+    adjustHeight() {
+        this.textarea.style.height = 'auto';
+        const newHeight = Math.max(this.textarea.scrollHeight, this.rows * 20); // Min height
+        this.textarea.style.height = '100%'; // Reset to fill wrapper
+        this.wrapper.style.height = newHeight + 'px';
+    }
+
+    destroy() {
+        this.autocomplete?.destroy();
+        this.wrapper.remove();
     }
 
     update() {
