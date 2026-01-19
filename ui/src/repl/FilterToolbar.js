@@ -55,9 +55,9 @@ export class FilterToolbar {
         const viewGroup = document.createElement('div');
         viewGroup.style.cssText = 'display: flex; gap: 2px; margin: 0 4px; background: #1e1e1e; padding: 2px; border-radius: 4px;';
 
-        ['list', 'grid', 'graph'].forEach(mode => {
+        ['list', 'grid', 'icon', 'graph'].forEach(mode => {
             const btn = document.createElement('button');
-            const icons = { list: '☰', grid: '⊞', graph: '🕸️' };
+            const icons = { list: '☰', grid: '⊞', icon: '🧱', graph: '🕸️' };
             btn.innerHTML = icons[mode];
             btn.title = `${mode.charAt(0).toUpperCase() + mode.slice(1)} View`;
             btn.onclick = () => {
