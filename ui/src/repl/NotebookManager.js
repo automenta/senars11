@@ -3,6 +3,8 @@ import { TruthSlider } from '../components/widgets/TruthSlider.js';
 import { SimpleGraphWidget } from '../components/widgets/SimpleGraphWidget.js';
 import { ChartWidget } from '../components/widgets/ChartWidget.js';
 import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
+import { ConceptCard } from '../components/ConceptCard.js';
+import { TaskCard } from '../components/TaskCard.js';
 import { marked } from 'marked';
 
 /**
@@ -83,7 +85,13 @@ export class CodeCell extends REPLCell {
     _createPreview() {
         const preview = document.createElement('div');
         preview.className = 'code-preview';
-        preview.innerHTML = NarseseHighlighter.highlight(this.content);
+
+        // Simple heuristic for language detection
+        const trimmed = this.content.trim();
+        const isMetta = trimmed.startsWith('(') || trimmed.startsWith(';') || trimmed.startsWith('!');
+        const language = isMetta ? 'metta' : 'narsese';
+
+        preview.innerHTML = NarseseHighlighter.highlight(this.content, language);
         preview.style.cssText = `
             padding: 10px; font-family: monospace; font-size: 0.95em;
             color: #d4d4d4; white-space: pre-wrap; cursor: pointer;
@@ -314,7 +322,15 @@ export class ResultCell extends REPLCell {
         const preview = document.createElement('span');
         preview.style.cssText = 'color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; opacity: 0.8;';
 
-        let previewText = typeof this.content === 'string' ? this.content : JSON.stringify(this.content);
+        let previewText = '';
+        if (this.category === 'concept' && typeof this.content === 'object') {
+            previewText = `Concept: ${this.content.term || this.content.id}`;
+        } else if (this.category === 'task' && typeof this.content === 'object') {
+            previewText = `Task: ${this.content.term || '...' }`;
+        } else {
+            previewText = typeof this.content === 'string' ? this.content : JSON.stringify(this.content);
+        }
+
         if (previewText.length > 80) previewText = previewText.substring(0, 80) + '...';
         preview.textContent = previewText;
 
@@ -332,7 +348,7 @@ export class ResultCell extends REPLCell {
         actions.className = 'cell-actions';
         actions.style.cssText = `
             position: absolute; top: 4px; right: 4px; opacity: 0; transition: opacity 0.2s;
-            display: flex; gap: 6px; background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 3px;
+            display: flex; gap: 6px; background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 3px; z-index: 10;
         `;
 
         this.element.onmouseenter = () => actions.style.opacity = '1';
@@ -357,7 +373,11 @@ export class ResultCell extends REPLCell {
         const contentDiv = document.createElement('div');
         contentDiv.style.cssText = 'white-space: pre-wrap; font-family: monospace; color: #d4d4d4; overflow-x: auto; font-size: 0.95em;';
 
-        if (typeof this.content === 'string') {
+        if (this.category === 'concept' && typeof this.content === 'object') {
+            new ConceptCard(contentDiv, this.content).render();
+        } else if (this.category === 'task' && typeof this.content === 'object') {
+            new TaskCard(contentDiv, this.content).render();
+        } else if (typeof this.content === 'string') {
             contentDiv.innerHTML = NarseseHighlighter.highlight(this.content);
         } else {
             contentDiv.textContent = JSON.stringify(this.content, null, 2);
