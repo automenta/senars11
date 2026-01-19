@@ -7,8 +7,11 @@ import { ConnectionManager } from './connection/ConnectionManager.js';
 import { GraphPanel } from './components/GraphPanel.js';
 import { MemoryInspector } from './components/MemoryInspector.js';
 import { DerivationTree } from './components/DerivationTree.js';
+import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
+import { CommandProcessor } from './command/CommandProcessor.js';
 import { MessageFilter, categorizeMessage } from './repl/MessageFilter.js';
 import { NotebookManager } from './repl/NotebookManager.js';
+import { NotebookLogger } from './repl/NotebookLogger.js';
 import { FilterToolbar } from './repl/FilterToolbar.js';
 import { REPLInput } from './repl/REPLInput.js';
 import { DemoLibrary } from './components/DemoLibrary.js';
@@ -27,6 +30,8 @@ class SeNARSIDE {
         this.graphManager = null;
         this.messageFilter = new MessageFilter();
         this.notebook = null;
+        this.notebookLogger = null;
+        this.commandProcessor = null;
         this.filterToolbar = null;
         this.cycleCount = 0;
         this.messageCount = 0;
@@ -77,7 +82,8 @@ class SeNARSIDE {
             'replComponent': (c) => this.createREPLComponent(c),
             'graphComponent': (c) => this.createGraphComponent(c),
             'memoryComponent': (c) => this.createMemoryComponent(c),
-            'derivationComponent': (c) => this.createDerivationComponent(c)
+            'derivationComponent': (c) => this.createDerivationComponent(c),
+            'metricsComponent': (c) => this.createMetricsComponent(c)
         };
 
         Object.entries(factories).forEach(([k, v]) => this.layout.registerComponentFactoryFunction(k, v));
@@ -88,23 +94,20 @@ class SeNARSIDE {
             root: {
                 type: 'row',
                 content: [
-                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 95 },
+                    { type: 'component', componentName: 'replComponent', title: 'REPL', width: 70 },
                     {
-                        type: 'stack', width: 5,
+                        type: 'stack', width: 30,
                         isClosable: true,
                         content: [
                             { type: 'component', componentName: 'graphComponent', title: 'KNOWLEDGE GRAPH', isClosable: true },
                             { type: 'component', componentName: 'memoryComponent', title: 'MEMORY INSPECTOR' },
-                            { type: 'component', componentName: 'derivationComponent', title: 'DERIVATION TRACER' }
+                            { type: 'component', componentName: 'derivationComponent', title: 'DERIVATION TRACER' },
+                            { type: 'component', componentName: 'metricsComponent', title: 'SYSTEM METRICS' }
                         ]
                     }
                 ]
             }
         });
-
-        // Minimize the sidebar stack after initialization if possible, or rely on 95/5 split
-        // GoldenLayout doesn't have a simple 'startMinimized' config in the tree structure easily accessible
-        // without complex state. 5% width is effectively collapsed.
 
         window.addEventListener('resize', () => this.layout.updateRootSize());
     }
@@ -139,6 +142,7 @@ class SeNARSIDE {
         replContainer.appendChild(notebookContainer);
 
         this.notebook = new NotebookManager(notebookContainer);
+        this.notebookLogger = new NotebookLogger(this.notebook);
 
         const inputContainer = document.createElement('div');
         replContainer.appendChild(inputContainer);
@@ -147,7 +151,8 @@ class SeNARSIDE {
             onExecute: (text) => this.executeInput(text),
             onClear: () => this.clearREPL(),
             onDemo: () => this.showDemoLibrary(),
-            onExtraAction: (action) => this.handleExtraAction(action)
+            onExtraAction: (action) => this.handleExtraAction(action),
+            onControl: (action) => this.controlReasoner(action)
         });
         this.replInput.render();
 
@@ -156,7 +161,6 @@ class SeNARSIDE {
             notebook: notebookContainer,
             input: this.replInput,
             modeIndicator,
-            cycleCount: document.getElementById('cycle-count'),
             messageCount: document.getElementById('message-count')
         });
     }
@@ -169,6 +173,8 @@ class SeNARSIDE {
         const panel = new GraphPanel(graphContainer);
         panel.initialize();
         this.components.set('graph', { container: graphContainer, panel });
+        this.graphManager = panel.graphManager;
+        if (this.commandProcessor) this.commandProcessor.graphManager = this.graphManager;
 
         container.on('resize', () => {
             panel.graphManager?.cy && (panel.graphManager.cy.resize(), panel.graphManager.cy.fit());
@@ -194,6 +200,15 @@ class SeNARSIDE {
         container.on('resize', () => panel.resize?.());
     }
 
+    createMetricsComponent(container) {
+        const metricsContainer = container.element;
+        metricsContainer.style.backgroundColor = '#1e1e1e';
+        metricsContainer.innerHTML = '';
+        const panel = new SystemMetricsPanel(metricsContainer);
+        panel.render();
+        this.components.set('metrics', { container: metricsContainer, panel });
+    }
+
     async switchMode(mode) {
         console.log(`Switching to ${mode} mode...`);
         this.connection?.disconnect();
@@ -201,9 +216,18 @@ class SeNARSIDE {
 
         const manager = mode === 'local' ? new LocalConnectionManager() : new WebSocketManager();
         this.connection = new ConnectionManager(manager);
-        await this.connection.connect();
+        await this.connection.connect(mode === 'remote' ? this.serverUrl : undefined);
 
         this.connection.subscribe('*', (message) => this.handleMessage(message));
+
+        // Update CommandProcessor with new connection
+        if (this.commandProcessor) {
+            this.commandProcessor.connection = this.connection;
+        } else {
+            this.commandProcessor = new CommandProcessor(this.connection, this.notebookLogger, this.graphManager);
+            this.commandProcessor.setLayout(this.layout);
+        }
+
         this.updateModeIndicator();
         this.saveSettings();
         this.notebook?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
@@ -218,8 +242,18 @@ class SeNARSIDE {
     }
 
     showConnectionModal() {
-        const switchTo = this.connectionMode === 'local' ? 'remote' : 'local';
-        confirm(`Switch to ${switchTo} mode?`) && this.switchMode(switchTo);
+        if (this.connectionMode === 'local') {
+            const defaultUrl = this.serverUrl || 'ws://localhost:3000';
+            const url = prompt('Enter Remote Server URL:', defaultUrl);
+            if (url !== null) {
+                this.serverUrl = url;
+                this.switchMode('remote');
+            }
+        } else {
+            if (confirm('Switch to Local Mode?')) {
+                this.switchMode('local');
+            }
+        }
     }
 
     handleMessage(message) {
@@ -228,10 +262,37 @@ class SeNARSIDE {
         this.updateStats();
 
         if (this.notebook) {
-            const category = categorizeMessage(message);
-            const content = message.payload?.result || message.content || JSON.stringify(message.payload);
-            const viewMode = this.messageFilter.getMessageViewMode(message);
-            this.notebook.createResultCell(content, category, viewMode);
+            if (message.type === 'visualization') {
+                const { type, data, content } = message.payload;
+                if (type === 'markdown') {
+                    this.notebook.createMarkdownCell(content || data);
+                } else if (type === 'graph' || type === 'chart') {
+                     // Map type to widget component name
+                     const widgetType = type === 'graph' ? 'GraphWidget' : 'ChartWidget';
+                     this.notebook.createWidgetCell(widgetType, data);
+                }
+            } else if (message.type === 'ui-command') {
+                const { command, args } = message.payload;
+                const fullCommand = `/${command} ${args}`;
+                this.notebookLogger.log(`System requested UI Command: ${fullCommand}`, 'system');
+                if (this.commandProcessor) {
+                    this.commandProcessor.processCommand(fullCommand, true);
+                }
+            } else if (message.type === 'agent/prompt') {
+                // Handle system asking for user input
+                const { question, id } = message.payload;
+                this.notebook.createPromptCell(question, (response) => {
+                     // Send response back
+                     if (this.connection) {
+                         this.connection.sendMessage('agent/response', { id, response });
+                     }
+                });
+            } else {
+                const category = categorizeMessage(message);
+                const content = message.payload?.result || message.content || JSON.stringify(message.payload);
+                const viewMode = this.messageFilter.getMessageViewMode(message);
+                this.notebook.createResultCell(content, category, viewMode);
+            }
         }
 
         if (message.payload?.cycle) {
@@ -248,6 +309,11 @@ class SeNARSIDE {
 
             const derComp = this.components.get('derivation');
             if (derComp?.panel && message.type === 'reasoning:derivation') derComp.panel.addDerivation(message.payload);
+
+            const metricsComp = this.components.get('metrics');
+            if (metricsComp?.panel && (message.type === 'metrics:update' || message.type === 'metrics.updated')) {
+                metricsComp.panel.update(message.payload);
+            }
         } catch (e) {
             console.error('Error updating components:', e);
         }
@@ -272,7 +338,11 @@ class SeNARSIDE {
     executeInput(text) {
         if (!text) return;
         this.notebook.createCodeCell(text, (content) => {
-            this.connection?.isConnected() && this.connection.sendMessage('agent/input', { text: content });
+            if (this.commandProcessor) {
+                this.commandProcessor.processCommand(content, false, 'narsese');
+            } else if (this.connection?.isConnected()) {
+                this.connection.sendMessage('agent/input', { text: content });
+            }
         }).execute();
     }
 
@@ -295,13 +365,19 @@ class SeNARSIDE {
         if (action === 'reset') {
             this.cycleCount = 0;
             this.messageCount = 0;
-            this.updateStats();
         }
+
+        this.replInput?.updateState(this.isRunning);
+        this.updateStats();
     }
 
     updateStats() {
         const repl = this.components.get('repl');
         if (repl) {
+            // Update REPLInput toolbar display
+            this.replInput?.updateCycles(this.cycleCount);
+
+            // Legacy/Status bar updates
             if (repl.cycleCount) repl.cycleCount.textContent = this.cycleCount;
             if (repl.messageCount) repl.messageCount.textContent = this.messageCount;
         }
@@ -365,12 +441,7 @@ class SeNARSIDE {
 
             // Update Chart
             const val = Math.sin(tick * 0.1) * 20 + 50 + Math.random() * 10;
-            const widget = chartCell.element.querySelector('canvas')?.__chartWidget; // Hack or need better way to get instance
-            // Actually, we don't have reference to widget instance from cell easily.
-            // Let's modify NotebookManager to return instance or allow access.
-            // For now, let's look up by cell ID or assume the cell has a way.
-
-            // Accessing the widget instance stored on the element (we need to update WidgetCell to store it)
+            // Hack to update: we don't have direct access to widget instance easily
             if (chartCell.widgetInstance) {
                 chartCell.widgetInstance.updateData(new Date().toLocaleTimeString(), val);
             }
@@ -431,12 +502,10 @@ class SeNARSIDE {
         backdrop.appendChild(modalContainer);
         document.body.appendChild(backdrop);
 
-        // Click backdrop to close
         backdrop.onclick = (e) => {
             if (e.target === backdrop) document.body.removeChild(backdrop);
         };
 
-        // ESC to close
         const escHandler = (e) => {
             if (e.key === 'Escape') {
                 document.body.removeChild(backdrop);

@@ -7,7 +7,7 @@ export class ConnectionManager extends ConnectionInterface {
         this.adapter = adapter;
     }
 
-    async connect() { return this.adapter.connect(); }
+    async connect(...args) { return this.adapter.connect(...args); }
     isConnected() { return this.adapter.isConnected(); }
     sendMessage(type, payload) { return this.adapter.sendMessage(type, payload); }
     subscribe(event, handler) { return this.adapter.subscribe(event, handler); }

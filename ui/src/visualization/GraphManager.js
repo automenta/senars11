@@ -372,6 +372,18 @@ export class GraphManager {
         this.cy?.elements().remove();
     }
 
+    getNodeCount() {
+        return this.cy ? this.cy.nodes().length : 0;
+    }
+
+    getTaskNodes() {
+        return this.cy ? this.cy.nodes('[type="task"]').toArray() : [];
+    }
+
+    getConceptNodes() {
+        return this.cy ? this.cy.nodes('[type="concept"]').toArray() : [];
+    }
+
     animateNode(nodeId) {
         const node = this.cy?.getElementById(nodeId);
         if (!node?.length) return;
