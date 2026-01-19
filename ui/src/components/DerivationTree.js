@@ -73,6 +73,22 @@ export class DerivationTree extends Component {
                 ],
                 layout: { name: 'grid' }
             });
+
+            this.cy.on('tap', 'node', (evt) => {
+                const data = evt.target.data();
+                if (data.type === 'conclusion' || data.type === 'premise') {
+                     // Dispatch select event to open in Memory Inspector
+                     // We need to construct a concept-like object or at least ID/Term
+                     const concept = {
+                         term: data.fullTerm || data.label,
+                         id: data.id // This ID is random, so MemoryInspector needs to match by term
+                     };
+                     document.dispatchEvent(new CustomEvent('senars:concept:select', {
+                        detail: { concept }
+                     }));
+                }
+            });
+
         } catch (e) {
             console.error('DerivationTree: Failed to init Cytoscape', e);
         }

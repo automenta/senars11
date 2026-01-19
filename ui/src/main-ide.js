@@ -66,11 +66,18 @@ class SeNARSIDE {
             this.notebook.createMarkdownCell("# Welcome to SeNARS IDE v1.0\n\nDouble-click this cell to edit.\n- **Local Mode**: Runs entirely in browser\n- **Remote Mode**: Connects to backend\n- **Widgets**: Interactive tools");
         }
 
-        // Listen for concept selection to log in REPL
+        // Listen for concept selection
         document.addEventListener('senars:concept:select', (e) => {
             const { concept } = e.detail;
             if (concept) {
-                this.notebook?.createResultCell(concept, 'concept', 'compact');
+                 // Open Memory Inspector if available
+                 const memoryComponent = this.layout.root.getItemsByFilter(item => item.config.componentName === 'memoryComponent')[0];
+                 if (memoryComponent && memoryComponent.parent && memoryComponent.parent.setActiveContentItem) {
+                     memoryComponent.parent.setActiveContentItem(memoryComponent);
+                 }
+                 // Optional: Do not log to REPL to avoid spam, or log only if not in "silent" mode.
+                 // For now, we disable REPL logging on selection to prioritize Inspector.
+                 // this.notebook?.createResultCell(concept, 'concept', 'compact');
             }
         });
 
