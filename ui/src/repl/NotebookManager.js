@@ -534,6 +534,18 @@ export class WidgetCell extends REPLCell {
         } else if (this.widgetType === 'ChartWidget') {
             this.widgetInstance = new ChartWidget(content, this.content);
             this.widgetInstance.render();
+        } else if (this.widgetType === 'SubNotebook') {
+             // Create a nested notebook
+             const nestedManager = new NotebookManager(content, {
+                 onExecute: (text, cell, options) => {
+                     // Pass through execution or handle locally?
+                     // For now, simple logging
+                     console.log('Nested execution:', text);
+                 }
+             });
+             this.widgetInstance = nestedManager;
+             // Add initial cell
+             nestedManager.createCodeCell('(print "Hello Nested World")');
         } else {
             content.innerHTML = `<div style="color:red">Unknown widget: ${this.widgetType}</div>`;
         }
@@ -553,12 +565,187 @@ export class NotebookManager {
         this.saveTimeout = null;
         this.storageKey = 'senars-notebook-content';
         this.defaultOnExecute = options.onExecute || null;
+        this.viewMode = 'list'; // list, grid, graph
+        this.viewContainer = document.createElement('div');
+        this.viewContainer.style.cssText = 'height: 100%; width: 100%; position: relative;';
+        this.container.appendChild(this.viewContainer);
+        this.switchView('list');
+    }
+
+    switchView(mode) {
+        this.viewMode = mode;
+        this.viewContainer.innerHTML = '';
+        this.viewContainer.className = `view-mode-${mode}`;
+
+        if (mode === 'list') {
+            this.viewContainer.style.overflowY = 'auto';
+            this.viewContainer.style.display = 'block';
+            this.cells.forEach(cell => this.viewContainer.appendChild(cell.render()));
+        } else if (mode === 'grid') {
+            this.viewContainer.style.overflowY = 'auto';
+            this.viewContainer.style.display = 'grid';
+            this.viewContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+            this.viewContainer.style.gap = '10px';
+            this.viewContainer.style.padding = '10px';
+            this.cells.forEach(cell => this.viewContainer.appendChild(this._renderGridCell(cell)));
+        } else if (mode === 'graph') {
+             this.viewContainer.style.overflow = 'hidden';
+             // Graph logic will be initialized here or via a dedicated method
+             this._initGraphView();
+        }
+    }
+
+    _renderGridCell(cell) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'grid-cell-wrapper';
+        wrapper.style.cssText = `
+            background: #252526; border: 1px solid #3c3c3c; border-radius: 4px;
+            padding: 8px; height: 150px; overflow: hidden; position: relative;
+            cursor: pointer; transition: transform 0.2s;
+        `;
+        wrapper.onmouseenter = () => wrapper.style.transform = 'scale(1.02)';
+        wrapper.onmouseleave = () => wrapper.style.transform = 'scale(1)';
+        wrapper.onclick = () => {
+             // Maybe switch back to list view and scroll to this cell?
+             this.switchView('list');
+             cell.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             cell.element.style.borderColor = '#00ff9d';
+             setTimeout(() => cell.element.style.borderColor = '#3c3c3c', 1000);
+        };
+
+        const typeBadge = document.createElement('div');
+        typeBadge.style.cssText = 'position: absolute; top: 4px; right: 4px; font-size: 10px; color: #888; text-transform: uppercase;';
+        typeBadge.textContent = cell.type;
+
+        const contentPreview = document.createElement('div');
+        contentPreview.style.cssText = 'font-size: 10px; color: #ccc; word-break: break-all; margin-top: 15px;';
+
+        let text = typeof cell.content === 'string' ? cell.content : JSON.stringify(cell.content);
+        if (text.length > 150) text = text.substring(0, 150) + '...';
+        contentPreview.textContent = text;
+
+        wrapper.append(typeBadge, contentPreview);
+        return wrapper;
+    }
+
+    _initGraphView() {
+        if (!window.cytoscape) {
+            this.viewContainer.innerHTML = 'Cytoscape library not loaded.';
+            return;
+        }
+
+        const cyContainer = document.createElement('div');
+        cyContainer.style.cssText = 'width: 100%; height: 100%; background: #1e1e1e;';
+        this.viewContainer.appendChild(cyContainer);
+
+        const nodes = this.cells.map((cell, index) => ({
+            group: 'nodes',
+            data: {
+                id: cell.id,
+                label: `[${index}] ${cell.type}`,
+                type: cell.type,
+                content: cell.content
+            }
+        }));
+
+        const edges = [];
+        for (let i = 0; i < this.cells.length - 1; i++) {
+            edges.push({
+                group: 'edges',
+                data: {
+                    source: this.cells[i].id,
+                    target: this.cells[i+1].id,
+                    label: 'next'
+                }
+            });
+        }
+
+        // Implicit links: If cell references previous results?
+        // Advanced: Parse Narsese for shared terms and link cells.
+
+        this.cy = window.cytoscape({
+            container: cyContainer,
+            elements: [...nodes, ...edges],
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#444',
+                        'label': 'data(label)',
+                        'color': '#fff',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'font-size': '10px',
+                        'width': '40px',
+                        'height': '40px'
+                    }
+                },
+                {
+                    selector: 'node[type="code"]',
+                    style: { 'background-color': '#0e639c', 'shape': 'rectangle', 'width': '60px' }
+                },
+                {
+                    selector: 'node[type="result"]',
+                    style: { 'background-color': '#00ff9d', 'color': '#000', 'shape': 'round-rectangle', 'width': '60px' }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 2,
+                        'line-color': '#555',
+                        'target-arrow-color': '#555',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier'
+                    }
+                }
+            ],
+            layout: {
+                name: 'grid',
+                rows: Math.ceil(Math.sqrt(nodes.length))
+            }
+        });
+
+        this.cy.on('tap', 'node', (evt) => {
+            const cellId = evt.target.id();
+            const cell = this.cells.find(c => c.id === cellId);
+            if (cell) {
+                // Flash interaction?
+                // Double tap to open?
+                // For now, simple tap to switch back to list view focused
+                this.switchView('list');
+                setTimeout(() => {
+                    cell.element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cell.element.style.borderColor = '#00ff9d';
+                    setTimeout(() => cell.element.style.borderColor = '#3c3c3c', 1000);
+                }, 100);
+            }
+        });
+
+        this.cy.layout({ name: 'dagre', rankDir: 'TB' }).run();
+        // fallback if dagre not loaded?
+        // We use grid above as initial, then try better layout
+    }
+
+    _updateGraphData() {
+        // Debounce update or just full re-render for prototype
+        if (this.viewMode === 'graph') {
+             this.switchView('graph'); // Re-init for now
+        }
     }
 
     addCell(cell) {
         this.cells.push(cell);
-        this.container.appendChild(cell.render());
-        this.scrollToBottom();
+
+        if (this.viewMode === 'list') {
+            this.viewContainer.appendChild(cell.render());
+            this.scrollToBottom();
+        } else if (this.viewMode === 'grid') {
+            this.viewContainer.appendChild(this._renderGridCell(cell));
+        } else if (this.viewMode === 'graph') {
+            // Update graph
+            this._updateGraphData();
+        }
+
         this.triggerSave();
         return cell;
     }
@@ -623,6 +810,14 @@ export class NotebookManager {
     removeCell(cell) {
         const index = this.cells.indexOf(cell);
         if (index > -1) this.cells.splice(index, 1);
+
+        if (this.viewMode === 'list') {
+            cell.element?.remove(); // Just remove element, destroy is called below
+        } else {
+             // Re-render whole view for grid/graph simplicity for now
+             this.switchView(this.viewMode);
+        }
+
         cell.destroy();
         this.triggerSave();
     }
@@ -633,10 +828,14 @@ export class NotebookManager {
             // Swap in array
             this.cells.splice(index, 1);
             this.cells.splice(index - 1, 0, cell);
-            // Swap in DOM
-            const prev = cell.element.previousElementSibling;
-            if (prev) {
-                this.container.insertBefore(cell.element, prev);
+
+            if (this.viewMode === 'list') {
+                const prev = cell.element.previousElementSibling;
+                if (prev) {
+                    this.viewContainer.insertBefore(cell.element, prev);
+                }
+            } else {
+                this.switchView(this.viewMode);
             }
             this.triggerSave();
         }
@@ -684,11 +883,14 @@ export class NotebookManager {
             // Swap in array
             this.cells.splice(index, 1);
             this.cells.splice(index + 1, 0, cell);
-            // Swap in DOM
-            const next = cell.element.nextElementSibling;
-            if (next) {
-                // To move down, insert before the element *after* the next one
-                this.container.insertBefore(cell.element, next.nextElementSibling);
+
+            if (this.viewMode === 'list') {
+                const next = cell.element.nextElementSibling;
+                if (next) {
+                    this.viewContainer.insertBefore(cell.element, next.nextElementSibling);
+                }
+            } else {
+                this.switchView(this.viewMode);
             }
             this.triggerSave();
         }
@@ -697,17 +899,19 @@ export class NotebookManager {
     duplicateCell(cell) {
         if (cell instanceof CodeCell) {
             const newCell = this.createCodeCell(cell.content, cell.onExecute);
-            // Insert after current cell instead of at end
             this.removeCell(newCell); // Remove from end
 
             const index = this.cells.indexOf(cell);
             this.cells.splice(index + 1, 0, newCell);
 
-            // DOM insert
-            if (cell.element.nextElementSibling) {
-                this.container.insertBefore(newCell.render(), cell.element.nextElementSibling);
+            if (this.viewMode === 'list') {
+                if (cell.element.nextElementSibling) {
+                    this.viewContainer.insertBefore(newCell.render(), cell.element.nextElementSibling);
+                } else {
+                    this.viewContainer.appendChild(newCell.render());
+                }
             } else {
-                this.container.appendChild(newCell.render());
+                this.switchView(this.viewMode);
             }
             this.triggerSave();
         }
@@ -716,26 +920,26 @@ export class NotebookManager {
     insertCellAfter(referenceCell, type = 'code') {
         let newCell;
         if (type === 'code') {
-            // Need to retrieve original onExecute from somewhere or pass a generic one?
-            // Ideally onExecute is bound to the notebook context in createCodeCell
-            // But here we need access to the execute logic passed from main-ide.js
-            // Solution: Use the same onExecute as the reference cell if available
             newCell = this.createCodeCell('', referenceCell.onExecute);
         } else if (type === 'markdown') {
             newCell = this.createMarkdownCell('');
         }
 
         if (newCell) {
-            this.removeCell(newCell); // Remove from end
+            this.removeCell(newCell);
             const index = this.cells.indexOf(referenceCell);
             this.cells.splice(index + 1, 0, newCell);
 
-            if (referenceCell.element.nextElementSibling) {
-                this.container.insertBefore(newCell.render(), referenceCell.element.nextElementSibling);
+            if (this.viewMode === 'list') {
+                if (referenceCell.element.nextElementSibling) {
+                    this.viewContainer.insertBefore(newCell.render(), referenceCell.element.nextElementSibling);
+                } else {
+                    this.viewContainer.appendChild(newCell.render());
+                }
+                newCell.focus();
             } else {
-                this.container.appendChild(newCell.render());
+                this.switchView(this.viewMode);
             }
-            newCell.focus();
             this.triggerSave();
         }
     }

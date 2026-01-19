@@ -146,7 +146,8 @@ class SeNARSIDE {
             onExport: () => this.exportLogs(),
             onImport: (file) => this.importLogs(file),
             onRunAll: () => this.notebook?.runAll(),
-            onClearOutputs: () => this.notebook?.clearOutputs()
+            onClearOutputs: () => this.notebook?.clearOutputs(),
+            onViewChange: (mode) => this.notebook?.switchView(mode)
         });
         replContainer.appendChild(this.filterToolbar.render());
 
@@ -458,6 +459,9 @@ class SeNARSIDE {
                 break;
             case 'simulation':
                 this.runEpicSimulation();
+                break;
+            case 'subnotebook':
+                this.notebook.createWidgetCell('SubNotebook', {});
                 break;
         }
     }

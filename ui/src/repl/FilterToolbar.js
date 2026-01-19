@@ -8,6 +8,8 @@ export class FilterToolbar {
         this.onImport = callbacks.onImport || (() => {});
         this.onRunAll = callbacks.onRunAll || (() => {});
         this.onClearOutputs = callbacks.onClearOutputs || (() => {});
+        this.onViewChange = callbacks.onViewChange || (() => {});
+        this.currentView = 'list';
         this.element = null;
         this.buttons = new Map();
     }
@@ -48,6 +50,25 @@ export class FilterToolbar {
             this.buttons.set(id, btn);
             categoryButtons.appendChild(btn);
         });
+
+        // View Switcher
+        const viewGroup = document.createElement('div');
+        viewGroup.style.cssText = 'display: flex; gap: 2px; margin: 0 4px; background: #1e1e1e; padding: 2px; border-radius: 4px;';
+
+        ['list', 'grid', 'graph'].forEach(mode => {
+            const btn = document.createElement('button');
+            const icons = { list: '☰', grid: '⊞', graph: '🕸️' };
+            btn.innerHTML = icons[mode];
+            btn.title = `${mode.charAt(0).toUpperCase() + mode.slice(1)} View`;
+            btn.onclick = () => {
+                this.currentView = mode;
+                this.onViewChange(mode);
+                this.updateViewButtons(viewGroup);
+            };
+            btn.dataset.mode = mode;
+            viewGroup.appendChild(btn);
+        });
+        this.updateViewButtons(viewGroup);
 
         // Action Buttons Group
         const actionGroup = document.createElement('div');
@@ -96,10 +117,26 @@ export class FilterToolbar {
 
         toolbar.appendChild(searchInput);
         toolbar.appendChild(categoryButtons);
+        toolbar.appendChild(viewGroup);
         toolbar.appendChild(actionGroup);
 
         this.element = toolbar;
         return toolbar;
+    }
+
+    updateViewButtons(container) {
+        Array.from(container.children).forEach(btn => {
+            const isActive = btn.dataset.mode === this.currentView;
+            btn.style.cssText = `
+                background: ${isActive ? '#333' : 'transparent'};
+                color: ${isActive ? '#fff' : '#888'};
+                border: none;
+                padding: 4px 8px;
+                cursor: pointer;
+                border-radius: 2px;
+                font-size: 14px;
+            `;
+        });
     }
 
     updateButtonStyle(btn, categoryId, mode) {

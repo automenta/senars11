@@ -95,8 +95,9 @@ export class REPLInput {
 
         const addMdBtn = this._createButton('📝 Text', '#333', () => this.onExtraAction('markdown'));
         const addSliderBtn = this._createButton('🎚️ Slider', '#333', () => this.onExtraAction('slider'));
+        const addSubNbBtn = this._createButton('📂 Sub-Notebook', '#333', () => this.onExtraAction('subnotebook'));
 
-        extraTools.append(addMdBtn, addSliderBtn);
+        extraTools.append(addMdBtn, addSliderBtn, addSubNbBtn);
         toolbar.append(runBtn, clearBtn, demoBtn, extraTools);
         return toolbar;
     }
