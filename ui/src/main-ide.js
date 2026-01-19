@@ -66,6 +66,14 @@ class SeNARSIDE {
             this.notebook.createMarkdownCell("# Welcome to SeNARS IDE v1.0\n\nDouble-click this cell to edit.\n- **Local Mode**: Runs entirely in browser\n- **Remote Mode**: Connects to backend\n- **Widgets**: Interactive tools");
         }
 
+        // Listen for concept selection to log in REPL
+        document.addEventListener('senars:concept:select', (e) => {
+            const { concept } = e.detail;
+            if (concept) {
+                this.notebook?.createResultCell(concept, 'concept', 'compact');
+            }
+        });
+
         console.log(`SeNARS IDE initialized in ${this.connectionMode} mode`);
     }
 
@@ -289,7 +297,12 @@ class SeNARSIDE {
                 });
             } else {
                 const category = categorizeMessage(message);
-                const content = message.payload?.result || message.content || JSON.stringify(message.payload);
+                let content;
+                if (category === 'concept' || category === 'task') {
+                    content = message.payload;
+                } else {
+                    content = message.payload?.result || message.content || JSON.stringify(message.payload);
+                }
                 const viewMode = this.messageFilter.getMessageViewMode(message);
                 this.notebook.createResultCell(content, category, viewMode);
             }

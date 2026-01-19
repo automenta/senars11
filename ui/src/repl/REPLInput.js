@@ -94,13 +94,9 @@ export class REPLInput {
         extraTools.style.cssText = 'display: flex; gap: 4px; border-left: 1px solid #444; padding-left: 12px; margin-left: auto;';
 
         const addMdBtn = this._createButton('📝 Text', '#333', () => this.onExtraAction('markdown'));
-        const addGraphBtn = this._createButton('🧩 Graph', '#333', () => this.onExtraAction('graph'));
         const addSliderBtn = this._createButton('🎚️ Slider', '#333', () => this.onExtraAction('slider'));
-        const simBtn = this._createButton('⚡ Simulation', '#00ff9d', () => this.onExtraAction('simulation'));
-        simBtn.style.color = '#000';
-        simBtn.style.fontWeight = 'bold';
 
-        extraTools.append(addMdBtn, addGraphBtn, addSliderBtn, simBtn);
+        extraTools.append(addMdBtn, addSliderBtn);
         toolbar.append(runBtn, clearBtn, demoBtn, extraTools);
         return toolbar;
     }
