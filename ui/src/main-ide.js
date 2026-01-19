@@ -155,7 +155,9 @@ class SeNARSIDE {
         notebookContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 10px;';
         replContainer.appendChild(notebookContainer);
 
-        this.notebook = new NotebookManager(notebookContainer);
+        this.notebook = new NotebookManager(notebookContainer, {
+            onExecute: (text) => this.processCellExecution(text)
+        });
         this.notebookLogger = new NotebookLogger(this.notebook);
 
         const inputContainer = document.createElement('div');
@@ -370,21 +372,23 @@ class SeNARSIDE {
         reader.readAsText(file);
     }
 
+    processCellExecution(content) {
+        // Detect language
+        const trimmed = content.trim();
+        const isMetta = trimmed.startsWith('(') || trimmed.startsWith(';') || trimmed.startsWith('!');
+        const mode = isMetta ? 'metta' : 'narsese';
+
+        if (this.commandProcessor) {
+            this.commandProcessor.processCommand(content, false, mode);
+        } else if (this.connection?.isConnected()) {
+            const type = mode === 'metta' ? 'agent/input' : 'narseseInput';
+            this.connection.sendMessage(type, { text: content });
+        }
+    }
+
     executeInput(text) {
         if (!text) return;
-        this.notebook.createCodeCell(text, (content) => {
-            // Detect language
-            const trimmed = content.trim();
-            const isMetta = trimmed.startsWith('(') || trimmed.startsWith(';') || trimmed.startsWith('!');
-            const mode = isMetta ? 'metta' : 'narsese';
-
-            if (this.commandProcessor) {
-                this.commandProcessor.processCommand(content, false, mode);
-            } else if (this.connection?.isConnected()) {
-                const type = mode === 'metta' ? 'agent/input' : 'narseseInput';
-                this.connection.sendMessage(type, { text: content });
-            }
-        }).execute();
+        this.notebook.createCodeCell(text).execute();
     }
 
     clearREPL() {

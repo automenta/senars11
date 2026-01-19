@@ -199,6 +199,10 @@ export class CodeCell extends REPLCell {
                 e.preventDefault();
                 this.execute();
             }
+            if (e.shiftKey && e.key === 'Enter') {
+                e.preventDefault();
+                this.execute({ advance: true });
+            }
         });
 
         editor.addEventListener('focus', () => this.element.style.borderColor = '#007acc');
@@ -548,12 +552,13 @@ export class WidgetCell extends REPLCell {
  * Notebook manager for REPL cells
  */
 export class NotebookManager {
-    constructor(container) {
+    constructor(container, options = {}) {
         this.container = container;
         this.cells = [];
         this.executionCount = 0;
         this.saveTimeout = null;
         this.storageKey = 'senars-notebook-content';
+        this.defaultOnExecute = options.onExecute || null;
     }
 
     addCell(cell) {
@@ -572,11 +577,15 @@ export class NotebookManager {
     }
 
     createCodeCell(content = '', onExecute = null) {
-        // Wrap execute to update execution count
-        const wrappedExecute = (content, cellInstance) => {
+        // Use provided handler or default
+        const executeHandler = onExecute || this.defaultOnExecute;
+
+        // Wrap execute to update execution count and handle focus
+        const wrappedExecute = (content, cellInstance, options) => {
             this.executionCount++;
             cellInstance.executionCount = this.executionCount;
-            if (onExecute) onExecute(content, cellInstance);
+            if (executeHandler) executeHandler(content, cellInstance);
+            this.handleCellExecution(cellInstance, options);
         };
         const cell = new CodeCell(content, wrappedExecute);
         this._bindCellEvents(cell);
@@ -636,6 +645,42 @@ export class NotebookManager {
                 this.container.insertBefore(cell.element, prev);
             }
             this.triggerSave();
+        }
+    }
+
+    focusNextCell(cell) {
+        const index = this.cells.indexOf(cell);
+        if (index > -1 && index < this.cells.length - 1) {
+            const next = this.cells[index + 1];
+            if (next instanceof CodeCell) next.focus();
+        }
+    }
+
+    focusPrevCell(cell) {
+        const index = this.cells.indexOf(cell);
+        if (index > 0) {
+            const prev = this.cells[index - 1];
+            if (prev instanceof CodeCell) prev.focus();
+        }
+    }
+
+    handleCellExecution(cell, options = {}) {
+        if (options.advance) {
+            const index = this.cells.indexOf(cell);
+            // Check if there is a next code cell (skip results)
+            let nextIndex = index + 1;
+            while(nextIndex < this.cells.length && !(this.cells[nextIndex] instanceof CodeCell)) {
+                nextIndex++;
+            }
+
+            if (nextIndex < this.cells.length) {
+                this.cells[nextIndex].focus();
+            } else {
+                // Create new cell if at end
+                const newCell = this.createCodeCell('', cell.onExecute);
+                // createCodeCell calls addCell which appends, so focus it
+                newCell.focus();
+            }
         }
     }
 

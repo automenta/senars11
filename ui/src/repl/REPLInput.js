@@ -167,6 +167,13 @@ export class REPLInput {
         this.history.add(content);
         this.onExecute(content);
         this.inputBox.setValue('');
+
+        // Auto-scroll to bottom of notebook when executing from REPL input
+        // This is a bit of a hack reaching into DOM, but simple
+        const notebook = document.getElementById('repl-notebook');
+        if (notebook) {
+            setTimeout(() => notebook.scrollTop = notebook.scrollHeight, 100);
+        }
     }
 
     setValue(value) {

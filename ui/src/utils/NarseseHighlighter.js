@@ -4,6 +4,9 @@
 export class NarseseHighlighter {
     static highlight(text, language = 'narsese') {
         if (!text) return '';
+        if (typeof text !== 'string') {
+            text = typeof text === 'object' ? JSON.stringify(text) : String(text);
+        }
 
         if (language === 'metta') {
             return this.highlightMetta(text);
