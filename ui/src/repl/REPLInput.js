@@ -157,6 +157,10 @@ export class REPLInput {
     }
 
     _createButton(label, bg, onClick) {
+        return REPLInput.createButton(label, bg, onClick);
+    }
+
+    static createButton(label, bg, onClick) {
         const btn = document.createElement('button');
         btn.textContent = label;
         btn.onclick = onClick;
