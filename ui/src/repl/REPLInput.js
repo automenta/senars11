@@ -90,6 +90,9 @@ export class REPLInput {
         const demoBtn = this._createButton('📚 Load Demo', '#5c2d91', () => this.onDemo());
         demoBtn.title = 'Browse demo library (Ctrl+Shift+D)';
 
+        const helpBtn = this._createButton('❓', '#333', () => this._showHelp());
+        helpBtn.title = 'Keyboard Shortcuts (F1)';
+
         const extraTools = document.createElement('div');
         extraTools.style.cssText = 'display: flex; gap: 4px; border-left: 1px solid #444; padding-left: 12px; margin-left: auto;';
 
@@ -98,8 +101,59 @@ export class REPLInput {
         const addSubNbBtn = this._createButton('📂 Sub-Notebook', '#333', () => this.onExtraAction('subnotebook'));
 
         extraTools.append(addMdBtn, addSliderBtn, addSubNbBtn);
-        toolbar.append(runBtn, clearBtn, demoBtn, extraTools);
+        toolbar.append(runBtn, clearBtn, demoBtn, helpBtn, extraTools);
         return toolbar;
+    }
+
+    _showHelp() {
+        const shortcuts = [
+            { key: 'Ctrl + Enter', desc: 'Execute current cell' },
+            { key: 'Shift + Enter', desc: 'Execute and advance' },
+            { key: 'Up / Down', desc: 'Navigate history (when empty)' },
+            { key: 'Ctrl + L', desc: 'Clear console' },
+            { key: 'F1', desc: 'Show this help' }
+        ];
+
+        const content = shortcuts.map(s => `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+                <span style="font-family: monospace; color: #00ff9d; background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 3px;">${s.key}</span>
+                <span style="color: #ccc;">${s.desc}</span>
+            </div>
+        `).join('');
+
+        // Simple modal using alert for now, or create a temporary element
+        // Since we want to be fancy, let's inject a div
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #252526; border: 1px solid #444; padding: 20px; border-radius: 6px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10000; min-width: 300px;
+        `;
+
+        modal.innerHTML = `
+            <h3 style="margin-top: 0; color: #fff; border-bottom: 1px solid #444; padding-bottom: 10px;">⌨️ Keyboard Shortcuts</h3>
+            <div style="margin: 15px 0;">${content}</div>
+            <div style="text-align: right;">
+                <button id="close-help-btn" style="padding: 6px 12px; background: #0e639c; color: white; border: none; border-radius: 3px; cursor: pointer;">Close</button>
+            </div>
+        `;
+
+        const backdrop = document.createElement('div');
+        backdrop.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+        `;
+
+        const close = () => {
+            modal.remove();
+            backdrop.remove();
+        };
+
+        backdrop.onclick = close;
+        document.body.appendChild(backdrop);
+        document.body.appendChild(modal);
+
+        modal.querySelector('#close-help-btn').onclick = close;
     }
 
     _createButton(label, bg, onClick) {
@@ -139,6 +193,18 @@ export class REPLInput {
     }
 
     _handleKeydown(e) {
+        if (e.key === 'F1') {
+            e.preventDefault();
+            this._showHelp();
+            return;
+        }
+
+        if (e.ctrlKey && e.key === 'l') {
+             e.preventDefault();
+             this.onClear();
+             return;
+        }
+
         if (e.ctrlKey && e.key === 'Enter') {
             e.preventDefault();
             this.execute();
