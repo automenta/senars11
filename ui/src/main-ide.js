@@ -141,7 +141,11 @@ class SeNARSIDE {
         statusBar.append(modeIndicator, stats);
         replContainer.appendChild(statusBar);
 
-        this.filterToolbar = new FilterToolbar(this.messageFilter, { onFilterChange: () => this.filterMessages(), onExport: () => this.exportLogs() });
+        this.filterToolbar = new FilterToolbar(this.messageFilter, {
+            onFilterChange: () => this.filterMessages(),
+            onExport: () => this.exportLogs(),
+            onImport: (file) => this.importLogs(file)
+        });
         replContainer.appendChild(this.filterToolbar.render());
 
         const notebookContainer = document.createElement('div');
@@ -343,9 +347,25 @@ class SeNARSIDE {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `senars-logs-${new Date().toISOString().replace(/:/g, '-')}.json`;
+        a.download = `senars-notebook-${new Date().toISOString().replace(/:/g, '-')}.json`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    importLogs(file) {
+        if (!this.notebook || !file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                this.notebook.importNotebook(data);
+                this.notebook.createResultCell('📂 Notebook imported successfully', 'system');
+            } catch (err) {
+                console.error('Import error', err);
+                this.notebook.createResultCell(`❌ Import failed: ${err.message}`, 'system');
+            }
+        };
+        reader.readAsText(file);
     }
 
     executeInput(text) {

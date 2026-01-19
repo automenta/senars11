@@ -128,10 +128,14 @@ export class CodeCell extends REPLCell {
             toggleBtn.innerHTML = this.isEditing ? '👁️' : '✏️';
         });
 
+        const upBtn = this._createButton('⬆️', 'Move Up', '#333', () => this.onMoveUp?.(this));
+        const downBtn = this._createButton('⬇️', 'Move Down', '#333', () => this.onMoveDown?.(this));
+        const dupBtn = this._createButton('📑', 'Duplicate', '#333', () => this.onDuplicate?.(this));
+
         const deleteBtn = this._createButton('🗑️', 'Delete', '#b30000', () => this.delete());
         deleteBtn.style.marginLeft = 'auto';
 
-        toolbar.append(label, runBtn, toggleBtn, deleteBtn);
+        toolbar.append(label, runBtn, toggleBtn, upBtn, downBtn, dupBtn, deleteBtn);
         return toolbar;
     }
 
@@ -530,9 +534,16 @@ export class NotebookManager {
         return cell;
     }
 
+    _bindCellEvents(cell) {
+        cell.onDelete = (c) => this.removeCell(c);
+        cell.onMoveUp = (c) => this.moveCellUp(c);
+        cell.onMoveDown = (c) => this.moveCellDown(c);
+        cell.onDuplicate = (c) => this.duplicateCell(c);
+    }
+
     createCodeCell(content = '', onExecute = null) {
         const cell = new CodeCell(content, onExecute);
-        cell.onDelete = (c) => this.removeCell(c);
+        this._bindCellEvents(cell);
         return this.addCell(cell);
     }
 
@@ -574,6 +585,57 @@ export class NotebookManager {
         if (index > -1) this.cells.splice(index, 1);
         cell.destroy();
         this.triggerSave();
+    }
+
+    moveCellUp(cell) {
+        const index = this.cells.indexOf(cell);
+        if (index > 0) {
+            // Swap in array
+            this.cells.splice(index, 1);
+            this.cells.splice(index - 1, 0, cell);
+            // Swap in DOM
+            const prev = cell.element.previousElementSibling;
+            if (prev) {
+                this.container.insertBefore(cell.element, prev);
+            }
+            this.triggerSave();
+        }
+    }
+
+    moveCellDown(cell) {
+        const index = this.cells.indexOf(cell);
+        if (index > -1 && index < this.cells.length - 1) {
+            // Swap in array
+            this.cells.splice(index, 1);
+            this.cells.splice(index + 1, 0, cell);
+            // Swap in DOM
+            const next = cell.element.nextElementSibling;
+            if (next) {
+                // To move down, insert before the element *after* the next one
+                this.container.insertBefore(cell.element, next.nextElementSibling);
+            }
+            this.triggerSave();
+        }
+    }
+
+    duplicateCell(cell) {
+        if (cell instanceof CodeCell) {
+            const newCell = this.createCodeCell(cell.content, cell.onExecute);
+            // Insert after current cell instead of at end
+            this.removeCell(newCell); // Remove from end
+
+            const index = this.cells.indexOf(cell);
+            this.cells.splice(index + 1, 0, newCell);
+
+            // DOM insert
+            if (cell.element.nextElementSibling) {
+                this.container.insertBefore(newCell.render(), cell.element.nextElementSibling);
+            } else {
+                this.container.appendChild(newCell.render());
+            }
+            // Bind again just in case (though createCodeCell binds)
+            this.triggerSave();
+        }
     }
 
     clear() {

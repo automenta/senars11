@@ -5,6 +5,7 @@ export class FilterToolbar {
         this.messageFilter = messageFilter;
         this.onFilterChange = callbacks.onFilterChange || (() => {});
         this.onExport = callbacks.onExport || (() => {});
+        this.onImport = callbacks.onImport || (() => {});
         this.element = null;
         this.buttons = new Map();
     }
@@ -46,16 +47,40 @@ export class FilterToolbar {
             categoryButtons.appendChild(btn);
         });
 
+        // Action Buttons Group
+        const actionGroup = document.createElement('div');
+        actionGroup.style.cssText = 'display: flex; gap: 4px; margin-left: 4px;';
+
+        // Import Button
+        const importBtn = document.createElement('button');
+        importBtn.innerHTML = '📂 Import';
+        importBtn.title = 'Import notebook';
+        importBtn.style.cssText = 'padding: 4px 8px; background: #333; color: #ccc; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 0.85em;';
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+        fileInput.style.display = 'none';
+        fileInput.onchange = (e) => {
+            if (e.target.files.length > 0) {
+                this.onImport(e.target.files[0]);
+                e.target.value = ''; // Reset
+            }
+        };
+        importBtn.onclick = () => fileInput.click();
+
         // Export Button
         const exportBtn = document.createElement('button');
         exportBtn.innerHTML = '💾 Export';
-        exportBtn.title = 'Export filtered logs';
-        exportBtn.style.cssText = 'padding: 4px 8px; background: #333; color: #ccc; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 0.85em; margin-left: 4px;';
+        exportBtn.title = 'Export notebook';
+        exportBtn.style.cssText = 'padding: 4px 8px; background: #333; color: #ccc; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 0.85em;';
         exportBtn.onclick = () => this.onExport();
+
+        actionGroup.append(importBtn, exportBtn, fileInput);
 
         toolbar.appendChild(searchInput);
         toolbar.appendChild(categoryButtons);
-        toolbar.appendChild(exportBtn);
+        toolbar.appendChild(actionGroup);
 
         this.element = toolbar;
         return toolbar;
