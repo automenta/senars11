@@ -42,7 +42,7 @@ export class SmartTextarea {
         this.textarea = document.createElement('textarea');
         this.textarea.className = 'smart-textarea-input';
         this.textarea.rows = this.rows;
-        this.textarea.placeholder = 'Enter Narsese or MeTTa... (Ctrl+Enter to Run)';
+        this.textarea.placeholder = 'Enter Narsese or MeTTa... (Shift+Enter to Run)';
         this.textarea.style.cssText = `
             position: relative;
             z-index: 2;
@@ -80,7 +80,7 @@ export class SmartTextarea {
         this.textarea.addEventListener('input', () => this.update());
         this.textarea.addEventListener('scroll', () => this.syncScroll());
         this.textarea.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
+            if ((e.shiftKey && e.key === 'Enter') || (e.ctrlKey && e.key === 'Enter')) {
                 e.preventDefault();
                 this.onExecute(this.textarea.value);
             }
@@ -94,8 +94,14 @@ export class SmartTextarea {
 
     update() {
         const text = this.textarea.value;
+
+        // Language detection for highlighting
+        const trimmed = text.trim();
+        const isMetta = trimmed.startsWith('(') || trimmed.startsWith(';') || trimmed.startsWith('!');
+        const language = isMetta ? 'metta' : 'narsese';
+
         // Simple highlighting
-        const highlighted = NarseseHighlighter.highlight(text);
+        const highlighted = NarseseHighlighter.highlight(text, language);
 
         // Ensure trailing newline is handled for scrolling match
         this.backdrop.innerHTML = highlighted + (text.endsWith('\n') ? '<br>&nbsp;' : '');

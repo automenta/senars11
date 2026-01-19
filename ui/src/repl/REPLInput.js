@@ -85,7 +85,7 @@ export class REPLInput {
         const toolbar = document.createElement('div');
         toolbar.style.cssText = 'display: flex; gap: 8px; align-items: center; flex-wrap: wrap;';
 
-        const runBtn = this._createButton('▶️ Execute (Ctrl+Enter)', '#0e639c', () => this.execute());
+        const runBtn = this._createButton('▶️ Execute (Shift+Enter)', '#0e639c', () => this.execute());
         const clearBtn = this._createButton('🗑️ Clear', '#333', () => this.onClear());
         const demoBtn = this._createButton('📚 Load Demo', '#5c2d91', () => this.onDemo());
         demoBtn.title = 'Browse demo library (Ctrl+Shift+D)';

@@ -351,10 +351,16 @@ class SeNARSIDE {
     executeInput(text) {
         if (!text) return;
         this.notebook.createCodeCell(text, (content) => {
+            // Detect language
+            const trimmed = content.trim();
+            const isMetta = trimmed.startsWith('(') || trimmed.startsWith(';') || trimmed.startsWith('!');
+            const mode = isMetta ? 'metta' : 'narsese';
+
             if (this.commandProcessor) {
-                this.commandProcessor.processCommand(content, false, 'narsese');
+                this.commandProcessor.processCommand(content, false, mode);
             } else if (this.connection?.isConnected()) {
-                this.connection.sendMessage('agent/input', { text: content });
+                const type = mode === 'metta' ? 'agent/input' : 'narseseInput';
+                this.connection.sendMessage(type, { text: content });
             }
         }).execute();
     }
