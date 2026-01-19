@@ -144,7 +144,9 @@ class SeNARSIDE {
         this.filterToolbar = new FilterToolbar(this.messageFilter, {
             onFilterChange: () => this.filterMessages(),
             onExport: () => this.exportLogs(),
-            onImport: (file) => this.importLogs(file)
+            onImport: (file) => this.importLogs(file),
+            onRunAll: () => this.notebook?.runAll(),
+            onClearOutputs: () => this.notebook?.clearOutputs()
         });
         replContainer.appendChild(this.filterToolbar.render());
 

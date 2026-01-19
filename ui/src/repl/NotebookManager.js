@@ -48,6 +48,7 @@ export class CodeCell extends REPLCell {
         super('code', content);
         this.onExecute = onExecute;
         this.isEditing = true;
+        this.executionCount = null;
     }
 
     render() {
@@ -61,15 +62,40 @@ export class CodeCell extends REPLCell {
             background: #1e1e1e;
             overflow: hidden;
             transition: border-color 0.2s;
+            position: relative;
         `;
 
         this.element.appendChild(this._createToolbar());
 
+        const body = document.createElement('div');
+        body.style.display = 'flex';
+
+        // Execution Count Gutter
+        this.gutter = document.createElement('div');
+        this.gutter.className = 'cell-gutter';
+        this.gutter.style.cssText = `
+            width: 50px; flex-shrink: 0; background: #252526; color: #888;
+            font-family: monospace; font-size: 0.85em; text-align: right; padding: 10px 5px;
+            border-right: 1px solid #3c3c3c; user-select: none;
+        `;
+        this._updateGutter();
+        body.appendChild(this.gutter);
+
         this.editorContainer = document.createElement('div');
-        this.element.appendChild(this.editorContainer);
+        this.editorContainer.style.flex = '1';
+        body.appendChild(this.editorContainer);
+
+        this.element.appendChild(body);
         this.updateMode();
 
         return this.element;
+    }
+
+    _updateGutter() {
+        if (this.gutter) {
+            this.gutter.textContent = this.executionCount ? `[${this.executionCount}]` : '[ ]';
+            if (this.executionCount) this.gutter.style.color = '#00ff9d';
+        }
     }
 
     updateMode() {
@@ -131,11 +157,13 @@ export class CodeCell extends REPLCell {
         const upBtn = this._createButton('⬆️', 'Move Up', '#333', () => this.onMoveUp?.(this));
         const downBtn = this._createButton('⬇️', 'Move Down', '#333', () => this.onMoveDown?.(this));
         const dupBtn = this._createButton('📑', 'Duplicate', '#333', () => this.onDuplicate?.(this));
+        const addCodeBtn = this._createButton('➕ Code', 'Insert Code Below', '#333', () => this.onInsertAfter?.('code'));
+        const addMdBtn = this._createButton('➕ Text', 'Insert Text Below', '#333', () => this.onInsertAfter?.('markdown'));
 
         const deleteBtn = this._createButton('🗑️', 'Delete', '#b30000', () => this.delete());
         deleteBtn.style.marginLeft = 'auto';
 
-        toolbar.append(label, runBtn, toggleBtn, upBtn, downBtn, dupBtn, deleteBtn);
+        toolbar.append(label, runBtn, toggleBtn, upBtn, downBtn, dupBtn, addCodeBtn, addMdBtn, deleteBtn);
         return toolbar;
     }
 
@@ -185,6 +213,7 @@ export class CodeCell extends REPLCell {
             this.isEditing = false;
             this.updateMode();
             this.onExecute(this.content, this);
+            this._updateGutter();
         }
     }
 
@@ -522,6 +551,7 @@ export class NotebookManager {
     constructor(container) {
         this.container = container;
         this.cells = [];
+        this.executionCount = 0;
         this.saveTimeout = null;
         this.storageKey = 'senars-notebook-content';
     }
@@ -542,8 +572,15 @@ export class NotebookManager {
     }
 
     createCodeCell(content = '', onExecute = null) {
-        const cell = new CodeCell(content, onExecute);
+        // Wrap execute to update execution count
+        const wrappedExecute = (content, cellInstance) => {
+            this.executionCount++;
+            cellInstance.executionCount = this.executionCount;
+            if (onExecute) onExecute(content, cellInstance);
+        };
+        const cell = new CodeCell(content, wrappedExecute);
         this._bindCellEvents(cell);
+        cell.onInsertAfter = (type) => this.insertCellAfter(cell, type);
         return this.addCell(cell);
     }
 
@@ -633,9 +670,49 @@ export class NotebookManager {
             } else {
                 this.container.appendChild(newCell.render());
             }
-            // Bind again just in case (though createCodeCell binds)
             this.triggerSave();
         }
+    }
+
+    insertCellAfter(referenceCell, type = 'code') {
+        let newCell;
+        if (type === 'code') {
+            // Need to retrieve original onExecute from somewhere or pass a generic one?
+            // Ideally onExecute is bound to the notebook context in createCodeCell
+            // But here we need access to the execute logic passed from main-ide.js
+            // Solution: Use the same onExecute as the reference cell if available
+            newCell = this.createCodeCell('', referenceCell.onExecute);
+        } else if (type === 'markdown') {
+            newCell = this.createMarkdownCell('');
+        }
+
+        if (newCell) {
+            this.removeCell(newCell); // Remove from end
+            const index = this.cells.indexOf(referenceCell);
+            this.cells.splice(index + 1, 0, newCell);
+
+            if (referenceCell.element.nextElementSibling) {
+                this.container.insertBefore(newCell.render(), referenceCell.element.nextElementSibling);
+            } else {
+                this.container.appendChild(newCell.render());
+            }
+            newCell.focus();
+            this.triggerSave();
+        }
+    }
+
+    runAll() {
+        this.cells.forEach(cell => {
+            if (cell instanceof CodeCell) {
+                cell.execute();
+            }
+        });
+    }
+
+    clearOutputs() {
+        // Filter out result and widget cells
+        const toRemove = this.cells.filter(c => c instanceof ResultCell || c instanceof WidgetCell);
+        toRemove.forEach(c => this.removeCell(c));
     }
 
     clear() {

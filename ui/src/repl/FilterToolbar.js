@@ -6,6 +6,8 @@ export class FilterToolbar {
         this.onFilterChange = callbacks.onFilterChange || (() => {});
         this.onExport = callbacks.onExport || (() => {});
         this.onImport = callbacks.onImport || (() => {});
+        this.onRunAll = callbacks.onRunAll || (() => {});
+        this.onClearOutputs = callbacks.onClearOutputs || (() => {});
         this.element = null;
         this.buttons = new Map();
     }
@@ -49,7 +51,21 @@ export class FilterToolbar {
 
         // Action Buttons Group
         const actionGroup = document.createElement('div');
-        actionGroup.style.cssText = 'display: flex; gap: 4px; margin-left: 4px;';
+        actionGroup.style.cssText = 'display: flex; gap: 4px; margin-left: 4px; border-left: 1px solid #444; padding-left: 4px;';
+
+        // Run All Button
+        const runAllBtn = document.createElement('button');
+        runAllBtn.innerHTML = '▶️▶️';
+        runAllBtn.title = 'Run All Cells';
+        runAllBtn.style.cssText = 'padding: 4px 8px; background: #0e639c; color: #fff; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 0.85em;';
+        runAllBtn.onclick = () => this.onRunAll();
+
+        // Clear Outputs Button
+        const clearBtn = document.createElement('button');
+        clearBtn.innerHTML = '🧹';
+        clearBtn.title = 'Clear Outputs';
+        clearBtn.style.cssText = 'padding: 4px 8px; background: #333; color: #ccc; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 0.85em;';
+        clearBtn.onclick = () => this.onClearOutputs();
 
         // Import Button
         const importBtn = document.createElement('button');
@@ -76,7 +92,7 @@ export class FilterToolbar {
         exportBtn.style.cssText = 'padding: 4px 8px; background: #333; color: #ccc; border: 1px solid #444; cursor: pointer; border-radius: 3px; font-size: 0.85em;';
         exportBtn.onclick = () => this.onExport();
 
-        actionGroup.append(importBtn, exportBtn, fileInput);
+        actionGroup.append(runAllBtn, clearBtn, importBtn, exportBtn, fileInput);
 
         toolbar.appendChild(searchInput);
         toolbar.appendChild(categoryButtons);
