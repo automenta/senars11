@@ -126,6 +126,13 @@ export class GraphPanel extends Component {
         this.graphManager?.initialized && this.graphManager.updateFromMessage(message);
     }
 
+    resize() {
+        if (this.graphManager?.cy) {
+            this.graphManager.cy.resize();
+            this.graphManager.cy.fit();
+        }
+    }
+
     reset() {
         this.graphManager?.initialized && this.graphManager.clear();
     }
