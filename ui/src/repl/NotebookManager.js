@@ -5,6 +5,9 @@ import { SmartTextarea } from './SmartTextarea.js';
 import { ConceptCard } from '../components/ConceptCard.js';
 import { TaskCard } from '../components/TaskCard.js';
 import { marked } from 'marked';
+import { Toast } from '../components/ui/Toast.js';
+import { Modal } from '../components/ui/Modal.js';
+import { Toolbar } from '../components/ui/Toolbar.js';
 
 /**
  * Base class for REPL cells
@@ -27,6 +30,7 @@ export class REPLCell {
     }
 
     _createActionBtn(icon, title, onClick) {
+        // Keeping this for non-Toolbar usages (like absolute positioned actions)
         const btn = document.createElement('button');
         btn.innerHTML = icon;
         btn.title = title;
@@ -147,54 +151,52 @@ export class CodeCell extends REPLCell {
     }
 
     _createToolbar() {
-        const toolbar = document.createElement('div');
-        toolbar.className = 'cell-toolbar';
-        toolbar.style.cssText = `
-            padding: 4px 8px;
-            background: #252526;
-            border-bottom: 1px solid #3c3c3c;
-            display: flex; gap: 8px; align-items: center; font-size: 0.85em;
-        `;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'cell-toolbar';
+        const tb = new Toolbar(wrapper, { style: 'display: flex; gap: 8px; align-items: center; padding: 4px 8px; background: #252526; border-bottom: 1px solid #3c3c3c;' });
 
         const label = document.createElement('span');
         label.textContent = '💻 Code';
         label.style.color = '#888';
+        label.style.fontSize = '0.85em';
+        tb.addCustom(label);
 
-        const runBtn = this._createButton('▶️', 'Run', '#0e639c', () => this.execute());
+        tb.addButton({ label: '▶️', title: 'Run', primary: true, onClick: () => this.execute() });
 
-        const toggleBtn = this._createButton(this.isEditing ? '👁️' : '✏️', 'Toggle View', '#333', () => {
-            this.isEditing = !this.isEditing;
-            this.updateMode();
-            toggleBtn.innerHTML = this.isEditing ? '👁️' : '✏️';
+        const toggleBtn = tb.addButton({
+            label: this.isEditing ? '👁️' : '✏️',
+            title: 'Toggle View',
+            onClick: () => {
+                this.isEditing = !this.isEditing;
+                this.updateMode();
+                toggleBtn.innerHTML = this.isEditing ? '👁️' : '✏️';
+            }
         });
 
-        const collapseBtn = this._createButton(this.isCollapsed ? '🔽' : '🔼', 'Collapse/Expand', '#333', () => {
-            this.isCollapsed = !this.isCollapsed;
-            this.updateMode();
-            collapseBtn.innerHTML = this.isCollapsed ? '🔽' : '🔼';
+        const collapseBtn = tb.addButton({
+            label: this.isCollapsed ? '🔽' : '🔼',
+            title: 'Collapse/Expand',
+            onClick: () => {
+                this.isCollapsed = !this.isCollapsed;
+                this.updateMode();
+                collapseBtn.innerHTML = this.isCollapsed ? '🔽' : '🔼';
+            }
         });
+
+        tb.addButton({ label: '⬆️', title: 'Move Up', onClick: () => this.onMoveUp?.(this) });
+        tb.addButton({ label: '⬇️', title: 'Move Down', onClick: () => this.onMoveDown?.(this) });
+        tb.addButton({ label: '📑', title: 'Duplicate', onClick: () => this.onDuplicate?.(this) });
+        tb.addButton({ label: '➕ Code', title: 'Insert Code Below', onClick: () => this.onInsertAfter?.('code') });
+        tb.addButton({ label: '➕ Text', title: 'Insert Text Below', onClick: () => this.onInsertAfter?.('markdown') });
 
         // Time Label
         this.timeLabel = document.createElement('span');
         this.timeLabel.style.cssText = 'margin-left: auto; color: #666; font-size: 0.8em; font-family: monospace;';
+        tb.addCustom(this.timeLabel);
 
-        const deleteBtn = this._createButton('🗑️', 'Delete', '#b30000', () => this.delete());
+        tb.addButton({ label: '🗑️', title: 'Delete', className: 'btn-danger', style: 'margin-left: 4px; background: #b30000; color: white; border: none;', onClick: () => this.delete() });
 
-        // Context Menu for more? Keeping it simple for row.
-        const upBtn = this._createActionBtn('⬆️', 'Move Up', (e) => this.onMoveUp?.(this));
-        const downBtn = this._createActionBtn('⬇️', 'Move Down', (e) => this.onMoveDown?.(this));
-
-        toolbar.append(label, runBtn, toggleBtn, collapseBtn, upBtn, downBtn, this.timeLabel, deleteBtn);
-        return toolbar;
-    }
-
-    _createButton(icon, title, bg, onClick) {
-        const btn = document.createElement('button');
-        btn.innerHTML = icon;
-        btn.title = title;
-        btn.style.cssText = `padding: 2px 8px; background: ${bg}; color: white; border: none; cursor: pointer; border-radius: 2px;`;
-        btn.onclick = onClick;
-        return btn;
+        return wrapper;
     }
 
     _createEditor() {
@@ -236,10 +238,12 @@ export class CodeCell extends REPLCell {
     }
 
     delete() {
-        if (confirm('Delete this cell?')) {
-            this.destroy();
-            this.onDelete?.(this);
-        }
+        Modal.confirm('Delete this cell?').then(yes => {
+            if (yes) {
+                this.destroy();
+                this.onDelete?.(this);
+            }
+        });
     }
 
     focus() {
@@ -464,7 +468,7 @@ export class ResultCell extends REPLCell {
         });
 
         const infoBtn = this._createActionBtn('ℹ️', 'Details', () => {
-            alert(`Type: ${catInfo.label}\nTime: ${new Date(this.timestamp).toLocaleString()}\nCategory: ${this.category}`);
+            Modal.alert(`Type: ${catInfo.label}<br>Time: ${new Date(this.timestamp).toLocaleString()}<br>Category: ${this.category}`, 'Cell Info');
         });
 
         actions.append(copyBtn, infoBtn, collapseBtn);
@@ -690,16 +694,12 @@ export class NotebookManager {
             const targetCell = cell;
 
             if (srcCell && srcCell !== targetCell) {
-                // Reorder cells array
                 const srcIndex = this.cells.indexOf(srcCell);
                 const targetIndex = this.cells.indexOf(targetCell);
 
                 this.cells.splice(srcIndex, 1);
                 this.cells.splice(targetIndex, 0, srcCell);
 
-                // Re-render list
-                // Simple approach: re-append all in correct order
-                // Better approach: move element
                 if (srcIndex < targetIndex) {
                     targetCell.element.after(srcCell.element);
                 } else {
