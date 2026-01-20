@@ -12,7 +12,6 @@ import { REPLPanel } from './components/REPLPanel.js';
 import { ExampleBrowser } from './components/ExampleBrowser.js';
 import { CommandProcessor } from './command/CommandProcessor.js';
 import { categorizeMessage } from './repl/MessageFilter.js';
-import { DemoLibrary } from './components/DemoLibrary.js';
 import { ThemeManager } from './components/ThemeManager.js';
 import { LMActivityIndicator } from './components/LMActivityIndicator.js';
 import { LayoutPresets } from './config/LayoutPresets.js';
@@ -388,7 +387,7 @@ class SeNARSIDE {
     }
 
     showDemoLibrary() {
-        // ... (Same implementation as before)
+        // Use ExampleBrowser in modal
         const backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
         backdrop.style.cssText = `
@@ -398,24 +397,49 @@ class SeNARSIDE {
         `;
 
         const modalContainer = document.createElement('div');
+        modalContainer.id = 'demo-library-modal';
         modalContainer.style.cssText = `
             width: 900px; max-width: 90vw; height: 80vh; background: #1e1e1e;
             border: 1px solid #3c3c3c; border-radius: 8px; overflow: hidden;
             display: flex; flex-direction: column;
         `;
 
-        const demoLib = new DemoLibrary(modalContainer, async (path, options) => {
-            document.body.removeChild(backdrop);
-            try {
-                await this.getNotebook()?.loadDemoFile(path, options);
-            } catch (error) {
-                this.getNotebook()?.createResultCell(`❌ Error loading demo: ${error.message}`, 'system');
+        // Title Bar
+        const header = document.createElement('div');
+        header.style.cssText = 'padding: 10px 15px; background: #252526; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center;';
+        header.innerHTML = '<span style="font-weight: bold; color: #d4d4d4;">📚 Demo Library</span>';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = 'background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 1.2em;';
+        closeBtn.onclick = () => document.body.removeChild(backdrop);
+        header.appendChild(closeBtn);
+        modalContainer.appendChild(header);
+
+        // Content
+        const content = document.createElement('div');
+        content.id = 'demo-browser-content';
+        content.style.cssText = 'flex: 1; overflow: hidden;';
+        modalContainer.appendChild(content);
+
+        const browser = new ExampleBrowser('demo-browser-content', {
+            viewMode: 'tree', // Default to tree in modal for compactness? Or graph?
+            onSelect: async (node) => {
+                if (node.type === 'file') {
+                    document.body.removeChild(backdrop);
+                    try {
+                        await this.getNotebook()?.loadDemoFile(node.path, { clearFirst: true, autoRun: true });
+                    } catch (error) {
+                        this.getNotebook()?.createResultCell(`❌ Error loading demo: ${error.message}`, 'system');
+                    }
+                }
             }
         });
 
-        demoLib.initialize();
         backdrop.appendChild(modalContainer);
         document.body.appendChild(backdrop);
+
+        // Initialize after appending to DOM
+        browser.initialize();
 
         backdrop.onclick = (e) => { if (e.target === backdrop) document.body.removeChild(backdrop); };
         const escHandler = (e) => {

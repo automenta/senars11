@@ -1,6 +1,6 @@
 import { Component } from './Component.js';
 import { NarseseHighlighter } from '../utils/NarseseHighlighter.js';
-import { contextMenu } from './GlobalContextMenu.js';
+// import { contextMenu } from './GlobalContextMenu.js';
 
 export class ConceptCard extends Component {
     constructor(container, concept, options = {}) {
