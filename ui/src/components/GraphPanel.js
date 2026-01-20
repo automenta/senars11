@@ -7,13 +7,90 @@ export class GraphPanel extends Component {
         super(containerId);
         this.graphManager = null;
         this.initialized = false;
+        this.filters = {
+            showTasks: true,
+            minPriority: 0
+        };
     }
 
     initialize() {
         if (this.initialized || !this.container) return;
 
+        // Create Toolbar
+        const toolbar = document.createElement('div');
+        toolbar.className = 'graph-toolbar';
+        toolbar.style.cssText = `
+            position: absolute; top: 10px; left: 10px; z-index: 10;
+            display: flex; flex-direction: column; gap: 5px;
+            background: rgba(0,0,0,0.8); padding: 6px; border-radius: 4px;
+            border: 1px solid var(--border-color); backdrop-filter: blur(2px);
+        `;
+
+        // Controls
+        const controls = [
+            { icon: '⤢', title: 'Fit View', action: () => this.graphManager?.fitToScreen() },
+            { icon: '🔭', title: 'Focus Center', action: () => this.graphManager?.cy?.center() },
+            { icon: '➕', title: 'Zoom In', action: () => this.graphManager?.zoomIn() },
+            { icon: '➖', title: 'Zoom Out', action: () => this.graphManager?.zoomOut() }
+        ];
+
+        const btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.gap = '4px';
+
+        controls.forEach(ctrl => {
+            const btn = document.createElement('button');
+            btn.innerHTML = ctrl.icon;
+            btn.title = ctrl.title;
+            btn.style.cssText = 'width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer;';
+            btn.onclick = ctrl.action;
+            btnRow.appendChild(btn);
+        });
+        toolbar.appendChild(btnRow);
+
+        // Filter: Show Tasks
+        const taskToggle = document.createElement('label');
+        taskToggle.style.cssText = 'font-size: 10px; color: #ccc; display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none;';
+        taskToggle.innerHTML = `<input type="checkbox" checked style="margin:0;"> Show Tasks`;
+        taskToggle.querySelector('input').onchange = (e) => {
+            this.filters.showTasks = e.target.checked;
+            this._dispatchFilter();
+        };
+        toolbar.appendChild(taskToggle);
+
+        // Filter: Priority Slider
+        const sliderContainer = document.createElement('div');
+        sliderContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px;';
+        const sliderLabel = document.createElement('div');
+        sliderLabel.style.cssText = 'font-size: 9px; color: #aaa; display: flex; justify-content: space-between;';
+        sliderLabel.innerHTML = '<span>Min Prio</span><span id="gp-prio-val">0.0</span>';
+
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = '0';
+        slider.max = '1';
+        slider.step = '0.05';
+        slider.value = '0';
+        slider.style.width = '100%';
+        slider.oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            this.filters.minPriority = val;
+            sliderLabel.querySelector('#gp-prio-val').textContent = val.toFixed(2);
+            this._dispatchFilter();
+        };
+
+        sliderContainer.append(sliderLabel, slider);
+        toolbar.appendChild(sliderContainer);
+
+        this.container.appendChild(toolbar);
+
+        // Graph Container
+        const graphDiv = document.createElement('div');
+        graphDiv.style.cssText = 'width: 100%; height: 100%;';
+        this.container.appendChild(graphDiv);
+
         const uiElements = {
-            graphContainer: this.container,
+            graphContainer: graphDiv,
             graphDetails: null
         };
 
@@ -27,8 +104,8 @@ export class GraphPanel extends Component {
                     const node = evt.target;
                     const items = [
                         { label: 'Inspect', icon: '🔍', action: () => this._inspectNode(node) },
-                        { label: 'Focus', icon: '🎯', action: () => this.graphManager.focusNode(node.id()) },
-                        { label: 'Expand', icon: '🔗', action: () => this.graphManager.expandNode(node.id()) },
+                        { label: 'Focus', icon: '🎯', action: () => this.graphManager.focusNode(node.id()) }, // Assuming focusNode exists or I add it
+                        { label: 'Highlight', icon: '🔦', action: () => this.graphManager.toggleTraceMode(node.id()) },
                         { separator: true },
                         { label: 'Copy ID', icon: '📋', action: () => navigator.clipboard.writeText(node.id()) }
                     ];
@@ -38,6 +115,12 @@ export class GraphPanel extends Component {
         } catch (e) {
             console.error('Failed to initialize GraphManager:', e);
         }
+    }
+
+    _dispatchFilter() {
+        document.dispatchEvent(new CustomEvent('senars:graph:filter', {
+            detail: { ...this.filters }
+        }));
     }
 
     _inspectNode(node) {

@@ -48,6 +48,8 @@ export class CodeCell extends REPLCell {
         this.onExecute = onExecute;
         this.isEditing = true;
         this.executionCount = null;
+        this.lastRunTime = null;
+        this.isCollapsed = false;
     }
 
     destroy() {
@@ -59,7 +61,7 @@ export class CodeCell extends REPLCell {
         this.element = document.createElement('div');
         this.element.className = 'repl-cell code-cell';
         this.element.dataset.cellId = this.id;
-        this.element.draggable = true; // Enable drag
+        this.element.draggable = true;
         this.element.style.cssText = `
             margin-bottom: 12px;
             border: 1px solid #3c3c3c;
@@ -70,10 +72,12 @@ export class CodeCell extends REPLCell {
             position: relative;
         `;
 
-        this.element.appendChild(this._createToolbar());
+        this.toolbar = this._createToolbar();
+        this.element.appendChild(this.toolbar);
 
         const body = document.createElement('div');
         body.style.display = 'flex';
+        this.body = body;
 
         // Execution Count Gutter
         this.gutter = document.createElement('div');
@@ -82,7 +86,7 @@ export class CodeCell extends REPLCell {
             width: 50px; flex-shrink: 0; background: #252526; color: #888;
             font-family: monospace; font-size: 0.85em; text-align: right; padding: 10px 5px;
             border-right: 1px solid #3c3c3c; user-select: none;
-            cursor: move; /* Drag handle cursor */
+            cursor: move;
         `;
         this._updateGutter();
         body.appendChild(this.gutter);
@@ -105,6 +109,12 @@ export class CodeCell extends REPLCell {
     }
 
     updateMode() {
+        if (this.isCollapsed) {
+            this.body.style.display = 'none';
+            return;
+        }
+        this.body.style.display = 'flex';
+
         this.editorContainer.innerHTML = '';
         if (this.isEditing) {
             this.editorContainer.appendChild(this._createEditor());
@@ -118,7 +128,6 @@ export class CodeCell extends REPLCell {
         const preview = document.createElement('div');
         preview.className = 'code-preview';
 
-        // Simple heuristic for language detection
         const trimmed = this.content.trim();
         const isMetta = trimmed.startsWith('(') || trimmed.startsWith(';') || trimmed.startsWith('!');
         const language = isMetta ? 'metta' : 'narsese';
@@ -159,16 +168,23 @@ export class CodeCell extends REPLCell {
             toggleBtn.innerHTML = this.isEditing ? '👁️' : '✏️';
         });
 
-        const upBtn = this._createButton('⬆️', 'Move Up', '#333', () => this.onMoveUp?.(this));
-        const downBtn = this._createButton('⬇️', 'Move Down', '#333', () => this.onMoveDown?.(this));
-        const dupBtn = this._createButton('📑', 'Duplicate', '#333', () => this.onDuplicate?.(this));
-        const addCodeBtn = this._createButton('➕ Code', 'Insert Code Below', '#333', () => this.onInsertAfter?.('code'));
-        const addMdBtn = this._createButton('➕ Text', 'Insert Text Below', '#333', () => this.onInsertAfter?.('markdown'));
+        const collapseBtn = this._createButton(this.isCollapsed ? '🔽' : '🔼', 'Collapse/Expand', '#333', () => {
+            this.isCollapsed = !this.isCollapsed;
+            this.updateMode();
+            collapseBtn.innerHTML = this.isCollapsed ? '🔽' : '🔼';
+        });
+
+        // Time Label
+        this.timeLabel = document.createElement('span');
+        this.timeLabel.style.cssText = 'margin-left: auto; color: #666; font-size: 0.8em; font-family: monospace;';
 
         const deleteBtn = this._createButton('🗑️', 'Delete', '#b30000', () => this.delete());
-        deleteBtn.style.marginLeft = 'auto';
 
-        toolbar.append(label, runBtn, toggleBtn, upBtn, downBtn, dupBtn, addCodeBtn, addMdBtn, deleteBtn);
+        // Context Menu for more? Keeping it simple for row.
+        const upBtn = this._createActionBtn('⬆️', 'Move Up', (e) => this.onMoveUp?.(this));
+        const downBtn = this._createActionBtn('⬇️', 'Move Down', (e) => this.onMoveDown?.(this));
+
+        toolbar.append(label, runBtn, toggleBtn, collapseBtn, upBtn, downBtn, this.timeLabel, deleteBtn);
         return toolbar;
     }
 
@@ -206,6 +222,14 @@ export class CodeCell extends REPLCell {
         if (this.onExecute && this.content.trim()) {
             this.isEditing = false;
             this.updateMode();
+
+            // Timestamp
+            const now = new Date();
+            this.lastRunTime = now;
+            if (this.timeLabel) {
+                this.timeLabel.textContent = `Run at ${now.toLocaleTimeString()}`;
+            }
+
             this.onExecute(this.content, this, options);
             this._updateGutter();
         }
@@ -310,9 +334,6 @@ export class ResultCell extends REPLCell {
         this.element.className = 'repl-cell result-cell';
         this.element.dataset.cellId = this.id;
         this.element.dataset.category = this.category;
-
-        // Results are generally not draggable unless we want to move them?
-        // Usually results stick to their execution context, but here it's a flat list.
         this.element.draggable = true;
 
         this.updateViewMode(this.viewMode);
