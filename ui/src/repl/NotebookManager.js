@@ -402,7 +402,7 @@ export class NotebookManager {
     }
 
     createWidgetCell(type, data = {}) {
-        const cell = new WidgetCell(type, data);
+        const cell = new WidgetCell(type, data, this.constructor);
         cell.onDelete = (c) => this.removeCell(c);
         return this.addCell(cell);
     }

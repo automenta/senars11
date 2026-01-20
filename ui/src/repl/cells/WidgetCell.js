@@ -1,15 +1,15 @@
 import { REPLCell } from './REPLCell.js';
 import { WidgetFactory } from '../../components/widgets/WidgetFactory.js';
-import { NotebookManager } from '../NotebookManager.js';
 
 /**
  * Widget cell for interactive components
  */
 export class WidgetCell extends REPLCell {
-    constructor(widgetType, data = {}) {
+    constructor(widgetType, data = {}, notebookClass = null) {
         super('widget', data);
         this.widgetType = widgetType;
         this.widgetInstance = null;
+        this.NotebookManagerClass = notebookClass;
     }
 
     render() {
@@ -30,9 +30,8 @@ export class WidgetCell extends REPLCell {
 
         this.element.append(header, content);
 
-        if (this.widgetType === 'SubNotebook') {
-             // We can use NotebookManager here because it should be defined by the time render is called
-             const nestedManager = new NotebookManager(content, {
+        if (this.widgetType === 'SubNotebook' && this.NotebookManagerClass) {
+             const nestedManager = new this.NotebookManagerClass(content, {
                  onExecute: (text, cell, options) => {
                      console.log('Nested execution:', text);
                  }
