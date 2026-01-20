@@ -42,7 +42,14 @@ class SeNARSIDE {
 
         // Handle URL params for mode/layout
         const urlParams = new URLSearchParams(window.location.search);
-        this.presetName = urlParams.get('layout') || urlParams.get('mode') || 'ide';
+        this.presetName = urlParams.get('layout') || urlParams.get('mode');
+
+        if (!this.presetName && window.location.pathname.endsWith('demo.html')) {
+            this.presetName = 'demo';
+        }
+
+        if (!this.presetName) this.presetName = 'ide';
+
         // Map common aliases
         if (this.presetName === 'console') this.presetName = 'repl';
         if (this.presetName === 'online') this.presetName = 'dashboard';

@@ -134,5 +134,51 @@ export const LayoutPresets = {
                 ]
             }]
         }
+    },
+    demo: {
+        settings: {
+            hasHeaders: true,
+            constrainDragToContainer: true,
+            reorderEnabled: false,
+            selectionEnabled: false,
+            popoutWholeStack: false,
+            blockedPopoutsThrowError: true,
+            closePopoutsOnUnload: true,
+            showPopoutIcon: false,
+            showMaximiseIcon: true,
+            showCloseIcon: false
+        },
+        dimensions: {
+            borderWidth: 2,
+            headerHeight: 24
+        },
+        root: {
+            type: 'row',
+            content: [{
+                type: 'component',
+                componentName: 'graphComponent',
+                title: 'KNOWLEDGE GRAPH',
+                width: 70,
+                componentState: { label: 'Graph' }
+            }, {
+                type: 'column',
+                width: 30,
+                content: [
+                    {
+                        type: 'component',
+                        componentName: 'replComponent',
+                        title: 'REPL',
+                        height: 50,
+                        isClosable: false
+                    },
+                    {
+                        type: 'component',
+                        componentName: 'examplesComponent',
+                        title: 'DEMOS',
+                        height: 50
+                    }
+                ]
+            }]
+        }
     }
 };
