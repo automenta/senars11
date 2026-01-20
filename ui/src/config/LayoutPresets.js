@@ -137,7 +137,7 @@ export const LayoutPresets = {
     },
     demo: {
         settings: {
-            hasHeaders: true,
+            hasHeaders: false,
             constrainDragToContainer: true,
             reorderEnabled: false,
             selectionEnabled: false,
@@ -145,39 +145,21 @@ export const LayoutPresets = {
             blockedPopoutsThrowError: true,
             closePopoutsOnUnload: true,
             showPopoutIcon: false,
-            showMaximiseIcon: true,
+            showMaximiseIcon: false,
             showCloseIcon: false
         },
         dimensions: {
-            borderWidth: 2,
-            headerHeight: 24
+            borderWidth: 0,
+            headerHeight: 0
         },
         root: {
-            type: 'row',
+            type: 'stack',
             content: [{
                 type: 'component',
                 componentName: 'graphComponent',
                 title: 'KNOWLEDGE GRAPH',
-                width: 70,
-                componentState: { label: 'Graph' }
-            }, {
-                type: 'column',
-                width: 30,
-                content: [
-                    {
-                        type: 'component',
-                        componentName: 'replComponent',
-                        title: 'REPL',
-                        height: 50,
-                        isClosable: false
-                    },
-                    {
-                        type: 'component',
-                        componentName: 'examplesComponent',
-                        title: 'DEMOS',
-                        height: 50
-                    }
-                ]
+                componentState: { label: 'Graph' },
+                isClosable: false
             }]
         }
     }
