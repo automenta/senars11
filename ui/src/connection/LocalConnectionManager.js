@@ -1,10 +1,8 @@
 import { ConnectionInterface } from './ConnectionInterface.js';
-import { NAR } from '../../../core/src/nar/NAR.js'; // Adjust path if needed or use aliases
+import { NAR } from '../../../core/src/nar/NAR.js';
 import { MeTTaInterpreter } from '../../../metta/src/MeTTaInterpreter.js';
 import { Config } from '../../../core/src/config/Config.js';
 import { Logger } from '../logging/Logger.js';
-
-import { BROWSER_STDLIB } from '../BrowserStdlib.js';
 
 export class LocalConnectionManager extends ConnectionInterface {
     constructor() {
@@ -36,7 +34,6 @@ export class LocalConnectionManager extends ConnectionInterface {
 
             this.metta = new MeTTaInterpreter(this.nar, {
                 ...config,
-                virtualFiles: BROWSER_STDLIB,
                 fs: null, path: null, url: null
             });
             await this.metta.initialize();
@@ -55,17 +52,13 @@ export class LocalConnectionManager extends ConnectionInterface {
         }
     }
 
-    isConnected() {
-        return this.connectionStatus === 'connected';
-    }
+    isConnected() { return this.connectionStatus === 'connected'; }
 
     sendMessage(type, payload) {
-        if (this.connectionStatus !== 'connected') {
+        if (!this.isConnected()) {
             console.warn("LocalConnectionManager: Not connected. Message dropped:", type);
             return false;
         }
-
-        // Handle standard messages
         this.processLocalMessage(type, payload);
         return true;
     }
@@ -75,15 +68,14 @@ export class LocalConnectionManager extends ConnectionInterface {
             switch (type) {
                 case 'agent/input':
                 case 'narseseInput':
-                    await this.handleInput(payload);
+                    await this.handleInput(payload, type);
                     break;
                 case 'control/reset':
                     await this.handleReset();
                     break;
                 case 'control/step':
-                    // this.nar.step() or similar
+                    // TODO: Implement step logic if needed
                     break;
-                // Add other command handlers as needed
                 default:
                     console.log("LocalConnectionManager: Unhandled message type", type);
             }
@@ -92,17 +84,47 @@ export class LocalConnectionManager extends ConnectionInterface {
         }
     }
 
-    async handleInput(payload) {
+    async handleInput(payload, type) {
         const text = payload.text || payload.input || payload;
-        this.nar && await this.nar.input(text);
 
-        if (this.metta && /^(!|\(|=\s)/.test(text)) {
+        if (type === 'narseseInput') {
+             this.nar && await this.nar.input(text);
+             return;
+        }
+
+        if (this.metta && (type === 'agent/input' || /^(!|\(|=\s)/.test(text))) {
             try {
                 const results = await this.metta.run(text);
-                results?.length && this.dispatchMessage({
-                    type: 'agent/result',
-                    payload: { result: results.map(r => r.toString()).join('\n') }
-                });
+                if (results?.length) {
+                    const output = results.map(r => r.toString()).join('\n');
+                    const vizMatch = output.match(/__VIZ__:(\w+):(.+)/s);
+                    const uiMatch = output.match(/__UI__:(\S+)(?:\s+(.+))?/);
+
+                    if (vizMatch) {
+                        const [_, type, data] = vizMatch;
+                        try {
+                            const parsedData = (type === 'graph' || type === 'chart') ? JSON.parse(data) : data;
+                            this.dispatchMessage({
+                                type: 'visualization',
+                                payload: { type, data: parsedData, content: data }
+                            });
+                        } catch (e) {
+                            console.error('Failed to parse visualization data', e);
+                            this.dispatchMessage({ type: 'agent/result', payload: { result: output } });
+                        }
+                    } else if (uiMatch) {
+                         const [_, cmd, args] = uiMatch;
+                         this.dispatchMessage({
+                             type: 'ui-command',
+                             payload: { command: cmd, args: args ? args.trim() : '' }
+                         });
+                    } else {
+                        this.dispatchMessage({
+                            type: 'agent/result',
+                            payload: { result: output }
+                        });
+                    }
+                }
             } catch (e) {
                 this.dispatchMessage({ type: 'error', payload: { message: e.message } });
             }
@@ -112,22 +134,26 @@ export class LocalConnectionManager extends ConnectionInterface {
     async handleReset() {
         if (this.nar) await this.nar.reset();
         if (this.metta) {
-            this.metta = new MeTTaInterpreter(this.nar, this.nar.config); // Re-create?
+            this.metta = new MeTTaInterpreter(this.nar, this.nar.config);
             await this.metta.initialize();
         }
         this.dispatchMessage({ type: 'system/reset', payload: {} });
     }
 
     subscribe(type, handler) {
-        if (!this.messageHandlers.has(type)) this.messageHandlers.set(type, []);
-        this.messageHandlers.get(type).push(handler);
+        let handlers = this.messageHandlers.get(type);
+        if (!handlers) {
+            handlers = [];
+            this.messageHandlers.set(type, handlers);
+        }
+        handlers.push(handler);
     }
 
     unsubscribe(type, handler) {
         const handlers = this.messageHandlers.get(type);
         if (!handlers) return;
         const index = handlers.indexOf(handler);
-        index > -1 && handlers.splice(index, 1);
+        if (index > -1) handlers.splice(index, 1);
     }
 
     disconnect() {
@@ -135,10 +161,20 @@ export class LocalConnectionManager extends ConnectionInterface {
         this.notifyStatusChange('disconnected');
     }
 
-    // Helper to dispatch to internal subscribers (UI)
     dispatchMessage(message) {
-        const handlers = [...(this.messageHandlers.get(message.type) || []), ...(this.messageHandlers.get('*') || [])];
-        handlers.forEach(h => { try { h(message); } catch (e) { console.error("Handler error", e); } });
+        const typeHandlers = this.messageHandlers.get(message.type);
+        if (typeHandlers) {
+            for (const h of [...typeHandlers]) {
+                try { h(message); } catch (e) { console.error("Handler error", e); }
+            }
+        }
+
+        const globalHandlers = this.messageHandlers.get('*');
+        if (globalHandlers) {
+            for (const h of [...globalHandlers]) {
+                try { h(message); } catch (e) { console.error("Handler error", e); }
+            }
+        }
     }
 
     updateStatus(status) {

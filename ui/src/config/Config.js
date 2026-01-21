@@ -1,6 +1,6 @@
 import {WebSocketConfig} from './WebSocketConfig.js';
-import {UIConfig} from './UIConfig.js';
 import {GraphConfig} from './GraphConfig.js';
+import {UIConfig} from './UIConfig.js';
 
 /**
  * Main Configuration module for SeNARS UI that combines all specific configuration modules
@@ -37,8 +37,8 @@ export class Config {
         return GraphConfig.getGraphStyle();
     }
 
-    static getGraphLayout() {
-        return GraphConfig.getGraphLayout();
+    static getGraphLayout(name) {
+        return GraphConfig.getGraphLayout(name);
     }
 
     static getConstants() {
@@ -49,6 +49,7 @@ export class Config {
 
             // History and UI constants
             MAX_HISTORY_SIZE: UIConfig.MAX_HISTORY_SIZE,
+            MAX_NOTEBOOK_CELLS: UIConfig.MAX_NOTEBOOK_CELLS,
             NOTIFICATION_DURATION: UIConfig.NOTIFICATION_DURATION,
             DEMO_DELAY: UIConfig.DEMO_DELAY,
 

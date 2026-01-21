@@ -1,11 +1,9 @@
 import {UI_CONSTANTS} from '@senars/core';
-import {LogViewer} from '../components/LogViewer.js';
 
 export class Logger {
     constructor(uiElements = null) {
         this.uiElements = uiElements;
         this.logViewer = null;
-        uiElements?.logsContainer && (this.logViewer = new LogViewer(uiElements.logsContainer));
         this.messageCounter = 1;
         this.icons = {
             success: UI_CONSTANTS.LOG_ICONS.SUCCESS,
@@ -32,12 +30,12 @@ export class Logger {
 
     setUIElements(uiElements) {
         this.uiElements = uiElements;
-        uiElements?.logsContainer && (this.logViewer = new LogViewer(uiElements.logsContainer));
     }
 
-
     addLogEntry(content, type = 'info', icon = null) {
-        if (this.logViewer) return this.logViewer.addLog(content, type, icon);
+        if (this.logViewer?.addLog) {
+            return this.logViewer.addLog(content, type, icon);
+        }
 
         const effectiveIcon = icon ?? this.icons[type] ?? this.icons[UI_CONSTANTS.LOG_TYPES.INFO];
         const timestamp = new Date().toLocaleTimeString();
@@ -49,6 +47,21 @@ export class Logger {
         this.addLogEntry(content, type, icon);
     }
 
+    logMarkdown(content) {
+        if (this.logViewer?.logMarkdown) {
+            this.logViewer.logMarkdown(content);
+        } else {
+            console.log('[Markdown Log]', content);
+        }
+    }
+
+    logWidget(type, data) {
+        if (this.logViewer?.logWidget) {
+            this.logViewer.logWidget(type, data);
+        } else {
+            console.log('[Widget Log]', type, data);
+        }
+    }
 
     showNotification(message, type = 'info') {
         const container = this.uiElements?.notificationContainer ?? document.getElementById('notification-container');
@@ -67,7 +80,7 @@ export class Logger {
 
 
     clearLogs() {
-        if (this.logViewer) {
+        if (this.logViewer?.clear) {
             this.logViewer.clear();
         } else if (this.uiElements?.logsContainer) {
             try {

@@ -3,154 +3,261 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>SeNARS UI2</title>
-    <link href="style.css" rel="stylesheet">
-    <script type="importmap">
-        {
-            "imports": {
-                "@senars/core": "/core/src/browser.js",
-                "@senars/agent": "/agent/src/browser.js"
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeNARS - Sensorimotor NARS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #d4d4d4;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff 0%, #00ff88 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #888;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+        }
+
+        .tagline {
+            font-size: 0.95rem;
+            color: #666;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .app-card {
+            background: rgba(45, 45, 45, 0.8);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 2px solid rgba(0, 212, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .app-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .app-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(0, 212, 255, 0.6);
+            box-shadow: 0 12px 40px rgba(0, 212, 255, 0.3);
+            background: rgba(55, 55, 55, 0.95);
+        }
+
+        .app-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .app-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #00d4ff;
+        }
+
+        .app-description {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #aaa;
+            margin-bottom: 1rem;
+        }
+
+        .app-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-local {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.4);
+        }
+
+        .badge-online {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.4);
+        }
+
+        .badge-demo {
+            background: rgba(255, 187, 0, 0.2);
+            color: #ffbb00;
+            border: 1px solid rgba(255, 187, 0, 0.4);
+        }
+
+        .badge-dev {
+            background: rgba(187, 134, 252, 0.2);
+            color: #bb86fc;
+            border: 1px solid rgba(187, 134, 252, 0.4);
+        }
+
+        footer {
+            margin-top: auto;
+            padding-top: 3rem;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #00d4ff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        footer a:hover {
+            color: #00ff88;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-    </script>
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .app-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div class="app-container">
-        <!-- REPL Panel (Main View) -->
-        <div class="log-panel" id="main-panel">
-            <div class="panel-header">
-                <span>SeNARS Control</span>
-                <div class="control-toolbar">
-                    <button class="icon-btn" id="btn-play-pause" title="Play/Pause">▶</button>
-                    <button class="icon-btn" id="btn-step" title="Single Step">⏯</button>
-                    <button class="icon-btn" id="btn-reset" title="Reset System">🔄</button>
-                    <div class="divider"></div>
-                    <button class="icon-btn" id="btn-toggle-sidebar" title="Toggle Graph Sidebar">📊</button>
-                </div>
-            </div>
+    <header>
+        <h1>SeNARS</h1>
+        <div class="subtitle">Sensorimotor Non-Axiomatic Reasoning System</div>
+        <div class="tagline">Cognitive Architecture for Artificial General Intelligence</div>
+    </header>
 
-            <div class="status-bar">
-                <div class="status-item">
-                    <div class="status-indicator status-disconnected" id="status-indicator"></div>
-                    <span id="connection-status">Disconnected</span>
-                </div>
-                <div class="status-item">
-                    <span class="cycle-badge" id="cycle-count">Cycle: 0</span>
-                    <span class="divider">|</span>
-                    <span id="message-count">0</span> msgs
-                </div>
-                <div class="view-toggles">
-                    <button id="btn-toggle-trace" title="Toggle Log/Trace View">Show Trace</button>
-                    <button id="btn-toggle-contrast" title="Toggle High-Contrast Mode">High Contrast</button>
-                </div>
-            </div>
+    <div class="app-grid">
+        <a href="/ide.html" class="app-card">
+            <span class="app-icon">💻</span>
+            <h2 class="app-title">Unified IDE</h2>
+            <p class="app-description">
+                The complete integrated development environment. Features Knowledge Graph, Memory Inspector, and REPL.
+                Supports both local (offline) and remote modes.
+            </p>
+            <span class="app-badge badge-local">Primary</span>
+        </a>
 
-            <div class="main-content-area">
-                <div class="view-layer active" id="log-view-container">
-                    <div class="logs-container" id="logs-container"></div>
-                </div>
-                <div class="view-layer hidden" id="trace-view-container">
-                    <div class="trace-container" id="trace-panel"></div>
-                </div>
-            </div>
+        <a href="/ide.html?layout=dashboard&mode=remote" class="app-card">
+            <span class="app-icon">🌐</span>
+            <h2 class="app-title">Dashboard</h2>
+            <p class="app-description">
+                Monitoring dashboard layout optimized for remote server connections. Focuses on metrics and logs.
+            </p>
+            <span class="app-badge badge-online">Remote • Monitoring</span>
+        </a>
 
-            <div class="input-section">
-                <div class="input-mode-toggle">
-                    <label class="mode-option"><input checked id="mode-narsese" name="input-mode" type="radio"
-                            value="narsese"> Narsese</label>
-                    <label class="mode-option"><input id="mode-agent" name="input-mode" type="radio" value="agent">
-                        Agent</label>
-                </div>
-                <div class="input-group">
-                    <input autocomplete="off" id="command-input" placeholder="Enter Narsese command..." type="text">
-                    <button id="send-button">Send</button>
-                </div>
-                <div class="input-group">
-                    <select id="quick-commands">
-                        <option value="">Quick Commands...</option>
-                        <option value="&lt;cat --&gt; animal&gt; .">Basic Assertion</option>
-                        <option value="&lt;bird --&gt; flyer&gt; . %1.0;0.9%">Assertion with Truth Value</option>
-                        <option value="&lt;dog --&gt; pet&gt; ?">Question</option>
-                        <option value="&lt;(cat & dog) --&gt; pets&gt; .">Compound Term</option>
-                        <option value="&lt;swan --&gt; flyer&gt; !">Goal</option>
-                        <option value="*step">Single Step</option>
-                        <option value="*run">Run Continuous</option>
-                        <option value="*stop">Stop</option>
-                        <option value="*reset">Reset</option>
-                    </select>
-                    <button id="exec-quick">Execute</button>
-                    <button id="show-history">History</button>
-                    <button id="clear-logs">Clear</button>
-                </div>
-            </div>
-        </div>
+        <a href="/demo.html" class="app-card">
+            <span class="app-icon">🎯</span>
+            <h2 class="app-title">Demo Runner</h2>
+            <p class="app-description">
+                Interactive graph of system demonstrations. Explore capabilities through guided examples.
+            </p>
+            <span class="app-badge badge-demo">Examples • Interactive</span>
+        </a>
 
-        <!-- Graph Panel (Sidebar) -->
-        <div class="graph-panel hidden" id="sidebar-panel">
-            <div class="panel-header">
-                <span>Graph View</span>
-                <button class="icon-btn" id="btn-close-sidebar" title="Close Sidebar">×</button>
-            </div>
-
-            <div class="metrics-container" id="metrics-panel"></div>
-
-            <div class="cytoscape-container" id="graph-container"></div>
-            <div class="graph-controls">
-                <button id="refresh-graph" title="Refresh Graph">🔄 Graph</button>
-                <button id="toggle-live" title="Toggle Live Updates">📡 Live</button>
-                <div class="separator"></div>
-                <button id="btn-zoom-in" title="Zoom In">➕</button>
-                <button id="btn-zoom-out" title="Zoom Out">➖</button>
-                <button id="btn-fit" title="Fit to Screen">⬜</button>
-                <div class="separator"></div>
-                <button id="btn-save" title="Save State">💾 Save</button>
-                <button id="btn-load" title="Load State">📂 Load</button>
-                <div class="separator"></div>
-                <label class="checkbox-control" title="Show/Hide Tasks">
-                    <input checked id="show-tasks-toggle" type="checkbox"> Tasks
-                </label>
-            </div>
-
-            <div class="panel-section-header">Examples</div>
-            <div id="example-browser-container" class="example-browser-container"></div>
-
-            <div class="panel-section-header">Details</div>
-            <div class="graph-details-panel" id="graph-details">
-                Click on nodes or edges to see details
-            </div>
-        </div>
+        <a href="/ide.html?layout=repl" class="app-card">
+            <span class="app-icon">⚡</span>
+            <h2 class="app-title">REPL Only</h2>
+            <p class="app-description">
+                Distraction-free console interface. Optimized for keyboard-heavy workflows and quick experiments.
+            </p>
+            <span class="app-badge badge-dev">Console Mode</span>
+        </a>
     </div>
 
-    <div class="notification-container" id="notification-container"></div>
-
-    <!-- Confirmation Modal -->
-    <div class="modal hidden" id="confirmation-modal">
-        <div class="modal-content">
-            <h3>Confirm Reset</h3>
-            <p>Are you sure you want to reset the system? This cannot be undone.</p>
-            <div class="modal-buttons">
-                <button class="primary-btn" id="btn-confirm-reset">Yes, Reset</button>
-                <button class="secondary-btn" id="btn-cancel-reset">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Inject WebSocket configuration from server
-        window.WEBSOCKET_CONFIG = {
-            port: '{{WEBSOCKET_PORT}}',
-            host: window.location.hostname || 'localhost'
-        };
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
-    <script src="https://unpkg.com/layout-base/layout-base.js"></script>
-    <script src="https://unpkg.com/cose-base/cose-base.js"></script>
-    <script src="https://unpkg.com/cytoscape-fcose/cytoscape-fcose.js"></script>
-    <script type="module">
-        import { SeNARSUI } from './src/SeNARSUI.js';
-        document.addEventListener('DOMContentLoaded', () => new SeNARSUI());
-    </script>
+    <footer>
+        <p>
+            SeNARS is an implementation of <a href="https://github.com/opennars/opennars" target="_blank">NARS</a>
+            with sensorimotor integration and <a href="https://github.com/trueagi-io/hyperon-experimental" target="_blank">MeTTa</a> support.
+        </p>
+    </footer>
 </body>
 
 </html>

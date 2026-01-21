@@ -18,10 +18,10 @@ export class WebSocketManager extends ConnectionInterface {
         this.processSliceMs = 12;
     }
 
-
-    connect() {
+    connect(url) {
         try {
-            this.ws = new WebSocket(Config.getWebSocketUrl());
+            const wsUrl = url ?? Config.getWebSocketUrl();
+            this.ws = new WebSocket(wsUrl);
             this.ws.onopen = () => {
                 this.connectionStatus = 'connected';
                 this.reconnectAttempts = 0;
@@ -34,7 +34,9 @@ export class WebSocketManager extends ConnectionInterface {
                 if (this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
                     setTimeout(() => this.connect(), this.reconnectDelay);
-                } else this.logger.log(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`, 'error', '🚨');
+                } else {
+                    this.logger.log(`Max reconnection attempts (${this.maxReconnectAttempts}) reached`, 'error', '🚨');
+                }
             };
 
             this.ws.onerror = () => {
@@ -58,7 +60,6 @@ export class WebSocketManager extends ConnectionInterface {
         this.notifyStatusChange(status);
     }
 
-
     sendMessage(type, payload) {
         if (!this.isConnected()) return false;
         this.ws.send(JSON.stringify({ type, payload }));
@@ -67,23 +68,23 @@ export class WebSocketManager extends ConnectionInterface {
 
     isConnected() { return this.ws?.readyState === WebSocket.OPEN; }
 
-
     subscribe(type, handler) {
-        !this.messageHandlers.has(type) && this.messageHandlers.set(type, []);
-        this.messageHandlers.get(type).push(handler);
+        let handlers = this.messageHandlers.get(type);
+        if (!handlers) {
+            handlers = [];
+            this.messageHandlers.set(type, handlers);
+        }
+        handlers.push(handler);
     }
-
 
     unsubscribe(type, handler) {
         const handlers = this.messageHandlers.get(type);
-        const index = handlers?.indexOf(handler);
-        index > -1 && handlers.splice(index, 1);
+        if (!handlers) return;
+        const index = handlers.indexOf(handler);
+        if (index > -1) handlers.splice(index, 1);
     }
 
-
-    getConnectionStatus() {
-        return this.connectionStatus;
-    }
+    getConnectionStatus() { return this.connectionStatus; }
 
     handleMessage(msg) {
         if (!msg) return;
@@ -114,15 +115,25 @@ export class WebSocketManager extends ConnectionInterface {
 
     dispatchMessage(msg) {
         if (msg.type === 'cycle.start' || msg.type === 'cycle.complete') return;
-        const handlers = [...(this.messageHandlers.get(msg.type) ?? []), ...(this.messageHandlers.get('*') ?? [])];
-        handlers.forEach(h => { try { h(msg); } catch (e) { console.error("WS Handler error", e); } });
-    }
 
+        const typeHandlers = this.messageHandlers.get(msg.type);
+        if (typeHandlers) {
+            for (const h of [...typeHandlers]) {
+                try { h(msg); } catch (e) { console.error("WS Handler error", e); }
+            }
+        }
+
+        const globalHandlers = this.messageHandlers.get('*');
+        if (globalHandlers) {
+            for (const h of [...globalHandlers]) {
+                try { h(msg); } catch (e) { console.error("WS Handler error", e); }
+            }
+        }
+    }
 
     notifyStatusChange(status) {
         this.messageHandlers.get('connection.status')?.forEach(h => h(status));
     }
-
 
     disconnect() { this.ws?.close(); }
 }

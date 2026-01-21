@@ -1,136 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <!-- Verified for Unified Demo System -->
-    <title>SeNARS Demo System</title>
-    <link href="style.css" rel="stylesheet">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
-          rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeNARS Demo Runner</title>
+
+    <!-- GoldenLayout Styles -->
+    <link type="text/css" rel="stylesheet" href="libs/goldenlayout-base.css" />
+    <link type="text/css" rel="stylesheet" href="libs/goldenlayout-dark-theme.css" />
+
+    <!-- Main UI Styles -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="src/styles/components.css">
+    <link rel="stylesheet" href="src/styles/effects.css">
+    <link rel="stylesheet" href="src/styles/lm-activity.css">
+
+    <style>
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #layout-root {
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* GoldenLayout container adjustments */
+        .lm_content {
+            background: #1e1e1e;
+        }
+    </style>
 </head>
-<body class="demo-runner-body">
-<div class="app-layout">
-    <!-- Left Sidebar (Demos) -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>SeNARS Demos</h2>
-            <div class="search-box">
-                <input id="search-input" placeholder="Search demos... (Ctrl+K)" type="text">
-                <span class="shortcut-hint">⌘K</span>
-            </div>
-        </div>
-        <div class="demo-list" id="demo-list">
-            <div class="loading-state">Loading demos...</div>
-        </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="top-bar">
-            <div class="demo-info">
-                <h2 id="demo-title">Select a Demo</h2>
-                <p id="demo-description">Choose a demo from the sidebar to begin.</p>
-            </div>
-            <div class="view-controls">
-                <button class="icon-btn" id="btn-toggle-source" title="Source Code">📝</button>
-                <button class="icon-btn" id="btn-toggle-graph" title="Graph View">📊</button>
-                <button class="icon-btn" id="btn-toggle-metrics" title="Metrics">📈</button>
-                <button class="icon-btn" id="btn-clear-console" title="Clear Console">🧹</button>
-            </div>
-            <div class="header-controls">
-                <div class="status-badge" id="connection-status">Disconnected</div>
-                <div class="playback-controls">
-                    <button class="icon-btn" disabled id="btn-play-pause" title="Run/Pause">▶</button>
-                    <button class="icon-btn" disabled id="btn-step" title="Step">⏯</button>
-                    <button class="icon-btn" id="btn-reset" title="Reset">🔄</button>
-                </div>
-                <button class="icon-btn" id="btn-config" title="Configuration">⚙️</button>
-            </div>
-        </header>
+<body>
+    <div id="layout-root"></div>
+    <div id="notification-container"></div>
 
-        <div class="main-view">
-            <!-- Console View (Main) -->
-            <div class="console-wrapper" id="console-view">
-                <div class="console-output" id="console-container"></div>
+    <script type="importmap">
+    {
+        "imports": {
+            "cytoscape": "https://cdn.jsdelivr.net/npm/cytoscape@3.30.0/dist/cytoscape.esm.min.js",
+            "cytoscape-fcose": "https://cdn.jsdelivr.net/npm/cytoscape-fcose@2.2.0/cytoscape-fcose.js",
+            "golden-layout": "https://cdn.jsdelivr.net/npm/golden-layout@2.6.0/dist/golden-layout.js",
+            "marked": "https://cdn.jsdelivr.net/npm/marked@12.0.0/lib/marked.esm.js",
+            "@senars/core": "/core/src/index.js"
+        }
+    }
+    </script>
 
-                <div class="console-input-area">
-                    <div class="input-wrapper">
-                        <span class="prompt">></span>
-                        <input autocomplete="off" id="command-input" placeholder="Enter command or Narsese..."
-                               type="text">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Sidebar (Source/Graph) -->
-            <aside class="right-sidebar hidden" id="right-sidebar">
-                <div class="sidebar-header">
-                    <span id="right-sidebar-title">View</span>
-                    <button class="icon-btn" id="btn-close-right-sidebar" title="Close">×</button>
-                </div>
-
-                <div class="sidebar-content hidden" id="source-view">
-                    <div class="editor-container">
-                        <textarea class="source-editor" id="source-editor" placeholder="Select a demo to view source..."
-                                  spellcheck="false"></textarea>
-                        <div class="editor-toolbar">
-                            <button class="primary-btn" id="btn-run-custom">Run Custom</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sidebar-content hidden" id="graph-view">
-                    <div class="cytoscape-container" id="graph-container"></div>
-                </div>
-
-                <div class="sidebar-content hidden" id="metrics-view">
-                    <div class="metrics-panel" style="padding: 1rem;">
-                        <h3>Demo Metrics</h3>
-                        <pre id="metrics-content" style="font-size: 0.85rem; overflow: auto;"></pre>
-                    </div>
-                </div>
-            </aside>
-        </div>
-    </main>
-
-    <!-- Config Panel Overlay -->
-    <div class="config-overlay hidden" id="config-overlay">
-        <div class="config-panel">
-            <div class="config-header">
-                <h3>Configuration</h3>
-                <button class="close-btn" id="btn-close-config">×</button>
-            </div>
-            <div class="config-content" id="config-content">
-                <!-- Config items injected here -->
-            </div>
-            <div class="config-footer">
-                <button class="primary-btn" id="btn-save-config">Apply & Restart</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div class="modal hidden" id="confirmation-modal">
-        <div class="modal-content">
-            <h3>Confirm Reset</h3>
-            <p>Are you sure you want to reset the current demo? This cannot be undone.</p>
-            <div class="modal-buttons">
-                <button class="primary-btn" id="btn-confirm-reset">Yes, Reset</button>
-                <button class="secondary-btn" id="btn-cancel-reset">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
-<script>
-    // Inject WebSocket configuration from server
-    window.WEBSOCKET_CONFIG = {
-        port: '{{WEBSOCKET_PORT}}',
-        host: window.location.hostname || 'localhost'
-    };
-</script>
-<script src="src/demo-runner/index.js" type="module"></script>
+    <!-- Unified IDE Bundle (Demo Mode) -->
+    <script type="module" src="/src/main-ide.js"></script>
 </body>
+
 </html>

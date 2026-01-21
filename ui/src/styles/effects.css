@@ -1,0 +1,17 @@
+/* Subtle Graph Bloom - Kept for aesthetics */
+.cytoscape-container {
+    filter: drop-shadow(0 0 5px rgba(0, 255, 157, 0.05));
+}
+
+.cytoscape-container canvas {
+    filter: contrast(1.05) brightness(1.05);
+}
+
+/*
+   Removed Scanlines and Flicker per user request for performance and robustness.
+   The console wrapper remains a clean dark container.
+*/
+.console-wrapper {
+    position: relative;
+    background: var(--bg-panel);
+}
