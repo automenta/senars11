@@ -34,25 +34,13 @@ export class StatusBar extends Component {
 
         this.container.innerHTML = '';
         this.container.className = 'status-bar';
-        this.container.style.cssText = `
-            height: 24px;
-            background: #007acc;
-            color: white;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            font-size: 12px;
-            font-family: var(--font-mono);
-            user-select: none;
-            justify-content: space-between;
-        `;
 
         // Left: Connection Mode & Status
         const leftSection = document.createElement('div');
-        leftSection.style.cssText = 'display: flex; align-items: center; gap: 15px;';
+        leftSection.className = 'status-left-section';
 
         this.els.mode = document.createElement('div');
-        this.els.mode.style.cssText = 'cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: bold;';
+        this.els.mode.className = 'status-mode';
         this.els.mode.title = 'Click to switch connection mode';
         this.els.mode.onclick = () => this.onModeSwitch?.();
 
@@ -62,7 +50,7 @@ export class StatusBar extends Component {
 
         // Right: Stats
         const rightSection = document.createElement('div');
-        rightSection.style.cssText = 'display: flex; gap: 15px;';
+        rightSection.className = 'status-right-section';
 
         this.els.cycles = document.createElement('div');
         this.els.messages = document.createElement('div');
