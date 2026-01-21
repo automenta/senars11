@@ -74,21 +74,35 @@ class Logger {
     }
 
     debug(msg, data) {
-        this.shouldLog('debug') && this.log('debug', msg, data);
+        if (this.shouldLog('debug')) {
+            const message = typeof msg === 'function' ? msg() : msg;
+            const logData = typeof data === 'function' ? data() : data;
+            this.log('debug', message, logData);
+        }
     }
 
     info(msg, data) {
-        this.shouldLog('info') && this.log('info', msg, data);
+        if (this.shouldLog('info')) {
+            const message = typeof msg === 'function' ? msg() : msg;
+            const logData = typeof data === 'function' ? data() : data;
+            this.log('info', message, logData);
+        }
     }
 
     warn(msg, data) {
-        this.shouldLog('warn') && this.log('warn', msg, data);
+        if (this.shouldLog('warn')) {
+            const message = typeof msg === 'function' ? msg() : msg;
+            const logData = typeof data === 'function' ? data() : data;
+            this.log('warn', message, logData);
+        }
     }
 
     error(msg, data) {
         if (this.shouldLog('error')) {
-            const logData = this.isTestEnv ? { message: data?.message || msg } : data;
-            this.log('error', msg, logData);
+            const message = typeof msg === 'function' ? msg() : msg;
+            let logData = typeof data === 'function' ? data() : data;
+            logData = this.isTestEnv ? { message: logData?.message || message } : logData;
+            this.log('error', message, logData);
         }
     }
 

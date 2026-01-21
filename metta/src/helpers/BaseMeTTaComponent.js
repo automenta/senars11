@@ -23,11 +23,11 @@ export class BaseMeTTaComponent extends BaseComponent {
      * Emit MeTTa-namespaced event
      */
     emitMeTTaEvent(eventName, data) {
-        this.emitEvent(`metta:${eventName}`, {
+        this.emitEvent(`metta:${eventName}`, () => ({
             component: this._name,
             timestamp: Date.now(),
             ...data
-        });
+        }));
     }
 
     /**
