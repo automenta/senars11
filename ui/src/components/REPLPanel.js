@@ -1,7 +1,7 @@
 import { Component } from './Component.js';
 import { NotebookManager } from '../repl/NotebookManager.js';
 import { REPLInput } from '../repl/REPLInput.js';
-import { MessageFilter, categorizeMessage } from '../repl/MessageFilter.js';
+import { MessageFilter } from '../repl/MessageFilter.js';
 import { FilterToolbar } from '../repl/FilterToolbar.js';
 
 export class REPLPanel extends Component {
@@ -18,24 +18,25 @@ export class REPLPanel extends Component {
         this.app = app;
         this.render();
         this.setupLoggerAdapter();
+        this.setupEventListeners();
+        console.log('REPLPanel initialized');
+    }
 
-        // Handle external requests to add cells
+    setupEventListeners() {
         document.addEventListener('senars:repl:add-cell', (e) => {
             const { type, content } = e.detail;
             if (type === 'code') this.notebookManager.createCodeCell(content);
             else if (type === 'markdown') this.notebookManager.createMarkdownCell(content);
         });
-
-        console.log('REPLPanel initialized');
     }
 
     render() {
         if (!this.container) return;
 
         this.container.innerHTML = '';
-        this.container.style.cssText = 'display: flex; flex-direction: column; height: 100%; background: #1e1e1e;';
+        this.container.className = 'repl-panel-container';
 
-        // 1. Toolbar (Filter + Tools)
+        // 1. Toolbar
         const toolbarContainer = document.createElement('div');
         this.filterToolbar = new FilterToolbar(this.messageFilter, {
             onFilterChange: () => this.notebookManager.applyFilter(this.messageFilter),
@@ -47,12 +48,9 @@ export class REPLPanel extends Component {
         // 2. Notebook Container
         const notebookContainer = document.createElement('div');
         notebookContainer.className = 'notebook-container';
-        // Ensure it takes available space and scrolls
-        notebookContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 10px; scroll-behavior: smooth;';
         this.container.appendChild(notebookContainer);
 
         this.notebookManager = new NotebookManager(notebookContainer);
-        // Load previous state?
         this.notebookManager.loadFromStorage();
 
         // 3. Input Area
@@ -69,13 +67,10 @@ export class REPLPanel extends Component {
     }
 
     handleExecution(command) {
-        // Create code cell first
         const cell = this.notebookManager.createCodeCell(command);
-        // Switch to view mode (highlighted) as it is a submitted command
         cell.isEditing = false;
         cell.updateMode();
 
-        // Execute via app command processor
         if (this.app?.commandProcessor) {
             this.app.commandProcessor.processCommand(command);
         } else {
@@ -87,7 +82,6 @@ export class REPLPanel extends Component {
     controlReasoner(action) {
         if (!this.app?.connection) return;
 
-        console.log('Reasoner control:', action);
         if (!this.app.connection.isConnected()) {
             this.notebookManager.createResultCell('⚠️ Not connected', 'system');
             return;
@@ -96,7 +90,6 @@ export class REPLPanel extends Component {
         this.app.connection.sendMessage(`control/${action}`, {});
         this.notebookManager.createResultCell(`🎛️ Reasoner ${action}`, 'system');
 
-        // Update state in app
         if (action === 'start') this.app.isRunning = true;
         else if (action === 'stop' || action === 'pause') this.app.isRunning = false;
         else if (action === 'reset') {
@@ -104,9 +97,8 @@ export class REPLPanel extends Component {
             this.app.messageCount = 0;
         }
 
-        // Update UI
         this.replInput.updateState(this.app.isRunning);
-        this.app.updateStats(); // Update global stats
+        this.app.updateStats();
     }
 
     handleExtraAction(action) {
@@ -117,15 +109,13 @@ export class REPLPanel extends Component {
             subnotebook: () => this.notebookManager.createWidgetCell('SubNotebook', {})
         };
 
-        if (actions[action]) actions[action]();
+        actions[action]?.();
     }
 
     showDemoSelector() {
-        if (this.app?.showDemoLibrary) {
-            this.app.showDemoLibrary();
-        } else {
-            this.notebookManager.createResultCell('Demo Library not available', 'info');
-        }
+        import('./DemoLibraryModal.js').then(({ DemoLibraryModal }) => {
+            new DemoLibraryModal(this.notebookManager).show();
+        });
     }
 
     exportNotebook() {
@@ -142,9 +132,8 @@ export class REPLPanel extends Component {
     setupLoggerAdapter() {
         if (!this.app?.logger) return;
 
-        // Adapter to route logs to notebook
         const adapter = {
-            addLog: (content, type, icon) => {
+            addLog: (content, type) => {
                 let category = 'system';
                 if (type === 'result') category = 'result';
                 else if (type === 'thought') category = 'reasoning';
@@ -162,7 +151,6 @@ export class REPLPanel extends Component {
                 this.notebookManager.createMarkdownCell(content);
             },
             logWidget: (type, data) => {
-                // Map widget types if necessary
                 const widgetType = type === 'graph' ? 'GraphWidget' : type;
                 this.notebookManager.createWidgetCell(widgetType, data);
             },

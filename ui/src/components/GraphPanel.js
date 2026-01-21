@@ -99,7 +99,6 @@ export class GraphPanel extends Component {
     }
 
     _inspectNode(node) {
-        // console.log('Inspecting node:', node.data()); // Commented out to reduce console noise
         document.dispatchEvent(new CustomEvent('senars:concept:select', {
             detail: { concept: { term: node.id(), ...node.data() } }
         }));

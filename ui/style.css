@@ -478,3 +478,251 @@ input[type="text"]:focus, select:focus {
     width: 100%;
     height: 100%;
 }
+
+/* REPL Panel */
+.repl-panel-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #1e1e1e;
+}
+
+.notebook-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    scroll-behavior: smooth;
+}
+
+/* System Metrics Panel */
+@keyframes heartbeat {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 1; text-shadow: 0 0 5px red; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+.beating {
+    animation: heartbeat 1s infinite;
+}
+
+.metric-heart {
+    font-size: 1.2em;
+    margin-right: 5px;
+    color: #ff4444;
+}
+
+.metric-item {
+    /* Assuming grid layout from previous styles or context */
+    /* Add specific styles if they were inline in the JS */
+}
+
+.metric-sub {
+    /* Styles for sub text */
+}
+
+.progress-bar {
+    /* Styles for progress bar container */
+}
+
+.progress-fill {
+    /* Styles for progress bar fill */
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Memory Inspector */
+.mi-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mi-toolbar {
+    padding: 8px;
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.mi-filter-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.mi-list {
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.mi-details {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.mi-details-header {
+    padding: 8px;
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.mi-details-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.mi-checkbox-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mi-checkbox-label input {
+    margin: 0;
+}
+
+.mi-content-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.mi-filter-input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 4px;
+}
+
+.mi-refresh-btn {
+    font-size: 10px;
+}
+
+/* Derivation Tree */
+.dt-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.dt-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.dt-sidebar {
+    width: 200px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    flex-shrink: 0;
+}
+
+.dt-main {
+    flex: 1;
+    position: relative;
+    background: var(--bg-graph, #1e1e1e);
+}
+
+.dt-history-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.dt-history-item {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    transition: background 0.1s;
+}
+
+.dt-history-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.dt-history-item.active {
+    background: rgba(0,255,157,0.1);
+    border-left: 2px solid var(--accent-primary);
+    color: var(--text-main);
+}
+
+.dt-rule {
+    color: var(--accent-secondary);
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.dt-term {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dt-time {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.dt-toolbar {
+    padding: 4px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.metric-item {
+    background: rgba(255,255,255,0.03);
+    padding: 8px;
+    border-radius: 2px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin: 4px 0;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    transition: width 0.3s ease;
+}
+
+.progress-fill.danger { background: var(--accent-error); }
+.progress-fill.warning { background: var(--accent-warn); }
+.progress-fill.success { background: var(--accent-primary); }
+
+.sparkline-svg {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid #333;
+}
