@@ -32,7 +32,7 @@ export class DemoLibraryModal {
         content.className = 'modal-content';
         modalContainer.appendChild(content);
 
-        const browser = new ExampleBrowser('demo-browser-content', {
+        const browser = new ExampleBrowser(content, {
             viewMode: 'tree',
             onSelect: async (node) => {
                 if (node.type === 'file') {

@@ -29,7 +29,7 @@ export class ExampleBrowser extends Component {
         } catch (error) {
             console.error('ExampleBrowser initialization failed:', error);
             if (this.container) {
-                this.container.innerHTML = `<div class="error-message">Failed to load examples: ${error.message}</div>`;
+                this.container.innerHTML = `<div class="eb-error">Failed to load examples: ${error.message}</div>`;
             }
         }
     }
@@ -42,10 +42,10 @@ export class ExampleBrowser extends Component {
 
         // Toolbar
         const toolbar = document.createElement('div');
-        toolbar.style.cssText = 'padding: 8px; background: #252526; border-bottom: 1px solid #3c3c3c; display: flex; gap: 8px;';
+        toolbar.className = 'eb-toolbar';
 
         const modeSelect = document.createElement('select');
-        modeSelect.style.cssText = 'background: #333; color: white; border: 1px solid #444; padding: 2px 4px; border-radius: 3px;';
+        modeSelect.className = 'eb-mode-select';
         modeSelect.innerHTML = `
             <option value="graph" ${this.options.viewMode === 'graph' ? 'selected' : ''}>Graph View</option>
             <option value="tree" ${this.options.viewMode === 'tree' ? 'selected' : ''}>Tree View</option>
@@ -60,7 +60,7 @@ export class ExampleBrowser extends Component {
 
         // Content Area
         this.contentArea = document.createElement('div');
-        this.contentArea.style.cssText = 'flex: 1; position: relative; overflow: hidden; height: calc(100% - 40px);';
+        this.contentArea.className = 'eb-content';
         this.container.appendChild(this.contentArea);
 
         this.renderContent();
@@ -76,9 +76,12 @@ export class ExampleBrowser extends Component {
     }
 
     renderTree() {
-        this.contentArea.style.overflowY = 'auto';
+        this.contentArea.style.overflowY = 'auto'; // Keep minimal functional style or move to CSS class
+        // Moving overflow-y to CSS class 'eb-content-tree' could be better but 'eb-content' handles basic layout.
+        // Let's rely on 'eb-content' and maybe specific tree container.
+
         const rootList = document.createElement('ul');
-        rootList.className = 'tree-root';
+        rootList.className = 'eb-tree-root';
         this.renderNode(this.treeData, rootList);
         this.contentArea.appendChild(rootList);
     }
@@ -93,13 +96,12 @@ export class ExampleBrowser extends Component {
             }
 
             const li = document.createElement('li');
-            li.className = 'tree-directory';
-            li.style.cssText = 'list-style: none; margin-left: 10px;';
+            li.className = 'eb-tree-dir';
 
             const details = document.createElement('details');
             details.open = true;
             const summary = document.createElement('summary');
-            summary.style.cursor = 'pointer';
+            summary.className = 'eb-tree-summary';
             summary.innerHTML = `<span class="icon">📁</span> <span class="label">${name}</span>`;
 
             const ul = document.createElement('ul');
@@ -111,12 +113,10 @@ export class ExampleBrowser extends Component {
 
         } else if (type === 'file') {
             const li = document.createElement('li');
-            li.className = 'tree-file';
-            li.style.cssText = 'list-style: none; margin-left: 20px;';
+            li.className = 'eb-tree-file';
 
             const button = document.createElement('button');
-            button.className = 'tree-item-btn';
-            button.style.cssText = 'background: transparent; border: none; color: #ccc; cursor: pointer; text-align: left;';
+            button.className = 'eb-file-btn';
             button.innerHTML = `<span class="icon">📄</span> <span class="label">${name}</span>`;
             Object.assign(button.dataset, { path, id });
             button.title = path;
@@ -130,12 +130,12 @@ export class ExampleBrowser extends Component {
 
     renderGraph() {
         if (!window.cytoscape) {
-            this.contentArea.innerHTML = 'Cytoscape library not loaded.';
+            this.contentArea.innerHTML = '<div class="eb-error">Cytoscape library not loaded.</div>';
             return;
         }
 
         const cyContainer = document.createElement('div');
-        cyContainer.style.cssText = 'width: 100%; height: 100%; background: #1e1e1e;';
+        cyContainer.className = 'eb-cy-container';
         this.contentArea.appendChild(cyContainer);
 
         const elements = this.convertToGraphElements(this.treeData);
