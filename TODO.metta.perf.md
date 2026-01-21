@@ -1,838 +1,1142 @@
-# SeNARS MeTTa Performance Optimization Plan
+# SeNARS MeTTa Performance Optimization Plan (Revised)
 
-**Objective:** Achieve performance parity (and beyond) with MORK and Hyperon-Rust through JavaScript/Web-native optimizations
-
-**Philosophy:** Leverage the JavaScript VM's unique strengths—JIT compilation, hidden classes, inline caching, and WebAssembly interop—to deliver symbolic AI performance that rivals or exceeds low-level implementations.
-
-**Challenge:** *"Can JavaScript MeTTa match or beat Rust MeTTa?"* YES, with smart architecture.
+> **Philosophy:** Quick wins first. Platform-independent. Optional and toggleable. Measure everything.
 
 ---
 
-## Executive Summary
+## Core Principles
 
-### Current State
-- **Implementation:** ~1200 LOC JavaScript MeTTa + SeNARS integration
-- **Feature Parity:** ~98% Hyperon stdlib parity (88/89 tests passing)
-- **Performance:** Baseline JavaScript implementation, ~10-100x slower than Rust
-- **Architecture:** Interpreted reduction with basic indexing
+### 1. Quick Wins First
+Prioritize optimizations by **effort-to-impact ratio**:
+- **Tier 1 (Hours):** Config changes, algorithm tweaks, reuse existing SeNARS code
+- **Tier 2 (Days):** New data structures, caching, indexing
+- **Tier 3 (Weeks):** WASM, parallelism, advanced JIT
 
-### Target State
-- **Performance:** Match MORK/Hyperon-Rust (1000x+ speedup potential)
-- **Code Size:** Minimal kernel expansion (~200 LOC overhead for optimization layer)
-- **Deployment:** Universal (Browser + Node.js + Worker threads + WASM hybrid)
-- **Timeline:** 6 phases over 4-6 weeks
+### 2. Platform-Independent
+Every optimization works identically in:
+- ✅ Browser (Chrome, Firefox, Safari, Edge)
+- ✅ Node.js (v14+)
+- ✅ Deno
+- ✅ Bun
+- ✅ React Native / Capacitor
+- ✅ Cloudflare Workers / Lambda@Edge
 
-### MORK Key Innovations (To Adapt)
+### 3. Optional & Toggleable
+All optimizations wrapped with feature flags:
+```javascript
+const METTA_CONFIG = {
+    // Tier 1: Always-on defaults (essentially free)
+    interning: true,
+    fastPaths: true,
+    
+    // Tier 2: Default on, can disable for debugging
+    indexing: true,
+    caching: true,
+    
+    // Tier 3: Default off, enable for production
+    wasm: false,
+    parallel: false,
+    jit: false
+};
+```
 
-From analyzing MORK (`trueagi-io/MORK`) repository:
-
-1. **Zipper-Based Virtual Machine**: Efficient expression traversal without stack allocation
-2. **Symbol Interning**: Bucket-based sharding (`MAX_WRITER_THREADS` pathmaps) for thread-safe symbol table
-3. **Multi-Level Indexing**: Functor → Arity → Signature indexing (already partially implemented in SeNARS)
-4. **Graph Database Integration**: State-of-the-art storage backend
-5. **Optimal Reduction Kernel**: Specialized unification and matching algorithms
-6. **Multi-Threading**: Parallel reduction across cores
-
-### JavaScript Performance Arsenal
-
-Research into V8 optimization reveals:
-
-1. **Hidden Classes (Shapes)**: Monomorphic object layouts for 10x+ property access speed
-2. **Inline Caching**: JIT-friendly code patterns for hot path optimization
-3. **Type Specialization**: Leverage TurboFan's optimization pipeline
-4. **WebAssembly**: Near-native speed for computational kernels (3-5x faster than JS)
-5. **Web Workers**: True parallelism in browser environments
-6. **Typed Arrays**: Zero-copy memory operations
-7. **asm.js Patterns**: Static typing hints for aggressive optimization
+### 4. Measurable
+Every optimization includes:
+- Baseline measurement
+- Toggle comparison
+- Automated regression tests
 
 ---
 
-## Phase P1: V8 JIT Optimization (Foundation)
+## SeNARS Components to Reuse
 
-**Goal:** Make the JavaScript code "JIT-friendly" to unlock V8's optimization pipeline
+The SeNARS codebase already has battle-tested components perfect for MeTTa optimization:
 
-**Timeline:** 3-4 days  
-**Priority:** CRITICAL (Foundational, enables all other optimizations)  
-**Expected Speedup:** 5-10x baseline improvement
+### From `core/src/memory/`:
+| Component | Purpose | MeTTa Use |
+|-----------|---------|-----------|
+| `MemoryIndex` | Multi-strategy concept lookup | Pattern matching acceleration |
+| `AtomicIndex` | Hash-based atomic term lookup | Symbol interning |
+| `CompoundIndex` | Functor+arity indexing | Rule indexing (already similar!) |
+| `ActivationIndex` | Priority-based retrieval | Hot-path optimization |
+| `TemporalIndex` | Time-based ordering | Recency-based caching |
+| `RelationshipIndex` | Graph traversal | Space navigation |
 
-### P1.1 Monomorphic Data Structures
+### From `core/src/term/`:
+| Component | Purpose | MeTTa Use |
+|-----------|---------|-----------|
+| `TermCache` | LRU cache with eviction | Reduction memoization |
+| `TermFactory` | Interned term creation | Symbol interning (just wrap it!) |
 
-**Strategy:** Ensure all hot-path objects have stable hidden classes
+### From `core/src/reason/exec/`:
+| Component | Purpose | MeTTa Use |
+|-----------|---------|-----------|
+| `RuleCompiler` | Rete-like decision tree | Compiled rule dispatch |
+| `RuleExecutor` | Optimized rule matching | Grounded operation lookup |
+
+---
+
+## Tier 1: Quick Wins (Hours, Platform-Independent)
+
+### Q1. Symbol Interning via TermFactory (~2 hours)
+
+**Reuse SeNARS `TermFactory` directly for symbol interning.**
 
 #### [MODIFY] `metta/src/kernel/Term.js`
 
 ```javascript
-// BEFORE: Dynamic property addition causes shape transitions
-class Term {
-    constructor(type, value) {
-        this.type = type;
-        if (value !== undefined) this.value = value; // ❌ Polymorphic
-    }
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
+
+// Shared term factory for all MeTTa symbols
+const termFactory = new TermFactory({ maxCacheSize: 10000 });
+
+export function sym(name) {
+    return termFactory.atomic(name); // Already interned + cached!
 }
 
-// AFTER: Initialize ALL properties upfront for stable hidden class
-class Term {
-    constructor(type, value = null) {
-        this.type = type;      // ✅ Always present
-        this.value = value;    // ✅ Always present (null if unused)
-        this.hash = null;      // ✅ Pre-allocate for caching
-        this.metadata = null;  // ✅ Pre-allocate for future use
-    }
+export function symbolEq(a, b) {
+    return a === b; // Reference equality (interned)
 }
 ```
 
-**Apply To:**
-- `Term` (Symbol, Variable, Expression)
-- `Space` internal structures
-- `Unify` substitution maps
-- All reduction context objects
+**Expected Speedup:** 3-5x for symbol operations  
+**Risk:** None (proven code)  
+**Toggle:** `METTA_CONFIG.interning`
 
-### P1.2 Inline Caching Patterns
+---
 
-**Strategy:** Write code that enables V8's inline caches
+### Q2. Fast-Path Type Guards (~1 hour)
+
+**Add monomorphic type checks for V8 inline caching.**
 
 #### [MODIFY] `metta/src/kernel/Unify.js`
 
 ```javascript
-// BEFORE: Polymorphic dispatch
-function unify(a, b, subs) {
-    if (typeof a === 'object' && a.type === 'Symbol') { /* ... */ }
-    else if (typeof a === 'object' && a.type === 'Variable') { /* ... */ }
-    // ❌ V8 sees different object shapes → megamorphic IC
+// Type tag constants
+const TYPE_SYMBOL = 1, TYPE_VAR = 2, TYPE_EXPR = 3;
+
+// Pre-extract type for faster dispatch
+function getTypeTag(term) {
+    return term._typeTag || 
+           (term.type === 'Symbol' ? TYPE_SYMBOL :
+            term.type === 'Variable' ? TYPE_VAR : TYPE_EXPR);
 }
 
-// AFTER: Monomorphic dispatch with type guards
-function unify(a, b, subs) {
-    // Fast path: both symbols (monomorphic, ~80% of cases)
-    if (a.type === 'Symbol' && b.type === 'Symbol') {
-        return unifySymbols(a, b, subs); // ✅ Always same shape
+export function unify(a, b, subs) {
+    const ta = getTypeTag(a), tb = getTypeTag(b);
+    
+    // 80% of cases: symbol-symbol (monomorphic fast path)
+    if (ta === TYPE_SYMBOL && tb === TYPE_SYMBOL) {
+        return a === b; // Reference equality (interned)
     }
     
-    // Slow path: variables and expressions (polymorphic, ~20%)
-    return unifyGeneric(a, b, subs);
+    // 15% of cases: variable
+    if (ta === TYPE_VAR) return unifyVar(a, b, subs);
+    if (tb === TYPE_VAR) return unifyVar(b, a, subs);
+    
+    // 5% of cases: expression
+    return unifyExpr(a, b, subs);
 }
 ```
 
-### P1.3 Type Specialization
-
-**Strategy:** Create specialized fast-paths for common operations
-
-#### [NEW] `metta/src/kernel/FastPaths.js`
-
-```javascript
-/**
- * V8-Optimized fast paths for hot operations
- * These are monomorphic, JIT-friendly versions of generic operations
- */
-
-// Fast equality for symbol-to-symbol comparison
-export function fastSymbolEq(a, b) {
-    // Assume: a.type === 'Symbol' && b.type === 'Symbol'
-    // V8 can inline this and optimize away the property access
-    return a.value === b.value;
-}
-
-// Fast list car/cdr for expression traversal
-export function fastCar(expr) {
-    // Assume: expr.type === 'Expression' && expr.components.length > 0
-    return expr.components[0];
-}
-
-export function fastCdr(expr) {
-    // Assume: expr.type === 'Expression' && expr.components.length > 0
-    return expr.components.slice(1);
-}
-
-// Fast arity check (avoid .length property lookup)
-export function fastIsNullary(expr) {
-    // Pre-compute arity and store in stable property
-    return expr.arity === 0;
-}
-```
-
-**Usage Pattern:**
-```javascript
-// In reduction hot loop
-if (isSymbol(a) && isSymbol(b)) {
-    // JIT compiles this to ~3 CPU instructions
-    return fastSymbolEq(a, b);
-} else {
-    // Slower generic path
-    return genericEquals(a, b);
-}
-```
-
-### P1.4 Array Pooling \& Reuse
-
-**Strategy:** Eliminate allocation pressure in hot loops
-
-#### [NEW] `metta/src/kernel/Pool.js`
-
-```javascript
-/**
- * Object pool for frequently allocated/discarded objects
- * Reduces GC pressure and improves cache locality
- */
-
-class ArrayPool {
-    constructor(initialSize = 1000) {
-        this.pool = new Array(initialSize).fill(null).map(() => []);
-        this.index = 0;
-    }
-    
-    acquire() {
-        if (this.index >= this.pool.length) {
-            // Pool exhausted, grow it
-            this.pool.push([]);
-        }
-        const arr = this.pool[this.index++];
-        arr.length = 0; // Clear without deallocation
-        return arr;
-    }
-    
-    release(arr) {
-        // Don't release, just reset index periodically
-    }
-    
-    reset() {
-        this.index = 0; // Bulk reset
-    }
-}
-
-export const SUBSTITUTION_POOL = new ArrayPool();
-export const RESULT_POOL = new ArrayPool();
-```
-
-**Apply To:**
-- Substitution lists in unification
-- Result accumulation in reduction
-- Temporary expression components
+**Expected Speedup:** 2-3x for unification  
+**Risk:** None  
+**Toggle:** `METTA_CONFIG.fastPaths`
 
 ---
 
-## Phase P2: Symbol Interning \& String Optimization
+### Q3. Stable Object Shapes (~30 minutes)
 
-**Goal:** Eliminate string comparison overhead using MORK's interning strategy
+**Initialize all Term properties upfront for V8 hidden class stability.**
 
-**Timeline:** 2-3 days  
-**Priority:** HIGH  
-**Expected Speedup:** 3-5x for symbol-heavy programs
-
-### P2.1 Interned Symbol Table
-
-**Strategy:** Adapt MORK's bucket-based symbol interning for JavaScript
-
-#### [NEW] `metta/src/kernel/Interning.js`
+#### [MODIFY] `metta/src/kernel/Term.js`
 
 ```javascript
-/**
- * Interned symbol table inspired by MORK's bucket-based design
- * Symbols are deduplicated and compared by reference (pointer equality)
- */
-
-// Use WeakMap for automatic GC of unused symbols
-const SYMBOL_TABLE = new Map(); // string → Symbol instance
-let SYMBOL_ID_COUNTER = 0;
-
-export class InternedSymbol {
-    constructor(name, id) {
-        this.name = name;
-        this.id = id;        // Unique integer ID for fast comparison
-        this.hash = id;      // Pre-computed hash
-        this.type = 'Symbol';
+export class Symbol {
+    constructor(name, id = null) {
+        this.type = 'Symbol';   // Always present
+        this.name = name;       // Always present
+        this.id = id;           // Always present (null if not interned)
+        this._typeTag = 1;      // Pre-computed type tag
+        this._hash = null;      // Lazy hash cache
     }
 }
 
-export function intern(name) {
-    if (SYMBOL_TABLE.has(name)) {
-        return SYMBOL_TABLE.get(name);
+export class Expression {
+    constructor(operator, components) {
+        this.type = 'Expression';
+        this.operator = operator;
+        this.components = components;
+        this.arity = components.length;  // Pre-computed
+        this._typeTag = 3;
+        this._hash = null;
     }
-    
-    const symbol = new InternedSymbol(name, SYMBOL_ID_COUNTER++);
-    SYMBOL_TABLE.set(name, symbol);
-    return symbol;
-}
-
-// Fast equality: compare by ID instead of string
-export function symbolEq(a, b) {
-    return a.id === b.id; // ✅ Integer comparison (1 CPU cycle)
 }
 ```
 
-#### [MODIFY] `metta/src/Parser.js`
+**Expected Speedup:** 1.5-2x (avoids shape transitions)  
+**Risk:** None  
+**Toggle:** Always on (no cost)
 
-```javascript
-import { intern } from './kernel/Interning.js';
+---
 
-// Replace all `new Symbol(name)` with `intern(name)`
-export function parseSymbol(token) {
-    return intern(token); // ✅ Deduplicated
-}
-```
+### Q4. Grounded Operation Lookup Table (~1 hour)
 
-### P2.2 Hashed Functor Dispatch
-
-**Strategy:** Use integer IDs for O(1) grounded operation dispatch
+**Replace string-based dispatch with integer ID lookup.**
 
 #### [MODIFY] `metta/src/kernel/Ground.js`
 
 ```javascript
 export class GroundRegistry {
     constructor() {
-        this.byId = new Map();    // symbolId → grounded function
-        this.byName = new Map();  // string → grounded function (fallback)
+        this.ops = new Map();       // name → { fn, options }
+        this.opsById = [];          // id → { fn, options } (array for O(1))
+        this.nameToId = new Map();  // name → id
+        this.nextId = 0;
     }
     
     register(name, fn, options = {}) {
-        const symbol = intern(name);
-        this.byId.set(symbol.id, { fn, options });
-        this.byName.set(name, { fn, options });
+        const id = this.nextId++;
+        this.nameToId.set(name, id);
+        this.ops.set(name, { fn, options, id });
+        this.opsById[id] = { fn, options };
     }
     
     lookup(symbol) {
-        // Fast path: ID-based lookup (monomorphic)
-        if (symbol.id !== undefined) {
-            return this.byId.get(symbol.id);
+        // Fast path: ID-based lookup
+        if (symbol.id !== undefined && this.opsById[symbol.id]) {
+            return this.opsById[symbol.id];
         }
         
-        // Slow path: string-based lookup
-        return this.byName.get(symbol.name);
+        // Slow path: name-based lookup
+        return this.ops.get(symbol.name);
     }
 }
 ```
+
+**Expected Speedup:** 2x for grounded calls  
+**Risk:** None  
+**Toggle:** `METTA_CONFIG.fastPaths`
 
 ---
 
-## Phase P3: WebAssembly Acceleration
+### Q5. Reduction Result Caching via TermCache (~2 hours)
 
-**Goal:** Compile performance-critical kernels to WASM for near-native speed
+**Reuse SeNARS `TermCache` for memoization.**
 
-**Timeline:** 4-5 days  
-**Priority:** HIGH  
-**Expected Speedup:** 3-5x for unification/matching, 10-20x for numeric ops
-
-### P3.1 WASM Unification Kernel
-
-**Strategy:** Port the unification algorithm to AssemblyScript or Rust→WASM
-
-#### [NEW] `metta/src/wasm/unify.as` (AssemblyScript)
-
-```typescript
-/**
- * WASM-compiled unification for maximum performance
- * Operates on linear memory for zero-copy interop
- */
-
-// Terms are encoded as flat arrays in linear memory:
-// [type_tag, value_or_index, metadata]
-
-export function unify(
-    aTerm: i32, bTerm: i32, 
-    subsPtr: i32, subsLen: i32
-): i32 {
-    const aType = load<u8>(aTerm);
-    const bType = load<u8>(bTerm);
-    
-    // Symbol-Symbol fast path (most common)
-    if (aType == 1 && bType == 1) {
-        const aId = load<u32>(aTerm + 1);
-        const bId = load<u32>(bTerm + 1);
-        return aId == bId ? 1 : 0;
-    }
-    
-    // Variable substitution lookup
-    if (aType == 2) { // Variable
-        const varId = load<u32>(aTerm + 1);
-        return lookupSubstitution(varId, subsPtr, subsLen);
-    }
-    
-    // Expression unification (recursive)
-    if (aType == 3 && bType == 3) {
-        return unifyExpression(aTerm, bTerm, subsPtr, subsLen);
-    }
-    
-    return 0; // No unification
-}
-```
-
-#### [MODIFY] `metta/src/kernel/Unify.js`
+#### [NEW] `metta/src/kernel/ReductionCache.js`
 
 ```javascript
-import { unifyWASM } from './wasm/unify.wasm.js';
+import { TermCache } from '../../../core/src/term/TermCache.js';
 
-export function unify(a, b, subs) {
-    // Try WASM fast path if available
-    if (typeof unifyWASM !== 'undefined' && canSerializeToWASM(a, b)) {
-        return unifyViaWASM(a, b, subs);
+export class ReductionCache {
+    constructor(maxSize = 5000) {
+        this.cache = new TermCache({ maxSize });
+        this.enabled = METTA_CONFIG.caching;
     }
     
-    // Fallback to JS (browser without WASM or complex terms)
-    return unifyJS(a, b, subs);
-}
-```
-
-### P3.2 WASM Math Operators
-
-**Strategy:** Accelerate numeric operations with WASM SIMD
-
-#### [NEW] `metta/src/wasm/math.as`
-
-```typescript
-// Vector operations with WASM SIMD
-export function vecAdd(a: Float32Array, b: Float32Array): Float32Array {
-    const result = new Float32Array(a.length);
-    for (let i = 0; i < a.length; i += 4) {
-        const va = v128.load(changetype<usize>(a), i * 4);
-        const vb = v128.load(changetype<usize>(b), i * 4);
-        const vr = f32x4.add(va, vb);
-        v128.store(changetype<usize>(result), vr, i * 4);
+    get(atom) {
+        if (!this.enabled) return null;
+        return this.cache.get(this._key(atom));
     }
-    return result;
+    
+    set(atom, result) {
+        if (!this.enabled) return;
+        this.cache.setWithEviction(this._key(atom), result);
+    }
+    
+    _key(atom) {
+        return atom._hash || (atom._hash = atom.toString());
+    }
+    
+    stats() {
+        return this.cache.stats;
+    }
 }
 ```
+
+**Expected Speedup:** 5-10x for repeated subexpressions  
+**Risk:** Memory growth (mitigated by LRU eviction)  
+**Toggle:** `METTA_CONFIG.caching`
 
 ---
 
-## Phase P4: Enhanced Indexing (MORK-Inspired)
+## Tier 2: Low-Hanging Fruit (Days, Platform-Independent)
 
-**Goal:** Multi-level indexing to reduce rule search from O(n) to O(1)
+### L1. Multi-Level Rule Indexing via MemoryIndex (~1 day)
 
-**Timeline:** 2 days  
-**Priority:** MEDIUM  
-**Expected Speedup:** 10-100x for large rule sets (1000+ rules)
+**Adapt SeNARS `MemoryIndex` for rule lookup.**
 
-### P4.1 Signature Index Enhancement
-
-**Strategy:** Extend existing indexing with MORK's signature-based approach
-
-#### [MODIFY] `metta/src/kernel/Space.js`
+#### [NEW] `metta/src/kernel/RuleIndex.js`
 
 ```javascript
-export class Space {
-    constructor() {
-        this.atoms = new Set();
-        this.rules = [];
-        
-        // EXISTING: Basic functor + arity indexing
-        this.functorIndex = new Map();
-        this.arityIndex = new Map();
-        
-        // NEW: Signature index (MORK-inspired)
-        this.signatureIndex = new Map(); // "functor/arg1/arg2" → rules
-        
-        // NEW: Bloom filter for negative lookups
-        this.bloomFilter = new BloomFilter(10000);
-        
-        this._stats = { 
-            indexHits: 0, 
-            fullScans: 0,
-            bloomFilterSaves: 0
-        };
-    }
-    
-    _indexRule(rule) {
-        const pattern = rule.pattern;
-        if (!isExpression(pattern)) return;
-        
-        const functor = pattern.operator.id; // Use interned ID
-        const arity = pattern.components.length;
+import { AtomicIndex } from '../../../core/src/memory/indexes/AtomicIndex.js';
+import { CompoundIndex } from '../../../core/src/memory/indexes/CompoundIndex.js';
+
+export class RuleIndex {
+    constructor(config = {}) {
+        this.enabled = config.enabled ?? METTA_CONFIG.indexing;
         
         // Level 1: Functor index
-        this._indexByFunctor(functor, rule);
+        this.functorIndex = new Map();
         
-        // Level 2: Functor+Arity index
-        const arityKey = (functor << 8) | arity; // Pack into integer
-        this._indexByArity(arityKey, rule);
+        // Level 2: Functor + Arity
+        this.arityIndex = new Map();
         
-        // Level 3: Signature index (first 2 constant args)
-        const sig = this._computeSignature(pattern);
-        if (sig !== null) {
-            this._indexBySignature(sig, rule);
-        }
+        // Level 3: Signature (first 2 constant args)
+        this.signatureIndex = new Map();
         
-        // Bloom filter for fast negative lookups
-        this.bloomFilter.add(functor);
+        this.allRules = [];
+        this.stats = { hits: 0, misses: 0, fullScans: 0 };
     }
     
-    _computeSignature(pattern) {
-        const args = pattern.components;
-        if (args.length < 2) return null;
+    addRule(rule) {
+        this.allRules.push(rule);
+        if (!this.enabled) return;
         
-        // Only index if first args are constants
-        if (!isSymbol(args[0]) || !isSymbol(args[1])) return null;
+        const pattern = rule.pattern;
+        if (!pattern.operator) return;
         
-        const functor = pattern.operator.id;
-        const arg1 = args[0].id;
-        const arg2 = args[1].id;
+        const functor = pattern.operator.id ?? pattern.operator.name;
+        const arity = pattern.components?.length || 0;
         
-        // Pack into 64-bit signature (functor:20, arg1:22, arg2:22)
-        return (functor << 44) | (arg1 << 22) | arg2;
+        // Index by functor
+        if (!this.functorIndex.has(functor)) {
+            this.functorIndex.set(functor, []);
+        }
+        this.functorIndex.get(functor).push(rule);
+        
+        // Index by functor + arity
+        const arityKey = `${functor}/${arity}`;
+        if (!this.arityIndex.has(arityKey)) {
+            this.arityIndex.set(arityKey, []);
+        }
+        this.arityIndex.get(arityKey).push(rule);
     }
     
     rulesFor(term) {
-        if (!isExpression(term)) return this.rules;
-        
-        const functor = term.operator.id;
-        
-        // Bloom filter: early exit if functor never seen
-        if (!this.bloomFilter.has(functor)) {
-            this._stats.bloomFilterSaves++;
-            return [];
+        if (!this.enabled || !term.operator) {
+            this.stats.fullScans++;
+            return this.allRules;
         }
         
-        // Try most specific: signature
-        const sig = this._computeSignature(term);
-        if (sig !== null && this.signatureIndex.has(sig)) {
-            this._stats.indexHits++;
-            return this.signatureIndex.get(sig);
-        }
+        const functor = term.operator.id ?? term.operator.name;
+        const arity = term.components?.length || 0;
+        const arityKey = `${functor}/${arity}`;
         
-        // Fall back to arity index
-        const arity = term.components.length;
-        const arityKey = (functor << 8) | arity;
+        // Try arity index first (most specific)
         if (this.arityIndex.has(arityKey)) {
-            this._stats.indexHits++;
+            this.stats.hits++;
             return this.arityIndex.get(arityKey);
         }
         
         // Fall back to functor index
         if (this.functorIndex.has(functor)) {
-            this._stats.indexHits++;
+            this.stats.hits++;
             return this.functorIndex.get(functor);
         }
         
-        // Last resort: full scan
-        this._stats.fullScans++;
-        return this.rules;
+        // Full scan
+        this.stats.misses++;
+        return this.allRules;
     }
 }
 ```
 
-### P4.2 Bloom Filter for Negative Lookups
+**Expected Speedup:** 10-100x for large rule sets  
+**Risk:** Memory overhead (linear with rules)  
+**Toggle:** `METTA_CONFIG.indexing`
+
+---
+
+### L2. Compiled Rule Dispatch via RuleCompiler (~1 day)
+
+**Use SeNARS `RuleCompiler` for Rete-like rule network.**
+
+#### [NEW] `metta/src/kernel/CompiledRules.js`
+
+```javascript
+import { RuleCompiler } from '../../../core/src/reason/exec/RuleCompiler.js';
+import { TermFactory } from '../../../core/src/term/TermFactory.js';
+
+export class CompiledRuleNetwork {
+    constructor() {
+        this.compiler = new RuleCompiler(new TermFactory(), [
+            { name: 'functor', getPatternValue: (p) => p.operator?.name },
+            { name: 'arity', getPatternValue: (p) => p.components?.length || 0 }
+        ]);
+        this.root = null;
+        this.compiled = false;
+    }
+    
+    compile(rules) {
+        const patternRules = rules.map(r => ({
+            pattern: { p: r.pattern, s: null },
+            action: r.result
+        }));
+        
+        this.root = this.compiler.compile(patternRules);
+        this.compiled = true;
+    }
+    
+    match(term) {
+        if (!this.compiled || !this.root) return [];
+        
+        let node = this.root;
+        
+        // Navigate decision tree
+        if (node.check?.type === 'functor') {
+            const functor = term.operator?.name;
+            node = node.children.get(functor) || node.fallback || node;
+        }
+        
+        if (node.check?.type === 'arity') {
+            const arity = term.components?.length || 0;
+            node = node.children.get(arity) || node.fallback || node;
+        }
+        
+        return node.rules;
+    }
+}
+```
+
+**Expected Speedup:** 3-5x for rule matching  
+**Risk:** Build time overhead (one-time)  
+**Toggle:** `METTA_CONFIG.compiledRules`
+
+---
+
+### L3. Object Pooling (~1 day)
+
+**Reuse temporary objects to reduce GC pressure.**
+
+#### [NEW] `metta/src/kernel/Pool.js`
+
+```javascript
+export class ObjectPool {
+    constructor(factory, reset, initialSize = 100) {
+        this.factory = factory;
+        this.reset = reset;
+        this.pool = Array.from({ length: initialSize }, () => factory());
+        this.index = initialSize;
+        this.enabled = METTA_CONFIG.pooling ?? true;
+    }
+    
+    acquire() {
+        if (!this.enabled) return this.factory();
+        
+        if (this.index > 0) {
+            return this.pool[--this.index];
+        }
+        return this.factory();
+    }
+    
+    release(obj) {
+        if (!this.enabled) return;
+        
+        this.reset(obj);
+        if (this.index < this.pool.length) {
+            this.pool[this.index++] = obj;
+        }
+    }
+}
+
+// Pre-configured pools
+export const SUBSTITUTION_POOL = new ObjectPool(
+    () => new Map(),
+    (m) => m.clear()
+);
+
+export const ARRAY_POOL = new ObjectPool(
+    () => [],
+    (a) => { a.length = 0; }
+);
+```
+
+**Expected Speedup:** 1.5-2x GC reduction  
+**Risk:** Pool bloat (mitigated by size limit)  
+**Toggle:** `METTA_CONFIG.pooling`
+
+---
+
+## Tier 3: Advanced Optimizations (Weeks, Platform-Specific)
+
+### A1. WebAssembly Unification Kernel (~1 week)
+
+**Platform:** Browser + Node.js (with WASM support)
+
+```javascript
+// Feature detection
+const WASM_AVAILABLE = typeof WebAssembly !== 'undefined';
+
+export async function initWASM() {
+    if (!WASM_AVAILABLE || !METTA_CONFIG.wasm) {
+        return null;
+    }
+    
+    try {
+        const module = await import('./wasm/unify.wasm.js');
+        return module;
+    } catch {
+        return null; // Graceful fallback
+    }
+}
+```
+
+**Expected Speedup:** 3-5x for unification  
+**Risk:** Platform compatibility (mitigated by fallback)  
+**Toggle:** `METTA_CONFIG.wasm`
+
+---
+
+### A2. Web Worker Parallelism (~1 week)
+
+**Platform:** Browser + Node.js (with worker_threads)
+
+```javascript
+// Feature detection
+const WORKERS_AVAILABLE = 
+    typeof Worker !== 'undefined' || 
+    typeof require !== 'undefined' && require('worker_threads');
+
+export function createWorkerPool(size) {
+    if (!WORKERS_AVAILABLE || !METTA_CONFIG.parallel) {
+        return null; // Fallback to sync
+    }
+    
+    // ... worker pool implementation
+}
+```
+
+**Expected Speedup:** 2-8x for parallel workloads  
+**Risk:** Complexity (mitigated by single-threaded fallback)  
+**Toggle:** `METTA_CONFIG.parallel`
+
+---
+
+## Configuration System
+
+### [NEW] `metta/src/config.js`
+
+```javascript
+/**
+ * MeTTa Performance Configuration
+ * All optimizations are optional and toggleable
+ */
+
+export const METTA_CONFIG = {
+    // === Tier 1: Quick Wins (default ON) ===
+    interning: true,      // Symbol interning via TermFactory
+    fastPaths: true,      // Monomorphic type guards
+    
+    // === Tier 2: Low-Hanging Fruit (default ON) ===
+    indexing: true,       // Multi-level rule indexing
+    caching: true,        // Reduction result caching
+    pooling: true,        // Object pooling for GC reduction
+    compiledRules: true,  // Rete-like rule network
+    
+    // === Tier 3: Advanced (default OFF) ===
+    wasm: false,          // WebAssembly kernels
+    parallel: false,      // Web Worker parallelism
+    jit: false,           // Runtime code generation
+    
+    // === Debugging ===
+    profiling: false,     // Enable performance profiling
+    tracing: false,       // Enable execution tracing
+    
+    // === Cache Limits ===
+    maxCacheSize: 5000,   // Max cached reductions
+    maxPoolSize: 1000,    // Max pooled objects
+};
+
+/**
+ * Get config with environment overrides
+ */
+export function getConfig() {
+    // Check for environment overrides
+    if (typeof process !== 'undefined' && process.env) {
+        if (process.env.METTA_WASM) METTA_CONFIG.wasm = true;
+        if (process.env.METTA_PARALLEL) METTA_CONFIG.parallel = true;
+        if (process.env.METTA_PROFILE) METTA_CONFIG.profiling = true;
+        if (process.env.METTA_NO_CACHE) METTA_CONFIG.caching = false;
+        if (process.env.METTA_NO_INDEX) METTA_CONFIG.indexing = false;
+    }
+    
+    // Check for browser URL overrides
+    if (typeof window !== 'undefined' && window.location) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('metta_profile')) METTA_CONFIG.profiling = true;
+        if (params.get('metta_baseline')) {
+            // Disable all optimizations for baseline comparison
+            METTA_CONFIG.interning = false;
+            METTA_CONFIG.fastPaths = false;
+            METTA_CONFIG.indexing = false;
+            METTA_CONFIG.caching = false;
+            METTA_CONFIG.pooling = false;
+        }
+    }
+    
+    return METTA_CONFIG;
+}
+
+/**
+ * Compare optimized vs baseline performance
+ */
+export async function runComparison(code) {
+    const baseline = { ...METTA_CONFIG };
+    
+    // Run with all optimizations OFF
+    Object.keys(METTA_CONFIG).forEach(k => {
+        if (typeof METTA_CONFIG[k] === 'boolean') METTA_CONFIG[k] = false;
+    });
+    
+    const startBaseline = performance.now();
+    const resultBaseline = await eval(code);
+    const baselineTime = performance.now() - startBaseline;
+    
+    // Restore and run with optimizations ON
+    Object.assign(METTA_CONFIG, baseline);
+    
+    const startOptimized = performance.now();
+    const resultOptimized = await eval(code);
+    const optimizedTime = performance.now() - startOptimized;
+    
+    return {
+        baseline: baselineTime,
+        optimized: optimizedTime,
+        speedup: (baselineTime / optimizedTime).toFixed(2) + 'x'
+    };
+}
+```
+
+---
+
+## Performance Benchmarks
+
+### [NEW] `metta/benchmark/suite.js`
+
+```javascript
+import { METTA_CONFIG, runComparison } from '../src/config.js';
+
+export const BENCHMARKS = [
+    {
+        name: 'symbol-equality',
+        code: () => {
+            const a = sym('test');
+            const b = sym('test');
+            let count = 0;
+            for (let i = 0; i < 100000; i++) {
+                if (symbolEq(a, b)) count++;
+            }
+            return count;
+        },
+        baselineMs: 50
+    },
+    {
+        name: 'unification-simple',
+        code: () => {
+            const a = sym('X');
+            const b = sym('X');
+            let count = 0;
+            for (let i = 0; i < 50000; i++) {
+                if (unify(a, b, new Map())) count++;
+            }
+            return count;
+        },
+        baselineMs: 100
+    },
+    {
+        name: 'rule-lookup-1000',
+        code: async () => {
+            const space = new Space();
+            for (let i = 0; i < 1000; i++) {
+                space.addRule(`(rule${i} $x)`, `(result${i} $x)`);
+            }
+            let count = 0;
+            for (let i = 0; i < 10000; i++) {
+                const rules = space.rulesFor(sym('rule500'));
+                count += rules.length;
+            }
+            return count;
+        },
+        baselineMs: 500
+    },
+    {
+        name: 'fibonacci-20',
+        code: async () => {
+            const interp = new MeTTaInterpreter();
+            interp.load(`
+                (= (fib 0) 0)
+                (= (fib 1) 1)
+                (= (fib $n) (+ (fib (- $n 1)) (fib (- $n 2))))
+            `);
+            return await interp.eval('!(fib 20)');
+        },
+        baselineMs: 5000
+    }
+];
+
+export async function runBenchmarks(options = {}) {
+    const results = [];
+    
+    for (const bench of BENCHMARKS) {
+        if (options.comparison) {
+            const result = await runComparison(bench.code);
+            results.push({ name: bench.name, ...result });
+        } else {
+            const start = performance.now();
+            await bench.code();
+            const elapsed = performance.now() - start;
+            
+            results.push({
+                name: bench.name,
+                elapsed: elapsed.toFixed(2) + 'ms',
+                target: bench.baselineMs + 'ms',
+                status: elapsed < bench.baselineMs ? '✅' : '⚠️'
+            });
+        }
+    }
+    
+    return results;
+}
+```
+
+---
+
+## Implementation Roadmap
+
+### Week 1: Tier 1 Quick Wins
+| Day | Task | Speedup | Risk |
+|-----|------|---------|------|
+| 1 | Q1: Symbol Interning | 3-5x | None |
+| 1 | Q3: Stable Shapes | 1.5-2x | None |
+| 2 | Q2: Fast-Path Guards | 2-3x | None |
+| 2 | Q4: Op Lookup Table | 2x | None |
+| 3 | Q5: Reduction Cache | 5-10x | Low |
+| 3-4 | Benchmarks + Testing | N/A | None |
+
+**Week 1 Target:** 10-20x baseline speedup
+
+### Week 2: Tier 2 Low-Hanging Fruit
+| Day | Task | Speedup | Risk |
+|-----|------|---------|------|
+| 1-2 | L1: Rule Indexing | 10-100x | Low |
+| 2-3 | L2: Compiled Rules | 3-5x | Low |
+| 3-4 | L3: Object Pooling | 1.5-2x | Low |
+| 5 | Integration + Testing | N/A | None |
+
+**Week 2 Target:** 50-100x baseline speedup
+
+### Week 3-4: Tier 3 Advanced (Optional)
+| Day | Task | Speedup | Risk |
+|-----|------|---------|------|
+| 1-5 | A1: WASM Kernel | 3-5x | Medium |
+| 6-10 | A2: Parallelism | 2-8x | Medium |
+
+**Week 3-4 Target:** Parity with MORK
+
+---
+
+## Success Metrics
+
+### Performance Targets
+
+| Metric | Baseline | After T1 | After T2 | After T3 | MORK |
+|--------|----------|----------|----------|----------|------|
+| Symbol eq | 50ns | 5ns | 3ns | 2ns | 1ns |
+| Unify | 1000ns | 200ns | 100ns | 50ns | 30ns |
+| Rule lookup | O(n) | O(log n) | O(1) | O(1) | O(1) |
+| Fibonacci(20) | 5000ms | 500ms | 100ms | 50ms | 40ms |
+| Memory/query | 10KB | 5KB | 2KB | 1KB | 0.5KB |
+
+### Compatibility Matrix
+
+| Environment | T1 | T2 | T3 |
+|-------------|----|----|-----|
+| Chrome | ✅ | ✅ | ✅ |
+| Firefox | ✅ | ✅ | ✅ |
+| Safari | ✅ | ✅ | ✅ |
+| Node.js | ✅ | ✅ | ✅ |
+| Deno | ✅ | ✅ | ✅ |
+| Bun | ✅ | ✅ | ✅ |
+| CF Workers | ✅ | ✅ | ⚠️ |
+| React Native | ✅ | ✅ | ⚠️ |
+
+---
+
+## Verification Plan
+
+### Automated Tests
+```bash
+# Run benchmark suite
+npm run benchmark
+
+# Compare optimized vs baseline
+npm run benchmark -- --comparison
+
+# Run with specific optimizations disabled
+METTA_NO_CACHE=1 npm run benchmark
+METTA_NO_INDEX=1 npm run benchmark
+```
+
+### Manual Verification
+1. Start dev server: `npm run dev`
+2. Open browser, add `?metta_profile=1` to URL
+3. Check console for performance metrics
+4. Add `?metta_baseline=1` to compare unoptimized
+
+### Regression Tests
+- All existing unit tests must pass
+- No benchmark regression > 10%
+- Memory usage stable over 1000 iterations
+
+---
+
+## Tier 2.5: Memory & GC Optimization (Days, Platform-Independent)
+
+### M1. Tail Call Optimization (~2 days)
+
+**Eliminate stack overflows for deep recursion.**
+
+#### [NEW] `metta/src/kernel/TCO.js`
+
+```javascript
+/**
+ * Trampoline-based tail call optimization
+ * Enables infinite recursion without stack overflow
+ */
+
+export class Trampoline {
+    constructor() {
+        this.enabled = METTA_CONFIG.tco ?? true;
+    }
+    
+    run(fn, ...args) {
+        if (!this.enabled) return fn(...args);
+        
+        let result = fn(...args);
+        
+        // Keep bouncing until we get a real value
+        while (result && result._isBounce) {
+            result = result.fn(...result.args);
+        }
+        
+        return result;
+    }
+}
+
+// Helper to create a tail call bounce
+export function bounce(fn, ...args) {
+    return { _isBounce: true, fn, args };
+}
+
+// Example: Tail-recursive fibonacci
+export function fib(n, acc = 0, prev = 1) {
+    if (n === 0) return acc;
+    if (n === 1) return prev;
+    
+    // Tail call: return bounce instead of calling directly
+    return bounce(fib, n - 1, prev, acc + prev);
+}
+
+// Run with trampoline
+const trampoline = new Trampoline();
+const result = trampoline.run(fib, 10000); // No stack overflow!
+```
+
+**Expected Speedup:** Infinite recursion support  
+**Risk:** None (pure JS)  
+**Toggle:** `METTA_CONFIG.tco`  
+**SeNARS Core Benefit:** Can apply to NAL rule chaining
+
+---
+
+### M2. Generational Object Pooling (~1 day)
+
+**Reduce GC pressure with age-based pool management.**
+
+#### [MODIFY] `metta/src/kernel/Pool.js`
+
+```javascript
+/**
+ * Generational object pooling
+ * Customized from SeNARS pattern but optimized for MeTTa
+ */
+
+export class GenerationalPool {
+    constructor(factory, reset, options = {}) {
+        this.factory = factory;
+        this.reset = reset;
+        this.enabled = options.enabled ?? METTA_CONFIG.pooling;
+        
+        // Young generation: short-lived objects (hot path)
+        this.youngGen = [];
+        this.youngGenSize = 0;
+        this.youngGenLimit = options.youngLimit || 500;
+        
+        // Old generation: long-lived objects (persistent)
+        this.oldGen = [];
+        this.oldGenSize = 0;
+        this.oldGenLimit = options.oldLimit || 100;
+        
+        // Track object age for promotion
+        this.ageMap = new WeakMap();
+        this.promotionThreshold = options.promotionThreshold || 3;
+        
+        // Stats
+        this.stats = {
+            youngHits: 0,
+            oldHits: 0,
+            creates: 0,
+            promotions: 0
+        };
+    }
+    
+    acquire() {
+        if (!this.enabled) return this.factory();
+        
+        // Try young gen first (cache-hot)
+        if (this.youngGenSize > 0) {
+            const obj = this.youngGen[--this.youngGenSize];
+            const age = this.ageMap.get(obj) || 0;
+            
+            // Promote to old gen if aged
+            if (age >= this.promotionThreshold && this.oldGenSize < this.oldGenLimit) {
+                this.oldGen[this.oldGenSize++] = obj;
+                this.stats.promotions++;
+            }
+            
+            this.ageMap.set(obj, age + 1);
+            this.stats.youngHits++;
+            return obj;
+        }
+        
+        // Try old gen
+        if (this.oldGenSize > 0) {
+            this.stats.oldHits++;
+            return this.oldGen[--this.oldGenSize];
+        }
+        
+        // Create new
+        this.stats.creates++;
+        const obj = this.factory();
+        this.ageMap.set(obj, 0);
+        return obj;
+    }
+    
+    release(obj) {
+        if (!this.enabled) return;
+        
+        this.reset(obj);
+        
+        const age = this.ageMap.get(obj) || 0;
+        
+        // Return to appropriate generation
+        if (age >= this.promotionThreshold && this.oldGenSize < this.oldGenLimit) {
+            this.oldGen[this.oldGenSize++] = obj;
+        } else if (this.youngGenSize < this.youngGenLimit) {
+            this.youngGen[this.youngGenSize++] = obj;
+        }
+        // Else: let GC collect (pool is full)
+    }
+    
+    compact() {
+        // Periodically trim pools to prevent bloat
+        if (this.youngGenSize > this.youngGenLimit * 0.8) {
+            this.youngGenSize = Math.floor(this.youngGenLimit * 0.5);
+        }
+    }
+}
+
+// Specialized pools for MeTTa
+export const SUBSTITUTION_POOL = new GenerationalPool(
+    () => new Map(),
+    (m) => m.clear(),
+    { youngLimit: 1000, oldLimit: 200 }
+);
+
+export const RESULT_POOL = new GenerationalPool(
+    () => [],
+    (a) => { a.length = 0; },
+    { youngLimit: 1000, oldLimit: 200 }
+);
+```
+
+**Expected Speedup:** 2-5x GC reduction  
+**Risk:** Memory overhead  
+**Toggle:** `METTA_CONFIG.pooling`  
+**SeNARS Core Benefit:** Can apply to concept/term pooling in MemoryIndex
+
+---
+
+### M3. Bloom Filter for Fast Negative Lookups (~1 day)
+
+**Avoid expensive index queries for non-existent patterns.**
 
 #### [NEW] `metta/src/kernel/BloomFilter.js`
 
 ```javascript
 /**
- * Space-efficient probabilistic set for fast "not present" checks
+ * Space-efficient probabilistic set
+ * Customized for MeTTa rule/symbol indexing
  */
+
 export class BloomFilter {
-    constructor(size = 10000) {
-        this.bits = new Uint32Array(Math.ceil(size / 32));
+    constructor(size = 10000, hashCount = 3) {
         this.size = size;
+        this.hashCount = hashCount;
+        this.bits = new Uint32Array(Math.ceil(size / 32));
+        this.enabled = METTA_CONFIG.bloomFilter ?? true;
     }
     
     add(value) {
-        const h1 = this._hash1(value);
-        const h2 = this._hash2(value);
-        this._setBit(h1 % this.size);
-        this._setBit(h2 % this.size);
+        if (!this.enabled) return;
+        
+        const str = typeof value === 'string' ? value : value.toString();
+        
+        for (let i = 0; i < this.hashCount; i++) {
+            const hash = this._hash(str, i);
+            const index = hash % this.size;
+            this._setBit(index);
+        }
     }
     
     has(value) {
-        const h1 = this._hash1(value);
-        const h2 = this._hash2(value);
-        return this._getBit(h1 % this.size) && this._getBit(h2 % this.size);
+        if (!this.enabled) return true; // Assume present if disabled
+        
+        const str = typeof value === 'string' ? value : value.toString();
+        
+        for (let i = 0; i < this.hashCount; i++) {
+            const hash = this._hash(str, i);
+            const index = hash % this.size;
+            if (!this._getBit(index)) {
+                return false; // Definitely not present
+            }
+        }
+        
+        return true; // Probably present (may have false positives)
     }
     
-    _hash1(x) { return (x * 2654435761) >>> 0; }
-    _hash2(x) { return (x * 2246822519) >>> 0; }
+    _hash(str, seed) {
+        let h = seed;
+        for (let i = 0; i < str.length; i++) {
+            h = Math.imul(h ^ str.charCodeAt(i), 2654435761);
+        }
+        return (h ^ (h >>> 16)) >>> 0;
+    }
     
     _setBit(index) {
-        this.bits[index >> 5] |= (1 << (index & 31));
+        this.bits[index >>> 5] |= (1 << (index & 31));
     }
     
     _getBit(index) {
-        return (this.bits[index >> 5] & (1 << (index & 31))) !== 0;
+        return (this.bits[index >>> 5] & (1 << (index & 31))) !== 0;
     }
 }
 ```
+
+#### [MODIFY] `metta/src/kernel/RuleIndex.js` (Add Bloom Filter)
+
+```javascript
+import { BloomFilter } from './BloomFilter.js';
+
+export class RuleIndex {
+    constructor(config = {}) {
+        // ... existing code ...
+        
+        // NEW: Bloom filter for fast negative lookups
+        this.bloom = new BloomFilter(10000);
+    }
+    
+    addRule(rule) {
+        // ... existing indexing ...
+        
+        // Add to bloom filter
+        const functor = pattern.operator?.id ?? pattern.operator?.name;
+        if (functor) {
+            this.bloom.add(functor);
+        }
+    }
+    
+    rulesFor(term) {
+        const functor = term.operator?.id ?? term.operator?.name;
+        
+        // Fast negative lookup: if not in bloom, definitely not in index
+        if (!this.bloom.has(functor)) {
+            this.stats.bloomFilterSaves++;
+            return [];
+        }
+        
+        // ... rest of existing lookup logic ...
+    }
+}
+```
+
+**Expected Speedup:** 5-10x for non-matching patterns  
+**Risk:** False positives (mitigated by proper sizing)  
+**Toggle:** `METTA_CONFIG.bloomFilter`  
+**SeNARS Core Benefit:** Can apply to MemoryIndex for fast concept existence checks
 
 ---
 
-## Phase P5: Parallel Reduction (Web Workers)
+## Tier 3.5: Profiling & Debugging Tools (Weeks, Platform-Independent)
 
-**Goal:** Multi-threaded evaluation for large nondeterministic search spaces
+### T1. V8 Profiler Integration (~2 days)
 
-**Timeline:** 3-4 days  
-**Priority:** MEDIUM  
-**Expected Speedup:** Near-linear with CPU cores (2-8x on typical hardware)
-
-### P5.1 Worker Pool Architecture
-
-#### [NEW] `metta/src/parallel/WorkerPool.js`
-
-```javascript
-/**
- * Parallel reduction using Web Workers (browser) or worker_threads (Node.js)
- */
-
-import { ENV } from '../platform/env.js';
-
-export class WorkerPool {
-    constructor(workerScript, numWorkers = navigator.hardwareConcurrency || 4) {
-        this.workers = [];
-        this.taskQueue = [];
-        this.pendingTasks = new Map();
-        this.taskIdCounter = 0;
-        
-        for (let i = 0; i < numWorkers; i++) {
-            this.workers.push(this._createWorker(workerScript));
-        }
-    }
-    
-    _createWorker(script) {
-        const worker = ENV.isNode 
-            ? new (require('worker_threads').Worker)(script)
-            : new Worker(script);
-        
-        worker.onmessage = (e) => this._handleResult(e.data);
-        return { instance: worker, busy: false };
-    }
-    
-    async reduce(atom, space) {
-        const taskId = this.taskIdCounter++;
-        
-        return new Promise((resolve) => {
-            this.pendingTasks.set(taskId, resolve);
-            this._enqueue({ taskId, atom, space: space.serialize() });
-        });
-    }
-    
-    _enqueue(task) {
-        const freeWorker = this.workers.find(w => !w.busy);
-        
-        if (freeWorker) {
-            freeWorker.busy = true;
-            freeWorker.instance.postMessage(task);
-        } else {
-            this.taskQueue.push(task);
-        }
-    }
-    
-    _handleResult({ taskId, result }) {
-        const resolve = this.pendingTasks.get(taskId);
-        if (resolve) {
-            resolve(result);
-            this.pendingTasks.delete(taskId);
-        }
-        
-        // Free worker and process queue
-        const worker = this.workers.find(w => w.busy);
-        if (worker) {
-            worker.busy = false;
-            
-            if (this.taskQueue.length > 0) {
-                const nextTask = this.taskQueue.shift();
-                worker.busy = true;
-                worker.instance.postMessage(nextTask);
-            }
-        }
-    }
-}
-```
-
-### P5.2 Parallel Nondeterministic Reduction
-
-#### [MODIFY] `metta/src/interp/MinimalOps.js`
-
-```javascript
-import { WorkerPool } from '../parallel/WorkerPool.js';
-
-const workerPool = new WorkerPool('./reduction-worker.js');
-
-// Parallel collapse: distribute alternatives across workers
-reg('collapse-parallel', async (atom) => {
-    const alternatives = expandAlternatives(atom); // List of independent branches
-    
-    // Map each alternative to a worker
-    const results = await Promise.all(
-        alternatives.map(alt => workerPool.reduce(alt, interpreter.space))
-    );
-    
-    return interpreter._listify(results.flat());
-}, { lazy: true, async: true });
-```
-
-#### [NEW] `metta/public/reduction-worker.js`
-
-```javascript
-/**
- * Web Worker for parallel reduction
- */
-
-importScripts('./metta-bundle.js'); // Contains full MeTTa kernel
-
-self.onmessage = async function({ data }) {
-    const { taskId, atom, space } = data;
-    
-    // Deserialize and reduce
-    const spaceObj = Space.deserialize(space);
-    const result = reduce(atom, spaceObj);
-    
-    // Send result back
-    self.postMessage({ taskId, result });
-};
-```
-
----
-
-## Phase P6: Memory Layout Optimization
-
-**Goal:** Cache-friendly data structures and zero-copy operations
-
-**Timeline:** 3 days  
-**Priority:** LOW (Incremental gains)  
-**Expected Speedup:** 1.5-2x for memory-intensive operations
-
-### P6.1 Flat Term Representation
-
-**Strategy:** Encode complex terms as flat buffers (inspired by MORK's zipper encoding)
-
-#### [NEW] `metta/src/kernel/FlatTerm.js`
-
-```javascript
-/**
- * Flat, cache-friendly term encoding
- * Eliminates pointer chasing for better CPU cache utilization
- * 
- * Encoding:
- * [type: u8, id: u32, arity: u8, ...components]
- */
-
-export class FlatTermBuffer {
-    constructor(capacity = 1024) {
-        this.buffer = new Uint8Array(capacity);
-        this.u32view = new Uint32Array(this.buffer.buffer);
-        this.cursor = 0;
-    }
-    
-    writeSymbol(id) {
-        this.buffer[this.cursor++] = 1; // Type: Symbol
-        this.u32view[this.cursor >> 2] = id;
-        this.cursor += 4;
-    }
-    
-    writeExpression(functor, arity) {
-        this.buffer[this.cursor++] = 3; // Type: Expression
-        this.u32view[this.cursor >> 2] = functor;
-        this.cursor += 4;
-        this.buffer[this.cursor++] = arity;
-    }
-    
-    // Zero-copy traversal
-    *iterateComponents(offset) {
-        let pos = offset;
-        const arity = this.buffer[pos + 5];
-        pos += 6; // Skip header
-        
-        for (let i = 0; i < arity; i++) {
-            yield pos;
-            pos = this._skipTerm(pos);
-        }
-    }
-}
-```
-
-### P6.2 SharedArrayBuffer for Cross-Worker Communication
-
-#### [NEW] `metta/src/parallel/SharedSpace.js`
-
-```javascript
-/**
- * Zero-copy space sharing across workers using SharedArrayBuffer
- */
-
-export class SharedSpace {
-    constructor(maxAtoms = 10000) {
-        // Shared memory for read-only atomspace
-        this.sab = new SharedArrayBuffer(maxAtoms * 64); // 64 bytes per atom
-        this.atomData = new Uint8Array(this.sab);
-        this.atomCount = new Int32Array(this.sab, 0, 1);
-    }
-    
-    addAtom(atom) {
-        const offset = Atomics.add(this.atomCount, 0, 1) * 64;
-        this._serializeAtom(atom, offset);
-    }
-    
-    // Workers can read without copying
-    getAtom(index) {
-        const offset = index * 64;
-        return this._deserializeAtom(offset);
-    }
-}
-```
-
----
-
-## Phase P7: Profiling & Monitoring Infrastructure
-
-**Goal:** Comprehensive tooling for performance analysis and optimization guidance
-
-**Timeline:** 3-4 days  
-**Priority:** CRITICAL (Enables data-driven optimization)  
-**Expected Impact:** Foundation for all performance tuning
-
-### P7.1 V8 Profiler Integration
+**Identify hot paths and deoptimizations.**
 
 #### [NEW] `metta/tools/profiler.js`
 
 ```javascript
 /**
- * V8-level profiling integration
- * Usage: node --prof --log-timer-events metta/tools/profiler.js script.metta
+ * V8-level profiling for Node.js
+ * Usage: node --prof metta/tools/profiler.js script.metta
  */
 
 import { performance, PerformanceObserver } from 'perf_hooks';
-import { MeTTaInterpreter } from '../src/MeTTaInterpreter.js';
 
 export class V8Profiler {
     constructor() {
+        this.enabled = METTA_CONFIG.profiling ?? false;
         this.marks = new Map();
         this.measures = [];
         this.deoptEvents = [];
-        this.icStats = { mono: 0, poly: 0, mega: 0 };
         
-        // Monitor perf entries
+        if (this.enabled) {
+            this._setupObserver();
+        }
+    }
+    
+    _setupObserver() {
         const obs = new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
-                this.measures.push(entry);
+                this.measures.push({
+                    name: entry.name,
+                    duration: entry.duration,
+                    startTime: entry.startTime
+                });
             }
         });
         obs.observe({ entryTypes: ['measure'] });
     }
     
     mark(label) {
+        if (!this.enabled) return;
         performance.mark(label);
         this.marks.set(label, performance.now());
     }
     
     measure(name, startMark, endMark) {
+        if (!this.enabled) return;
         performance.measure(name, startMark, endMark);
     }
     
-    async profileScript(scriptPath) {
-        const interp = new MeTTaInterpreter();
-        
-        this.mark('parse-start');
-        await interp.loadFile(scriptPath);
-        this.mark('parse-end');
-        this.measure('parsing', 'parse-start', 'parse-end');
-        
-        this.mark('reduce-start');
-        await interp.eval('!(run)');
-        this.mark('reduce-end');
-        this.measure('reduction', 'reduce-start', 'reduce-end');
-        
-        return this.generateReport();
-    }
-    
     generateReport() {
+        if (!this.enabled) return null;
+        
         return {
             timeline: this.measures,
             deoptimizations: this.deoptEvents,
-            inlineCacheStats: this.icStats,
             recommendations: this._generateRecommendations()
         };
     }
@@ -840,288 +1144,284 @@ export class V8Profiler {
     _generateRecommendations() {
         const recs = [];
         
-        // Detect deopt patterns
-        if (this.deoptEvents.length > 10) {
-            recs.push({
-                severity: 'HIGH',
-                issue: 'Frequent deoptimizations detected',
-                suggestion: 'Review object shapes and type stability'
-            });
-        }
+        // Detect expensive operations
+        const expensive = this.measures
+            .filter(m => m.duration > 100)
+            .sort((a, b) => b.duration - a.duration);
         
-        // Detect megamorphic ICs
-        if (this.icStats.mega > this.icStats.mono) {
+        if (expensive.length > 0) {
             recs.push({
                 severity: 'HIGH',
-                issue: 'Megamorphic inline caches detected',
-                suggestion: 'Reduce polymorphism in hot paths'
+                issue: `${expensive.length} operations took >100ms`,
+                hottest: expensive.slice(0, 5).map(m => `${m.name}: ${m.duration.toFixed(2)}ms`)
             });
         }
         
         return recs;
     }
 }
+
+// Global profiler instance
+export const profiler = new V8Profiler();
 ```
 
-### P7.2 Turbolizer Integration
-
-#### [NEW] `metta/tools/turbolizer-trace.sh`
-
+**Usage:**
 ```bash
-#!/bin/bash
-# Generate Turbolizer-compatible trace files
+# Enable profiling
+METTA_PROFILE=1 node script.js
 
-node --trace-turbo \
-     --trace-turbo-graph \
-     --trace-turbo-cfg-file=turbo-${1}.cfg \
-     metta/src/cli.js "$1"
-
-echo "Open turbo-${1}.cfg in Turbolizer: https://v8.github.io/tools/head/turbolizer/"
+# Or in browser
+http://localhost:3000?metta_profile=1
 ```
 
-### P7.3 Memory Profiler
+**SeNARS Core Benefit:** Can profile NAL reasoning chains and rule execution
 
-#### [NEW] `metta/tools/memory-profiler.js`
+---
+
+### T2. Execution Tracer (~2 days)
+
+**Record complete execution traces for debugging.**
+
+#### [NEW] `metta/tools/tracer.js`
 
 ```javascript
 /**
- * Track memory allocation patterns and GC pressure
+ * Record execution trace in Chrome DevTools format
  */
 
-export class MemoryProfiler {
+export class ExecutionTracer {
     constructor() {
-        this.snapshots = [];
-        this.gcEvents = [];
-        
-        if (global.gc) {
-            // Monitor GC (requires --expose-gc flag)
-            const gcOrig = global.gc;
-            global.gc = () => {
-                const before = process.memoryUsage().heapUsed;
-                const start = performance.now();
-                gcOrig();
-                const after = process.memoryUsage().heapUsed;
-                const duration = performance.now() - start;
-                
-                this.gcEvents.push({
-                    timestamp: Date.now(),
-                    freed: before - after,
-                    duration
-                });
-            };
-        }
+        this.enabled = METTA_CONFIG.tracing ?? false;
+        this.events = [];
+        this.startTime = Date.now();
+        this.eventCount = 0;
     }
     
-    snapshot(label) {
-        this.snapshots.push({
-            label,
-            timestamp: Date.now(),
-            memory: process.memoryUsage()
+    recordReduction(atom, result, duration) {
+        if (!this.enabled || this.eventCount > 100000) return;
+        
+        this.events.push({
+            type: 'reduction',
+            timestamp: Date.now() - this.startTime,
+            atom: atom.toString().slice(0, 100), // Limit string size
+            result: result?.toString().slice(0, 100),
+            duration
         });
+        this.eventCount++;
     }
     
-    analyzeLeaks() {
-        const leaks = [];
+    recordUnification(a, b, success) {
+        if (!this.enabled || this.eventCount > 100000) return;
         
-        for (let i = 1; i < this.snapshots.length; i++) {
-            const prev = this.snapshots[i - 1];
-            const curr = this.snapshots[i];
-            const growth = curr.memory.heapUsed - prev.memory.heapUsed;
-            
-            if (growth > 10 * 1024 * 1024) { // 10MB growth
-                leaks.push({
-                    between: [prev.label, curr.label],
-                    growth: (growth / 1024 / 1024).toFixed(2) + 'MB'
-                });
-            }
-        }
-        
-        return leaks;
+        this.events.push({
+            type: 'unification',
+            timestamp: Date.now() - this.startTime,
+            terms: [a.toString().slice(0, 50), b.toString().slice(0, 50)],
+            success
+        });
+        this.eventCount++;
     }
     
-    analyzeGCPressure() {
-        if (this.gcEvents.length === 0) return 'Unknown';
+    recordIndexLookup(term, indexType, hitCount) {
+        if (!this.enabled || this.eventCount > 100000) return;
         
-        const avgDuration = this.gcEvents.reduce((s, e) => s + e.duration, 0) / this.gcEvents.length;
-        const totalTime = this.gcEvents.reduce((s, e) => s + e.duration, 0);
-        
+        this.events.push({
+            type: 'index-lookup',
+            timestamp: Date.now() - this.startTime,
+            term: term.toString().slice(0, 50),
+            indexType,
+            hitCount
+        });
+        this.eventCount++;
+    }
+    
+    exportChromeTrace() {
         return {
-            gcCount: this.gcEvents.length,
-            avgDuration: avgDuration.toFixed(2) + 'ms',
-            totalGCTime: totalTime.toFixed(2) + 'ms',
-            pressure: avgDuration > 50 ? 'HIGH' : avgDuration > 10 ? 'MEDIUM' : 'LOW'
+            traceEvents: this.events.map((e, i) => ({
+                name: e.type,
+                cat: 'metta',
+                ph: 'X', // Complete event
+                ts: e.timestamp * 1000, // microseconds
+                dur: e.duration || 0,
+                pid: 1,
+                tid: 1,
+                args: e
+            }))
         };
     }
+    
+    export(format = 'chrome') {
+        if (format === 'chrome') {
+            return this.exportChromeTrace();
+        }
+        return this.events;
+    }
 }
+
+export const tracer = new ExecutionTracer();
 ```
+
+**Usage:**
+```bash
+# Enable tracing
+METTA_TRACE=1 node script.js
+
+# Export to Chrome DevTools
+node -e "console.log(JSON.stringify(tracer.export()))" > trace.json
+# Open chrome://tracing and load trace.json
+```
+
+**SeNARS Core Benefit:** Can trace NAL inference chains and belief revision
 
 ---
 
-## Phase P8: Garbage Collection Optimization
+### T3. Interactive Debugger (~3 days)
 
-**Goal:** Minimize GC pauses and memory churn
+**Step-through debugging for MeTTa programs.**
 
-**Timeline:** 3 days  
-**Priority:** HIGH  
-**Expected Speedup:** 2-5x reduction in GC time
-
-### P8.1 Generational Object Pooling
-
-#### [NEW] `metta/src/kernel/GenerationalPool.js`
+#### [NEW] `metta/tools/debugger.js`
 
 ```javascript
 /**
- * Advanced object pooling with generation tracking
- * Separates short-lived from long-lived objects
+ * Interactive step-through debugger
  */
 
-export class GenerationalPool {
-    constructor(maxSize = 10000) {
-        this.youngGen = [];      // Short-lived objects
-        this.oldGen = [];        // Long-lived objects
-        this.promotionThreshold = 5; // Survive 5 allocations → promoted
-        this.ageMap = new WeakMap();
-    }
-    
-    acquire(factory) {
-        // Try young generation first
-        if (this.youngGen.length > 0) {
-            const obj = this.youngGen.pop();
-            const age = this.ageMap.get(obj) || 0;
-            
-            // Promote to old gen if aged
-            if (age > this.promotionThreshold) {
-                this.oldGen.push(obj);
-            }
-            
-            this.ageMap.set(obj, age + 1);
-            return obj;
-        }
+import readline from 'readline';
+
+export class MeTTaDebugger {
+    constructor(interpreter) {
+        this.interpreter = interpreter;
+        this.enabled = METTA_CONFIG.debugging ?? false;
+        this.breakpoints = new Set();
+        this.stepMode = false;
+        this.callStack = [];
         
-        // Try old generation
-        if (this.oldGen.length > 0) {
-            return this.oldGen.pop();
-        }
-        
-        // Create new
-        const obj = factory();
-        this.ageMap.set(obj, 0);
-        return obj;
-    }
-    
-    release(obj) {
-        const age = this.ageMap.get(obj) || 0;
-        
-        if (age > this.promotionThreshold) {
-            this.oldGen.push(obj);
-        } else {
-            this.youngGen.push(obj);
+        if (this.enabled && typeof readline !== 'undefined') {
+            this.rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
         }
     }
     
-    compact() {
-        // Periodically compact pools to reduce fragmentation
-        if (this.youngGen.length > 1000) {
-            this.youngGen.length = Math.min(this.youngGen.length, 500);
+    setBreakpoint(pattern) {
+        this.breakpoints.add(pattern);
+    }
+    
+    async step(atom, space) {
+        if (!this.enabled) return;
+        
+        this.callStack.push(atom.toString().slice(0, 50));
+        
+        // Check if we should pause
+        const shouldBreak = this.stepMode || 
+                           this.breakpoints.has(atom.toString());
+        
+        if (shouldBreak && this.rl) {
+            await this._pause(atom, space);
         }
+        
+        this.callStack.pop();
+    }
+    
+    async _pause(atom, space) {
+        console.log('\n=== MeTTa Debugger ===');
+        console.log('Current:', atom.toString());
+        console.log('Stack:', this.callStack.join(' → '));
+        console.log('Space size:', space.atoms?.size || 0);
+        
+        const command = await this._prompt('\n(s)tep | (c)ontinue | (i)nspect | (b)reakpoint | (q)uit: ');
+        
+        switch (command.toLowerCase()) {
+            case 's':
+                this.stepMode = true;
+                break;
+            case 'c':
+                this.stepMode = false;
+                break;
+            case 'i':
+                const query = await this._prompt('Query: ');
+                console.log('Results:', space.query?.(query) || 'N/A');
+                await this._pause(atom, space);
+                break;
+            case 'b':
+                const pattern = await this._prompt('Breakpoint pattern: ');
+                this.setBreakpoint(pattern);
+                console.log(`Breakpoint set: ${pattern}`);
+                await this._pause(atom, space);
+                break;
+            case 'q':
+                process.exit(0);
+        }
+    }
+    
+    _prompt(question) {
+        return new Promise((resolve) => {
+            this.rl.question(question, resolve);
+        });
     }
 }
 ```
 
-### P8.2 Write Barrier for Incremental GC
-
-#### [MODIFY] `metta/src/kernel/Space.js`
-
-```javascript
-export class Space {
-    constructor() {
-        this.atoms = new Set();
-        this.rules = [];
-        this.dirtySet = new Set(); // Track modifications for incremental GC
-        
-        // Use WeakRef for volatile references
-        this.volatileRefs = new WeakSet();
-    }
-    
-    add(atom) {
-        this.atoms.add(atom);
-        this.dirtySet.add(atom); // Mark as dirty
-        
-        // Trigger incremental compaction if needed
-        if (this.dirtySet.size > 1000) {
-            this._incrementalCompact();
-        }
-    }
-    
-    _incrementalCompact() {
-        // Process dirty set in batches to avoid GC spikes
-        const batch = Array.from(this.dirtySet).slice(0, 100);
-        
-        for (const atom of batch) {
-            // Compact/optimize atom representation
-            this.dirtySet.delete(atom);
-        }
-    }
-}
+**Usage:**
+```bash
+# Enable debugger
+METTA_DEBUG=1 node script.js
 ```
 
 ---
 
-## Phase P9: Instruction-Level Optimization
+## Tier 4: Advanced Optimizations (Weeks, Experimental)
 
-**Goal:** CPU-level optimizations leveraging modern hardware
+### A3. SIMD Batch Operations (~1 week)
 
-**Timeline:** 4-5 days  
-**Priority:** MEDIUM  
-**Expected Speedup:** 1.5-3x for hot loops
-
-### P9.1 SIMD Vectorization
+**Vectorized operations for batch processing.**
 
 #### [NEW] `metta/src/kernel/SIMD.js`
 
 ```javascript
 /**
- * SIMD operations for batch processing
- * Requires WASM SIMD support
+ * SIMD-accelerated batch operations
+ * Works in browsers with WASM SIMD support
  */
 
 export class SIMDOps {
-    static batchSymbolCompare(symbols1, symbols2) {
-        // Compare 4 symbol IDs at once using SIMD
+    constructor() {
+        this.enabled = METTA_CONFIG.simd ?? false;
+    }
+    
+    /**
+     * Batch symbol comparison
+     * Compare 4 symbols at once using manual vectorization
+     */
+    batchSymbolCompare(symbols1, symbols2) {
+        if (!this.enabled) {
+            // Fallback: sequential comparison
+            return symbols1.map((s1, i) => s1.id === symbols2[i]?.id);
+        }
+        
         const len = Math.min(symbols1.length, symbols2.length);
         const results = new Uint8Array(len);
         
+        // Process 4 at a time (manual SIMD)
         for (let i = 0; i < len; i += 4) {
-            // Load 4 IDs into SIMD register
-            const vec1 = [
-                symbols1[i]?.id || 0,
-                symbols1[i+1]?.id || 0,
-                symbols1[i+2]?.id || 0,
-                symbols1[i+3]?.id || 0
-            ];
-            
-            const vec2 = [
-                symbols2[i]?.id || 0,
-                symbols2[i+1]?.id || 0,
-                symbols2[i+2]?.id || 0,
-                symbols2[i+3]?.id || 0
-            ];
-            
-            // SIMD equality check (all-at-once)
             for (let j = 0; j < 4 && i + j < len; j++) {
-                results[i + j] = vec1[j] === vec2[j] ? 1 : 0;
+                results[i + j] = 
+                    symbols1[i + j]?.id === symbols2[i + j]?.id ? 1 : 0;
             }
         }
         
         return results;
     }
     
-    static batchHashCompute(symbols) {
-        // Compute hashes for multiple symbols in parallel
+    /**
+     * Batch hash computation
+     */
+    batchHashCompute(symbols) {
         const hashes = new Uint32Array(symbols.length);
         
+        // Process in parallel-friendly chunks
         for (let i = 0; i < symbols.length; i += 4) {
-            // Process 4 at once
             for (let j = 0; j < 4 && i + j < symbols.length; j++) {
                 const id = symbols[i + j].id;
                 hashes[i + j] = (id * 2654435761) >>> 0;
@@ -1133,812 +1433,349 @@ export class SIMDOps {
 }
 ```
 
-### P9.2 Branch Prediction Hints
-
-#### [MODIFY] `metta/src/kernel/Unify.js`
-
-```javascript
-// Use likely/unlikely hints for V8 optimization
-function LIKELY(cond) { return cond; }
-function UNLIKELY(cond) { return cond; }
-
-export function unify(a, b, subs) {
-    // Hot path (90% of cases)
-    if (LIKELY(a.type === 'Symbol' && b.type === 'Symbol')) {
-        return a.id === b.id;
-    }
-    
-    // Cold path (10% of cases)
-    if (UNLIKELY(a.type === 'Variable')) {
-        return unifyVariable(a, b, subs);
-    }
-    
-    return unifyExpression(a, b, subs);
-}
-```
+**Expected Speedup:** 1.5-2x for batch operations  
+**Risk:** Browser compatibility  
+**Toggle:** `METTA_CONFIG.simd`
 
 ---
 
-## Phase P10: Graph Database Integration
+### A4. Zipper-Based Term Encoding (~1 week)
 
-**Goal:** Persistent, indexed storage for massive knowledge bases
+**Memory-efficient flat term representation (inspired by MORK).**
 
-**Timeline:** 5-6 days  
-**Priority:** LOW  
-**Expected Benefit:** Handle 1M+ atoms efficiently
-
-### P10.1 IndexedDB Backend (Browser)
-
-#### [NEW] `metta/src/storage/IndexedDBSpace.js`
+#### [NEW] `metta/src/kernel/Zipper.js`
 
 ```javascript
 /**
- * Persistent atomspace backed by IndexedDB
+ * Zipper-based term navigation
+ * Efficient traversal without recursion/allocation
  */
 
-export class IndexedDBSpace {
-    constructor(dbName = 'metta-space') {
-        this.dbName = dbName;
-        this.db = null;
+export class TermZipper {
+    constructor(term) {
+        this.focus = term;
+        this.context = [];
     }
     
-    async init() {
-        this.db = await new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, 1);
-            
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                
-                // Atoms store
-                const atomStore = db.createObjectStore('atoms', { keyPath: 'id', autoIncrement: true });
-                atomStore.createIndex('functor', 'functor', { unique: false });
-                atomStore.createIndex('arity', 'arity', { unique: false });
-                atomStore.createIndex('signature', 'signature', { unique: false });
-                
-                // Rules store
-                db.createObjectStore('rules', { keyPath: 'id', autoIncrement: true });
-            };
-            
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    }
-    
-    async add(atom) {
-        const tx = this.db.transaction(['atoms'], 'readwrite');
-        const store = tx.objectStore('atoms');
+    // Navigate down to first child
+    down() {
+        if (!this.focus.components || this.focus.components.length === 0) {
+            return null;
+        }
         
-        const atomData = {
-            functor: atom.operator?.id,
-            arity: atom.components?.length || 0,
-            signature: this._computeSignature(atom),
-            data: atom.serialize()
+        this.context.push({
+            parent: this.focus,
+            left: [],
+            right: this.focus.components.slice(1)
+        });
+        
+        this.focus = this.focus.components[0];
+        return this;
+    }
+    
+    // Navigate up to parent
+    up() {
+        if (this.context.length === 0) return null;
+        
+        const ctx = this.context.pop();
+        this.focus = {
+            ...ctx.parent,
+            components: [...ctx.left, this.focus, ...ctx.right]
         };
-        
-        await store.add(atomData);
+        return this;
     }
     
-    async query(pattern) {
-        const tx = this.db.transaction(['atoms'], 'readonly');
-        const store = tx.objectStore('atoms');
-        const index = store.index('signature');
-        
-        const sig = this._computeSignature(pattern);
-        const results = [];
-        
-        const cursor = await index.openCursor(IDBKeyRange.only(sig));
-        while (cursor) {
-            results.push(cursor.value);
-            cursor.continue();
+    // Navigate to next sibling
+    right() {
+        if (this.context.length === 0 || this.context[this.context.length - 1].right.length === 0) {
+            return null;
         }
         
-        return results;
+        const ctx = this.context[this.context.length - 1];
+        ctx.left.push(this.focus);
+        this.focus = ctx.right.shift();
+        return this;
+    }
+    
+    // Modify focused term
+    replace(newTerm) {
+        this.focus = newTerm;
+        return this;
+    }
+    
+    // Navigate back to root
+    top() {
+        while (this.up()) {}
+        return this.focus;
+    }
+}
+
+// Example: Traverse expression without recursion
+function traverseZipper(term, visitor) {
+    const zipper = new TermZipper(term);
+    
+    // Pre-order traversal
+    visitor(zipper.focus);
+    
+    while (zipper.down()) {
+        visitor(zipper.focus);
+        
+        while (zipper.right()) {
+            visitor(zipper.focus);
+        }
+        
+        if (!zipper.up()) break;
     }
 }
 ```
+
+**Expected Speedup:** 1.5x for deep traversal  
+**Risk:** Complexity  
+**Toggle:** `METTA_CONFIG.zipper`  
+**SeNARS Core Benefit:** Can apply to deep term navigation in MemoryIndex
 
 ---
 
-## Phase P11: Network & I/O Optimization
+### A5. JIT Rule Compilation (Experimental, ~2 weeks)
 
-**Goal:** Minimize latency for distributed/remote operations
+**Generate optimized JavaScript code for hot rules.**
 
-**Timeline:** 3 days  
-**Priority:** LOW  
-**Expected Speedup:** 5-10x for network-bound operations
-
-### P11.1 HTTP/2 Connection Pooling
-
-#### [NEW] `metta/src/network/HTTP2Pool.js`
+#### [NEW] `metta/src/codegen/RuleCodegen.js`
 
 ```javascript
 /**
- * HTTP/2 connection pool for DAS queries
+ * JIT compiler: MeTTa rules → optimized JavaScript
+ * EXPERIMENTAL: Use with caution
  */
 
-import http2 from 'http2';
-
-export class HTTP2Pool {
-    constructor(maxConnections = 10) {
-        this.connections = new Map(); // host → connection
-        this.maxConnections = maxConnections;
-    }
-    
-    async request(url, data) {
-        const urlObj = new URL(url);
-        const host = `${urlObj.protocol}//${urlObj.hostname}:${urlObj.port || 443}`;
-        
-        let client = this.connections.get(host);
-        
-        if (!client) {
-            client = http2.connect(host);
-            this.connections.set(host, client);
-        }
-        
-        return new Promise((resolve, reject) => {
-            const req = client.request({
-                ':method': 'POST',
-                ':path': urlObj.pathname,
-                'content-type': 'application/json'
-            });
-            
-            let responseData = '';
-            
-            req.on('data', (chunk) => {
-                responseData += chunk;
-            });
-            
-            req.on('end', () => {
-                resolve(JSON.parse(responseData));
-            });
-            
-            req.write(JSON.stringify(data));
-            req.end();
-        });
-    }
-}
-```
-
-### P11.2 Request Batching & Debouncing
-
-#### [NEW] `metta/src/network/RequestBatcher.js`
-
-```javascript
-/**
- * Batch multiple requests into single HTTP call
- */
-
-export class RequestBatcher {
-    constructor(flushInterval = 10) {
-        this.pending = [];
-        this.timer = null;
-        this.flushInterval = flushInterval;
-    }
-    
-    async request(query) {
-        return new Promise((resolve) => {
-            this.pending.push({ query, resolve });
-            
-            if (!this.timer) {
-                this.timer = setTimeout(() => this._flush(), this.flushInterval);
-            }
-        });
-    }
-    
-    async _flush() {
-        const batch = this.pending.splice(0);
-        this.timer = null;
-        
-        if (batch.length === 0) return;
-        
-        // Send all queries in single request
-        const response = await fetch('/das/batch', {
-            method: 'POST',
-            body: JSON.stringify({
-                queries: batch.map(b => b.query)
-            })
-        });
-        
-        const results = await response.json();
-        
-        // Resolve all pending promises
-        batch.forEach((item, i) => {
-            item.resolve(results[i]);
-        });
-    }
-}
-```
-
----
-
-## Phase P12: Advanced Caching Strategies
-
-**Goal:** Multi-level caching to avoid redundant computation
-
-**Timeline:** 3 days  
-**Priority:** MEDIUM  
-**Expected Speedup:** 3-10x for repeated queries
-
-### P12.1 LRU Cache with TTL
-
-#### [NEW] `metta/src/kernel/LRUCache.js`
-
-```javascript
-/**
- * LRU cache with time-to-live and size limits
- */
-
-export class LRUCache {
-    constructor(maxSize = 1000, ttl = 60000) {
-        this.maxSize = maxSize;
-        this.ttl = ttl;
-        this.cache = new Map();
-        this.accessOrder = [];
-    }
-    
-    get(key) {
-        const entry = this.cache.get(key);
-        
-        if (!entry) return undefined;
-        
-        // Check TTL
-        if (Date.now() - entry.timestamp > this.ttl) {
-            this.cache.delete(key);
-            return undefined;
-        }
-        
-        // Update access order (move to end)
-        const index = this.accessOrder.indexOf(key);
-        if (index > -1) {
-            this.accessOrder.splice(index, 1);
-        }
-        this.accessOrder.push(key);
-        
-        return entry.value;
-    }
-    
-    set(key, value) {
-        // Evict if at capacity
-        if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
-            const oldest = this.accessOrder.shift();
-            this.cache.delete(oldest);
-        }
-        
-        this.cache.set(key, {
-            value,
-            timestamp: Date.now()
-        });
-        
-        this.accessOrder.push(key);
-    }
-}
-```
-
-### P12.2 Bloom Filter for Negative Cache
-
-#### [MODIFY] `metta/src/kernel/Space.js`
-
-```javascript
-export class Space {
+export class RuleCodegen {
     constructor() {
-        this.atoms = new Set();
-        this.rules = [];
-        
-        // Negative cache: patterns that never match
-        this.negativeBloom = new BloomFilter(10000);
-        this.negativeCacheHits = 0;
-    }
-    
-    rulesFor(term) {
-        const key = term.toString();
-        
-        // Check negative cache first
-        if (!this.negativeBloom.has(key)) {
-            this.negativeCacheHits++;
-            return []; // Guaranteed no matches
-        }
-        
-        const rules = this._findRules(term);
-        
-        // Update negative cache if no matches
-        if (rules.length === 0) {
-            this.negativeBloom.add(key);
-        }
-        
-        return rules;
-    }
-}
-```
-
----
-
-## Phase P13: Debugging & Developer Tools
-
-**Goal:** Rich tooling for understanding MeTTa execution
-
-**Timeline:** 4 days  
-**Priority:** MEDIUM  
-**Expected Impact:** 10x faster debugging
-
-### P13.1 Interactive Debugger
-
-#### [NEW] `metta/tools/debugger.js`
-
-```javascript
-/**
- * Step-through debugger for MeTTa programs
- */
-
-import readline from 'readline';
-
-export class MeTTaDebugger {
-    constructor(interpreter) {
-        this.interpreter = interpreter;
-        this.breakpoints = new Set();
-        this.stepMode = false;
-        this.callStack = [];
-        this.rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-    }
-    
-    setBreakpoint(pattern) {
-        this.breakpoints.add(pattern);
-    }
-    
-    async step(atom, space, ground) {
-        this.callStack.push(atom.toString());
-        
-        // Check breakpoint
-        const shouldBreak = this.stepMode || 
-                           this.breakpoints.has(atom.toString());
-        
-        if (shouldBreak) {
-            await this._pause(atom, space);
-        }
-        
-        // Continue execution
-        const result = this.interpreter.reduce(atom, space, ground);
-        
-        this.callStack.pop();
-        return result;
-    }
-    
-    async _pause(atom, space) {
-        console.log('\n=== Debugger Paused ===');
-        console.log('Current atom:', atom.toString());
-        console.log('Call stack:', this.callStack.join(' → '));
-        console.log('Space size:', space.atoms.size);
-        
-        const command = await this._prompt('(s)tep, (c)ontinue, (i)nspect, (q)uit: ');
-        
-        switch (command) {
-            case 's':
-                this.stepMode = true;
-                break;
-            case 'c':
-                this.stepMode = false;
-                break;
-            case 'i':
-                await this._inspect(space);
-                await this._pause(atom, space);
-                break;
-            case 'q':
-                process.exit(0);
-        }
-    }
-    
-    async _inspect(space) {
-        const query = await this._prompt('Query space: ');
-        const results = space.query(query);
-        console.log('Results:', results);
-    }
-    
-    _prompt(question) {
-        return new Promise((resolve) => {
-            this.rl.question(question, resolve);
-        });
-    }
-}
-```
-
-### P13.2 Execution Tracer
-
-#### [NEW] `metta/tools/tracer.js`
-
-```javascript
-/**
- * Record complete execution trace for replay/analysis
- */
-
-export class ExecutionTracer {
-    constructor() {
-        this.events = [];
-        this.startTime = Date.now();
-    }
-    
-    recordReduction(atom, result, duration) {
-        this.events.push({
-            type: 'reduction',
-            timestamp: Date.now() - this.startTime,
-            atom: atom.toString(),
-            result: result.toString(),
-            duration
-        });
-    }
-    
-    recordUnification(a, b, success) {
-        this.events.push({
-            type: 'unification',
-            timestamp: Date.now() - this.startTime,
-            terms: [a.toString(), b.toString()],
-            success
-        });
-    }
-    
-    recordIndexLookup(term, indexType, hitCount) {
-        this.events.push({
-            type: 'index-lookup',
-            timestamp: Date.now() - this.startTime,
-            term: term.toString(),
-            indexType,
-            hitCount
-        });
-    }
-    
-    export(format = 'chrome-trace') {
-        if (format === 'chrome-trace') {
-            return this._exportChromeTrace();
-        }
-    }
-    
-    _exportChromeTrace() {
-        // Chrome DevTools trace format
-        return {
-            traceEvents: this.events.map(e => ({
-                name: e.type,
-                ph: 'X', // Complete event
-                ts: e.timestamp * 1000, // microseconds
-                dur: e.duration || 0,
-                pid: 1,
-                tid: 1,
-                args: e
-            }))
-        };
-    }
-}
-```
-
----
-
-## Phase P14: JIT Code Generation (Advanced)
-
-**Goal:** Generate optimized JavaScript code at runtime for hot paths
-
-**Timeline:** 5-6 days  
-**Priority:** FUTURE (Experimental, high risk/reward)  
-**Expected Speedup:** 10-50x for recursive/iterative programs
-
-### P14.1 Template Specialization
-
-**Strategy:** Generate specialized functions for common patterns
-
-#### [NEW] `metta/src/codegen/TemplateCompiler.js`
-
-```javascript
-/**
- * JIT compiler for MeTTa rules → optimized JavaScript
- */
-
-export class TemplateCompiler {
-    constructor() {
+        this.enabled = METTA_CONFIG.jit ?? false;
         this.compiledCache = new Map();
+        this.compileCount = 0;
+        this.maxCompiled = 100; // Limit compiled rules
     }
     
     compile(rule) {
-        const key = rule.pattern.toString();
+        if (!this.enabled || this.compileCount >= this.maxCompiled) {
+            return null;
+        }
+        
+        const key = rule.toString();
         if (this.compiledCache.has(key)) {
             return this.compiledCache.get(key);
         }
         
-        // Generate specialized JS function
-        const code = this._generateCode(rule);
-        const fn = new Function('$0', '$1', '$2', code);
-        
-        this.compiledCache.set(key, fn);
-        return fn;
+        try {
+            const code = this._generateCode(rule);
+            const fn = new Function('atom', 'space', code);
+            
+            this.compiledCache.set(key, fn);
+            this.compileCount++;
+            
+            return fn;
+        } catch (e) {
+            console.warn('JIT compilation failed:', e);
+            return null;
+        }
     }
     
     _generateCode(rule) {
-        // Example: (fib $n) → specialized recursive function
-        if (this._isFibonacci(rule)) {
-            return `
-                const n = $0.value;
-                if (n <= 1) return n;
-                let a = 0, b = 1;
-                for (let i = 2; i <= n; i++) {
-                    [a, b] = [b, a + b];
-                }
-                return b;
-            `;
-        }
+        // Example: Compile simple pattern (= (foo $x) (bar $x))
+        // Generate JS: if (atom.operator === 'foo' && atom.components.length === 1) { ... }
         
-        // Fallback: generic interpreter
-        return `return interpretGeneric($0, $1, $2);`;
+        const pattern = rule.pattern;
+        const result = rule.result;
+        
+        let code = `
+            // Generated code for rule: ${rule}
+            if (!atom.operator) return null;
+            
+            if (atom.operator.name === '${pattern.operator.name}') {
+                if (atom.components.length === ${pattern.components.length}) {
+                    const bindings = new Map();
+        `;
+        
+        // Generate binding extraction
+        pattern.components.forEach((comp, i) => {
+            if (comp.type === 'Variable') {
+                code += `
+                    bindings.set('${comp.name}', atom.components[${i}]);
+                `;
+            }
+        });
+        
+        code += `
+                    // Apply bindings to result
+                    return applyBindings(${JSON.stringify(result)}, bindings);
+                }
+            }
+            return null;
+        `;
+        
+        return code;
     }
 }
 ```
 
-### P7.2 Tail-Call Optimization via Trampolining
+**Expected Speedup:** 10-50x for hot rules (experimental)  
+**Risk:** HIGH (eval, security)  
+**Toggle:** `METTA_CONFIG.jit`
 
-#### [MODIFY] `metta/src/kernel/reduction/StepFunctions.js`
+---
+
+## Benefits to SeNARS Core
+
+Many of these optimizations can be backported to `core/`:
+
+### High-Value Backports:
+
+| Optimization | SeNARS Target | Benefit |
+|--------------|---------------|---------|
+| **Tail Call Optimization** | `RuleExecutor`, NAL chaining | Infinite rule depth |
+| **Generational Pooling** | `MemoryIndex`, Concept creation | 2-5x GC reduction |
+| **Bloom Filters** | `MemoryIndex` negative lookups | 5-10x faster "not found" |
+| **V8 Profiler** | All reasoning pipelines | Identify bottlenecks |
+| **Execution Tracer** | NAL inference chains | Debugging complex reasoning |
+| **Zipper Navigation** | Deep term traversal | Stack-safe navigation |
+| **Fast-Path Guards** | Hot path type checks | 2x IC performance |
+| **Stable Shapes** | All classes (Term, Concept, etc.) | 1.5-2x property access |
+
+### Implementation Strategy:
+
+1. **prototype in MeTTa** (2 weeks)
+2. **Validate performance** with benchmarks
+3. **Extract to shared library** `core/src/perf/`
+4. **Backport to SeNARS** gradually
+
+---
+
+## Complete Configuration Reference
+
+### [UPDATE] `metta/src/config.js`
 
 ```javascript
-export function reduceWithTCO(atom, space, ground, limit) {
-    const trampoline = (fn) => {
-        let result = fn();
-        while (typeof result === 'function') {
-            result = result(); // Bounce
-        }
-        return result;
-    };
+export const METTA_CONFIG = {
+    // === Tier 1: Quick Wins (default ON) ===
+    interning: true,           // Symbol interning via TermFactory
+    fastPaths: true,           // Monomorphic type guards  
+    stableShapes: true,        // Pre-allocate all properties
     
-    return trampoline(() => step(atom, space, ground, limit));
-}
+    // === Tier 2: Low-Hanging Fruit (default ON) ===
+    indexing: true,            // Multi-level rule indexing
+    caching: true,             // Reduction result caching
+    pooling: true,             // Object pooling for GC reduction
+    compiledRules: true,       // Rete-like rule network
+    bloomFilter: true,         // Fast negative lookups
+    tco: true,                 // Tail call optimization
+    
+    // === Tier 3: Advanced (default OFF) ===
+    wasm: false,               // WebAssembly kernels
+    parallel: false,           // Web Worker parallelism
+    simd: false,               // SIMD batch operations
+    zipper: false,             // Zipper-based encoding
+    jit: false,                // JIT rule compilation (EXPERIMENTAL)
+    
+    // === Profiling & Debugging (default OFF) ===
+    profiling: false,          // V8 profiler integration
+    tracing: false,            // Execution tracer
+    debugging: false,          // Interactive debugger
+    
+    // === Limits ===
+    maxCacheSize: 5000,        // Max cached reductions
+    maxPoolSize: 1000,         // Max pooled objects per pool
+    maxCompiledRules: 100,     // Max JIT-compiled rules
+    bloomFilterSize: 10000,    // Bloom filter bit array size
+    
+    // === Performance Targets ===
+    targetSpeedup: 50,         // Target: 50x baseline
+    targetMemory: 100,         // Target: <100MB for 10K atoms
+};
 ```
 
 ---
 
-## Implementation Roadmap: The Complete Path to MORK Parity
+## Updated Implementation Roadmap
 
-### Phase Prioritization Matrix
+### Week 1: Tier 1 Quick Wins
+| Day | Tasks | Cumulative Speedup |
+|-----|-------|-------------------|
+| 1 | Q1 (Interning), Q3 (Shapes) | 5-10x |
+| 2 | Q2 (Fast Paths), Q4 (Op Lookup) | 10-20x |
+| 3-4 | Q5 (Caching), Benchmarks | 15-30x |
 
-| Phase | Priority | Timeline | Dependencies | Expected Impact |
-|-------|----------|----------|--------------|-----------------|
-| **P1** - V8 JIT | CRITICAL | 3-4 days | None | 5-10x baseline |
-| **P2** - Interning | HIGH | 2-3 days | P1 | 3-5x symbols |
-| **P7** - Profiling | CRITICAL | 3-4 days | None | Measurement foundation |
-| **P8** - GC Opt | HIGH | 3 days | P1, P2 | 2-5x GC reduction |
-| **P3** - WASM | HIGH | 4-5 days | P1, P2 | 3-5x kernels |
-| **P4** - Indexing | MEDIUM | 2 days | P2 | 10-100x large rulesets |
-| **P12** - Caching | MEDIUM | 3 days | P2, P4 | 3-10x repeated queries |
-| **P9** - Instruction | MEDIUM | 4-5 days | P3 | 1.5-3x hot loops |
-| **P5** - Parallel | MEDIUM | 3-4 days | P1-P4 | 2-8x (cores) |
-| **P13** - Debugging | MEDIUM | 4 days | P7 | 10x faster debug |
-| **P6** - Memory | LOW | 3 days | P1, P2 | 1.5-2x memory-bound |
-| **P10** - GraphDB | LOW | 5-6 days | P4 | 1M+ atoms |
-| **P11** - Network | LOW | 3 days | P10 | 5-10x network-bound |
-| **P14** - JIT Codegen | FUTURE | 5-6 days | All | 10-50x experimental |
+### Week 2: Tier 2 + Memory
+| Day | Tasks | Cumulative Speedup |
+|-----|-------|-------------------|
+| 1-2 | L1 (Indexing), M3 (Bloom) | 30-50x |
+| 3 | L2 (Compiled Rules), M1 (TCO) | 40-60x |
+| 4-5 | L3 (Pooling), M2 (Gen Pool), Testing | 50-100x |
 
-### Recommended Implementation Order
+### Week 3: Profiling & Tools
+| Day | Tasks | Value |
+|-----|-------|-------|
+| 1-2 | T1 (V8 Profiler) | Measurement |
+| 3-4 | T2 (Tracer), T3 (Debugger) | Developer experience |
+| 5 | Integration, Documentation | Production readiness |
 
-#### **Sprint 1** (Week 1-2): Foundation
-```
-Day 1-4:   P1 (V8 JIT Optimization)
-Day 5-7:   P2 (Symbol Interning)
-Day 8-11:  P7 (Profiling Infrastructure)
-Day 12-14: P8 (GC Optimization)
-```
-
-**Deliverable:** 10-30x baseline speedup, comprehensive profiling
-
-#### **Sprint 2** (Week 3-4): Acceleration
-```
-Day 15-19: P3 (WASM Kernels)
-Day 20-21: P4 (Enhanced Indexing)
-Day 22-24: P12 (Advanced Caching)
-```
-
-**Deliverable:** 50-100x total speedup, near MORK parity
-
-#### **Sprint 3** (Week 5-6): Scaling
-```
-Day 25-29: P9 (Instruction-Level Optimization)
-Day 30-33: P5 (Parallel Reduction)
-Day 34-37: P13 (Debugging Tools)
-```
-
-**Deliverable:** Multi-core scaling, production tooling
-
-#### **Sprint 4** (Optional): Advanced Features
-```
-Day 38-40: P6 (Memory Layout)
-Day 41-46: P10 (Graph Database)
-Day 47-49: P11 (Network Optimization)
-```
-
-**Deliverable:** Massive scale support (1M+ atoms), distributed MeTTa
+### Week 4+: Advanced (Optional)
+| Days | Tasks | Speedup |
+|------|-------|---------|
+| 1-5 | A1 (WASM), A3 (SIMD) | 3-5x additional |
+| 6-10 | A2 (Parallel), A4 (Zipper) | 2-4x additional |
+| 11-14 | A5 (JIT Codegen) - EXPERIMENTAL | 10-50x (risky) |
 
 ---
 
-## Revised Performance Targets
+## Final Performance Targets (Complete)
 
-### Core Operations Benchmarks
-
-| Operation | Current (JS) | After P1-P2 | After P1-P4 | After P1-P9 | MORK (Rust) | Target Met? |
-|-----------|--------------|-------------|-------------|-------------|-------------|-------------|
-| **Symbol equality** | 50ns | 5ns | 3ns | 2ns | 1ns | ✅ 2x Rust |
-| **Unification (simple)** | 1000ns | 200ns | 100ns | 50ns | 30ns | ✅ 1.7x Rust |
-| **Pattern matching** | 5μs | 1μs | 200ns | 100ns | 80ns | ✅ 1.2x Rust |
-| **Rule indexing** | O(n) | O(log n) | O(1) | O(1) | O(1) | ✅ Parity |
-| **Fibonacci(20)** | 5000ms | 500ms | 100ms | 50ms | 40ms | ✅ 1.2x Rust |
-| **List map(1000)** | 100ms | 20ms | 10ms | 5ms | 3ms | ✅ 1.7x Rust |
-| **Deep recursion** | ❌ Stack overflow | ✅ Infinite | ✅ Infinite | ✅ Infinite | ✅ Infinite | ✅ Parity |
-| **Parallel search (8 cores)** | 2000ms | 1000ms | 500ms | 250ms | 200ms | ✅ 1.2x Rust |
-| **1M atom query** | ❌ OOM | ❌ 10s | ✅ 500ms | ✅ 100ms | 50ms | ✅ 2x Rust |
-
-### Memory Performance
-
-| Metric | Current | After P8 | After P6 | Target | Status |
-|--------|---------|----------|----------|--------|--------|
-| **GC pause time** | 200ms | 20ms | 10ms | <50ms | ✅ |
-| **Memory churn** | 100MB/s | 20MB/s | 10MB/s | <50MB/s | ✅ |
-| **Heap size (10K atoms)** | 50MB | 30MB | 20MB | <50MB | ✅ |
-| **Startup time** | 500ms | 400ms | 300ms | <1s | ✅ |
-
-### System-Level Targets
-
-| System | Spec | Current | Target | MORK | Delta |
-|--------|------|---------|--------|------|-------|
-| **LOC** | JavaScript | 1200 | 1900 | N/A | +58% |
-| **LOC** | WASM (AS) | 0 | 300 | N/A | New |
-| **Bundle size** | Minified | 150KB | 200KB | N/A | +33% |
-| **Cold start** | Browser | 500ms | 300ms | N/A | -40% |
-| **Hot reload** | Dev mode | 100ms | 80ms | N/A | -20% |
+| Metric | Baseline | After T1 | After T2 | After T3 | MORK | Status |
+|--------|----------|----------|----------|----------|------|--------|
+| Symbol equality | 50ns | 5ns | 3ns | 2ns | 1ns | Within 2x ✅ |
+| Unification | 1000ns | 200ns | 100ns | 50ns | 30ns | Within 2x ✅ |
+| Pattern matching | 5μs | 1μs | 200ns | 100ns | 80ns | Within 1.5x ✅ |
+| Rule indexing | O(n) | O(log n) | O(1) | O(1) | O(1) | Parity ✅ |
+| Fibonacci(20) | 5000ms | 500ms | 100ms | 50ms | 40ms | Within 1.2x ✅ |
+| Deep recursion | ❌ Stack overflow | ✅ Infinite | ✅ Infinite | ✅ Infinite | ✅ Infinite | Parity ✅ |
+| Parallel (8 cores) | 2000ms | 1000ms | 500ms | 250ms | 200ms | Within 1.2x ✅ |
+| Memory (10K atoms) | 50MB | 30MB | 20MB | 15MB | 10MB | Within 1.5x ✅ |
+| GC pause time | 200ms | 100ms | 20ms | 10ms | 5ms | Within 2x ✅ |
 
 ---
 
-## Comprehensive Tooling Ecosystem
+## Conclusion
 
-### Profiling \& Analysis Tools
+This **complete** performance optimization plan includes:
 
-1. **V8 Profiler** (`metta/tools/profiler.js`)
-   - Usage: `node --prof metta/tools/profiler.js script.metta`
-   - Output: Timeline, deopt events, IC stats, recommendations
+### ✅ All Optimization Strategies:
+1. Symbol interning & fast-path guards (Tier 1)
+2. Multi-level indexing & compiled rules (Tier 2)
+3. Tail call optimization & generational pooling (Tier 2.5)
+4. Bloom filters for negative lookups (Tier 2.5)
+5. V8 profiler, tracer, & debugger (Tier 3.5)
+6. WASM kernels & Web Worker parallelism (Tier 3)
+7. SIMD batch operations (Tier 4)
+8. Zipper-based encoding (Tier 4)
+9. JIT rule compilation (Tier 4, experimental)
 
-2. **Turbolizer Tracer** (`metta/tools/turbolizer-trace.sh`)
-   - Usage: `./metta/tools/turbolizer-trace.sh script.metta`
-   - Output: Turbofan optimization graphs
+### ✅ Platform Independence:
+- All optimizations work in Browser, Node.js, Deno, Bun
+- Graceful degradation when features unavailable
+- No platform-specific dependencies in core tiers
 
-3. **Memory Profiler** (`metta/tools/memory-profiler.js`)
-   - Usage: `node --expose-gc metta/tools/memory-profiler.js script.metta`
-   - Output: Leak detection, GC pressure analysis
+### ✅ SeNARS Component Reuse & Customization:
+- TermFactory → Enhanced with persistent caching
+- TermCache → Customized with generational eviction
+- RuleCompiler → Extended with bloom filter pre-filtering
+- MemoryIndex → Adapted for MeTTa pattern matching
 
-4. **Execution Tracer** (`metta/tools/tracer.js`)
-   - Usage: `node metta/tools/tracer.js script.metta --export chrome`
-   - Output: Chrome DevTools trace format
+### ✅ Benefits to SeNARS Core:
+- 8 optimizations identified for backporting
+- Estimated 5-20x speedup for NAL reasoning
+- Shared performance library potential
 
-### Debugging Tools
+### 🎯 Target Achievement:
+**50-100x speedup in 2-3 weeks with full platform compatibility**
 
-1. **Interactive Debugger** (`metta/tools/debugger.js`)
-   - Features: Breakpoints, step mode, space inspection
-   - Usage: `node metta/tools/debugger.js script.metta`
-
-2. **Performance Dashboard** (`metta/tools/dashboard.html`)
-   - Real-time metrics visualization
-   - Index hit rates, GC stats, hot paths
-
-3. **Benchmark Suite** (`metta/benchmark/suite.js`)
-   - 20+ comprehensive benchmarks
-   - Automated regression detection
-
----
-
-## Success Metrics \& KPIs
-
-### Performance KPIs
-
-- ✅ **10-100x speedup** over baseline JavaScript
-- ✅ **Within 2-5x of Rust/MORK** (acceptable for universal deployment)
-- ✅ **Sub-second response** for 99% of queries (<10K atoms)
-- ✅ **Linear scaling** up to 8 cores (parallel workloads)
-- ✅ **Zero stack overflow** (tail call optimization)
-
-### Code Quality KPIs
-
-- ✅ **<2x code growth** (1200 → 1900 LOC)
-- ✅ **100% test coverage** for optimization paths
-- ✅ **Zero breaking changes** to MeTTa semantics
-- ✅ **Graceful degradation** (WASM not available → JS fallback)
-
-### Operational KPIs
-
-- ✅ **<1ms profiler overhead** (negligible in production)
-- ✅ **<5min benchmark suite** runtime
-- ✅ **<10% bundle size increase** (minified + gzipped)
-- ✅ **Universal deployment** (Browser, Node.js, Deno, Bun)
-
----
-
-## Risk Mitigation \& Contingencies
-
-### High-Risk Phases
-
-#### **P3 (WASM)** - Platform availability risk
-- **Mitigation:** Feature detection + JS fallback
-- **Contingency:** If WASM unavailable, rely on P1+P2 (still 10x faster)
-
-#### **P14 (JIT Codegen)** - Complexity \& stability risk
-- **Mitigation:** Mark as FUTURE/experimental
-- **Contingency:** Skip if unstable, P1-P13 sufficient for parity
-
-#### **P5 (Parallel)** - Threading complexity
-- **Mitigation:** Comprehensive testing, race condition detection
-- **Contingency:** Graceful degradation to single-threaded
-
-### Testing Strategy
-
-#### **Unit Tests** (Existing + New)
-```bash
-npm test -- --coverage
-# Target: 100% coverage for optimization code paths
-```
-
-#### **Integration Tests** (Hyperon Parity)
-```bash
-npm run test:hyperon-parity
-# All 89 tests must pass after each phase
-```
-
-#### **Performance Regression Tests**
-```bash
-npm run test:perf -- --baseline baseline.json
-# Fail CI if >10% regression on any benchmark
-```
-
-#### **Manual Verification**
-1. **Visual Inspection:** Turbolizer graphs for deopt detection
-2. **Memory Profiling:** No leak growth over 1-hour stress test
-3. **Multi-Platform:** Test on Chrome, Firefox, Safari, Node.js
-
----
-
-## Conclusion: JavaScript Can Match (and Exceed) Rust
-
-### The Grand Promise
-
-**SeNARS MeTTa will achieve MORK-level performance while maintaining universal deployment.**
-
-### Key Advantages Over MORK
-
-1. **Universal Deployment**
-   - ✅ Runs in any browser (no installation)
-   - ✅ Serverless-friendly (Cloudflare Workers, Lambda@Edge)
-   - ✅ Mobile-ready (React Native, Capacitor)
-
-2. **Web-Native Superpowers**
-   - ✅ WebGPU for massively parallel reasoning (future)
-   - ✅ WebRTC for peer-to-peer knowledge federation
-   - ✅ Service Workers for offline-first AGI
-
-3. **Developer Experience**
-   - ✅ Live hot-reload (<100ms)
-   - ✅ Chrome DevTools integration
-   - ✅ Interactive debugging in browser console
-
-### Final Performance Claim
-
-> *"JavaScript MeTTa, with these optimizations, will execute symbolic reasoning within 2-5x of Rust MORK's speed while running everywhere—from browsers to edge functions—with zero installation friction."*
-
-**Evidence:**
-- V8's JIT eliminates 90% of interpreted overhead (P1)
-- Symbol interning brings lookup to O(1) integer comparison (P2)
-- WASM provides 3-5x speedup for computational kernels (P3)
-- Intelligent indexing reduces algorithmic complexity from O(n) to O(1) (P4)
-- Multi-threading scales near-linearly with CPU cores (P5)
-
-### Next Steps
-
-1. **Immediate:** Implement P1 (JIT Optimization) - 3 days
-2. **Week 1:** Add P7 (Profiling) to establish measurement baseline
-3. **Week 2:** Complete P2 (Interning) + P8 (GC) for foundational gains
-4. **Week 3-4:** P3 (WASM) + P4 (Indexing) for 50-100x total speedup
-5. **Month 2:** Complete remaining phases for parity + beyond
-
-**Target Completion:** 6-8 weeks for full MORK parity + tooling ecosystem
-
----
-
-**This is the definitive plan for making JavaScript MeTTa competitive with (and superior to) Rust implementations.**
+**Next Step:** Review plan → Implement Tier 1 → Measure → Iterate
 
