@@ -4,7 +4,7 @@ import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
 import { CommandProcessor } from './command/CommandProcessor.js';
-import { categorizeMessage } from './repl/MessageFilter.js';
+import { categorizeMessage } from './notebook/MessageFilter.js';
 import { ThemeManager } from './components/ThemeManager.js';
 import { Logger } from './logging/Logger.js';
 import { StatusBar } from './components/StatusBar.js';
@@ -97,7 +97,7 @@ class SeNARSIDE {
     }
 
     getNotebook() {
-        return this.components.get('repl')?.notebookManager;
+        return this.components.get('notebook')?.notebookManager;
     }
 
     async switchMode(mode) {
@@ -117,7 +117,7 @@ class SeNARSIDE {
         if (this.commandProcessor) {
             this.commandProcessor.connection = this.connection;
         } else {
-            // Check if we have a repl panel to hook logger
+            // Check if we have a repl panel to hook logger (now NotebookPanel)
             this.commandProcessor = new CommandProcessor(this.connection, this.logger, this.graphManager);
         }
 
@@ -162,7 +162,7 @@ class SeNARSIDE {
         if (message.type === 'lm:prompt:complete') this.lmActivityIndicator?.hide();
         if (message.type === 'lm:error') this.lmActivityIndicator?.showError(message.payload?.error);
 
-        // 2. Notebook / REPL Handling
+        // 2. Notebook Handling
         const notebook = this.getNotebook();
         if (notebook) {
             if (message.type === 'visualization') {
@@ -224,8 +224,8 @@ class SeNARSIDE {
     }
 
     updateStats() {
-        const repl = this.components.get('repl');
-        repl?.replInput?.updateCycles(this.cycleCount);
+        const notebook = this.components.get('notebook');
+        notebook?.notebookInput?.updateCycles(this.cycleCount);
 
         this.statusBar?.updateStats({
             cycles: this.cycleCount,

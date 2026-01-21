@@ -1,4 +1,4 @@
-export class REPLCell {
+export class Cell {
     constructor(type, content = '') {
         this.id = `cell-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         this.type = type;
@@ -8,7 +8,7 @@ export class REPLCell {
     }
 
     render() {
-        throw new Error('REPLCell.render() must be implemented by subclass');
+        throw new Error('Cell.render() must be implemented by subclass');
     }
 
     destroy() {

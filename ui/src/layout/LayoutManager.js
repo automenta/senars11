@@ -3,7 +3,7 @@ import { GraphPanel } from '../components/GraphPanel.js';
 import { MemoryInspector } from '../components/MemoryInspector.js';
 import { DerivationTree } from '../components/DerivationTree.js';
 import { SystemMetricsPanel } from '../components/SystemMetricsPanel.js';
-import { REPLPanel } from '../components/REPLPanel.js';
+import { NotebookPanel } from '../components/NotebookPanel.js';
 import { ExampleBrowser } from '../components/ExampleBrowser.js';
 import { LMActivityIndicator } from '../components/LMActivityIndicator.js';
 import { LayoutPresets } from '../config/LayoutPresets.js';
@@ -32,7 +32,8 @@ export class LayoutManager {
 
     _registerComponents() {
         const factories = {
-            replComponent: (c) => this._createREPLComponent(c),
+            notebookComponent: (c) => this._createNotebookComponent(c),
+            replComponent: (c) => this._createNotebookComponent(c), // Legacy alias
             graphComponent: (c) => this._createGraphComponent(c),
             memoryComponent: (c) => this._createMemoryComponent(c),
             derivationComponent: (c) => this._createDerivationComponent(c),
@@ -60,10 +61,10 @@ export class LayoutManager {
         });
     }
 
-    _createREPLComponent(container) {
-        const replPanel = new REPLPanel(container.element);
-        replPanel.initialize(this.app);
-        this.app.registerComponent('repl', replPanel);
+    _createNotebookComponent(container) {
+        const panel = new NotebookPanel(container.element);
+        panel.initialize(this.app);
+        this.app.registerComponent('notebook', panel);
         this.app.updateStats();
     }
 

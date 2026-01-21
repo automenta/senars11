@@ -1,14 +1,14 @@
 import { Component } from './Component.js';
-import { NotebookManager } from '../repl/NotebookManager.js';
-import { REPLInput } from '../repl/REPLInput.js';
-import { MessageFilter } from '../repl/MessageFilter.js';
-import { FilterToolbar } from '../repl/FilterToolbar.js';
+import { NotebookManager } from '../notebook/NotebookManager.js';
+import { NotebookInput } from '../notebook/NotebookInput.js';
+import { MessageFilter } from '../notebook/MessageFilter.js';
+import { FilterToolbar } from '../notebook/FilterToolbar.js';
 
-export class REPLPanel extends Component {
+export class NotebookPanel extends Component {
     constructor(container) {
         super(container);
         this.notebookManager = null;
-        this.replInput = null;
+        this.notebookInput = null;
         this.messageFilter = new MessageFilter();
         this.filterToolbar = null;
         this.app = null;
@@ -19,11 +19,11 @@ export class REPLPanel extends Component {
         this.render();
         this.setupLoggerAdapter();
         this.setupEventListeners();
-        console.log('REPLPanel initialized');
+        console.log('NotebookPanel initialized');
     }
 
     setupEventListeners() {
-        document.addEventListener('senars:repl:add-cell', (e) => {
+        document.addEventListener('senars:notebook:add-cell', (e) => {
             const { type, content } = e.detail;
             if (type === 'code') this.notebookManager.createCodeCell(content);
             else if (type === 'markdown') this.notebookManager.createMarkdownCell(content);
@@ -34,7 +34,7 @@ export class REPLPanel extends Component {
         if (!this.container) return;
 
         this.container.innerHTML = '';
-        this.container.className = 'repl-panel-container';
+        this.container.className = 'notebook-panel-container';
 
         // 1. Toolbar
         const toolbarContainer = document.createElement('div');
@@ -55,14 +55,14 @@ export class REPLPanel extends Component {
 
         // 3. Input Area
         const inputContainer = document.createElement('div');
-        this.replInput = new REPLInput(inputContainer, {
+        this.notebookInput = new NotebookInput(inputContainer, {
             onExecute: (cmd) => this.handleExecution(cmd),
             onClear: () => this.notebookManager.clear(),
             onDemo: () => this.showDemoSelector(),
             onExtraAction: (action) => this.handleExtraAction(action),
             onControl: (action) => this.controlReasoner(action)
         });
-        this.replInput.render();
+        this.notebookInput.render();
         this.container.appendChild(inputContainer);
     }
 
@@ -102,7 +102,7 @@ export class REPLPanel extends Component {
 
         stateActions[action]?.();
 
-        this.replInput.updateState(this.app.isRunning);
+        this.notebookInput.updateState(this.app.isRunning);
         this.app.updateStats();
     }
 
@@ -170,6 +170,6 @@ export class REPLPanel extends Component {
         };
 
         this.app.logger.logViewer = adapter;
-        console.log('Logger adapter installed in REPLPanel');
+        console.log('Logger adapter installed in NotebookPanel');
     }
 }

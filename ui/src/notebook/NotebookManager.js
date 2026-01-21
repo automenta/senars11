@@ -9,7 +9,7 @@ import { NotebookGraphView } from './views/NotebookGraphView.js';
 import { NotebookGridView } from './views/NotebookGridView.js';
 
 /**
- * Notebook manager for REPL cells
+ * Notebook manager for Notebook cells
  */
 export class NotebookManager {
     constructor(container, options = {}) {

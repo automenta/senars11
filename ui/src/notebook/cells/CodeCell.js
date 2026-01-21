@@ -1,4 +1,4 @@
-import { REPLCell } from './REPLCell.js';
+import { Cell } from './Cell.js';
 import { Toolbar } from '../../components/ui/Toolbar.js';
 import { SmartTextarea } from '../SmartTextarea.js';
 import { NarseseHighlighter } from '../../utils/NarseseHighlighter.js';
@@ -7,7 +7,7 @@ import { Modal } from '../../components/ui/Modal.js';
 /**
  * Code cell for user input
  */
-export class CodeCell extends REPLCell {
+export class CodeCell extends Cell {
     constructor(content = '', onExecute = null) {
         super('code', content);
         this.onExecute = onExecute;

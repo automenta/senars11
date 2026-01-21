@@ -1,10 +1,10 @@
-import { REPLCell } from './REPLCell.js';
+import { Cell } from './Cell.js';
 import { marked } from 'marked';
 
 /**
  * Markdown cell for documentation
  */
-export class MarkdownCell extends REPLCell {
+export class MarkdownCell extends Cell {
     constructor(content = '') {
         super('markdown', content);
         this.isEditing = false;

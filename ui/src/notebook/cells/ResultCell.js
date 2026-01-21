@@ -1,4 +1,4 @@
-import { REPLCell } from './REPLCell.js';
+import { Cell } from './Cell.js';
 import { VIEW_MODES, MESSAGE_CATEGORIES } from '../MessageFilter.js';
 import { ConceptCard } from '../../components/ConceptCard.js';
 import { TaskCard } from '../../components/TaskCard.js';
@@ -8,7 +8,7 @@ import { Modal } from '../../components/ui/Modal.js';
 /**
  * Result cell for output display
  */
-export class ResultCell extends REPLCell {
+export class ResultCell extends Cell {
     constructor(content, category = 'result', viewMode = VIEW_MODES.FULL) {
         super('result', content);
         this.category = category;
