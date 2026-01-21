@@ -297,8 +297,9 @@ export class BaseComponent {
         }, options);
     }
 
-    _emitIntrospectionEvent(eventName, payload) {
-        this._config.introspection?.enabled &&
+    _emitIntrospectionEvent(eventName, payloadOrFn) {
+        if (!this._config.introspection?.enabled) return;
+        const payload = typeof payloadOrFn === 'function' ? payloadOrFn() : payloadOrFn;
         this._eventBus.emit(eventName, createEventPayload(this._name, payload));
     }
 

@@ -44,7 +44,7 @@ export class StreamReasoner extends BaseComponent {
                 const derivations = this.ruleProcessor.processSyncRule(rule, task, belief);
                 for (const derived of derivations) {
                     this.memory.addTask(derived);
-                    this._emitIntrospectionEvent(IntrospectionEvents.REASONING_DERIVATION, {task: derived.serialize()});
+                    this._emitIntrospectionEvent(IntrospectionEvents.REASONING_DERIVATION, () => ({task: derived.serialize()}));
                     // Emit legacy event for tests
                     if (this.eventBus) {
                         this.eventBus.emit('reasoning.derivation', derived);

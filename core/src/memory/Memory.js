@@ -112,7 +112,7 @@ export class Memory extends BaseComponent {
 
         const added = concept.addTask(task);
         if (added) {
-            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, {task: task.serialize()});
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_TASK_ADDED, () => ({task: task.serialize()}));
             this._stats.totalTasks++;
             this._resourceManager.updateResourceUsage(concept, 1);
 
@@ -137,7 +137,7 @@ export class Memory extends BaseComponent {
         this._concepts.set(term, concept);
         this._index.addConcept(concept);
         this._stats.totalConcepts++;
-        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_CREATED, {concept: concept.serialize()});
+        this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_CREATED, () => ({concept: concept.serialize()}));
         return concept;
     }
 
@@ -147,7 +147,7 @@ export class Memory extends BaseComponent {
         const concept = this._concepts.get(term) || this._findConceptByEquality(term);
 
         if (concept) {
-            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, {concept: concept.serialize()});
+            this._emitIntrospectionEvent(IntrospectionEvents.MEMORY_CONCEPT_ACCESSED, () => ({concept: concept.serialize()}));
         }
 
         return concept;
