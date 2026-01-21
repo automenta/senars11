@@ -13,23 +13,7 @@ export class DerivationTree extends Component {
         if (!this.container) return;
 
         this.container.innerHTML = '';
-        this.container.style.cssText = 'width: 100%; height: 100%; overflow: hidden;';
-
-        const style = document.createElement('style');
-        style.textContent = `
-            .dt-container { display: flex; width: 100%; height: 100%; }
-            .dt-sidebar { width: 200px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: var(--bg-panel); flex-shrink: 0; }
-            .dt-main { flex: 1; position: relative; background: var(--bg-graph, #1e1e1e); }
-            .dt-history-list { overflow-y: auto; flex: 1; }
-            .dt-history-item { padding: 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); transition: background 0.1s; }
-            .dt-history-item:hover { background: rgba(255,255,255,0.05); }
-            .dt-history-item.active { background: rgba(0,255,157,0.1); border-left: 2px solid var(--accent-primary); color: var(--text-main); }
-            .dt-rule { color: var(--accent-secondary); font-weight: bold; margin-bottom: 2px; }
-            .dt-term { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            .dt-time { font-size: 10px; opacity: 0.7; }
-            .dt-toolbar { padding: 4px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; }
-        `;
-        this.container.appendChild(style);
+        this.container.className = 'dt-wrapper';
 
         const wrapper = document.createElement('div');
         wrapper.className = 'dt-container';
