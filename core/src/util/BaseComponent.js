@@ -287,8 +287,13 @@ export class BaseComponent {
     }
 
     // Event emission
-    emitEvent(event, data, options = {}) {
+    emitEvent(event, dataOrFn, options = {}) {
+        if (this._eventBus.hasSubscribers && !this._eventBus.hasSubscribers(event)) {
+            return;
+        }
+
         const currentTime = Date.now();
+        const data = typeof dataOrFn === 'function' ? dataOrFn() : dataOrFn;
         this._eventBus.emit(event, {
             timestamp: currentTime,
             component: this._name,

@@ -341,7 +341,7 @@ export class NAR extends BaseComponent {
         this._setupStreamMonitoring(options);
 
         this._eventBus.emit(IntrospectionEvents.SYSTEM_START, { timestamp: Date.now() }, { traceId: options.traceId });
-        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_START, { timestamp: Date.now() });
+        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_START, () => ({ timestamp: Date.now() }));
         this.logInfo(`NAR started successfully with stream-based reasoning`);
         return true;
     }
@@ -387,7 +387,7 @@ export class NAR extends BaseComponent {
         this._stopComponentsAsync();
 
         this._eventBus.emit(IntrospectionEvents.SYSTEM_STOP, { timestamp: Date.now() }, { traceId: options.traceId });
-        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_STOP, { timestamp: Date.now() });
+        this._emitIntrospectionEvent(IntrospectionEvents.SYSTEM_STOP, () => ({ timestamp: Date.now() }));
         this.logInfo(`NAR stopped successfully (stream-based reasoning)`);
         return true;
     }

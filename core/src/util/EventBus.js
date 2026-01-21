@@ -133,6 +133,12 @@ export class EventBus {
         return !!(handlers?.length || handlers?.size);
     }
 
+    hasSubscribers(eventName) {
+        return this._middleware.length > 0 ||
+            this.hasListeners(eventName) ||
+            this.hasListeners('*');
+    }
+
     listenerCount(eventName) {
         const handlers = this._emitter.all.get(eventName);
         return handlers?.length || handlers?.size || 0;

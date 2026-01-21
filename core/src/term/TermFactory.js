@@ -85,11 +85,11 @@ export class TermFactory extends BaseComponent {
         const cachedTerm = this._cache.get(name);
 
         if (cachedTerm) {
-            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, { termName: name });
+            this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_HIT, () => ({ termName: name }));
             return cachedTerm;
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, { termName: name });
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CACHE_MISS, () => ({ termName: name }));
         const term = this._createAndCache(operator, normalizedComponents, name);
         this._calculateComplexityMetrics(term, normalizedComponents);
         this._cognitiveDiversity.registerTerm(term);
@@ -210,7 +210,7 @@ export class TermFactory extends BaseComponent {
             this._cognitiveDiversity.unregisterTerm(evictedKey);
         }
 
-        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, { termName: name });
+        this._emitIntrospectionEvent(IntrospectionEvents.TERM_CREATED, () => ({ termName: name }));
         return term;
     }
 
