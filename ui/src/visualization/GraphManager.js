@@ -137,6 +137,14 @@ export class GraphManager {
         this.cy.animate({ center: {elt: node}, zoom: this.cy.zoom() }, { duration: 200 });
     }
 
+    setCommandProcessor(commandProcessor) {
+        if (!commandProcessor) return;
+        this.callbacks.commandProcessor = commandProcessor;
+        if (!this.contextMenu) {
+            this.contextMenu = new ContextMenu(this, commandProcessor);
+        }
+    }
+
     initialize() {
         if (!this.uiElements?.graphContainer) {
             console.error('Graph container element not found');
@@ -161,7 +169,7 @@ export class GraphManager {
         this.keyboardNav.initialize(this.uiElements.graphContainer);
 
         if (this.callbacks.commandProcessor) {
-            this.contextMenu = new ContextMenu(this, this.callbacks.commandProcessor);
+            this.setCommandProcessor(this.callbacks.commandProcessor);
         }
 
         this._setupOverlayControls();

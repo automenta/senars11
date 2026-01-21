@@ -155,7 +155,10 @@ class SeNARSIDE {
         this.components.set('graph', panel);
         this.graphManager = panel.graphManager;
 
-        if (this.commandProcessor) this.commandProcessor.graphManager = this.graphManager;
+        if (this.commandProcessor) {
+            this.commandProcessor.graphManager = this.graphManager;
+            this.graphManager.setCommandProcessor(this.commandProcessor);
+        }
 
         // Initialize LM Activity Indicator on Graph Container
         if (panel.container) {
@@ -229,7 +232,11 @@ class SeNARSIDE {
         } else {
             // Check if we have a repl panel to hook logger
             this.commandProcessor = new CommandProcessor(this.connection, this.logger, this.graphManager);
-            // Wait, CommandProcessor expects (connection, logger). REPLPanel hooks into this.logger.
+        }
+
+        // Ensure GraphManager has access to CommandProcessor (for ContextMenu)
+        if (this.graphManager && this.commandProcessor) {
+            this.graphManager.setCommandProcessor(this.commandProcessor);
         }
 
         this.updateModeIndicator();
