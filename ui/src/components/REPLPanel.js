@@ -90,12 +90,17 @@ export class REPLPanel extends Component {
         this.app.connection.sendMessage(`control/${action}`, {});
         this.notebookManager.createResultCell(`🎛️ Reasoner ${action}`, 'system');
 
-        if (action === 'start') this.app.isRunning = true;
-        else if (action === 'stop' || action === 'pause') this.app.isRunning = false;
-        else if (action === 'reset') {
-            this.app.cycleCount = 0;
-            this.app.messageCount = 0;
-        }
+        const stateActions = {
+            start: () => { this.app.isRunning = true; },
+            stop: () => { this.app.isRunning = false; },
+            pause: () => { this.app.isRunning = false; },
+            reset: () => {
+                this.app.cycleCount = 0;
+                this.app.messageCount = 0;
+            }
+        };
+
+        stateActions[action]?.();
 
         this.replInput.updateState(this.app.isRunning);
         this.app.updateStats();
@@ -132,16 +137,21 @@ export class REPLPanel extends Component {
     setupLoggerAdapter() {
         if (!this.app?.logger) return;
 
+        const categoryMap = {
+            result: 'result',
+            thought: 'reasoning',
+            debug: 'debug',
+            error: 'system',
+            warning: 'system',
+            info: 'system',
+            input: 'user-input',
+            metric: 'metric'
+        };
+
         const adapter = {
             addLog: (content, type) => {
-                let category = 'system';
-                if (type === 'result') category = 'result';
-                else if (type === 'thought') category = 'reasoning';
-                else if (type === 'debug') category = 'debug';
-                else if (['error', 'warning', 'info'].includes(type)) category = 'system';
-                else if (type === 'input') category = 'user-input';
-                else if (type === 'metric') category = 'metric';
-                else if (type.includes('reasoning') || type.includes('inference')) category = 'reasoning';
+                let category = categoryMap[type] || 'system';
+                if (type.includes('reasoning') || type.includes('inference')) category = 'reasoning';
 
                 const viewMode = this.messageFilter.getCategoryMode(category);
                 this.notebookManager.createResultCell(content, category, viewMode);
