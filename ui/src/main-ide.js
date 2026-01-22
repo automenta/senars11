@@ -4,12 +4,12 @@ import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
 import { CommandProcessor } from './command/CommandProcessor.js';
-import { categorizeMessage } from './notebook/MessageFilter.js';
 import { ThemeManager } from './components/ThemeManager.js';
 import { Logger } from './logging/Logger.js';
 import { StatusBar } from './components/StatusBar.js';
 import { DemoLibraryModal } from './components/DemoLibraryModal.js';
 import { LayoutManager } from './layout/LayoutManager.js';
+import { MessageRouter } from './messaging/MessageRouter.js';
 
 cytoscape.use(fcose);
 window.cytoscape = cytoscape;
@@ -17,6 +17,7 @@ window.cytoscape = cytoscape;
 class SeNARSIDE {
     constructor() {
         this.layoutManager = new LayoutManager(this, 'layout-root');
+        this.messageRouter = new MessageRouter(this);
         this.connection = null;
         this.connectionMode = 'local';
         this.components = new Map();
@@ -110,7 +111,7 @@ class SeNARSIDE {
 
         await this.connection.connect(mode === 'remote' ? this.serverUrl : undefined);
 
-        this.connection.subscribe('*', (message) => this.handleMessage(message));
+        this.connection.subscribe('*', (message) => this.messageRouter.handleMessage(message));
         this.connection.subscribe('connection.status', (status) => this.statusBar?.updateStatus(status));
 
         // Update CommandProcessor with new connection
@@ -150,76 +151,6 @@ class SeNARSIDE {
             if (confirm('Switch to Local Mode?')) {
                 this.switchMode('local');
             }
-        }
-    }
-
-    handleMessage(message) {
-        this.messageCount++;
-        this.updateStats();
-
-        // 1. LM Activities
-        if (message.type === 'lm:prompt:start') this.lmActivityIndicator?.show();
-        if (message.type === 'lm:prompt:complete') this.lmActivityIndicator?.hide();
-        if (message.type === 'lm:error') this.lmActivityIndicator?.showError(message.payload?.error);
-
-        // 2. Notebook Handling
-        const notebook = this.getNotebook();
-        if (notebook) {
-            if (message.type === 'visualization') {
-                const { type, data, content } = message.payload;
-                if (type === 'markdown') {
-                    notebook.createMarkdownCell(content || data);
-                } else if (type === 'graph' || type === 'chart') {
-                     const widgetType = type === 'graph' ? 'GraphWidget' : 'ChartWidget';
-                     notebook.createWidgetCell(widgetType, data);
-                }
-            } else if (message.type === 'ui-command') {
-                const { command, args } = message.payload;
-                const fullCommand = `/${command} ${args}`;
-                this.logger.log(`System requested UI Command: ${fullCommand}`, 'system');
-                this.commandProcessor?.processCommand(fullCommand, true);
-            } else if (message.type === 'agent/prompt') {
-                const { question, id } = message.payload;
-                notebook.createPromptCell(question, (response) => {
-                     this.connection?.sendMessage('agent/response', { id, response });
-                });
-            } else {
-                const category = categorizeMessage(message);
-                if (category !== 'unknown' && category !== 'concept' && category !== 'task' && category !== 'metrics') {
-                     // Log logic here if needed
-                }
-            }
-        }
-
-        // 3. Components Updates
-        try {
-            const graphComp = this.components.get('graph');
-            if (message.type === 'reasoning:concept') graphComp?.graphManager?.updateGraph(message);
-            if (message.type === 'memory:focus:promote') graphComp?.graphManager?.animateGlow(message.payload?.id || message.payload?.nodeId, 1.0);
-            if (message.type === 'concept.created') graphComp?.graphManager?.animateFadeIn(message.payload?.id);
-            graphComp?.update(message);
-
-            const memComp = this.components.get('memory');
-            if (message.type === 'memorySnapshot') memComp?.update(message.payload);
-
-            const derComp = this.components.get('derivation');
-            if (message.type === 'reasoning:derivation') {
-                derComp?.addDerivation(message.payload);
-                graphComp?.graphManager?.handleDerivation?.(message);
-            }
-
-            const metricsComp = this.components.get('metrics');
-            if (message.type === 'metrics:update' || message.type === 'metrics.updated') {
-                metricsComp?.update(message.payload);
-            }
-
-            if (message.payload?.cycle) {
-                this.cycleCount = message.payload.cycle;
-                this.updateStats();
-            }
-
-        } catch (e) {
-            console.error('Error updating components:', e);
         }
     }
 
