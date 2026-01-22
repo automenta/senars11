@@ -156,7 +156,7 @@ class SeNARSIDE {
 
     updateStats() {
         const notebook = this.components.get('notebook');
-        notebook?.notebookInput?.updateCycles(this.cycleCount);
+        notebook?.updateStats({ cycles: this.cycleCount });
 
         this.statusBar?.updateStats({
             cycles: this.cycleCount,
