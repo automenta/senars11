@@ -118,7 +118,73 @@ export class GraphManager {
 
     setLayout(name) {
         if (!this.cy) return;
+        this.currentLayout = name;
         this.cy.layout(Config.getGraphLayout(name)).run();
+    }
+
+    applyScatterLayout(xAxis = 'priority', yAxis = 'confidence') {
+        if (!this.cy) return;
+        this.currentLayout = 'scatter';
+
+        const nodes = this.cy.nodes();
+        const width = this.cy.width() * 0.8;
+        const height = this.cy.height() * 0.8;
+        const padding = 50;
+
+        const getVal = (node, axis) => {
+            const data = node.data('fullData') || {};
+            const truth = data.truth || {};
+            const budget = data.budget || {};
+
+            switch (axis) {
+                case 'priority': return budget.priority || 0;
+                case 'durability': return budget.durability || 0;
+                case 'quality': return budget.quality || 0;
+                case 'frequency': return truth.frequency || 0;
+                case 'confidence': return truth.confidence || 0;
+                case 'taskCount': return Math.min((data.tasks?.length || 0) / 20, 1);
+                default: return 0;
+            }
+        };
+
+        nodes.forEach(node => {
+            const x = getVal(node, xAxis);
+            const y = getVal(node, yAxis);
+
+            // Map 0-1 to screen coordinates
+            // X: 0 -> -width/2, 1 -> width/2
+            // Y: 0 -> height/2, 1 -> -height/2 (SVG coords are inverted for Y)
+            const posX = (x - 0.5) * width;
+            const posY = -(y - 0.5) * height; // Invert Y so high values are at top
+
+            node.position({ x: posX, y: posY });
+        });
+
+        this.cy.fit();
+    }
+
+    applySortedGridLayout(sortField = 'priority') {
+        if (!this.cy) return;
+        this.currentLayout = 'sorted-grid';
+
+        const nodes = this.cy.nodes().sort((a, b) => {
+            const getVal = (n) => {
+                 const d = n.data('fullData') || {};
+                 if (sortField === 'priority') return d.budget?.priority || 0;
+                 if (sortField === 'term') return n.id();
+                 return 0;
+            };
+            // Descending order
+            return getVal(b) - getVal(a);
+        });
+
+        nodes.layout({
+            name: 'grid',
+            rows: undefined,
+            cols: undefined,
+            avoidOverlap: true,
+            padding: 30
+        }).run();
     }
 
     applyFilters(filters) {
