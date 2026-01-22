@@ -146,6 +146,65 @@ export const LayoutPresets = {
             closePopoutsOnUnload: true,
             showPopoutIcon: false,
             showMaximiseIcon: true,
+            showCloseIcon: true // Allow closing to support minimal view
+        },
+        dimensions: {
+            borderWidth: 2,
+            headerHeight: 24
+        },
+        root: {
+            type: 'row',
+            content: [
+                {
+                    type: 'component',
+                    componentName: 'examplesComponent',
+                    title: 'DEMO LIBRARY',
+                    width: 20,
+                    isClosable: false
+                },
+                {
+                    type: 'component',
+                    componentName: 'notebookComponent',
+                    title: 'NOTEBOOK',
+                    width: 40,
+                    isClosable: false
+                },
+                {
+                    type: 'column',
+                    width: 40,
+                    isClosable: true,
+                    content: [
+                        {
+                            type: 'component',
+                            componentName: 'graphComponent',
+                            title: 'KNOWLEDGE GRAPH',
+                            height: 70,
+                            componentState: { label: 'Graph' },
+                            isClosable: true
+                        },
+                        {
+                            type: 'component',
+                            componentName: 'metricsComponent',
+                            title: 'SYSTEM METRICS',
+                            height: 30,
+                            isClosable: true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    demo_minimal: {
+        settings: {
+            hasHeaders: true,
+            constrainDragToContainer: true,
+            reorderEnabled: false,
+            selectionEnabled: false,
+            popoutWholeStack: false,
+            blockedPopoutsThrowError: true,
+            closePopoutsOnUnload: true,
+            showPopoutIcon: false,
+            showMaximiseIcon: true,
             showCloseIcon: false
         },
         dimensions: {
