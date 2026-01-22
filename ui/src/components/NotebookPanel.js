@@ -3,6 +3,7 @@ import { NotebookManager } from '../notebook/NotebookManager.js';
 import { NotebookInput } from '../notebook/NotebookInput.js';
 import { MessageFilter } from '../notebook/MessageFilter.js';
 import { FilterToolbar } from '../notebook/FilterToolbar.js';
+import { EVENTS } from '../config/constants.js';
 
 export class NotebookPanel extends Component {
     constructor(container) {
@@ -23,7 +24,7 @@ export class NotebookPanel extends Component {
     }
 
     setupEventListeners() {
-        document.addEventListener('senars:notebook:add-cell', (e) => {
+        document.addEventListener(EVENTS.NOTEBOOK_ADD_CELL, (e) => {
             const { type, content } = e.detail;
             if (type === 'code') this.notebookManager.createCodeCell(content);
             else if (type === 'markdown') this.notebookManager.createMarkdownCell(content);
@@ -37,7 +38,6 @@ export class NotebookPanel extends Component {
         this.container.className = 'notebook-panel-container';
 
         // 1. Toolbar
-        const toolbarContainer = document.createElement('div');
         this.filterToolbar = new FilterToolbar(this.messageFilter, {
             onFilterChange: () => this.notebookManager.applyFilter(this.messageFilter),
             onExport: () => this.exportNotebook(),
@@ -47,19 +47,18 @@ export class NotebookPanel extends Component {
             onViewChange: (mode) => this.notebookManager.switchView(mode)
         });
 
-        toolbarContainer.appendChild(this.filterToolbar.render());
+        const toolbarContainer = this.createElement('div', {}, [this.filterToolbar.render()]);
         this.container.appendChild(toolbarContainer);
 
         // 2. Notebook Container
-        const notebookContainer = document.createElement('div');
-        notebookContainer.className = 'notebook-container';
+        const notebookContainer = this.createElement('div', { className: 'notebook-container' });
         this.container.appendChild(notebookContainer);
 
         this.notebookManager = new NotebookManager(notebookContainer);
         this.notebookManager.loadFromStorage();
 
         // 3. Input Area
-        const inputContainer = document.createElement('div');
+        const inputContainer = this.createElement('div');
         this.notebookInput = new NotebookInput(inputContainer, {
             onExecute: (cmd) => this.handleExecution(cmd),
             onClear: () => this.notebookManager.clear(),
