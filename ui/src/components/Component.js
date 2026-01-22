@@ -1,3 +1,5 @@
+import { createElement } from '../utils/dom.js';
+
 /**
  * Base Component class providing common functionality for UI components
  */
@@ -38,5 +40,12 @@ export class Component {
             this.container.innerHTML = '';
         }
         this.elements = {};
+    }
+
+    /**
+     * Helper to create DOM elements
+     */
+    createElement(tag, attributes, children) {
+        return createElement(tag, attributes, children);
     }
 }
