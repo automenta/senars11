@@ -4,6 +4,7 @@ import { ConceptCard } from '../../components/ConceptCard.js';
 import { TaskCard } from '../../components/TaskCard.js';
 import { NarseseHighlighter } from '../../utils/NarseseHighlighter.js';
 import { Modal } from '../../components/ui/Modal.js';
+import { WidgetFactory } from '../../components/widgets/WidgetFactory.js';
 
 /**
  * Result cell for output display
@@ -118,10 +119,11 @@ export class ResultCell extends Cell {
         if (typeof this.content === 'string') {
             contentDiv.innerHTML = NarseseHighlighter.highlight(this.content);
         } else if (this.category === 'derivation') {
-             contentDiv.innerHTML = `<div style="padding:10px; border:1px dashed #444; text-align:center;">🌲 Derivation Tree Visualization (Coming Soon)</div>`;
-             const raw = document.createElement('pre');
-             raw.textContent = JSON.stringify(this.content, null, 2);
-             contentDiv.appendChild(raw);
+             // Embed Derivation Widget
+             contentDiv.style.height = '300px';
+             contentDiv.style.position = 'relative';
+             const widget = WidgetFactory.createWidget('derivation', contentDiv, this.content);
+             requestAnimationFrame(() => widget?.render());
         } else {
             contentDiv.textContent = JSON.stringify(this.content, null, 2);
         }
