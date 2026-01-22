@@ -42,6 +42,16 @@ export class NotebookPanel extends Component {
             onFilterChange: () => this.notebookManager.applyFilter(this.messageFilter),
             onExport: () => this.exportNotebook()
         });
+
+        // Add Run All button to toolbar
+        const runAllBtn = document.createElement('button');
+        runAllBtn.className = 'toolbar-btn';
+        runAllBtn.textContent = '▶️ Run All';
+        runAllBtn.title = 'Execute all code cells sequentially';
+        runAllBtn.onclick = () => this.notebookManager.runAll();
+        runAllBtn.style.marginLeft = '8px';
+        this.filterToolbar.element.querySelector('.filter-action-group').prepend(runAllBtn);
+
         toolbarContainer.appendChild(this.filterToolbar.render());
         this.container.appendChild(toolbarContainer);
 
