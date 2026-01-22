@@ -3,12 +3,14 @@ import { NotebookManager } from '../notebook/NotebookManager.js';
 import { NotebookInput } from '../notebook/NotebookInput.js';
 import { MessageFilter } from '../notebook/MessageFilter.js';
 import { FilterToolbar } from '../notebook/FilterToolbar.js';
+import { ControlPanel } from './ControlPanel.js';
 
 export class NotebookPanel extends Component {
     constructor(container) {
         super(container);
         this.notebookManager = null;
         this.notebookInput = null;
+        this.controlPanel = null;
         this.messageFilter = new MessageFilter();
         this.filterToolbar = null;
         this.app = null;
@@ -58,17 +60,30 @@ export class NotebookPanel extends Component {
         this.notebookManager = new NotebookManager(notebookContainer);
         this.notebookManager.loadFromStorage();
 
-        // 3. Input Area
+        // 3. Control Panel
+        const controlContainer = document.createElement('div');
+        this.controlPanel = new ControlPanel(controlContainer, {
+            onControl: (action, data) => this.controlReasoner(action, data)
+        });
+        this.controlPanel.render();
+        this.container.appendChild(controlContainer);
+
+        // 4. Input Area
         const inputContainer = document.createElement('div');
         this.notebookInput = new NotebookInput(inputContainer, {
             onExecute: (cmd) => this.handleExecution(cmd),
             onClear: () => this.notebookManager.clear(),
             onDemo: () => this.showDemoSelector(),
-            onExtraAction: (action) => this.handleExtraAction(action),
-            onControl: (action) => this.controlReasoner(action)
+            onExtraAction: (action) => this.handleExtraAction(action)
         });
         this.notebookInput.render();
         this.container.appendChild(inputContainer);
+    }
+
+    updateStats(stats) {
+        if (this.controlPanel) {
+            this.controlPanel.updateStats(stats);
+        }
     }
 
     handleExecution(command) {
@@ -84,7 +99,7 @@ export class NotebookPanel extends Component {
         }
     }
 
-    controlReasoner(action) {
+    controlReasoner(action, data = {}) {
         if (!this.app?.connection) return;
 
         if (!this.app.connection.isConnected()) {
@@ -92,8 +107,11 @@ export class NotebookPanel extends Component {
             return;
         }
 
-        this.app.connection.sendMessage(`control/${action}`, {});
-        this.notebookManager.createResultCell(`🎛️ Reasoner ${action}`, 'system');
+        const payload = { ...data };
+        this.app.connection.sendMessage(`control/${action}`, payload);
+
+        const actionStr = action === 'step' ? `step (${data.steps || 1})` : action;
+        this.notebookManager.createResultCell(`🎛️ Reasoner ${actionStr}`, 'system');
 
         const stateActions = {
             start: () => { this.app.isRunning = true; },
@@ -107,7 +125,7 @@ export class NotebookPanel extends Component {
 
         stateActions[action]?.();
 
-        this.notebookInput.updateState(this.app.isRunning);
+        this.controlPanel?.updateState(this.app.isRunning);
         this.app.updateStats();
     }
 

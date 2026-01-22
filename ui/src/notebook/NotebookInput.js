@@ -11,24 +11,16 @@ export class NotebookInput {
         this.onClear = options.onClear ?? (() => {});
         this.onDemo = options.onDemo ?? (() => {});
         this.onExtraAction = options.onExtraAction ?? (() => {});
-        this.onControl = options.onControl ?? (() => {});
 
         this.history = new CommandHistory('senars-repl-history', Config.getConstants().MAX_HISTORY_SIZE);
         this.element = null;
         this.inputBox = null;
-        this.controls = {};
-        this.isRunning = false;
-        this.cycleCount = 0;
     }
 
     render() {
         this.element = document.createElement('div');
         this.element.className = 'notebook-input-area';
         this.element.style.cssText = 'padding: 10px; background: #252526; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px;';
-
-        // Reasoner Controls (Top Bar)
-        const controlBar = this._createControlBar();
-        this.element.appendChild(controlBar);
 
         // Input Box (SmartTextarea)
         const inputContainer = document.createElement('div');
@@ -66,34 +58,6 @@ export class NotebookInput {
         }
 
         return this.element;
-    }
-
-    _createControlBar() {
-        const wrapper = document.createElement('div');
-        const tb = new Toolbar(wrapper, { style: 'display: flex; gap: 6px; align-items: center; margin-bottom: 4px; background: transparent; padding: 0;' });
-
-        this.controls.playPause = tb.addButton({
-            label: '▶️ Run',
-            onClick: () => this.onControl(this.isRunning ? 'stop' : 'start')
-        });
-
-        this.controls.step = tb.addButton({
-            label: '⏭️ Step',
-            onClick: () => this.onControl('step')
-        });
-
-        this.controls.reset = tb.addButton({
-            label: '🔄 Reset',
-            onClick: () => Modal.confirm('Reset Memory?').then(yes => yes && this.onControl('reset'))
-        });
-
-        this.controls.cycleDisplay = document.createElement('span');
-        this.controls.cycleDisplay.style.cssText = 'margin-left: auto; font-family: monospace; font-size: 11px; color: #888;';
-        this.controls.cycleDisplay.textContent = 'Cycles: 0';
-
-        wrapper.firstChild.appendChild(this.controls.cycleDisplay); // Append to toolbar div
-
-        return wrapper;
     }
 
     _createBottomToolbar() {
@@ -138,25 +102,6 @@ export class NotebookInput {
             width: '400px'
         });
         modal.show();
-    }
-
-    updateState(isRunning) {
-        this.isRunning = isRunning;
-        if (this.controls.playPause) {
-            this.controls.playPause.innerHTML = isRunning ? '⏸️ Pause' : '▶️ Run';
-            this.controls.playPause.style.background = isRunning ? '#8f6e00' : '#333';
-        }
-        if (this.controls.step) {
-            this.controls.step.disabled = isRunning;
-            this.controls.step.style.opacity = isRunning ? 0.5 : 1;
-        }
-    }
-
-    updateCycles(count) {
-        this.cycleCount = count;
-        if (this.controls.cycleDisplay) {
-            this.controls.cycleDisplay.textContent = `Cycles: ${count}`;
-        }
     }
 
     _updateModeBadge() {
