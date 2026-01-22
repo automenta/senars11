@@ -1,7 +1,6 @@
 import { ConnectionInterface } from './ConnectionInterface.js';
-import { NAR } from '@senars/core/nar/NAR.js';
+import { NAR, Config } from '@senars/core';
 import { MeTTaInterpreter } from '@senars/metta/MeTTaInterpreter.js';
-import { Config } from '@senars/core/config/Config.js';
 import { Logger } from '../logging/Logger.js';
 
 export class LocalConnectionManager extends ConnectionInterface {
