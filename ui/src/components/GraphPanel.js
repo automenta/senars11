@@ -48,6 +48,20 @@ export class GraphPanel extends Component {
         controlTb.addButton({ icon: '🔭', title: 'Focus Center', onClick: () => this.graphManager?.cy?.center(), className: 'toolbar-btn' });
         controlTb.addButton({ icon: '➕', title: 'Zoom In', onClick: () => this.graphManager?.zoomIn(), className: 'toolbar-btn' });
         controlTb.addButton({ icon: '➖', title: 'Zoom Out', onClick: () => this.graphManager?.zoomOut(), className: 'toolbar-btn' });
+        controlTb.addButton({ icon: '🗑️', title: 'Reset', onClick: () => this.reset(), className: 'toolbar-btn' });
+
+        // Layout Selector
+        const layoutSelect = document.createElement('select');
+        layoutSelect.className = 'graph-layout-select toolbar-select';
+        layoutSelect.style.cssText = 'background: #333; color: #eee; border: 1px solid #444; border-radius: 3px; padding: 2px; margin-left: 4px;';
+        ['fcose', 'grid', 'circle', 'concentric', 'breadthfirst'].forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l;
+            opt.textContent = l.charAt(0).toUpperCase() + l.slice(1);
+            layoutSelect.appendChild(opt);
+        });
+        layoutSelect.onchange = (e) => this.graphManager?.setLayout(e.target.value);
+        controlTb.addCustom(layoutSelect);
 
         tb.addCustom(controlRow);
 
@@ -60,6 +74,17 @@ export class GraphPanel extends Component {
             this._dispatchFilter();
         };
         tb.addCustom(taskToggle);
+
+        // Filter: Hide Isolated
+        const isolatedToggle = document.createElement('label');
+        isolatedToggle.className = 'graph-filter-toggle';
+        isolatedToggle.style.marginLeft = '8px';
+        isolatedToggle.innerHTML = `<input type="checkbox" style="margin:0;"> Hide Isolated`;
+        isolatedToggle.querySelector('input').onchange = (e) => {
+            this.filters.hideIsolated = e.target.checked;
+            this._dispatchFilter();
+        };
+        tb.addCustom(isolatedToggle);
 
         // Filter: Priority Slider
         const sliderContainer = document.createElement('div');
@@ -96,9 +121,9 @@ export class GraphPanel extends Component {
     }
 
     _dispatchFilter() {
-        document.dispatchEvent(new CustomEvent('senars:graph:filter', {
-            detail: { ...this.filters }
-        }));
+        if (this.graphManager) {
+            this.graphManager.applyFilters(this.filters);
+        }
     }
 
     _inspectNode(node) {
@@ -120,6 +145,6 @@ export class GraphPanel extends Component {
     }
 
     reset() {
-        this.graphManager?.initialized && this.graphManager.clear();
+        this.graphManager?.clear();
     }
 }

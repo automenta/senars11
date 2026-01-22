@@ -142,3 +142,41 @@
     cursor: pointer;
     margin-top: 10px;
 }
+
+/* ConceptCard & TaskCard Enhanced Styles */
+.concept-card, .task-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: transform 0.1s, box-shadow 0.1s;
+    cursor: pointer;
+}
+
+.concept-card:hover, .task-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    border-color: var(--text-muted);
+}
+
+.concept-card { border-left: 3px solid var(--accent-primary); }
+.task-card { border-left: 3px solid var(--accent-secondary); }
+
+.concept-card.compact, .task-card.compact { padding: 4px 8px; font-size: 0.9em; }
+.concept-card.full, .task-card.full { padding: 10px; }
+
+.concept-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.concept-term-large { font-size: 1.1em; font-weight: bold; margin-bottom: 8px; color: var(--text-main); }
+.concept-meta-row { display: flex; flex-direction: column; gap: 4px; }
+.priority-meter-container { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.priority-meter-bar { height: 100%; transition: width 0.3s; }
+.concept-stats { display: flex; gap: 8px; font-size: 0.8em; color: var(--text-muted); }
+
+.task-card-row { display: flex; align-items: center; gap: 6px; }
+.truth-mini-bar { height: 2px; background: rgba(255,255,255,0.1); margin-top: 4px; border-radius: 1px; }
+.truth-fill { height: 100%; background: var(--accent-primary); }
+.task-content { font-family: monospace; color: var(--text-main); margin-bottom: 6px; }
+.truth-viz-container { font-size: 0.8em; color: var(--text-muted); }
+.truth-bar-track { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 2px; }
+.truth-bar-fill { height: 100%; background: var(--accent-secondary); }
