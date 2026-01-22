@@ -281,6 +281,8 @@ export class NotebookManager {
     }
 
     handleCellExecution(cell, options = {}) {
+        eventBus.emit('notebook:cell:executed', cell);
+
         if (options.advance) {
             const index = this.cells.indexOf(cell);
             let nextIndex = index + 1;
