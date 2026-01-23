@@ -74,6 +74,8 @@ export class CodeCell extends Cell {
     }
 
     updateMode() {
+        if (!this.body) return;
+
         if (this.isCollapsed) {
             this.body.style.display = 'none';
             return;
