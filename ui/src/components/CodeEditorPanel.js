@@ -239,7 +239,7 @@ export class CodeEditorPanel extends Component {
             }
 
             // Send to command processor
-            this.app.commandProcessor.processCommand(content);
+            this.app.commandProcessor.processCommand(content, false, this.language);
         }
     }
 
