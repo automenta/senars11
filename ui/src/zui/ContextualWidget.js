@@ -29,21 +29,22 @@ export class ContextualWidget {
 
         const div = document.createElement('div');
         div.className = 'zui-widget';
-        div.style.position = 'absolute';
-        div.style.display = 'none'; // Hidden by default
-        div.style.pointerEvents = 'none'; // Let clicks pass through to graph unless we enable interaction
-        div.style.background = 'rgba(0,0,0,0.8)';
-        div.style.color = '#fff';
-        div.style.padding = '5px';
-        div.style.borderRadius = '4px';
-        div.style.fontSize = '10px';
-        div.style.zIndex = '1000';
+        Object.assign(div.style, {
+            position: 'absolute',
+            display: 'none',
+            pointerEvents: 'none',
+            background: 'rgba(0,0,0,0.8)',
+            color: '#fff',
+            padding: '5px',
+            borderRadius: '4px',
+            fontSize: '10px',
+            zIndex: '1000'
+        });
         div.innerHTML = contentHtml;
 
         this.container.appendChild(div);
         this.activeWidgets.set(nodeId, div);
 
-        // Initial position update if possible
         this.updateNodeWidget(nodeId);
     }
 
@@ -61,7 +62,6 @@ export class ContextualWidget {
     updatePositions() {
         if (!this.viewport.cy) return;
 
-        // Only update if visible
         this.activeWidgets.forEach((div, nodeId) => {
             if (div.style.display !== 'none') {
                 this.updateNodeWidget(nodeId);
@@ -70,15 +70,14 @@ export class ContextualWidget {
     }
 
     updateNodeWidget(nodeId) {
-        const node = this.viewport.cy.getElementById(nodeId);
-        if (node.length === 0) return;
+        const node = this.viewport.cy?.getElementById(nodeId);
+        if (!node?.length) return;
 
         const pos = node.renderedPosition();
         const div = this.activeWidgets.get(nodeId);
 
-        // Position slightly offset from center
-        div.style.left = (pos.x + 10) + 'px';
-        div.style.top = (pos.y - 20) + 'px';
+        div.style.left = `${pos.x + 10}px`;
+        div.style.top = `${pos.y - 20}px`;
     }
 
     remove(nodeId) {

@@ -106,17 +106,14 @@ export class GraphViewport {
 
     // API to be used by ActivityGraph
     addElements(elements) {
-        if (!this.cy) return;
-        this.cy.add(elements);
+        this.cy?.add(elements);
     }
 
     clear() {
-        if (!this.cy) return;
-        this.cy.elements().remove();
+        this.cy?.elements().remove();
     }
 
     fit() {
-        if (!this.cy) return;
-        this.cy.fit();
+        this.cy?.fit();
     }
 }

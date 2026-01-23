@@ -49,24 +49,15 @@ export class SemanticZoom {
         const cy = this.viewport.cy;
         if (!cy) return;
 
-        cy.batch(() => {
-            if (level === 'overview') {
-                cy.nodes().style({
-                    'label': '',
-                    'width': 'data(weight)',
-                    'height': 'data(weight)'
-                });
-            } else if (level === 'component') {
-                cy.nodes().style({
-                    'label': 'data(label)',
-                    'font-size': '10px'
-                });
-            } else if (level === 'detail') {
-                 cy.nodes().style({
-                    'label': 'data(label)',
-                    'font-size': '12px'
-                });
-            }
-        });
+        const styles = {
+            overview: { 'label': '', 'width': 'data(weight)', 'height': 'data(weight)' },
+            component: { 'label': 'data(label)', 'font-size': '10px' },
+            detail: { 'label': 'data(label)', 'font-size': '12px' }
+        };
+
+        const style = styles[level];
+        if (style) {
+            cy.batch(() => cy.nodes().style(style));
+        }
     }
 }
