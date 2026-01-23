@@ -36,7 +36,12 @@ class SeNARSIDE {
 
         // Handle URL params for mode/layout
         const urlParams = new URLSearchParams(window.location.search);
-        this.presetName = urlParams.get('layout') || urlParams.get('mode');
+        this.presetName = urlParams.get('layout') || 'ide';
+
+        const modeParam = urlParams.get('mode');
+        if (modeParam && Object.values(MODES).includes(modeParam)) {
+            this.settingsManager.setMode(modeParam);
+        }
 
         if (!this.presetName && window.location.pathname.endsWith('demo.html')) {
             this.presetName = 'demo';
