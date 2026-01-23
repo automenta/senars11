@@ -8,8 +8,9 @@ import { FluentUI } from '../utils/FluentUI.js';
 import { eventBus } from '../core/EventBus.js';
 
 export class NotebookPanel extends Component {
-    constructor(container) {
+    constructor(container, options = {}) {
         super(container);
+        this.options = options;
         this.notebookManager = null;
         this.notebookInput = null;
         this.messageFilter = new MessageFilter();
@@ -62,16 +63,18 @@ export class NotebookPanel extends Component {
         });
         this.notebookManager.loadFromStorage();
 
-        const inputContainer = FluentUI.create('div').mount(this.container);
+        if (!this.options.hideInput) {
+            const inputContainer = FluentUI.create('div').mount(this.container);
 
-        this.notebookInput = new NotebookInput(inputContainer.dom, {
-            onExecute: (cmd) => this.handleExecution(cmd),
-            onClear: () => this.notebookManager.clear(),
-            onDemo: () => this.showDemoSelector(),
-            onExtraAction: (action) => this.handleExtraAction(action),
-            onControl: (action) => this.controlReasoner(action)
-        });
-        this.notebookInput.render();
+            this.notebookInput = new NotebookInput(inputContainer.dom, {
+                onExecute: (cmd) => this.handleExecution(cmd),
+                onClear: () => this.notebookManager.clear(),
+                onDemo: () => this.showDemoSelector(),
+                onExtraAction: (action) => this.handleExtraAction(action),
+                onControl: (action) => this.controlReasoner(action)
+            });
+            this.notebookInput.render();
+        }
     }
 
     handleExecution(command, originCell) {
@@ -112,7 +115,7 @@ export class NotebookPanel extends Component {
 
         stateActions[action]?.();
 
-        this.notebookInput.updateState(this.app.isRunning);
+        this.notebookInput?.updateState(this.app.isRunning);
         this.app.updateStats();
     }
 
