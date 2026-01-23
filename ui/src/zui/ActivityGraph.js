@@ -66,4 +66,29 @@ export class ActivityGraph {
 
         this.viewport.fit();
     }
+
+    fit() {
+        this.viewport.fit();
+    }
+
+    zoomIn() {
+        if (!this.viewport.cy) return;
+        this.viewport.cy.animate({ zoom: this.viewport.cy.zoom() * 1.2, duration: 200 });
+    }
+
+    zoomOut() {
+        if (!this.viewport.cy) return;
+        this.viewport.cy.animate({ zoom: this.viewport.cy.zoom() / 1.2, duration: 200 });
+    }
+
+    relayout() {
+        if (!this.viewport.cy) return;
+        this.viewport.cy.layout({
+            name: 'grid',
+            padding: 50,
+            avoidOverlap: true,
+            spacingFactor: 1.5,
+            animate: true
+        }).run();
+    }
 }

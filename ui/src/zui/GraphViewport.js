@@ -19,7 +19,12 @@ export class GraphViewport {
             this.cy = cytoscape({
                 container: container,
                 style: this._getDefaultStyle(),
-                layout: { name: 'grid' }, // Default layout
+                layout: {
+                    name: 'grid',
+                    padding: 50,
+                    avoidOverlap: true,
+                    spacingFactor: 1.5
+                },
                 minZoom: 0.1,
                 maxZoom: 10,
                 wheelSensitivity: 0.2
