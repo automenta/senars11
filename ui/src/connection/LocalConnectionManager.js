@@ -32,11 +32,13 @@ export class LocalConnectionManager extends ConnectionInterface {
 
             let AgentClass = null;
             try {
-                // Dynamic import to avoid circular dependency issues at load time
+                // Dynamically import Agent to break circular dependency cycle:
+                // LocalConnectionManager -> Agent -> NAR -> BaseComponent -> Logger -> UI_CONSTANTS -> core
+                // If imported statically, this cycle causes a crash during module evaluation.
                 const module = await import('@senars/agent');
                 AgentClass = module.Agent;
             } catch (e) {
-                console.warn('Agent module failed to load:', e);
+                console.warn('Agent module failed to load (Local Agent features unavailable):', e);
             }
 
             if (AgentClass) {

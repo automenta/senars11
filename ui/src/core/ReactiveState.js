@@ -95,6 +95,7 @@ export class ReactiveState {
 
         // Evaluate and track dependencies
         this._currentComputed = name;
+        // Use the proxy as context to ensure property accesses are intercepted for dependency tracking
         this._state[name] = fn.call(this._proxy || this);
         this._currentComputed = null;
     }
