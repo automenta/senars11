@@ -78,24 +78,31 @@ export class GraphPanel extends Component {
                         type: 'select',
                         class: 'graph-layout-select',
                         style: { background: '#333', color: '#eee', border: '1px solid #444', borderRadius: '3px', padding: '2px', marginRight: '4px' },
-                        options: [
-                            { value: 'fcose', label: 'Force Graph', selected: true },
-                            { value: 'grid', label: 'Grid' },
-                            { value: 'circle', label: 'Circle' },
-                            { value: 'scatter', label: 'Scatter Plot' },
-                            { value: 'sorted-grid', label: 'Sorted Grid' }
-                        ],
+                        options: this._getLayoutOptions(),
                         onChange: (val) => this.state.viewMode = val
                     },
-                    {
-                        type: 'custom',
-                        renderer: () => this.createAxisSelectors()
-                    },
+                    { type: 'custom', renderer: () => this.createAxisSelectors() },
                     { type: 'button', icon: '⤢', title: 'Fit', onClick: () => this.graphManager?.fitToScreen() },
                     { type: 'button', icon: '➕', title: 'In', onClick: () => this.graphManager?.zoomIn() },
                     { type: 'button', icon: '➖', title: 'Out', onClick: () => this.graphManager?.zoomOut() }
                 ]
             },
+            ...this._getFilterControls()
+        ];
+    }
+
+    _getLayoutOptions() {
+        return [
+            { value: 'fcose', label: 'Force Graph', selected: true },
+            { value: 'grid', label: 'Grid' },
+            { value: 'circle', label: 'Circle' },
+            { value: 'scatter', label: 'Scatter Plot' },
+            { value: 'sorted-grid', label: 'Sorted Grid' }
+        ];
+    }
+
+    _getFilterControls() {
+        return [
             {
                 type: 'toggle',
                 label: 'Tasks',

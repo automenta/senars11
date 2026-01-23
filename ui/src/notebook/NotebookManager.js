@@ -90,62 +90,64 @@ export class NotebookManager {
     }
 
     _addDnDListeners(el, cell) {
-        el.addEventListener('dragstart', (e) => {
-            this.dragSrcEl = el;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', cell.id);
-            el.style.opacity = '0.4';
-            el.classList.add('dragging');
-        });
+        el.addEventListener('dragstart', (e) => this._onDragStart(e, el, cell));
+        el.addEventListener('dragover', (e) => this._onDragOver(e, el));
+        el.addEventListener('dragenter', () => el.classList.add('drag-over'));
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+        el.addEventListener('dragend', (e) => this._onDragEnd(el));
+        el.addEventListener('drop', (e) => this._onDrop(e, cell));
+    }
 
-        el.addEventListener('dragover', (e) => {
-            if (e.preventDefault) e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            el.classList.add('drag-over');
-            return false;
-        });
+    _onDragStart(e, el, cell) {
+        this.dragSrcEl = el;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', cell.id);
+        el.style.opacity = '0.4';
+        el.classList.add('dragging');
+    }
 
-        el.addEventListener('dragenter', (e) => {
-            el.classList.add('drag-over');
-        });
+    _onDragOver(e, el) {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        el.classList.add('drag-over');
+        return false;
+    }
 
-        el.addEventListener('dragleave', (e) => {
-            el.classList.remove('drag-over');
-        });
+    _onDragEnd(el) {
+        el.style.opacity = '1';
+        el.classList.remove('dragging');
+        this.state.cells.forEach(c => c.element?.classList.remove('drag-over'));
+    }
 
-        el.addEventListener('dragend', (e) => {
-            el.style.opacity = '1';
-            el.classList.remove('dragging');
-            this.state.cells.forEach(c => c.element?.classList.remove('drag-over'));
-        });
+    _onDrop(e, targetCell) {
+        if (e.stopPropagation) e.stopPropagation();
 
-        el.addEventListener('drop', (e) => {
-            if (e.stopPropagation) e.stopPropagation();
+        const srcId = e.dataTransfer.getData('text/plain');
+        const srcCell = this.state.cells.find(c => c.id === srcId);
 
-            const srcId = e.dataTransfer.getData('text/plain');
-            const srcCell = this.state.cells.find(c => c.id === srcId);
-            const targetCell = cell;
+        if (srcCell && srcCell !== targetCell) {
+            const currentCells = [...this.state.cells];
+            const srcIndex = currentCells.indexOf(srcCell);
+            const targetIndex = currentCells.indexOf(targetCell);
 
-            if (srcCell && srcCell !== targetCell) {
-                const currentCells = [...this.state.cells];
-                const srcIndex = currentCells.indexOf(srcCell);
-                const targetIndex = currentCells.indexOf(targetCell);
+            currentCells.splice(srcIndex, 1);
+            currentCells.splice(targetIndex, 0, srcCell);
 
-                currentCells.splice(srcIndex, 1);
-                currentCells.splice(targetIndex, 0, srcCell);
+            this.state.cells = currentCells;
 
-                this.state.cells = currentCells;
-
+            // DOM order update optimization for list mode is handled here manually
+            // though reactive update would handle it, this is smoother for drag
+            if (this.state.viewMode === 'list') {
                 if (srcIndex < targetIndex) {
                     targetCell.element.after(srcCell.element);
                 } else {
                     targetCell.element.before(srcCell.element);
                 }
-
-                this.triggerSave();
             }
-            return false;
-        });
+
+            this.triggerSave();
+        }
+        return false;
     }
 
     _updateGraphData() {

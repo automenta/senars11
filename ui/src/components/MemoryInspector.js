@@ -25,27 +25,18 @@ export class MemoryInspector extends Component {
 
         // Computed filtered and sorted data
         this.state.computed('filteredData', function() {
-            return this.data.filter(c =>
-                (!this.filterText || c.term.toLowerCase().includes(this.filterText)) &&
-                (!this.filters.hasGoals || c.tasks?.some(t => t.punctuation === '!')) &&
-                (!this.filters.hasQuestions || c.tasks?.some(t => t.punctuation === '?'))
-            ).sort((a, b) => {
-                // Accessing outer class method via closure or binding?
-                // computed functions are bound to state proxy.
-                // We need access to _getValue.
-                // Solution: Make _getValue static or attach to state?
-                // Or just implement sort logic here.
+            const { data, filterText, filters, sortField, sortDirection } = this;
 
-                const getValue = (obj, field) => {
-                    if (field === 'priority') return obj.budget?.priority ?? 0;
-                    if (field === 'taskCount') return obj.tasks?.length ?? obj.taskCount ?? 0;
-                    if (field === 'term') return obj.term ?? '';
-                    return obj[field];
-                };
+            const filtered = data.filter(c =>
+                (!filterText || c.term.toLowerCase().includes(filterText)) &&
+                (!filters.hasGoals || c.tasks?.some(t => t.punctuation === '!')) &&
+                (!filters.hasQuestions || c.tasks?.some(t => t.punctuation === '?'))
+            );
 
-                const valA = getValue(a, this.sortField);
-                const valB = getValue(b, this.sortField);
-                return (valA < valB ? -1 : 1) * (this.sortDirection === 'asc' ? 1 : -1);
+            return filtered.sort((a, b) => {
+                const valA = MemoryInspector.getValue(a, sortField);
+                const valB = MemoryInspector.getValue(b, sortField);
+                return (valA < valB ? -1 : 1) * (sortDirection === 'asc' ? 1 : -1);
             });
         });
 
@@ -73,6 +64,13 @@ export class MemoryInspector extends Component {
     // Getters for compatibility if needed, though mostly used internally
     get viewMode() { return this.state.viewMode; }
     set viewMode(v) { this.state.viewMode = v; }
+
+    static getValue(obj, field) {
+        if (field === 'priority') return obj.budget?.priority ?? 0;
+        if (field === 'taskCount') return obj.tasks?.length ?? obj.taskCount ?? 0;
+        if (field === 'term') return obj.term ?? '';
+        return obj[field];
+    }
 
     initialize() {
         if (!this.container) return;
