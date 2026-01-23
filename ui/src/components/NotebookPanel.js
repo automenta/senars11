@@ -126,7 +126,9 @@ export class NotebookPanel extends Component {
             markdown: () => this.notebookManager.createMarkdownCell('Double click to edit...'),
             graph: () => this.notebookManager.createWidgetCell('GraphWidget', { nodes: [], edges: [] }),
             slider: () => this.notebookManager.createWidgetCell('TruthSlider', { frequency: 0.5, confidence: 0.9 }),
-            subnotebook: () => this.notebookManager.createWidgetCell('SubNotebook', {})
+            subnotebook: () => this.notebookManager.createWidgetCell('SubNotebook', {}),
+            timeline: () => this.notebookManager.createWidgetCell('TimelineWidget', { events: [] }),
+            variables: () => this.notebookManager.createWidgetCell('VariableInspector', { bindings: {} })
         };
 
         actions[action]?.();

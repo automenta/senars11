@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Layout Verification', () => {
 
-    // Layouts to test: ide, code, repl, dashboard, split, canvas
-    // We already tested 'ide' (default) and 'code' (code_editor.spec.js)
-
     test('should load SPLIT layout', async ({ page }) => {
+        page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
+        page.on('pageerror', err => console.log(`BROWSER ERROR: ${err}`));
+
         await page.goto('http://localhost:5173/ide.html?mode=local&layout=split');
         await page.waitForSelector('.notebook-panel-container', { state: 'visible' });
 

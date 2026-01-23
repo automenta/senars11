@@ -79,22 +79,31 @@ export class CodeEditorPanel extends Component {
             .style({ flex: '1', position: 'relative', height: 'calc(100% - 35px)', overflow: 'hidden' })
             .mount(this.container);
 
-        this.editor = new SmartTextarea(editorContainer.dom, {
-            rows: 20, // Initial rows, but autoResize false for fixed height
-            autoResize: false,
-            onExecute: (text) => this.execute(text)
-        });
+        try {
+            this.editor = new SmartTextarea(editorContainer.dom, {
+                rows: 20, // Initial rows, but autoResize false for fixed height
+                autoResize: false,
+                onExecute: (text) => this.execute(text)
+            });
 
-        // Hook for Auto-Run
-        this.editor.textarea.addEventListener('input', this.debounce(() => {
-            if (this.autoRun) {
-                this.execute();
+            const editorEl = this.editor.render();
+            editorEl.style.height = '100%';
+            this.editor.textarea.style.height = '100%'; // Ensure full height
+
+            // Hook for Auto-Run
+            // Check if textarea exists
+            if (this.editor.textarea) {
+                this.editor.textarea.addEventListener('input', this.debounce(() => {
+                    if (this.autoRun) {
+                        this.execute();
+                    }
+                }, 1000));
+            } else {
+                console.error('CodeEditorPanel: textarea not found in SmartTextarea');
             }
-        }, 1000));
-
-        const editorEl = this.editor.render();
-        editorEl.style.height = '100%';
-        this.editor.textarea.style.height = '100%'; // Ensure full height
+        } catch (e) {
+            console.error('CodeEditorPanel Error:', e);
+        }
     }
 
     saveFile() {
