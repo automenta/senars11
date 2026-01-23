@@ -79,6 +79,7 @@ export class NotebookPanel extends Component {
             const cell = this.notebookManager.createCodeCell(command);
             cell.isEditing = false;
             cell.updateMode();
+            this.notebookManager.lastInsertionPoint = cell;
         }
 
         if (this.app?.commandProcessor) {
