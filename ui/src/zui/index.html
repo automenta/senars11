@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeNARS ZUI Experiment</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: #1e1e1e; color: #fff; font-family: sans-serif; }
+        #graph-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        #widget-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
+        .controls { position: absolute; top: 20px; left: 20px; z-index: 3; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 4px; }
+        .controls h1 { margin: 0 0 10px 0; font-size: 1.2em; }
+        .controls p { margin: 0; font-size: 0.9em; opacity: 0.8; }
+        .zui-widget { pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
+    <div id="widget-container"></div>
+
+    <div class="controls">
+        <h1>SeNARS ZUI</h1>
+        <p>Scroll to zoom. Widgets appear at high zoom.</p>
+        <p id="zoom-level">Level: overview</p>
+    </div>
+
+    <script type="module">
+        import { ActivityGraph } from './ActivityGraph.js';
+
+        const graph = new ActivityGraph('graph-container', document.getElementById('widget-container'));
+
+        if (graph.initialize()) {
+            console.log('ZUI Initialized');
+
+            // Hook up zoom level display
+            graph.viewport.on('zoomLevelChange', (data) => {
+                document.getElementById('zoom-level').textContent = `Level: ${data.level} (Zoom: ${data.zoom.toFixed(2)})`;
+            });
+        }
+    </script>
+</body>
+</html>
