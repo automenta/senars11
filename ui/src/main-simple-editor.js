@@ -67,7 +67,8 @@ class SimpleEditorApp {
             this.logger.log(e.message, 'error');
         });
 
-        this.logger.log('Simple Editor Initialized. Type code and press Run.', 'info');
+        this.logger.log('Simple Editor Initialized.', 'info');
+        this.logger.log('Type code on the left (e.g. `!(+ 1 1)`) and press "Run" or Shift+Enter.', 'info', '💡');
     }
 
     // Required by MessageRouter

@@ -59,7 +59,21 @@ export class SimpleOutputPanel extends Component {
         const time = new Date().toLocaleTimeString();
         const iconStr = icon || (type === 'input' ? '>' : '');
 
-        entry.text(`[${time}] ${iconStr} ${content}`);
+        let displayContent = content;
+
+        // Try to parse JSON result for cleaner display if it's a simple result wrapper
+        if (typeof content === 'string' && content.startsWith('{"result":')) {
+            try {
+                const parsed = JSON.parse(content);
+                if (parsed.result && Object.keys(parsed).length === 1) {
+                    displayContent = parsed.result; // Just show the result value
+                }
+            } catch (e) {
+                // Keep original content if parsing fails
+            }
+        }
+
+        entry.text(`[${time}] ${iconStr} ${displayContent}`);
 
         this.logContainer.child(entry);
         this.scrollToBottom();
