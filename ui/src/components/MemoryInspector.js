@@ -19,7 +19,8 @@ export class MemoryInspector extends Component {
             filters: { hasGoals: false, hasQuestions: false },
             listMode: 'compact',
             viewMode: 'list',
-            selectedConcept: null
+            selectedConcept: null,
+            limit: 50
         });
 
         // Computed filtered and sorted data
@@ -202,7 +203,7 @@ export class MemoryInspector extends Component {
         if (filtered.length === 0) {
             listDiv.html('<div style="padding:10px; color:var(--text-muted); text-align:center;">No concepts found</div>');
         } else {
-            const limit = 50;
+            const limit = this.state.limit;
             const isCompact = this.state.listMode === 'compact';
 
             for (const concept of filtered.slice(0, limit)) {
@@ -211,9 +212,19 @@ export class MemoryInspector extends Component {
 
             if (filtered.length > limit) {
                 listDiv.child(
-                    FluentUI.create('div')
-                        .text(`...and ${filtered.length - limit} more`)
-                        .style({ padding: '10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '10px' })
+                    FluentUI.create('button')
+                        .text(`Load More (${filtered.length - limit} remaining)`)
+                        .class('mi-load-more-btn')
+                        .style({
+                            display: 'block', margin: '10px auto', padding: '5px 10px',
+                            background: '#333', border: '1px solid #444', color: '#ccc', cursor: 'pointer'
+                        })
+                        .on('click', () => {
+                            this.state.limit += 50;
+                            // Re-render handled by state watcher if we watched 'limit', but we didn't add it yet
+                            // Adding explicit render call here or ensuring watcher covers it
+                            this._renderListView();
+                        })
                 );
             }
         }

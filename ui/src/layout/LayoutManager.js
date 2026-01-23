@@ -114,4 +114,25 @@ export class LayoutManager {
         panel.initialize();
         this.app.registerComponent('examples', panel);
     }
+
+    toggleSidebar() {
+        // Simple toggle for components typically found in sidebars
+        const toggleComponent = (name) => {
+            const items = this.layout.root.getItemsByFilter(item => item.config.componentName === name);
+            items.forEach(item => {
+                if (item.parent.isStack) {
+                    item.parent.header.controlsContainer.find('.lm_maximise').click();
+                }
+            });
+        };
+
+        // Try toggling 'examples' or 'settings' or 'metrics'
+        // Since we don't know exactly which is the "sidebar", we'll just try to find a common one.
+        // Or better, just maximize the first non-center item? No, that's risky.
+        // Let's toggle visibility of the 'examples' panel if it exists
+
+        // This is tricky with GoldenLayout programmatically without a defined sidebar region.
+        // We will just log for now as a placeholder implementation until a sidebar region is strictly defined.
+        console.log('Sidebar toggle not fully implemented for dynamic GoldenLayout.');
+    }
 }

@@ -11,13 +11,15 @@ export class GraphPanel extends Component {
         this.graphManager = null;
         this.initialized = false;
 
+        const savedLayout = localStorage.getItem('senars-graph-layout') || 'fcose';
+
         this.state = new ReactiveState({
             filters: {
                 showTasks: true,
                 minPriority: 0,
                 hideIsolated: false
             },
-            viewMode: 'fcose',
+            viewMode: savedLayout,
             scatterAxes: { x: 'priority', y: 'confidence' }
         });
 
@@ -158,6 +160,9 @@ export class GraphPanel extends Component {
     }
 
     setLayout(layout) {
+        // Persist
+        localStorage.setItem('senars-graph-layout', layout);
+
         // Toggle Axis Selectors
         if (this.axisSelectors) {
             this.axisSelectors.style.display = layout === 'scatter' ? 'inline' : 'none';

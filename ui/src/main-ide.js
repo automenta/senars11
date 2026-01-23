@@ -158,6 +158,15 @@ class SeNARSIDE {
                 e.preventDefault();
                 new DemoLibraryModal(this.getNotebook()).show();
             }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                this.getNotebook()?.saveToStorage();
+                this.getNotebook()?.createResultCell('💾 Notebook saved', 'system');
+            }
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                this.layoutManager.toggleSidebar();
+            }
         });
     }
 }
