@@ -124,7 +124,21 @@ export class LocalConnectionManager extends ConnectionInterface {
             try {
                 const results = await this.metta.run(text);
                 if (results?.length) {
-                    const output = results.map(r => r.toString()).join('\n');
+                    // Filter out results that are just echoes of definitions
+                    // MeTTaInterpreter returns the expression itself for definitions (= ...), which we don't want to show as result
+                    const cleanResults = results.filter(r => {
+                        const str = r.toString();
+                        // Filter if it looks like a definition (= ...) or type definition (: ...)
+                        // AND if it matches a line in the input text (heuristic)
+                        if (str.startsWith('(= ') || str.startsWith('(: ')) {
+                            return !text.includes(str);
+                        }
+                        return true;
+                    });
+
+                    if (cleanResults.length === 0) return;
+
+                    const output = cleanResults.map(r => r.toString()).join('\n');
                     const vizMatch = output.match(/__VIZ__:(\w+):(.+)/s);
                     const uiMatch = output.match(/__UI__:(\S+)(?:\s+(.+))?/);
 
