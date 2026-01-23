@@ -49,7 +49,8 @@ export class NotebookPanel extends Component {
             onImport: (file) => this.importNotebookFile(file),
             onRunAll: () => this.notebookManager.runAll(),
             onClearOutputs: () => this.notebookManager.clearOutputs(),
-            onViewChange: (mode) => this.notebookManager.switchView(mode)
+            onViewChange: (mode) => this.notebookManager.switchView(mode),
+            onReset: () => this.controlReasoner('reset')
         });
 
         FluentUI.create('div').child(this.filterToolbar.render()).mount(this.container);

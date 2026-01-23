@@ -91,6 +91,7 @@ export class FilterToolbar {
                     }},
                     { type: 'button', label: '▶️▶️', title: 'Run All', class: 'primary', onClick: () => this.onRunAll() },
                     { type: 'button', label: '🧹', title: 'Clear Outputs', onClick: () => this.onClearOutputs() },
+                    { type: 'button', label: '🔄', title: 'Restart Kernel / Reset', onClick: () => this.onReset?.() },
                     { type: 'custom', renderer: () => {
                         const input = FluentUI.create('input').attr({ type: 'file', accept: '.json' }).style({ display: 'none' })
                             .on('change', (e) => {

@@ -33,9 +33,23 @@ export class CodeEditorPanel extends Component {
         );
 
         toolbar.child(
+            FluentUI.create('button')
+                .text('💾 Save')
+                .style({ padding: '4px 8px', background: '#333', color: '#ccc', border: '1px solid #444', borderRadius: '3px', cursor: 'pointer' })
+                .on('click', () => this.saveFile())
+        );
+
+        toolbar.child(
+            FluentUI.create('button')
+                .text('📂 Load')
+                .style({ padding: '4px 8px', background: '#333', color: '#ccc', border: '1px solid #444', borderRadius: '3px', cursor: 'pointer' })
+                .on('click', () => this.loadFile())
+        );
+
+        toolbar.child(
             FluentUI.create('span')
                 .text('Shift+Enter to Run')
-                .style({ fontSize: '0.8em', color: '#888', alignSelf: 'center' })
+                .style({ fontSize: '0.8em', color: '#888', alignSelf: 'center', marginLeft: 'auto' })
         );
 
         // Editor Area
@@ -52,6 +66,34 @@ export class CodeEditorPanel extends Component {
         const editorEl = this.editor.render();
         editorEl.style.height = '100%';
         this.editor.textarea.style.height = '100%'; // Ensure full height
+    }
+
+    saveFile() {
+        const content = this.editor.getValue();
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'code.nars'; // Default to nars, could detect
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    loadFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.nars,.metta,.scm,.txt';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    this.editor.setValue(evt.target.result);
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
     }
 
     execute(text) {
