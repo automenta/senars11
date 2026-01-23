@@ -97,7 +97,7 @@ export class SmartTextarea {
             .bracket-match { background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 2px; }
 
             /* Hide text in textarea but keep caret */
-            .smart-textarea-input.highlight-mode { color: transparent; background: transparent; }
+            .smart-textarea-input.highlight-mode { color: transparent !important; background: transparent; }
             .smart-textarea-input.highlight-mode::selection { background: rgba(255, 255, 255, 0.2); color: transparent; }
         `;
 

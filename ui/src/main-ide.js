@@ -43,7 +43,7 @@ class SeNARSIDE {
             this.settingsManager.setMode(modeParam);
         }
 
-        if (!this.presetName && window.location.pathname.endsWith('demo.html')) {
+        if (window.location.pathname.endsWith('demo.html')) {
             this.presetName = 'demo';
         }
 

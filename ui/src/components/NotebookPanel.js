@@ -58,7 +58,7 @@ export class NotebookPanel extends Component {
             .mount(this.container);
 
         this.notebookManager = new NotebookManager(notebookContainer.dom, {
-            onExecute: (cmd) => this.handleExecution(cmd)
+            onExecute: (cmd, originCell) => this.handleExecution(cmd, originCell)
         });
         this.notebookManager.loadFromStorage();
 
