@@ -25,6 +25,7 @@ export class NotebookManager {
         this.saveTimeout = null;
         this.storageKey = 'senars-notebook-content';
         this.defaultOnExecute = options.onExecute || null;
+        this.lastInsertionPoint = null;
 
         this.viewContainer = document.createElement('div');
         this.viewContainer.style.cssText = 'height: 100%; width: 100%; position: relative;';
@@ -185,6 +186,7 @@ export class NotebookManager {
         const wrappedExecute = (content, cellInstance, options) => {
             this.executionCount++;
             cellInstance.executionCount = this.executionCount;
+            this.lastInsertionPoint = cellInstance;
             if (executeHandler) executeHandler(content, cellInstance);
             this.handleCellExecution(cellInstance, options);
         };
@@ -195,7 +197,15 @@ export class NotebookManager {
     }
 
     createResultCell(content, category = 'result', viewMode = VIEW_MODES.FULL) {
-        return this.addCell(new ResultCell(content, category, viewMode));
+        const cell = new ResultCell(content, category, viewMode);
+
+        if (this.lastInsertionPoint && this.cells.includes(this.lastInsertionPoint)) {
+            this.insertCell(cell, this.lastInsertionPoint);
+            this.lastInsertionPoint = cell;
+            return cell;
+        }
+
+        return this.addCell(cell);
     }
 
     createMarkdownCell(content = '') {
@@ -346,34 +356,54 @@ export class NotebookManager {
         }
     }
 
-    insertCellAfter(referenceCell, type = 'code') {
-        let newCell;
-        if (type === 'code') {
-            newCell = this.createCodeCell('', referenceCell.onExecute);
-        } else if (type === 'markdown') {
-            newCell = this.createMarkdownCell('');
+    insertCell(newCell, referenceCell) {
+        // If cell is already in manager (e.g. via addCell), remove it first to move it
+        if (this.state.cells.includes(newCell)) {
+            this.removeCell(newCell);
         }
 
-        if (newCell) {
-            this.removeCell(newCell);
+        const currentCells = [...this.state.cells];
+        const index = currentCells.indexOf(referenceCell);
 
-            const currentCells = [...this.state.cells];
-            const index = currentCells.indexOf(referenceCell);
+        if (index > -1) {
             currentCells.splice(index + 1, 0, newCell);
             this.state.cells = currentCells;
 
             if (this.state.viewMode === 'list') {
-                if (referenceCell.element.nextElementSibling) {
-                    this.viewContainer.insertBefore(newCell.render(), referenceCell.element.nextElementSibling);
+                const el = newCell.render ? newCell.render() : newCell.element;
+                // Ensure events are bound if not already
+                if (!newCell.element) this._addDnDListeners(el, newCell);
+                else if (!newCell.element.classList.contains('drag-over')) this._addDnDListeners(el, newCell);
+
+                if (referenceCell.element && referenceCell.element.nextElementSibling) {
+                    this.viewContainer.insertBefore(el, referenceCell.element.nextElementSibling);
                 } else {
-                    this.viewContainer.appendChild(newCell.render());
+                    this.viewContainer.appendChild(el);
                 }
-                newCell.focus();
             } else {
                 this._renderView(this.state.viewMode);
             }
             this.triggerSave();
             eventBus.emit('notebook:cell:added', newCell);
+        } else {
+            // Fallback
+            this.addCell(newCell);
+        }
+        return newCell;
+    }
+
+    insertCellAfter(referenceCell, type = 'code') {
+        let newCell;
+        if (type === 'code') {
+            newCell = this.createCodeCell('', referenceCell.onExecute);
+            // Since createCodeCell adds it, we need to move it or create it detached?
+            // createCodeCell calls addCell.
+            // insertCell handles moving if it exists.
+            this.insertCell(newCell, referenceCell);
+            newCell.focus();
+        } else if (type === 'markdown') {
+            newCell = this.createMarkdownCell('');
+            this.insertCell(newCell, referenceCell);
         }
     }
 
