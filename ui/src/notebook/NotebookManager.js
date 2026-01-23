@@ -21,6 +21,7 @@ export class NotebookManager {
             viewMode: 'list'
         });
 
+        this.history = []; // Undo stack
         this.executionCount = 0;
         this.saveTimeout = null;
         this.storageKey = 'senars-notebook-content';
@@ -240,6 +241,10 @@ export class NotebookManager {
         const index = currentCells.indexOf(cell);
 
         if (index > -1) {
+            // Push to undo history
+            this.history.push({ action: 'delete', cell, index });
+            if (this.history.length > 50) this.history.shift();
+
             currentCells.splice(index, 1);
             this.state.cells = currentCells;
         }
@@ -250,9 +255,39 @@ export class NotebookManager {
              this._renderView(this.state.viewMode);
         }
 
-        cell.destroy();
+        // Don't fully destroy if we want to undo, but DOM element is removed
+        // cell.destroy();
         this.triggerSave();
         eventBus.emit('notebook:cell:removed', cell);
+    }
+
+    undo() {
+        const lastAction = this.history.pop();
+        if (!lastAction) return;
+
+        if (lastAction.action === 'delete') {
+            const { cell, index } = lastAction;
+            const currentCells = [...this.state.cells];
+            currentCells.splice(index, 0, cell);
+            this.state.cells = currentCells;
+
+            if (this.state.viewMode === 'list') {
+                const el = cell.element || cell.render();
+                // Rebind events as elements might lose listeners if re-rendered
+                this._addDnDListeners(el, cell);
+
+                // Find insertion point
+                const nextCell = currentCells[index + 1];
+                if (nextCell && nextCell.element) {
+                    this.viewContainer.insertBefore(el, nextCell.element);
+                } else {
+                    this.viewContainer.appendChild(el);
+                }
+            } else {
+                this._renderView(this.state.viewMode);
+            }
+            this.triggerSave();
+        }
     }
 
     moveCellUp(cell) {

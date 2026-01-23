@@ -7,6 +7,8 @@ export class CodeEditorPanel extends Component {
         super(container);
         this.app = null;
         this.editor = null;
+        this.autoRun = false;
+        this.language = 'metta';
     }
 
     initialize(app) {
@@ -21,7 +23,7 @@ export class CodeEditorPanel extends Component {
         // Toolbar
         const toolbar = FluentUI.create('div')
             .class('editor-toolbar')
-            .style({ padding: '5px', background: '#252526', borderBottom: '1px solid #333', display: 'flex', gap: '8px' })
+            .style({ padding: '5px', background: '#252526', borderBottom: '1px solid #333', display: 'flex', gap: '8px', alignItems: 'center' })
             .mount(this.container);
 
         toolbar.child(
@@ -31,6 +33,15 @@ export class CodeEditorPanel extends Component {
                 .style({ padding: '4px 12px', background: '#0e639c', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' })
                 .on('click', () => this.execute())
         );
+
+        // Language Select
+        const langSelect = FluentUI.create('select')
+            .style({ background: '#333', color: '#eee', border: '1px solid #444', borderRadius: '3px', padding: '2px' })
+            .on('change', (e) => { this.language = e.target.value; })
+            .child(FluentUI.create('option').attr({ value: 'metta' }).text('MeTTa'))
+            .child(FluentUI.create('option').attr({ value: 'narsese' }).text('Narsese'));
+
+        toolbar.child(langSelect);
 
         toolbar.child(
             FluentUI.create('button')
@@ -45,6 +56,17 @@ export class CodeEditorPanel extends Component {
                 .style({ padding: '4px 8px', background: '#333', color: '#ccc', border: '1px solid #444', borderRadius: '3px', cursor: 'pointer' })
                 .on('click', () => this.loadFile())
         );
+
+        // Auto Run Toggle
+        const autoRunLabel = FluentUI.create('label')
+            .style({ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85em', color: '#ccc', marginLeft: '8px', cursor: 'pointer' });
+
+        const autoRunCheck = FluentUI.create('input')
+            .attr({ type: 'checkbox' })
+            .on('change', (e) => { this.autoRun = e.target.checked; });
+
+        autoRunLabel.child(autoRunCheck).child(document.createTextNode('Auto-Run'));
+        toolbar.child(autoRunLabel);
 
         toolbar.child(
             FluentUI.create('span')
@@ -62,6 +84,13 @@ export class CodeEditorPanel extends Component {
             autoResize: false,
             onExecute: (text) => this.execute(text)
         });
+
+        // Hook for Auto-Run
+        this.editor.textarea.addEventListener('input', this.debounce(() => {
+            if (this.autoRun) {
+                this.execute();
+            }
+        }, 1000));
 
         const editorEl = this.editor.render();
         editorEl.style.height = '100%';
@@ -96,9 +125,19 @@ export class CodeEditorPanel extends Component {
         input.click();
     }
 
+    debounce(func, wait) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
     execute(text) {
         const content = text || this.editor.getValue();
         if (!content.trim()) return;
+
+        // Future: Check syntax based on this.language before running
 
         if (this.app?.commandProcessor) {
             // Optionally log to notebook if available
