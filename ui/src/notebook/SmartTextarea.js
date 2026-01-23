@@ -66,6 +66,10 @@ export class SmartTextarea {
         this.textarea.className = 'smart-textarea-input';
         this.textarea.rows = this.rows;
         this.textarea.placeholder = 'Enter Narsese or MeTTa... (Shift+Enter to Run)';
+        this.textarea.setAttribute('spellcheck', 'false');
+        this.textarea.setAttribute('autocomplete', 'off');
+        this.textarea.setAttribute('autocorrect', 'off');
+        this.textarea.setAttribute('autocapitalize', 'off');
         this.textarea.style.cssText = `
             position: relative;
             z-index: 3;
