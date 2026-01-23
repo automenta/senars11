@@ -116,48 +116,54 @@ export class CodeCell extends Cell {
     _createToolbar() {
         const wrapper = document.createElement('div');
         wrapper.className = 'cell-toolbar';
-        const tb = new Toolbar(wrapper, { style: 'display: flex; gap: 8px; align-items: center; padding: 4px 8px; background: #252526; border-bottom: 1px solid #3c3c3c;' });
+        // Reduced padding and height for streamline look
+        const tb = new Toolbar(wrapper, { style: 'display: flex; gap: 4px; align-items: center; padding: 2px 4px; background: #252526; border-bottom: 1px solid #333; height: 28px;' });
 
+        // Run Button (Primary)
+        tb.addButton({ label: '▶️', title: 'Run (Shift+Enter)', primary: true, style: 'padding: 0 8px;', onClick: () => this.execute() });
+
+        // Type Badge (compact)
         const label = document.createElement('span');
-        label.textContent = '💻 Code';
-        label.style.color = '#888';
-        label.style.fontSize = '0.85em';
+        label.textContent = 'CODE';
+        label.style.cssText = 'color: #555; font-size: 0.7em; font-weight: bold; margin-left: 4px; font-family: monospace;';
         tb.addCustom(label);
 
-        tb.addButton({ label: '▶️', title: 'Run', primary: true, onClick: () => this.execute() });
-
-        const toggleBtn = tb.addButton({
-            label: this.isEditing ? '👁️' : '✏️',
-            title: 'Toggle View',
-            onClick: () => {
-                this.isEditing = !this.isEditing;
-                this.updateMode();
-                toggleBtn.innerHTML = this.isEditing ? '👁️' : '✏️';
-            }
-        });
-
-        const collapseBtn = tb.addButton({
-            label: this.isCollapsed ? '🔽' : '🔼',
-            title: 'Collapse/Expand',
-            onClick: () => {
-                this.isCollapsed = !this.isCollapsed;
-                this.updateMode();
-                collapseBtn.innerHTML = this.isCollapsed ? '🔽' : '🔼';
-            }
-        });
-
-        tb.addButton({ label: '⬆️', title: 'Move Up', onClick: () => this.onMoveUp?.(this) });
-        tb.addButton({ label: '⬇️', title: 'Move Down', onClick: () => this.onMoveDown?.(this) });
-        tb.addButton({ label: '📑', title: 'Duplicate', onClick: () => this.onDuplicate?.(this) });
-        tb.addButton({ label: '➕ Code', title: 'Insert Code Below', onClick: () => this.onInsertAfter?.('code') });
-        tb.addButton({ label: '➕ Text', title: 'Insert Text Below', onClick: () => this.onInsertAfter?.('markdown') });
+        // Spacer
+        const spacer = document.createElement('div');
+        spacer.style.flex = '1';
+        tb.addCustom(spacer);
 
         // Time Label
         this.timeLabel = document.createElement('span');
-        this.timeLabel.style.cssText = 'margin-left: auto; color: #666; font-size: 0.8em; font-family: monospace;';
+        this.timeLabel.style.cssText = 'color: #555; font-size: 0.8em; font-family: monospace; margin-right: 8px;';
         tb.addCustom(this.timeLabel);
 
-        tb.addButton({ label: '🗑️', title: 'Delete', className: 'btn-danger', style: 'margin-left: 4px; background: #b30000; color: white; border: none;', onClick: () => this.delete() });
+        // Secondary Actions (Compact Icons)
+        const btnStyle = 'padding: 2px 4px; font-size: 12px; background: transparent; border: none; color: #888; cursor: pointer;';
+        const hoverStyle = (e) => { e.target.style.color = '#fff'; e.target.style.background = '#333'; };
+        const outStyle = (e) => { e.target.style.color = '#888'; e.target.style.background = 'transparent'; };
+
+        const addBtn = (icon, title, action) => {
+            const b = document.createElement('button');
+            b.textContent = icon;
+            b.title = title;
+            b.style.cssText = btnStyle;
+            b.onclick = action;
+            b.onmouseover = hoverStyle;
+            b.onmouseout = outStyle;
+            wrapper.appendChild(b);
+            return b;
+        };
+
+        addBtn('⬆️', 'Move Up', () => this.onMoveUp?.(this));
+        addBtn('⬇️', 'Move Down', () => this.onMoveDown?.(this));
+        addBtn('➕', 'Insert Code', () => this.onInsertAfter?.('code'));
+
+        // Delete Button (X)
+        const delBtn = addBtn('✕', 'Delete Cell', () => this.delete());
+        delBtn.style.color = '#ff4444';
+        delBtn.onmouseover = (e) => { e.target.style.background = '#b30000'; e.target.style.color = '#fff'; };
+        delBtn.onmouseout = (e) => { e.target.style.background = 'transparent'; e.target.style.color = '#ff4444'; };
 
         return wrapper;
     }

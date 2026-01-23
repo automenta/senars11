@@ -43,7 +43,7 @@ export class SmartTextarea {
             top: 0; left: 0;
             ${fontStyles}
             pointer-events: none;
-            color: transparent;
+            color: #d4d4d4;
             overflow: hidden; /* Scroll is handled by sync */
             z-index: 1;
         `;
