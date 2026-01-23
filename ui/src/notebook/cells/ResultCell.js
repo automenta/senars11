@@ -34,14 +34,17 @@ export class ResultCell extends Cell {
         const catInfo = MESSAGE_CATEGORIES[this.category] || MESSAGE_CATEGORIES.unknown;
         const color = catInfo.color || '#00ff88';
 
-        this.element.innerHTML = '';
         this.element.style.display = mode === VIEW_MODES.HIDDEN ? 'none' : 'block';
-        if (mode === VIEW_MODES.HIDDEN) return;
 
-        if (mode === VIEW_MODES.COMPACT) {
-            this._renderCompact(catInfo, color);
-        } else {
-            this._renderFull(catInfo, color);
+        // Don't clear innerHTML if not necessary or if we want to preserve state?
+        // Actually, switching modes usually requires re-render.
+        if (mode !== VIEW_MODES.HIDDEN) {
+            this.element.innerHTML = '';
+            if (mode === VIEW_MODES.COMPACT) {
+                this._renderCompact(catInfo, color);
+            } else {
+                this._renderFull(catInfo, color);
+            }
         }
     }
 
