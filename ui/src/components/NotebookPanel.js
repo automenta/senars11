@@ -26,14 +26,11 @@ export class NotebookPanel extends Component {
     }
 
     setupEventListeners() {
-        // Listen to EventBus for add cell commands
-        eventBus.on('notebook:cmd:add-cell', (data) => {
-            const { type, content } = data;
+        eventBus.on('notebook:cmd:add-cell', ({ type, content }) => {
             if (type === 'code') this.notebookManager.createCodeCell(content);
             else if (type === 'markdown') this.notebookManager.createMarkdownCell(content);
         });
 
-        // Legacy DOM event support (bridged or direct)
         document.addEventListener(EVENTS.NOTEBOOK_ADD_CELL, (e) => {
             const { type, content } = e.detail;
             eventBus.emit('notebook:cmd:add-cell', { type, content });
@@ -45,7 +42,6 @@ export class NotebookPanel extends Component {
 
         this.fluent().clear().class('notebook-panel-container');
 
-        // 1. Toolbar
         this.filterToolbar = new FilterToolbar(this.messageFilter, {
             onFilterChange: () => this.notebookManager.applyFilter(this.messageFilter),
             onExport: () => this.exportNotebook(),
@@ -55,11 +51,8 @@ export class NotebookPanel extends Component {
             onViewChange: (mode) => this.notebookManager.switchView(mode)
         });
 
-        const toolbarContainer = FluentUI.create('div')
-            .child(this.filterToolbar.render())
-            .mount(this.container);
+        FluentUI.create('div').child(this.filterToolbar.render()).mount(this.container);
 
-        // 2. Notebook Container
         const notebookContainer = FluentUI.create('div')
             .class('notebook-container')
             .mount(this.container);
@@ -67,7 +60,6 @@ export class NotebookPanel extends Component {
         this.notebookManager = new NotebookManager(notebookContainer.dom);
         this.notebookManager.loadFromStorage();
 
-        // 3. Input Area
         const inputContainer = FluentUI.create('div').mount(this.container);
 
         this.notebookInput = new NotebookInput(inputContainer.dom, {
@@ -88,7 +80,6 @@ export class NotebookPanel extends Component {
         if (this.app?.commandProcessor) {
             this.app.commandProcessor.processCommand(command);
         } else {
-            console.warn('Command Processor not available');
             this.notebookManager.createResultCell('Command Processor not connected', 'system');
         }
     }
@@ -175,7 +166,7 @@ export class NotebookPanel extends Component {
             metric: 'metric'
         };
 
-        const adapter = {
+        this.app.logger.logViewer = {
             addLog: (content, type) => {
                 let category = categoryMap[type] || 'system';
                 if (type.includes('reasoning') || type.includes('inference')) category = 'reasoning';
@@ -184,9 +175,7 @@ export class NotebookPanel extends Component {
                 this.notebookManager.createResultCell(content, category, viewMode);
                 return true;
             },
-            logMarkdown: (content) => {
-                this.notebookManager.createMarkdownCell(content);
-            },
+            logMarkdown: (content) => this.notebookManager.createMarkdownCell(content),
             logWidget: (type, data) => {
                 const widgetType = type === 'graph' ? 'GraphWidget' : type;
                 this.notebookManager.createWidgetCell(widgetType, data);
@@ -195,8 +184,5 @@ export class NotebookPanel extends Component {
             messageCounter: 0,
             icons: this.app.logger.icons || {}
         };
-
-        this.app.logger.logViewer = adapter;
-        console.log('Logger adapter installed in NotebookPanel');
     }
 }
