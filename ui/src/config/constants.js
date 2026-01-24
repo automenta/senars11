@@ -2,7 +2,8 @@ export const EVENTS = {
     CONCEPT_SELECT: 'senars:concept:select',
     NOTEBOOK_ADD_CELL: 'senars:notebook:add-cell',
     GRAPH_FILTER: 'senars:graph:filter',
-    SETTINGS_UPDATED: 'senars:settings:updated'
+    SETTINGS_UPDATED: 'senars:settings:updated',
+    MEMORY_REFRESH: 'senars:memory:refresh'
 };
 
 export const COMPONENTS = {
