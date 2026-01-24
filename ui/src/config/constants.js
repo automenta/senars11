@@ -16,7 +16,8 @@ export const COMPONENTS = {
     DERIVATION: 'derivationComponent',
     METRICS: 'metricsComponent',
     SETTINGS: 'settingsComponent',
-    EXAMPLES: 'examplesComponent'
+    EXAMPLES: 'examplesComponent',
+    EDITOR: 'editorComponent'
 };
 
 export const STORAGE_KEYS = {
