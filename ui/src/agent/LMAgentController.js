@@ -39,7 +39,7 @@ export class LMAgentController extends EventEmitter {
             }
 
             // Initialize AIClient
-            this.aiClient = new AIClient({
+            this.aiClient = this._createAIClient({
                 provider: this.config.provider,
                 modelName: this.config.modelName,
                 apiKey: this.config.apiKey,
@@ -115,22 +115,13 @@ export class LMAgentController extends EventEmitter {
             // Build system prompt with tool information
             const systemPrompt = this.buildSystemPrompt();
 
-            // Prepare messages (AIClient usually takes prompt + history, but here we just send prompt for now as per previous code?
-            // Wait, previous code sent array of messages to generate?)
-            // Previous code: this.aiClient.generate(userMessage, ...)
-            // It seems AIClient.generate takes a string prompt, not chat history?
-            // "const result = await this.aiClient.generate(userMessage, {"
-
-            // If AIClient supports chat history, we should use it.
-            // But preserving original logic:
-
             const result = await this.aiClient.generate(userMessage, {
                 provider: this.config.provider,
                 model: this.config.modelName,
                 temperature: options.temperature ?? 0.7,
                 maxTokens: options.maxTokens ?? 512,
-                systemPrompt: systemPrompt, // Passing system prompt if supported
-                messages: [...this.conversationHistory] // Passing history if supported
+                systemPrompt: systemPrompt,
+                messages: [...this.conversationHistory]
             });
 
             const assistantMessage = result.text || '';
@@ -142,7 +133,16 @@ export class LMAgentController extends EventEmitter {
             });
 
             // Check if response includes tool calls
-            await this.handleToolCalls(assistantMessage);
+            const toolResults = await this.handleToolCalls(assistantMessage);
+
+            // If tools were executed, we might want to return that info or trigger another generation
+            // For now, let's just log it and potentially return the augmented history if needed
+            if (toolResults && toolResults.length > 0) {
+                 this.logger.log(`Tools executed: ${toolResults.length}`, 'system');
+                 // In a full agent loop, we would feed this back to the LM.
+                 // For now, we rely on the UI or next user message to see the result
+                 // because the results are added to history in handleToolCalls
+            }
 
             return assistantMessage;
 
@@ -208,7 +208,18 @@ export class LMAgentController extends EventEmitter {
 
         return `You are an AI assistant integrated with the SeNARS cognitive architecture. You have access to the following tools:
 
-${tools.map(t => `- ${t.name}: ${t.description}`).join('\n')}
+${tools.map(t => `- ${t.name}: ${t.description} (Args: ${JSON.stringify(t.parameters)})`).join('\n')}
+
+To use a tool, you MUST output a JSON object in a Markdown code block like this:
+
+\`\`\`json
+{
+    "tool": "tool_name",
+    "parameters": {
+        "arg_name": "value"
+    }
+}
+\`\`\`
 
 You can help users:
 1. Query and manipulate the NAR (Non-Axiomatic Reasoning) system
@@ -217,14 +228,44 @@ You can help users:
 4. Configure system parameters
 5. Generate and execute MeTTa code for self-programming
 
-When users ask you to perform actions that require tools, explain what you would do and mention the relevant tool. Be helpful and educational about the system's capabilities.`;
+When users ask you to perform actions that require tools, explain what you would do and then output the tool call JSON.`;
     }
 
     /**
-     * Simple tool call detection and handling
+     * Tool call detection and handling
+     * Parses the response for JSON code blocks specifying a tool.
      */
     async handleToolCalls(response) {
-        return null;
+        if (!this.toolsBridge) return null;
+
+        const toolRegex = /```json\s*({[\s\S]*?"tool"\s*:\s*"[^"]+"[\s\S]*?})\s*```/g;
+        let match;
+        const results = [];
+
+        while ((match = toolRegex.exec(response)) !== null) {
+            try {
+                const toolJson = JSON.parse(match[1]);
+                if (toolJson.tool) {
+                    this.logger.log(`Executing tool: ${toolJson.tool}`, 'system');
+
+                    const result = await this.toolsBridge.executeTool(toolJson.tool, toolJson.parameters || {});
+
+                    const resultMessage = {
+                        role: 'system',
+                        content: `Tool '${toolJson.tool}' execution result:\n${JSON.stringify(result, null, 2)}`
+                    };
+
+                    this.conversationHistory.push(resultMessage);
+                    results.push({ tool: toolJson.tool, result });
+
+                    this.emit('tool-executed', { tool: toolJson.tool, result });
+                }
+            } catch (e) {
+                this.logger.log(`Failed to parse tool call: ${e.message}`, 'error');
+            }
+        }
+
+        return results;
     }
 
     getAvailableTools() {
@@ -233,6 +274,10 @@ When users ask you to perform actions that require tools, explain what you would
 
     clearHistory() {
         this.conversationHistory = [];
+    }
+
+    _createAIClient(config) {
+        return new AIClient(config);
     }
 
     async destroy() {
