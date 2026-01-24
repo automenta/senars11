@@ -56,6 +56,7 @@ export class StatusBar extends Component {
                     )
                     .child(
                         this.ui.status = FluentUI.create('div')
+                            .id('connection-status')
                     )
             )
             .child(

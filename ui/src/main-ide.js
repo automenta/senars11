@@ -57,7 +57,10 @@ class SeNARSIDE {
 
     registerComponent(name, instance) {
         this.components.set(name, instance);
-        if (name === 'graph') this.graphManager = instance.graphManager;
+        if (name === 'graph') {
+            this.graphManager = instance.graphManager;
+            this.commandProcessor?.setGraphManager(this.graphManager);
+        }
     }
 
     async initialize() {
