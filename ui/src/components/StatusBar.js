@@ -13,18 +13,21 @@ export class StatusBar extends Component {
             latency: 0
         };
         this.onModeSwitch = null;
+        this.onThemeToggle = null;
 
         this.ui = {
             mode: null,
             status: null,
             cycles: null,
             messages: null,
-            latency: null
+            latency: null,
+            theme: null
         };
     }
 
-    initialize({ onModeSwitch }) {
+    initialize({ onModeSwitch, onThemeToggle }) {
         this.onModeSwitch = onModeSwitch;
+        this.onThemeToggle = onThemeToggle;
         this.render();
     }
 
@@ -65,6 +68,13 @@ export class StatusBar extends Component {
                     .child(this.ui.cycles = FluentUI.create('div'))
                     .child(this.ui.messages = FluentUI.create('div'))
                     .child(this.ui.latency = FluentUI.create('div'))
+                    .child(
+                        this.ui.theme = FluentUI.create('div')
+                            .class('status-item status-interactive')
+                            .text('🎨 Theme')
+                            .attr({ title: 'Toggle Theme' })
+                            .on('click', () => this.onThemeToggle?.())
+                    )
             );
 
         this._refreshAll();
