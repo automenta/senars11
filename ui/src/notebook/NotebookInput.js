@@ -227,6 +227,7 @@ export class NotebookInput {
             const items = [
                 { label: 'Truth Slider', icon: '🎚️', onClick: () => this.onExtraAction('slider') },
                 { label: 'Graph Widget', icon: '🕸️', onClick: () => this.onExtraAction('graph') },
+                { label: 'Task Tree', icon: '🌳', onClick: () => this.onExtraAction('tasktree') },
                 { label: 'Timeline', icon: '⏱️', onClick: () => this.onExtraAction('timeline') },
                 { label: 'Variables', icon: '🔢', onClick: () => this.onExtraAction('variables') },
                 { label: 'Sub-Notebook', icon: '📂', onClick: () => this.onExtraAction('subnotebook') }
