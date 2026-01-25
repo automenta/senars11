@@ -64,7 +64,7 @@ class SeNARSIDE {
     }
 
     async initialize() {
-        this.logger.log(`Initializing SeNARS IDE (Layout: ${this.presetName})...`, 'system');
+        // this.logger.log(`Initializing SeNARS IDE (Layout: ${this.presetName})...`, 'system');
 
         this.statusBar = new StatusBar(document.getElementById('status-bar-root'));
         this.statusBar.initialize({ onModeSwitch: () => this.showConnectionModal() });
@@ -85,7 +85,7 @@ class SeNARSIDE {
         eventBus.on('concept:select', onConceptSelect);
         document.addEventListener(EVENTS.CONCEPT_SELECT, (e) => onConceptSelect(e.detail?.concept));
 
-        this.logger.log(`SeNARS IDE initialized in ${this.settingsManager.getMode()} mode`, 'success');
+        // this.logger.log(`SeNARS IDE initialized in ${this.settingsManager.getMode()} mode`, 'success');
     }
 
     getNotebook() {
@@ -93,7 +93,7 @@ class SeNARSIDE {
     }
 
     async switchMode(mode) {
-        this.logger.log(`Switching to ${mode} mode...`, 'system');
+        // this.logger.log(`Switching to ${mode} mode...`, 'system');
         this.connection?.disconnect();
         this.settingsManager.setMode(mode);
 
@@ -115,7 +115,7 @@ class SeNARSIDE {
         this.graphManager?.setCommandProcessor(this.commandProcessor);
 
         this.updateModeIndicator();
-        this.getNotebook()?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
+        // this.getNotebook()?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
     }
 
     updateModeIndicator() {
