@@ -1,6 +1,6 @@
-import {Component} from './Component.js';
-import {GraphManager} from '../visualization/GraphManager.js';
-import {Toolbar} from './ui/Toolbar.js';
+import { Component } from './Component.js';
+import { GraphManager } from '../visualization/GraphManager.js';
+import { Toolbar } from './ui/Toolbar.js';
 
 export class GraphPanel extends Component {
     constructor(containerId) {
@@ -16,21 +16,30 @@ export class GraphPanel extends Component {
     initialize() {
         if (this.initialized || !this.container) return;
 
-        // Create Toolbar
-        const toolbarContainer = document.createElement('div');
-        toolbarContainer.style.cssText = `
-            position: absolute; top: 10px; left: 10px; z-index: 10;
-            background: rgba(0,0,0,0.8); padding: 4px; border-radius: 4px;
-            border: 1px solid var(--border-color); backdrop-filter: blur(2px);
-        `;
+        this.createToolbar();
+        this.createGraphContainer();
 
-        const tb = new Toolbar(toolbarContainer, { style: 'display: flex; flex-direction: column; gap: 6px;' });
+        try {
+            this.graphManager = new GraphManager({
+                graphContainer: this.graphDiv,
+                graphDetails: null
+            });
+            this.initialized = this.graphManager.initialize();
+        } catch (e) {
+            console.error('Failed to initialize GraphManager:', e);
+        }
+    }
+
+    createToolbar() {
+        const toolbarContainer = document.createElement('div');
+        toolbarContainer.className = 'graph-toolbar-container';
+
+        const tb = new Toolbar(toolbarContainer);
 
         // Row 1: Controls
         const controlRow = document.createElement('div');
-        controlRow.style.display = 'flex';
-        controlRow.style.gap = '4px';
-        const controlTb = new Toolbar(controlRow, { style: 'display: flex; gap: 4px;' });
+        controlRow.className = 'graph-control-row';
+        const controlTb = new Toolbar(controlRow);
 
         controlTb.addButton({ icon: '⤢', title: 'Fit View', onClick: () => this.graphManager?.fitToScreen(), className: 'toolbar-btn' });
         controlTb.addButton({ icon: '🔭', title: 'Focus Center', onClick: () => this.graphManager?.cy?.center(), className: 'toolbar-btn' });
@@ -41,7 +50,7 @@ export class GraphPanel extends Component {
 
         // Filter: Show Tasks
         const taskToggle = document.createElement('label');
-        taskToggle.style.cssText = 'font-size: 10px; color: #ccc; display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; padding: 0 4px;';
+        taskToggle.className = 'graph-filter-toggle';
         taskToggle.innerHTML = `<input type="checkbox" checked style="margin:0;"> Show Tasks`;
         taskToggle.querySelector('input').onchange = (e) => {
             this.filters.showTasks = e.target.checked;
@@ -51,9 +60,10 @@ export class GraphPanel extends Component {
 
         // Filter: Priority Slider
         const sliderContainer = document.createElement('div');
-        sliderContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; padding: 0 4px;';
+        sliderContainer.className = 'graph-slider-container';
+
         const sliderLabel = document.createElement('div');
-        sliderLabel.style.cssText = 'font-size: 9px; color: #aaa; display: flex; justify-content: space-between;';
+        sliderLabel.className = 'graph-slider-label';
         sliderLabel.innerHTML = '<span>Min Prio</span><span id="gp-prio-val">0.0</span>';
 
         const slider = document.createElement('input');
@@ -62,7 +72,7 @@ export class GraphPanel extends Component {
         slider.max = '1';
         slider.step = '0.05';
         slider.value = '0';
-        slider.style.width = '100%';
+        slider.className = 'graph-slider-input';
         slider.oninput = (e) => {
             const val = parseFloat(e.target.value);
             this.filters.minPriority = val;
@@ -74,23 +84,12 @@ export class GraphPanel extends Component {
         tb.addCustom(sliderContainer);
 
         this.container.appendChild(toolbarContainer);
+    }
 
-        // Graph Container
-        const graphDiv = document.createElement('div');
-        graphDiv.style.cssText = 'width: 100%; height: 100%;';
-        this.container.appendChild(graphDiv);
-
-        const uiElements = {
-            graphContainer: graphDiv,
-            graphDetails: null
-        };
-
-        try {
-            this.graphManager = new GraphManager(uiElements);
-            this.initialized = this.graphManager.initialize();
-        } catch (e) {
-            console.error('Failed to initialize GraphManager:', e);
-        }
+    createGraphContainer() {
+        this.graphDiv = document.createElement('div');
+        this.graphDiv.className = 'graph-container';
+        this.container.appendChild(this.graphDiv);
     }
 
     _dispatchFilter() {
@@ -100,16 +99,13 @@ export class GraphPanel extends Component {
     }
 
     _inspectNode(node) {
-        console.log('Inspecting node:', node.data());
         document.dispatchEvent(new CustomEvent('senars:concept:select', {
             detail: { concept: { term: node.id(), ...node.data() } }
         }));
     }
 
     update(message) {
-        if (this.graphManager?.initialized) {
-            this.graphManager.updateFromMessage(message);
-        }
+        this.graphManager?.initialized && this.graphManager.updateFromMessage(message);
     }
 
     resize() {
@@ -121,8 +117,6 @@ export class GraphPanel extends Component {
     }
 
     reset() {
-        if (this.graphManager?.initialized) {
-            this.graphManager.clear();
-        }
+        this.graphManager?.initialized && this.graphManager.clear();
     }
 }

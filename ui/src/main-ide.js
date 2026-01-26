@@ -17,6 +17,7 @@ import { LMActivityIndicator } from './components/LMActivityIndicator.js';
 import { LayoutPresets } from './config/LayoutPresets.js';
 import { Logger } from './logging/Logger.js';
 import { StatusBar } from './components/StatusBar.js';
+import { DemoLibraryModal } from './components/DemoLibraryModal.js';
 
 cytoscape.use(fcose);
 window.cytoscape = cytoscape;
@@ -91,9 +92,7 @@ class SeNARSIDE {
         if (concept) {
              // Open Memory Inspector if available
              const memoryComponent = this.layout.root.getItemsByFilter(item => item.config.componentName === 'memoryComponent')[0];
-             if (memoryComponent && memoryComponent.parent && memoryComponent.parent.setActiveContentItem) {
-                 memoryComponent.parent.setActiveContentItem(memoryComponent);
-             }
+             memoryComponent?.parent?.setActiveContentItem?.(memoryComponent);
         }
     }
 
@@ -156,7 +155,10 @@ class SeNARSIDE {
         this.components.set('graph', panel);
         this.graphManager = panel.graphManager;
 
-        if (this.commandProcessor) this.commandProcessor.graphManager = this.graphManager;
+        if (this.commandProcessor) {
+            this.commandProcessor.graphManager = this.graphManager;
+            this.graphManager.setCommandProcessor(this.commandProcessor);
+        }
 
         // Initialize LM Activity Indicator on Graph Container
         if (panel.container) {
@@ -230,7 +232,11 @@ class SeNARSIDE {
         } else {
             // Check if we have a repl panel to hook logger
             this.commandProcessor = new CommandProcessor(this.connection, this.logger, this.graphManager);
-            // Wait, CommandProcessor expects (connection, logger). REPLPanel hooks into this.logger.
+        }
+
+        // Ensure GraphManager has access to CommandProcessor (for ContextMenu)
+        if (this.graphManager && this.commandProcessor) {
+            this.graphManager.setCommandProcessor(this.commandProcessor);
         }
 
         this.updateModeIndicator();
@@ -372,74 +378,9 @@ class SeNARSIDE {
             }
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
-                this.showDemoLibrary();
+                new DemoLibraryModal(this.getNotebook()).show();
             }
         });
-    }
-
-    showDemoLibrary() {
-        // Use ExampleBrowser in modal
-        const backdrop = document.createElement('div');
-        backdrop.className = 'modal-backdrop';
-        backdrop.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); z-index: 1000; display: flex;
-            align-items: center; justify-content: center;
-        `;
-
-        const modalContainer = document.createElement('div');
-        modalContainer.id = 'demo-library-modal';
-        modalContainer.style.cssText = `
-            width: 900px; max-width: 90vw; height: 80vh; background: #1e1e1e;
-            border: 1px solid #3c3c3c; border-radius: 8px; overflow: hidden;
-            display: flex; flex-direction: column;
-        `;
-
-        // Title Bar
-        const header = document.createElement('div');
-        header.style.cssText = 'padding: 10px 15px; background: #252526; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center;';
-        header.innerHTML = '<span style="font-weight: bold; color: #d4d4d4;">📚 Demo Library</span>';
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '✕';
-        closeBtn.style.cssText = 'background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 1.2em;';
-        closeBtn.onclick = () => document.body.removeChild(backdrop);
-        header.appendChild(closeBtn);
-        modalContainer.appendChild(header);
-
-        // Content
-        const content = document.createElement('div');
-        content.id = 'demo-browser-content';
-        content.style.cssText = 'flex: 1; overflow: hidden;';
-        modalContainer.appendChild(content);
-
-        const browser = new ExampleBrowser('demo-browser-content', {
-            viewMode: 'tree', // Default to tree in modal for compactness? Or graph?
-            onSelect: async (node) => {
-                if (node.type === 'file') {
-                    document.body.removeChild(backdrop);
-                    try {
-                        await this.getNotebook()?.loadDemoFile(node.path, { clearFirst: true, autoRun: true });
-                    } catch (error) {
-                        this.getNotebook()?.createResultCell(`❌ Error loading demo: ${error.message}`, 'system');
-                    }
-                }
-            }
-        });
-
-        backdrop.appendChild(modalContainer);
-        document.body.appendChild(backdrop);
-
-        // Initialize after appending to DOM
-        browser.initialize();
-
-        backdrop.onclick = (e) => { if (e.target === backdrop) document.body.removeChild(backdrop); };
-        const escHandler = (e) => {
-            if (e.key === 'Escape') {
-                document.body.removeChild(backdrop);
-                document.removeEventListener('keydown', escHandler);
-            }
-        };
-        document.addEventListener('keydown', escHandler);
     }
 }
 

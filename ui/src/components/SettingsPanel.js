@@ -10,7 +10,6 @@ export class SettingsPanel extends Component {
         if (!this.container) return;
 
         this.container.className = 'settings-container';
-        this.container.style.height = '100%'; // Ensure full height scrolling
 
         this.render();
     }
@@ -106,7 +105,7 @@ export class SettingsPanel extends Component {
         return `
             <div class="setting-color-row">
                 <label class="setting-label">${label}</label>
-                <input type="color" id="color-${key}" value="${val}" style="border:none; width:30px; height:20px; padding:0; background:none;">
+                <input type="color" id="color-${key}" value="${val}" class="setting-color-input">
             </div>
         `;
     }

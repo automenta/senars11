@@ -16,7 +16,12 @@ console.log(`UI Server configuration:
   Backend WS Port: ${BACKEND_WS_PORT}`);
 
 const server = http.createServer((req, res) => {
-    let filePath = req.url === '/' || req.url === '/index.html' ? './index.html' : req.url;
+    const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+    let filePath = parsedUrl.pathname;
+
+    if (filePath === '/' || filePath === '/index.html') {
+        filePath = './index.html';
+    }
 
     let localPath = path.join(__dirname, filePath);
     let fullPath = path.join(__dirname, '..', filePath); // Default to repo root for modules
