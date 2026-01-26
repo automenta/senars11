@@ -46,14 +46,12 @@ class SeNARSIDE {
 
         // Map common aliases
         const aliases = { console: 'repl', online: 'dashboard' };
-        if (aliases[this.presetName]) this.presetName = aliases[this.presetName];
+        this.presetName = aliases[this.presetName] ?? this.presetName;
     }
 
     registerComponent(name, instance) {
         this.components.set(name, instance);
-        if (name === 'graph') {
-            this.graphManager = instance.graphManager;
-        }
+        if (name === 'graph') this.graphManager = instance.graphManager;
     }
 
     async initialize() {
@@ -69,11 +67,10 @@ class SeNARSIDE {
 
         // Listen for concept selection (Global Event Bus & DOM)
         const onConceptSelect = (concept) => {
-            if (concept) {
-                 // Open Memory Inspector if available
-                 const memoryComponent = this.layoutManager.layout.root.getItemsByFilter(item => item.config.componentName === COMPONENTS.MEMORY)[0];
-                 memoryComponent?.parent?.setActiveContentItem?.(memoryComponent);
-            }
+            if (!concept) return;
+             // Open Memory Inspector if available
+             const memoryComponent = this.layoutManager.layout.root.getItemsByFilter(item => item.config.componentName === COMPONENTS.MEMORY)[0];
+             memoryComponent?.parent?.setActiveContentItem?.(memoryComponent);
         };
 
         eventBus.on('concept:select', onConceptSelect);
@@ -103,19 +100,13 @@ class SeNARSIDE {
         if (this.commandProcessor) {
             this.commandProcessor.connection = this.connection;
         } else {
-            // Check if we have a repl panel to hook logger (now NotebookPanel)
             this.commandProcessor = new CommandProcessor(this.connection, this.logger, this.graphManager);
         }
 
-        // Ensure GraphManager has access to CommandProcessor (for ContextMenu)
-        if (this.graphManager && this.commandProcessor) {
-            this.graphManager.setCommandProcessor(this.commandProcessor);
-        }
+        this.graphManager?.setCommandProcessor(this.commandProcessor);
 
         this.updateModeIndicator();
-
-        const notebook = this.getNotebook();
-        notebook?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
+        this.getNotebook()?.createResultCell(`🚀 Connected in ${mode} mode`, 'system');
     }
 
     updateModeIndicator() {
@@ -131,10 +122,8 @@ class SeNARSIDE {
                 this.settingsManager.setServerUrl(url);
                 this.switchMode(MODES.REMOTE);
             }
-        } else {
-            if (confirm('Switch to Local Mode?')) {
-                this.switchMode(MODES.LOCAL);
-            }
+        } else if (confirm('Switch to Local Mode?')) {
+            this.switchMode(MODES.LOCAL);
         }
     }
 

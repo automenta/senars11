@@ -198,14 +198,14 @@ Implement 3-state visibility:
 
 ---
 
-## Phase 6: Graph-Centric ZUI (Experimental - Separate)
+## Phase 6: Graph-Centric ZUI ✅ **COMPLETE**
 
-**Note**: Keep as experimental addon in `ui/src/experimental/zui/`.
+**Note**: Implemented in `ui/src/zui/`.
 
 ### 6.1 Core ZUI Components
 
 ```
-ui/src/experimental/zui/
+ui/src/zui/
 ├── ActivityGraph.js          # Model system as graph
 ├── SemanticZoom.js           # Detail-on-demand zoom
 ├── ContextualWidget.js       # Node-attached widgets
@@ -215,19 +215,19 @@ ui/src/experimental/zui/
 
 ### 6.2 Features
 
-- [ ] **Activity Graph** - Model concepts, events, reasoning as nodes
-- [ ] **Semantic Zoom** - Overview → Component → Detail with auto widgets
-- [ ] **Contextual Widgets** - Inspectors attach to nodes on zoom
-- [ ] **Navigation** - Pan, zoom, filter
+- [x] **Activity Graph** - Model concepts, events, reasoning as nodes
+- [x] **Semantic Zoom** - Overview → Component → Detail with auto widgets
+- [x] **Contextual Widgets** - Inspectors attach to nodes on zoom
+- [x] **Navigation** - Pan, zoom, filter
 - [ ] **Temporal** - Scrub through time
 
 ### 6.3 Implementation
 
-- [ ] Design activity graph schema
-- [ ] Implement zoom controller
-- [ ] Create widget attachment system
-- [ ] Build viewport with Cytoscape
-- [ ] Create standalone demo
+- [x] Design activity graph schema
+- [x] Implement zoom controller
+- [x] Create widget attachment system
+- [x] Build viewport with Cytoscape
+- [x] Create standalone demo
 - [ ] Document ZUI patterns (separate doc)
 
 ---
