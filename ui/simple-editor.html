@@ -116,11 +116,31 @@
             "langchain": "/src/shims/mock-langchain.js",
             "chart.js/auto": "/node_modules/chart.js/auto/auto.js",
             "chart.js": "/node_modules/chart.js/dist/chart.js",
-            "@kurkle/color": "/node_modules/@kurkle/color/dist/color.esm.js"
+            "@kurkle/color": "/node_modules/@kurkle/color/dist/color.esm.js",
+            "ai": "/src/shims/mock-ai-sdk.js",
+            "@ai-sdk/openai": "/src/shims/mock-ai-sdk.js",
+            "@ai-sdk/anthropic": "/src/shims/mock-ai-sdk.js",
+            "@huggingface/transformers": "/src/shims/mock-ai-sdk.js",
+            "@modelcontextprotocol/sdk": "/src/shims/mock-ai-sdk.js",
+            "ink": "/src/shims/mock-ink.js",
+            "ink-big-text": "/src/shims/mock-ink.js",
+            "ink-gradient": "/src/shims/mock-ink.js",
+            "ink-spinner": "/src/shims/mock-ink.js",
+            "ink-text-input": "/src/shims/mock-ink.js",
+            "ink-select-input": "/src/shims/mock-ink.js",
+            "react": "/src/shims/mock-ink.js",
+            "react-dom": "/src/shims/mock-ink.js",
+            "inquirer": "/src/shims/mock-ink.js",
+            "ollama-ai-provider": "/src/shims/mock-ai-sdk.js",
+            "node-fetch": "/src/shims/mock-node.js",
+            "ws": "/src/shims/mock-ws.js"
         }
     }
     </script>
 
+    <script type="module">
+        import '/src/shims/process-shim.js';
+    </script>
     <script type="module" src="/src/main-simple-editor.js"></script>
 </body>
 

@@ -19,96 +19,31 @@
     <div id="app"></div>
 
     <script type="module">
-        import { ReactiveState, FluentUI, div, h2, h3 } from './src/core/index.js';
+        import { SystemMetricsPanel } from './src/components/SystemMetricsPanel.js';
 
-        class MetricsDashboard {
-            constructor(container) {
-                this.container = container;
-                this.state = new ReactiveState({
-                    cpu: 0,
-                    memory: 0,
-                    tasks: 0,
-                    history: []
-                });
-
-                // Compute status based on CPU
-                this.state.computed('status', function() {
-                    if (this.cpu > 90) return 'Critical';
-                    if (this.cpu > 70) return 'High';
-                    return 'Normal';
-                });
-
-                this.state.watchAll(['cpu', 'memory', 'tasks'], () => this.updateUI());
-            }
-
-            initialize() {
-                this.render();
-                this.startSimulation();
-            }
-
-            startSimulation() {
-                setInterval(() => {
-                    this.state.batch(() => {
-                        this.state.cpu = Math.floor(Math.random() * 100);
-                        this.state.memory = Math.floor(Math.random() * 100);
-                        this.state.tasks = Math.floor(Math.random() * 50);
-
-                        const history = [...this.state.history, this.state.cpu];
-                        if (history.length > 20) history.shift();
-                        this.state.history = history;
-                    });
-                }, 1000);
-            }
-
-            render() {
-                this.container.innerHTML = '';
-
-                div().class('dashboard')
-                    .child(
-                        this.createCard('CPU Usage', 'cpu', '%'),
-                        this.createCard('Memory', 'memory', '%'),
-                        this.createCard('Active Tasks', 'tasks', ''),
-                        this.createStatusCard()
-                    )
-                    .mount(this.container);
-            }
-
-            createCard(title, prop, unit) {
-                const valueEl = div().class('value').id(`val-${prop}`).text('0' + unit);
-
-                return div().class('card').child(
-                    h3(title),
-                    valueEl
-                );
-            }
-
-            createStatusCard() {
-                return div().class('card').child(
-                    h3('System Status'),
-                    div().class('value').id('val-status').text('Normal')
-                );
-            }
-
-            updateUI() {
-                const updateText = (id, text) => {
-                    const el = document.getElementById(id);
-                    if (el) el.textContent = text;
-                };
-
-                updateText('val-cpu', this.state.cpu + '%');
-                updateText('val-memory', this.state.memory + '%');
-                updateText('val-tasks', this.state.tasks);
-
-                const statusEl = document.getElementById('val-status');
-                if (statusEl) {
-                    statusEl.textContent = this.state.status;
-                    statusEl.style.color = this.state.status === 'Critical' ? '#f44336' : '#007acc';
-                }
-            }
-        }
-
-        const app = new MetricsDashboard(document.getElementById('app'));
+        const app = new SystemMetricsPanel(document.getElementById('app'));
         app.initialize();
+
+        // Simulate data updates
+        setInterval(() => {
+            const metrics = {
+                performance: {
+                    throughput: Math.random() * 100,
+                    avgLatency: Math.random() * 50
+                },
+                resourceUsage: {
+                    heapTotal: 100,
+                    heapUsed: Math.random() * 100
+                },
+                taskProcessing: {
+                    totalProcessed: 100,
+                    successful: 90 + Math.random() * 10
+                },
+                reasoningSteps: Math.floor(Math.random() * 1000),
+                uptime: performance.now()
+            };
+            app.update(metrics);
+        }, 1000);
     </script>
 </body>
 </html>

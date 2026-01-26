@@ -9,6 +9,8 @@ export class CodeEditorPanel extends Component {
         this.editor = null;
         this.autoRun = false;
         this.language = 'metta';
+        this.demoSelect = null;
+        this.langSelect = null;
     }
 
     initialize(app) {
@@ -35,13 +37,23 @@ export class CodeEditorPanel extends Component {
         );
 
         // Language Select
-        const langSelect = FluentUI.create('select')
+        this.langSelect = FluentUI.create('select')
             .style({ background: '#333', color: '#eee', border: '1px solid #444', borderRadius: '3px', padding: '2px' })
             .on('change', (e) => { this.language = e.target.value; })
             .child(FluentUI.create('option').attr({ value: 'metta' }).text('MeTTa'))
             .child(FluentUI.create('option').attr({ value: 'narsese' }).text('Narsese'));
 
-        toolbar.child(langSelect);
+        toolbar.child(this.langSelect);
+
+        // Demo Select
+        this.demoSelect = FluentUI.create('select')
+            .id('demo-select')
+            .style({ background: '#333', color: '#eee', border: '1px solid #444', borderRadius: '3px', padding: '2px', maxWidth: '150px' })
+            .child(FluentUI.create('option').text('Load Demo...'))
+            .on('change', (e) => this.onDemoSelect(e.target.value));
+
+        toolbar.child(this.demoSelect);
+        this.loadDemos();
 
         toolbar.child(
             FluentUI.create('button')
@@ -134,6 +146,72 @@ export class CodeEditorPanel extends Component {
         input.click();
     }
 
+    async loadDemos() {
+        try {
+            const response = await fetch('/examples.json');
+            const data = await response.json();
+
+            const flatten = (items, groupName) => {
+                let results = [];
+                items.forEach(item => {
+                    if (item.type === 'directory') {
+                        const newGroup = groupName ? `${groupName} / ${item.name}` : item.name;
+                        results = results.concat(flatten(item.children, newGroup));
+                    } else if (item.type === 'file') {
+                        results.push({ ...item, group: groupName });
+                    }
+                });
+                return results;
+            };
+
+            const allFiles = flatten(data.children || [], '');
+
+            // Group by group name
+            const grouped = {};
+            allFiles.forEach(f => {
+                if (!grouped[f.group]) grouped[f.group] = [];
+                grouped[f.group].push(f);
+            });
+
+            // Create optgroups
+            for (const [group, files] of Object.entries(grouped)) {
+                const optgroup = FluentUI.create('optgroup').attr({ label: group });
+                files.forEach(f => {
+                    optgroup.child(FluentUI.create('option').attr({ value: f.path }).text(f.name));
+                });
+                this.demoSelect.child(optgroup);
+            }
+
+        } catch (e) {
+            console.error('Failed to load demos:', e);
+        }
+    }
+
+    async onDemoSelect(path) {
+        if (!path || path === 'Load Demo...') return;
+
+        try {
+            const response = await fetch('/' + path);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const content = await response.text();
+            this.editor.setValue(content);
+
+            // Detect language
+            if (path.endsWith('.metta')) {
+                this.language = 'metta';
+                if (this.langSelect) this.langSelect.dom.value = 'metta';
+            } else if (path.endsWith('.nars')) {
+                this.language = 'narsese';
+                if (this.langSelect) this.langSelect.dom.value = 'narsese';
+            }
+
+        } catch (e) {
+            console.error('Failed to load demo file:', e);
+            this.app?.logger?.log?.(`Failed to load demo: ${e.message}`, 'error');
+        }
+    }
+
     debounce(func, wait) {
         let timeout;
         return (...args) => {
@@ -161,7 +239,7 @@ export class CodeEditorPanel extends Component {
             }
 
             // Send to command processor
-            this.app.commandProcessor.processCommand(content);
+            this.app.commandProcessor.processCommand(content, false, this.language);
         }
     }
 
