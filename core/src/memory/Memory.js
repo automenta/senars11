@@ -39,7 +39,6 @@ export class Memory extends BaseComponent {
         const mergedConfig = {...defaultConfig, ...config};
 
         super(mergedConfig, 'Memory');
-        this._config = mergedConfig;
 
         this._concepts = new Map();
         this._conceptBag = new Bag(this._config.maxConcepts, this._config.forgetPolicy);
