@@ -3,7 +3,7 @@
  * @description Tool for processing media files including PDFs, images, and OCR with safety features
  */
 
-import {BaseTool} from './BaseTool.js';
+import { BaseTool } from '../BaseTool.js';
 import {promises as fs} from 'fs';
 import path from 'path';
 

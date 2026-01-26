@@ -3,7 +3,7 @@
  * @description Tool for generating embeddings with safety features
  */
 
-import {BaseTool} from './BaseTool.js';
+import { BaseTool } from '../BaseTool.js';
 
 /**
  * Tool for generating embeddings from text content
