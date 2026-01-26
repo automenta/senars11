@@ -3,8 +3,8 @@ import {clamp} from './util/common.js';
 
 export class Truth {
     constructor(frequency = TRUTH.DEFAULT_FREQUENCY, confidence = TRUTH.DEFAULT_CONFIDENCE) {
-        this.frequency = clamp(isNaN(frequency) ? TRUTH.DEFAULT_FREQUENCY : frequency, 0, 1);
-        this.confidence = clamp(isNaN(confidence) ? TRUTH.DEFAULT_CONFIDENCE : confidence, 0, 1);
+        this._frequency = clamp(isNaN(frequency) ? TRUTH.DEFAULT_FREQUENCY : frequency, 0, 1);
+        this._confidence = clamp(isNaN(confidence) ? TRUTH.DEFAULT_CONFIDENCE : confidence, 0, 1);
         Object.freeze(this);
     }
 
@@ -20,12 +20,20 @@ export class Truth {
         return Truth._NEUTRAL || (Truth._NEUTRAL = new Truth(0.5, TRUTH.DEFAULT_CONFIDENCE));
     }
 
+    get frequency() {
+        return this._frequency;
+    }
+
+    get confidence() {
+        return this._confidence;
+    }
+
     get f() {
-        return this.frequency;
+        return this._frequency;
     }
 
     get c() {
-        return this.confidence;
+        return this._confidence;
     }
 
     /**
@@ -87,8 +95,8 @@ export class Truth {
         if (!truth1 || !truth2) return truth1 || truth2;
         if (truth1 === truth2 || truth1.equals(truth2)) return truth1;
 
-        const {frequency: f1, confidence: c1} = truth1;
-        const {frequency: f2, confidence: c2} = truth2;
+        const {f: f1, c: c1} = truth1;
+        const {f: f2, c: c2} = truth2;
         const confidenceSum = c1 + c2;
 
         return new Truth(
@@ -198,11 +206,11 @@ export class Truth {
 
     equals(other) {
         return other instanceof Truth &&
-            Math.abs(this.frequency - other.frequency) < TRUTH.EPSILON &&
-            Math.abs(this.confidence - other.confidence) < TRUTH.EPSILON;
+            Math.abs(this._frequency - other.frequency) < TRUTH.EPSILON &&
+            Math.abs(this._confidence - other.confidence) < TRUTH.EPSILON;
     }
 
     toString() {
-        return `%${this.frequency.toFixed(TRUTH.PRECISION)};${this.confidence.toFixed(TRUTH.PRECISION)}%`;
+        return `%${this._frequency.toFixed(TRUTH.PRECISION)};${this._confidence.toFixed(TRUTH.PRECISION)}%`;
     }
 }
