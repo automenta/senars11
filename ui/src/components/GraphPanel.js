@@ -2,21 +2,42 @@ import { Component } from './Component.js';
 import { GraphManager } from '../visualization/GraphManager.js';
 import { FluentToolbar } from './ui/FluentToolbar.js';
 import { FluentUI } from '../utils/FluentUI.js';
+import { ReactiveState } from '../core/ReactiveState.js';
+import { eventBus } from '../core/EventBus.js';
 
 export class GraphPanel extends Component {
     constructor(containerId) {
         super(containerId);
         this.graphManager = null;
         this.initialized = false;
-        this.filters = {
-            showTasks: true,
-            minPriority: 0,
-            hideIsolated: false
-        };
-        this.viewMode = 'fcose'; // 'fcose', 'grid', 'scatter', etc.
-        this.scatterAxes = { x: 'priority', y: 'confidence' };
-        this.axisSelectors = null; // Reference to update visibility
+
+        const savedLayout = localStorage.getItem('senars-graph-layout') || 'fcose';
+
+        this.state = new ReactiveState({
+            filters: {
+                showTasks: true,
+                minPriority: 0,
+                hideIsolated: false
+            },
+            viewMode: savedLayout,
+            scatterAxes: { x: 'priority', y: 'confidence' }
+        });
+
+        this.axisSelectors = null;
+
+        // Watchers
+        this.state.watch('filters', () => this._dispatchFilter());
+        this.state.watch('viewMode', (mode) => this.setLayout(mode));
+        this.state.watch('scatterAxes', () => {
+            if (this.state.viewMode === 'scatter') {
+                this.setLayout('scatter');
+            }
+        });
     }
+
+    get filters() { return this.state.filters; }
+    get viewMode() { return this.state.viewMode; }
+    get scatterAxes() { return this.state.scatterAxes; }
 
     initialize() {
         if (this.initialized || !this.container) return;
@@ -57,24 +78,31 @@ export class GraphPanel extends Component {
                         type: 'select',
                         class: 'graph-layout-select',
                         style: { background: '#333', color: '#eee', border: '1px solid #444', borderRadius: '3px', padding: '2px', marginRight: '4px' },
-                        options: [
-                            { value: 'fcose', label: 'Force Graph', selected: true },
-                            { value: 'grid', label: 'Grid' },
-                            { value: 'circle', label: 'Circle' },
-                            { value: 'scatter', label: 'Scatter Plot' },
-                            { value: 'sorted-grid', label: 'Sorted Grid' }
-                        ],
-                        onChange: (val) => this.setLayout(val)
+                        options: this._getLayoutOptions(),
+                        onChange: (val) => this.state.viewMode = val
                     },
-                    {
-                        type: 'custom',
-                        renderer: () => this.createAxisSelectors()
-                    },
+                    { type: 'custom', renderer: () => this.createAxisSelectors() },
                     { type: 'button', icon: '⤢', title: 'Fit', onClick: () => this.graphManager?.fitToScreen() },
                     { type: 'button', icon: '➕', title: 'In', onClick: () => this.graphManager?.zoomIn() },
                     { type: 'button', icon: '➖', title: 'Out', onClick: () => this.graphManager?.zoomOut() }
                 ]
             },
+            ...this._getFilterControls()
+        ];
+    }
+
+    _getLayoutOptions() {
+        return [
+            { value: 'fcose', label: 'Force Graph', selected: true },
+            { value: 'grid', label: 'Grid' },
+            { value: 'circle', label: 'Circle' },
+            { value: 'scatter', label: 'Scatter Plot' },
+            { value: 'sorted-grid', label: 'Sorted Grid' }
+        ];
+    }
+
+    _getFilterControls() {
+        return [
             {
                 type: 'toggle',
                 label: 'Tasks',
@@ -82,8 +110,7 @@ export class GraphPanel extends Component {
                 inputStyle: { margin: '0' },
                 style: { marginLeft: '8px' },
                 onChange: (checked) => {
-                    this.filters.showTasks = checked;
-                    this._dispatchFilter();
+                    this.state.filters = { ...this.state.filters, showTasks: checked };
                 }
             },
             {
@@ -93,8 +120,7 @@ export class GraphPanel extends Component {
                 inputStyle: { margin: '0' },
                 style: { marginLeft: '8px' },
                 onChange: (checked) => {
-                    this.filters.hideIsolated = checked;
-                    this._dispatchFilter();
+                    this.state.filters = { ...this.state.filters, hideIsolated: checked };
                 }
             },
             {
@@ -106,32 +132,26 @@ export class GraphPanel extends Component {
                 value: 0,
                 class: 'graph-slider-container',
                 onChange: (val) => {
-                    this.filters.minPriority = val;
-                    this._dispatchFilter();
+                    this.state.filters = { ...this.state.filters, minPriority: val };
                 }
             }
         ];
     }
 
     createAxisSelectors() {
-        // We still use imperative creation for this complex custom widget for now,
-        // or we could wrap it in FluentUI, but let's stick to the refactor plan.
-        // Actually, let's use FluentUI here too since we have it.
-
         const axes = ['priority', 'confidence', 'frequency', 'durability', 'quality', 'taskCount'];
         const createSelector = (label, axis) => {
             return FluentUI.create('select')
                 .class('toolbar-select-mini')
                 .style({ background: '#222', color: '#ccc', border: '1px solid #333', margin: '0 2px', fontSize: '10px' })
                 .on('change', (e) => {
-                    this.scatterAxes[axis] = e.target.value;
-                    this.setLayout('scatter');
+                    this.state.scatterAxes = { ...this.state.scatterAxes, [axis]: e.target.value };
                 })
                 .children(axes.map(opt =>
                     FluentUI.create('option')
                         .attr({ value: opt })
                         .text(opt.charAt(0).toUpperCase() + opt.slice(1))
-                        .prop({ selected: opt === this.scatterAxes[axis] })
+                        .prop({ selected: opt === this.state.scatterAxes[axis] })
                 ));
         };
 
@@ -147,7 +167,8 @@ export class GraphPanel extends Component {
     }
 
     setLayout(layout) {
-        this.viewMode = layout;
+        // Persist
+        localStorage.setItem('senars-graph-layout', layout);
 
         // Toggle Axis Selectors
         if (this.axisSelectors) {
@@ -155,7 +176,7 @@ export class GraphPanel extends Component {
         }
 
         if (layout === 'scatter') {
-            this.graphManager?.applyScatterLayout(this.scatterAxes.x, this.scatterAxes.y);
+            this.graphManager?.applyScatterLayout(this.state.scatterAxes.x, this.state.scatterAxes.y);
         } else if (layout === 'sorted-grid') {
              this.graphManager?.applySortedGridLayout('priority');
         } else {

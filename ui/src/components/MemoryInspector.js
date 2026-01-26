@@ -4,22 +4,72 @@ import { TaskCard } from './TaskCard.js';
 import { FluentUI } from '../utils/FluentUI.js';
 import { FluentToolbar } from './ui/FluentToolbar.js';
 import { EVENTS } from '../config/constants.js';
+import { ReactiveState } from '../core/ReactiveState.js';
+import { eventBus } from '../core/EventBus.js';
 
 export class MemoryInspector extends Component {
     constructor(container) {
         super(container);
-        this.data = [];
-        this.sortField = 'priority';
-        this.sortDirection = 'desc';
-        this.filterText = '';
-        this.filters = { hasGoals: false, hasQuestions: false };
-        this.listMode = 'compact'; // 'compact' or 'full'
-        this.viewMode = 'list';
-        this.selectedConcept = null;
 
-        document.addEventListener(EVENTS.CONCEPT_SELECT, (e) => {
-            e.detail?.concept && this.selectConcept(e.detail.concept);
+        this.state = new ReactiveState({
+            data: [],
+            sortField: 'priority',
+            sortDirection: 'desc',
+            filterText: '',
+            filters: { hasGoals: false, hasQuestions: false },
+            listMode: 'compact',
+            viewMode: 'list',
+            selectedConcept: null,
+            limit: 50
         });
+
+        // Computed filtered and sorted data
+        this.state.computed('filteredData', function() {
+            const { data, filterText, filters, sortField, sortDirection } = this;
+
+            const filtered = data.filter(c =>
+                (!filterText || c.term.toLowerCase().includes(filterText)) &&
+                (!filters.hasGoals || c.tasks?.some(t => t.punctuation === '!')) &&
+                (!filters.hasQuestions || c.tasks?.some(t => t.punctuation === '?'))
+            );
+
+            return filtered.sort((a, b) => {
+                const valA = MemoryInspector.getValue(a, sortField);
+                const valB = MemoryInspector.getValue(b, sortField);
+                return (valA < valB ? -1 : 1) * (sortDirection === 'asc' ? 1 : -1);
+            });
+        });
+
+        // Watchers
+        this.state.watch('filteredData', () => this.viewMode === 'list' && this._renderListView());
+        this.state.watch('viewMode', (mode) => this.render());
+        this.state.watch('selectedConcept', (concept) => {
+            if (concept) {
+                this.state.viewMode = 'details';
+            }
+        });
+        this.state.watch('listMode', () => this.viewMode === 'list' && this._renderListView());
+
+        // Events
+        eventBus.on('concept:select', (concept) => {
+            this.selectConcept(concept);
+        });
+
+        // Bridge legacy
+        document.addEventListener(EVENTS.CONCEPT_SELECT, (e) => {
+            e.detail?.concept && eventBus.emit('concept:select', e.detail.concept);
+        });
+    }
+
+    // Getters for compatibility if needed, though mostly used internally
+    get viewMode() { return this.state.viewMode; }
+    set viewMode(v) { this.state.viewMode = v; }
+
+    static getValue(obj, field) {
+        if (field === 'priority') return obj.budget?.priority ?? 0;
+        if (field === 'taskCount') return obj.tasks?.length ?? obj.taskCount ?? 0;
+        if (field === 'term') return obj.term ?? '';
+        return obj[field];
     }
 
     initialize() {
@@ -41,6 +91,7 @@ export class MemoryInspector extends Component {
             .mount(this.container)
             .dom;
 
+        // Initial render
         this.render();
     }
 
@@ -56,8 +107,7 @@ export class MemoryInspector extends Component {
                             .attr({ type: 'text', placeholder: 'Filter terms...', id: 'mi-filter-text' })
                             .class('mi-filter-input')
                             .on('input', (e) => {
-                                this.filterText = e.target.value.toLowerCase();
-                                this.render();
+                                this.state.filterText = e.target.value.toLowerCase();
                             }).dom
                     },
                     {
@@ -77,8 +127,7 @@ export class MemoryInspector extends Component {
                         label: 'Has Goals',
                         class: 'mi-checkbox-label',
                         onChange: (checked) => {
-                            this.filters.hasGoals = checked;
-                            this.render();
+                            this.state.filters = { ...this.state.filters, hasGoals: checked };
                         }
                     },
                     {
@@ -86,8 +135,7 @@ export class MemoryInspector extends Component {
                         label: 'Has Questions',
                         class: 'mi-checkbox-label',
                         onChange: (checked) => {
-                            this.filters.hasQuestions = checked;
-                            this.render();
+                            this.state.filters = { ...this.state.filters, hasQuestions: checked };
                         }
                     },
                     {
@@ -97,8 +145,7 @@ export class MemoryInspector extends Component {
                         class: 'mi-checkbox-label',
                         style: { marginLeft: '8px' },
                         onChange: (checked) => {
-                            this.listMode = checked ? 'compact' : 'full';
-                            this.render();
+                            this.state.listMode = checked ? 'compact' : 'full';
                         }
                     },
                     {
@@ -110,8 +157,7 @@ export class MemoryInspector extends Component {
                             { value: 'taskCount', label: 'Task Count' }
                         ],
                         onChange: (val) => {
-                            this.sortField = val;
-                            this.render();
+                            this.state.sortField = val;
                         }
                     }
                 ]
@@ -121,28 +167,24 @@ export class MemoryInspector extends Component {
 
     update(payload) {
         if (!payload?.concepts) return;
-        this.data = payload.concepts;
+        this.state.data = payload.concepts;
 
-        if (this.selectedConcept) {
-             const updated = this.data.find(c => c.id === this.selectedConcept.id || c.term === this.selectedConcept.term);
-             if (updated) this.selectedConcept = updated;
+        if (this.state.selectedConcept) {
+             const updated = this.state.data.find(c => c.id === this.state.selectedConcept.id || c.term === this.state.selectedConcept.term);
+             if (updated) this.state.selectedConcept = updated;
         }
-
-        this.render();
     }
 
     selectConcept(concept) {
-        this.selectedConcept = concept;
-        this.viewMode = 'details';
-        this.render();
+        this.state.selectedConcept = concept;
     }
 
     render() {
         if (!this.contentContainer) return;
         this.contentContainer.innerHTML = '';
-        this.toolbar.style.display = this.viewMode === 'list' ? 'flex' : 'none';
+        this.toolbar.style.display = this.state.viewMode === 'list' ? 'flex' : 'none';
 
-        if (this.viewMode === 'list') {
+        if (this.state.viewMode === 'list') {
             this._renderListView();
         } else {
             this._renderDetailsView();
@@ -150,15 +192,17 @@ export class MemoryInspector extends Component {
     }
 
     _renderListView() {
-        const listDiv = FluentUI.create('div').class('mi-list').mount(this.contentContainer);
+        if (!this.contentContainer) return;
+        this.contentContainer.innerHTML = ''; // Clear container for list view
 
-        const filtered = this._filterAndSortData();
+        const listDiv = FluentUI.create('div').class('mi-list').mount(this.contentContainer);
+        const filtered = this.state.filteredData;
 
         if (filtered.length === 0) {
             listDiv.html('<div style="padding:10px; color:var(--text-muted); text-align:center;">No concepts found</div>');
         } else {
-            const limit = 50;
-            const isCompact = this.listMode === 'compact';
+            const limit = this.state.limit;
+            const isCompact = this.state.listMode === 'compact';
 
             for (const concept of filtered.slice(0, limit)) {
                 new ConceptCard(listDiv.dom, concept, { compact: isCompact }).render();
@@ -166,9 +210,19 @@ export class MemoryInspector extends Component {
 
             if (filtered.length > limit) {
                 listDiv.child(
-                    FluentUI.create('div')
-                        .text(`...and ${filtered.length - limit} more`)
-                        .style({ padding: '10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '10px' })
+                    FluentUI.create('button')
+                        .text(`Load More (${filtered.length - limit} remaining)`)
+                        .class('mi-load-more-btn')
+                        .style({
+                            display: 'block', margin: '10px auto', padding: '5px 10px',
+                            background: '#333', border: '1px solid #444', color: '#ccc', cursor: 'pointer'
+                        })
+                        .on('click', () => {
+                            this.state.limit += 50;
+                            // Re-render handled by state watcher if we watched 'limit', but we didn't add it yet
+                            // Adding explicit render call here or ensuring watcher covers it
+                            this._renderListView();
+                        })
                 );
             }
         }
@@ -181,7 +235,7 @@ export class MemoryInspector extends Component {
 
         const content = FluentUI.create('div').class('mi-details-content').mount(container);
 
-        if (this.selectedConcept) {
+        if (this.state.selectedConcept) {
              this._renderConceptDetails(content);
         }
     }
@@ -194,21 +248,20 @@ export class MemoryInspector extends Component {
                     .html('← Back')
                     .class('mi-back-btn')
                     .on('click', () => {
-                        this.viewMode = 'list';
-                        this.selectedConcept = null;
-                        this.render();
+                        this.state.viewMode = 'list';
+                        this.state.selectedConcept = null;
                     })
             )
             .child(
                 FluentUI.create('div')
                     .class('mi-details-title')
-                    .text(this.selectedConcept?.term ?? 'Concept Details')
+                    .text(this.state.selectedConcept?.term ?? 'Concept Details')
             );
     }
 
     _renderConceptDetails(container) {
         const wrapper = FluentUI.create('div').style({ marginBottom: '20px' }).mount(container);
-        new ConceptCard(wrapper.dom, this.selectedConcept).render();
+        new ConceptCard(wrapper.dom, this.state.selectedConcept).render();
 
         container.child(
             FluentUI.create('div')
@@ -216,8 +269,8 @@ export class MemoryInspector extends Component {
                 .class('mi-section-header')
         );
 
-        if (this.selectedConcept.tasks?.length > 0) {
-            this.selectedConcept.tasks.forEach(task => new TaskCard(container.dom, task).render());
+        if (this.state.selectedConcept.tasks?.length > 0) {
+            this.state.selectedConcept.tasks.forEach(task => new TaskCard(container.dom, task).render());
         } else {
             container.child(
                 FluentUI.create('div')
@@ -225,24 +278,5 @@ export class MemoryInspector extends Component {
                     .style({ color: 'var(--text-muted)' })
             );
         }
-    }
-
-    _filterAndSortData() {
-        return this.data.filter(c =>
-            (!this.filterText || c.term.toLowerCase().includes(this.filterText)) &&
-            (!this.filters.hasGoals || c.tasks?.some(t => t.punctuation === '!')) &&
-            (!this.filters.hasQuestions || c.tasks?.some(t => t.punctuation === '?'))
-        ).sort((a, b) => {
-            const valA = this._getValue(a, this.sortField);
-            const valB = this._getValue(b, this.sortField);
-            return (valA < valB ? -1 : 1) * (this.sortDirection === 'asc' ? 1 : -1);
-        });
-    }
-
-    _getValue(obj, field) {
-        if (field === 'priority') return obj.budget?.priority ?? 0;
-        if (field === 'taskCount') return obj.tasks?.length ?? obj.taskCount ?? 0;
-        if (field === 'term') return obj.term ?? '';
-        return obj[field];
     }
 }

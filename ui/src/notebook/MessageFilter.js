@@ -40,75 +40,87 @@ export function registerMessageCategory(id, config) {
     };
 }
 
+const CATEGORY_MATCHERS = [
+    { id: 'concept', match: t => t.includes('concept') },
+    { id: 'task', match: t => t.includes('task') },
+    { id: 'reasoning', match: t => ['reasoning', 'inference', 'derivation'].some(k => t.includes(k)) },
+    { id: 'lm-call', match: t => ['lm', 'llm', 'language-model'].some(k => t.includes(k)) },
+    { id: 'system', match: t => t === 'system' || ['control', 'agent'].some(k => t.includes(k)) },
+    { id: 'debug', match: t => t === 'debug' },
+    { id: 'user-input', match: t => t === 'user-input' || t === 'user' },
+    { id: 'result', match: t => t === 'result' || ['answer', 'query'].some(k => t.includes(k)) },
+    { id: 'metric', match: t => t === 'metric' || ['performance', 'stats'].some(k => t.includes(k)) },
+    { id: 'derivation', match: t => ['derive', 'proof'].some(k => t.includes(k)) }
+];
+
 /**
  * Categorize a message based on its type
  */
 export function categorizeMessage(message) {
     const type = message.type || 'unknown';
-
     if (MESSAGE_CATEGORIES[type]) return type;
 
-    if (type.includes('concept')) return 'concept';
-    if (type.includes('task')) return 'task';
-    if (['reasoning', 'inference', 'derivation'].some(t => type.includes(t))) return 'reasoning';
-    if (['lm', 'llm', 'language-model'].some(t => type.includes(t))) return 'lm-call';
-    if (type === 'system' || ['control', 'agent'].some(t => type.includes(t))) return 'system';
-    if (type === 'debug') return 'debug';
-    if (type === 'user-input' || type === 'user') return 'user-input';
-    if (type === 'result' || ['answer', 'query'].some(t => type.includes(t))) return 'result';
-    if (type === 'metric' || ['performance', 'stats'].some(t => type.includes(t))) return 'metric';
-    if (['derive', 'proof'].some(t => type.includes(t))) return 'derivation';
-
-    return 'unknown';
+    const matched = CATEGORY_MATCHERS.find(m => m.match(type));
+    return matched ? matched.id : 'unknown';
 }
+
+import { ReactiveState } from '../core/ReactiveState.js';
 
 /**
  * Filter manager for REPL messages
  */
 export class MessageFilter {
     constructor() {
-        this.modeMap = new Map();
-        this.searchTerm = '';
-
-        // Initialize with defaults
+        // Initialize state with default modes
+        const initialModes = {};
         Object.values(MESSAGE_CATEGORIES).forEach(cat => {
-            this.modeMap.set(cat.id, cat.defaultMode);
+            initialModes[cat.id] = cat.defaultMode;
+        });
+
+        this.state = new ReactiveState({
+            modeMap: initialModes,
+            searchTerm: ''
         });
 
         this.loadFilters();
+
+        // Auto-save on change
+        this.state.watch('modeMap', () => this.saveFilters());
     }
 
     cycleCategoryMode(categoryId) {
-        const current = this.modeMap.get(categoryId) || VIEW_MODES.FULL;
+        const current = this.state.modeMap[categoryId] || VIEW_MODES.FULL;
         const next = current === VIEW_MODES.FULL ? VIEW_MODES.COMPACT :
                      current === VIEW_MODES.COMPACT ? VIEW_MODES.HIDDEN : VIEW_MODES.FULL;
 
-        this.modeMap.set(categoryId, next);
-        this.saveFilters();
+        this.state.modeMap = { ...this.state.modeMap, [categoryId]: next };
         return next;
     }
 
     setCategoryMode(categoryId, mode) {
         if (!Object.values(VIEW_MODES).includes(mode)) return;
-        this.modeMap.set(categoryId, mode);
-        this.saveFilters();
+        this.state.modeMap = { ...this.state.modeMap, [categoryId]: mode };
     }
 
     getCategoryMode(categoryId) {
-        return this.modeMap.get(categoryId) || VIEW_MODES.FULL;
+        return this.state.modeMap[categoryId] || VIEW_MODES.FULL;
     }
 
     setSearchTerm(term) {
-        this.searchTerm = term.toLowerCase();
+        this.state.searchTerm = term.toLowerCase();
+    }
+
+    get searchTerm() {
+        return this.state.searchTerm;
     }
 
     getMessageViewMode(message) {
         const category = categorizeMessage(message);
         const mode = this.getCategoryMode(category);
 
-        if (this.searchTerm) {
+        if (this.state.searchTerm) {
             const content = message.content || message.payload?.result || JSON.stringify(message.payload) || '';
-            const matches = content.toLowerCase().includes(this.searchTerm);
+            const matches = content.toLowerCase().includes(this.state.searchTerm);
 
             if (!matches) return VIEW_MODES.HIDDEN;
             if (mode === VIEW_MODES.HIDDEN) return VIEW_MODES.COMPACT;
@@ -119,8 +131,7 @@ export class MessageFilter {
 
     saveFilters() {
         try {
-            const filters = Object.fromEntries(this.modeMap);
-            localStorage.setItem('senars-message-filters-v2', JSON.stringify(filters));
+            localStorage.setItem('senars-message-filters-v2', JSON.stringify(this.state.modeMap));
         } catch (e) {
             console.warn('Failed to save filters', e);
         }
@@ -131,17 +142,8 @@ export class MessageFilter {
             const savedV2 = localStorage.getItem('senars-message-filters-v2');
             if (savedV2) {
                 const filters = JSON.parse(savedV2);
-                Object.entries(filters).forEach(([cat, mode]) => this.modeMap.set(cat, mode));
+                this.state.modeMap = { ...this.state.modeMap, ...filters };
                 return;
-            }
-
-            // Fallback to v1
-            const savedV1 = localStorage.getItem('senars-message-filters');
-            if (savedV1) {
-                const filters = JSON.parse(savedV1);
-                Object.entries(filters).forEach(([cat, visible]) => {
-                    this.modeMap.set(cat, visible ? VIEW_MODES.FULL : VIEW_MODES.HIDDEN);
-                });
             }
         } catch (e) {
             console.error('Failed to load filters:', e);

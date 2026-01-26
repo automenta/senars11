@@ -186,7 +186,8 @@ export class CodeCell extends Cell {
             this.isEditing = false;
             this.updateMode();
 
-            // Timestamp
+            // Timestamp and duration (start)
+            this.startTime = Date.now();
             const now = new Date();
             this.lastRunTime = now;
             if (this.timeLabel) {
@@ -195,6 +196,10 @@ export class CodeCell extends Cell {
 
             this.onExecute(this.content, this, options);
             this._updateGutter();
+
+            // Note: End time and duration would technically be set when execution finishes,
+            // but since onExecute is async or event-based, we might just show start time
+            // or need a callback for completion. For now, just timestamp is fine.
         }
     }
 

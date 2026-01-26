@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrics Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { padding: 20px; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
+        .card { background: #252526; padding: 20px; border-radius: 8px; border: 1px solid #333; text-align: center; }
+        .card h3 { margin-top: 0; color: #888; font-size: 14px; text-transform: uppercase; }
+        .value { font-size: 36px; font-weight: bold; color: #007acc; }
+        .graph { height: 100px; background: #333; margin-top: 10px; position: relative; overflow: hidden; }
+        .bar { background: #007acc; width: 10px; position: absolute; bottom: 0; transition: height 0.3s; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script type="module">
+        import { ReactiveState, FluentUI, div, h2, h3 } from './src/core/index.js';
+
+        class MetricsDashboard {
+            constructor(container) {
+                this.container = container;
+                this.state = new ReactiveState({
+                    cpu: 0,
+                    memory: 0,
+                    tasks: 0,
+                    history: []
+                });
+
+                // Compute status based on CPU
+                this.state.computed('status', function() {
+                    if (this.cpu > 90) return 'Critical';
+                    if (this.cpu > 70) return 'High';
+                    return 'Normal';
+                });
+
+                this.state.watchAll(['cpu', 'memory', 'tasks'], () => this.updateUI());
+            }
+
+            initialize() {
+                this.render();
+                this.startSimulation();
+            }
+
+            startSimulation() {
+                setInterval(() => {
+                    this.state.batch(() => {
+                        this.state.cpu = Math.floor(Math.random() * 100);
+                        this.state.memory = Math.floor(Math.random() * 100);
+                        this.state.tasks = Math.floor(Math.random() * 50);
+
+                        const history = [...this.state.history, this.state.cpu];
+                        if (history.length > 20) history.shift();
+                        this.state.history = history;
+                    });
+                }, 1000);
+            }
+
+            render() {
+                this.container.innerHTML = '';
+
+                div().class('dashboard')
+                    .child(
+                        this.createCard('CPU Usage', 'cpu', '%'),
+                        this.createCard('Memory', 'memory', '%'),
+                        this.createCard('Active Tasks', 'tasks', ''),
+                        this.createStatusCard()
+                    )
+                    .mount(this.container);
+            }
+
+            createCard(title, prop, unit) {
+                const valueEl = div().class('value').id(`val-${prop}`).text('0' + unit);
+
+                return div().class('card').child(
+                    h3(title),
+                    valueEl
+                );
+            }
+
+            createStatusCard() {
+                return div().class('card').child(
+                    h3('System Status'),
+                    div().class('value').id('val-status').text('Normal')
+                );
+            }
+
+            updateUI() {
+                const updateText = (id, text) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = text;
+                };
+
+                updateText('val-cpu', this.state.cpu + '%');
+                updateText('val-memory', this.state.memory + '%');
+                updateText('val-tasks', this.state.tasks);
+
+                const statusEl = document.getElementById('val-status');
+                if (statusEl) {
+                    statusEl.textContent = this.state.status;
+                    statusEl.style.color = this.state.status === 'Critical' ? '#f44336' : '#007acc';
+                }
+            }
+        }
+
+        const app = new MetricsDashboard(document.getElementById('app'));
+        app.initialize();
+    </script>
+</body>
+</html>

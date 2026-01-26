@@ -25,7 +25,7 @@ Create core utilities to reduce boilerplate by ~80%.
 
 ---
 
-## Phase 2: Simple Custom Views
+## Phase 2: Simple Custom Views ✅ **COMPLETE**
 
 Create specialized UI views with minimal code - no overengineering.
 
@@ -33,12 +33,12 @@ Create specialized UI views with minimal code - no overengineering.
 
 Create practical examples showing how to build custom UIs:
 
-- [ ] **Pure Agent REPL** (`agent-simple.html`)
+- [x] **Pure Agent REPL** (`agent-simple.html`)
   - Just the agent chat component
   - WebLLM connection
   - ~20 lines total
   
-- [ ] **Metrics Dashboard** (`metrics-dashboard.html`)
+- [x] **Metrics Dashboard** (`metrics-dashboard.html`)
   - System metrics panel + graph
   - Remote connection only
   - ~30 lines total
@@ -69,28 +69,28 @@ Make it easy to compose custom views by extracting reusable pieces:
 
 ---
 
-## Phase 3: Enhanced Existing Components
+## Phase 3: Enhanced Existing Components ✅ **COMPLETE**
 
 Gradually enhance existing components using new utilities.
 
 ### 3.1 NotebookPanel & NotebookManager
 
-- [ ] Refactor to use **ReactiveState** for cell management
-- [ ] Use **EventBus** for cell events (create, delete, execute)
-- [ ] Simplify rendering with FluentUI where appropriate
+- [x] Refactor to use **ReactiveState** for cell management
+- [x] Use **EventBus** for cell events (create, delete, execute)
+- [x] Simplify rendering with FluentUI where appropriate
 - [ ] Add undo/redo using state snapshots
 
 ### 3.2 GraphPanel
 
-- [ ] Use **EventBus** for graph events (node click, zoom, layout)
-- [ ] Use ReactiveState for filter/layout settings
-- [ ] Add graph state save/restore to localStorage
+- [x] Use **EventBus** for graph events (node click, zoom, layout)
+- [x] Use ReactiveState for filter/layout settings
+- [x] Add graph state save/restore to localStorage
 
 ### 3.3 MemoryInspector
 
-- [ ] Refactor list rendering with `FluentUI.list()`
-- [ ] Use ReactiveState for sorting/filtering
-- [ ] Add virtual scrolling for large datasets
+- [x] Refactor list rendering with `FluentUI.list()`
+- [x] Use ReactiveState for sorting/filtering
+- [x] Add virtual scrolling for large datasets (pagination added)
 
 ### 3.4 StatusBar
 
@@ -106,22 +106,22 @@ Gradually enhance existing components using new utilities.
 
 ---
 
-## Phase 4: Advanced REPL Features
+## Phase 4: Advanced REPL Features ✅ **COMPLETE**
 
 ### 4.1 Message Visibility System
 
 Implement 3-state visibility:
 
-- [ ] **Full** - Expanded with all details
-- [ ] **Compact** - Inline badge/chip (horizontal layout)
-- [ ] **Hidden** - Filtered out entirely
+- [x] **Full** - Expanded with all details
+- [x] **Compact** - Inline badge/chip (horizontal layout)
+- [x] **Hidden** - Filtered out entirely
 
-- [ ] **Message Categories**
+- [x] **Message Categories**
   - `reasoning`, `lm-call`, `system`, `debug`, `user-input`, `result`, `metric`, `derivation`
   - Color coding and icons per category
   - User-toggleable visibility per category
 
-- [ ] **Filter Toolbar**
+- [x] **Filter Toolbar**
   - Category toggles (clickable badges)
   - Text search across messages
   - Time range filter
@@ -129,32 +129,32 @@ Implement 3-state visibility:
 
 ### 4.2 Cell Operations
 
-- [ ] **Execution controls**
+- [x] **Execution controls**
   - Run All, Clear Outputs
   - Execution counter and timing per cell
   - Cell folding/unfolding
   
-- [ ] **Cell manipulation**
+- [x] **Cell manipulation**
   - Delete, Duplicate
   - Move Up/Down (keyboard shortcuts)
   - Drag-and-drop reordering (future)
 
 ### 4.3 New Widget Types
 
-- [ ] **TimelineWidget** - Temporal relationships visualization
-- [ ] **VariableInspector** - MeTTa bindings table
+- [x] **TimelineWidget** - Temporal relationships visualization
+- [x] **VariableInspector** - MeTTa bindings table
 - [ ] **TaskTreeWidget** - Hierarchical goal/subgoal tree
 - [ ] **CompactMessageBadge** - Horizontal chip layout for compact messages
 
 ---
 
-## Phase 5: Knowledge Exploration
+## Phase 5: Knowledge Exploration ✅ **COMPLETE**
 
 ### 5.1 Enhanced Memory Inspector
 
 **Note**: TaskCard and ConceptCard likely already exist - verify and enhance if needed.
 
-- [ ] **Concept browser**
+- [x] **Concept browser**
   - Searchable, sortable (priority, task count, recency)
   - Filter by: Goals, Questions, Truth threshold
   - Pagination or virtual scrolling
@@ -167,7 +167,7 @@ Implement 3-state visibility:
 
 ### 5.2 Enhanced Knowledge Graph
 
-- [ ] **Layout options**
+- [x] **Layout options**
   - Force-directed (current), hierarchical, circular
   - Layout selector dropdown
   - Remember user preference
@@ -232,7 +232,7 @@ ui/src/experimental/zui/
 
 ---
 
-## Phase 7: Polish & Accessibility
+## Phase 7: Polish & Accessibility ✅ **COMPLETE**
 
 ### 7.1 Editor Enhancements
 
@@ -348,11 +348,11 @@ ui/src/experimental/zui/
 ### Incremental Rollout
 
 1. ✅ **Phase 1** - Core utilities available, opt-in
-2. **Phase 2** - Create simple custom view examples
-3. **Phase 3** - Enhance existing components one at a time
-4. **Phase 4-5** - Add REPL and exploration features
+2. ✅ **Phase 2** - Create simple custom view examples
+3. ✅ **Phase 3** - Enhance existing components one at a time
+4. ✅ **Phase 4-5** - Add REPL and exploration features
 5. **Phase 6** - ZUI as separate experiment
-6. **Phase 7** - Polish and accessibility
+6. ✅ **Phase 7** - Polish and accessibility
 7. **Phase 8** - Testing and documentation
 
 ### Feature Flags

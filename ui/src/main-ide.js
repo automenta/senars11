@@ -12,6 +12,7 @@ import { LayoutManager } from './layout/LayoutManager.js';
 import { MessageRouter } from './messaging/MessageRouter.js';
 import { SettingsManager } from './config/SettingsManager.js';
 import { EVENTS, COMPONENTS, MODES } from './config/constants.js';
+import { eventBus } from './core/EventBus.js';
 
 cytoscape.use(fcose);
 window.cytoscape = cytoscape;
@@ -66,19 +67,19 @@ class SeNARSIDE {
         await this.switchMode(this.settingsManager.getMode());
         this.setupKeyboardShortcuts();
 
-        // Listen for concept selection (Global Event Bus)
-        document.addEventListener(EVENTS.CONCEPT_SELECT, (e) => this.handleConceptSelect(e));
+        // Listen for concept selection (Global Event Bus & DOM)
+        const onConceptSelect = (concept) => {
+            if (concept) {
+                 // Open Memory Inspector if available
+                 const memoryComponent = this.layoutManager.layout.root.getItemsByFilter(item => item.config.componentName === COMPONENTS.MEMORY)[0];
+                 memoryComponent?.parent?.setActiveContentItem?.(memoryComponent);
+            }
+        };
+
+        eventBus.on('concept:select', onConceptSelect);
+        document.addEventListener(EVENTS.CONCEPT_SELECT, (e) => onConceptSelect(e.detail?.concept));
 
         this.logger.log(`SeNARS IDE initialized in ${this.settingsManager.getMode()} mode`, 'success');
-    }
-
-    handleConceptSelect(e) {
-        const { concept } = e.detail;
-        if (concept) {
-             // Open Memory Inspector if available
-             const memoryComponent = this.layoutManager.layout.root.getItemsByFilter(item => item.config.componentName === COMPONENTS.MEMORY)[0];
-             memoryComponent?.parent?.setActiveContentItem?.(memoryComponent);
-        }
     }
 
     getNotebook() {
@@ -156,6 +157,15 @@ class SeNARSIDE {
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
                 new DemoLibraryModal(this.getNotebook()).show();
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                this.getNotebook()?.saveToStorage();
+                this.getNotebook()?.createResultCell('💾 Notebook saved', 'system');
+            }
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                this.layoutManager.toggleSidebar();
             }
         });
     }

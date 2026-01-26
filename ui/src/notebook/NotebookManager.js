@@ -7,6 +7,8 @@ import { WidgetCell } from './cells/WidgetCell.js';
 import { Config } from '../config/Config.js';
 import { NotebookGraphView } from './views/NotebookGraphView.js';
 import { NotebookGridView } from './views/NotebookGridView.js';
+import { ReactiveState } from '../core/ReactiveState.js';
+import { eventBus } from '../core/EventBus.js';
 
 /**
  * Notebook manager for Notebook cells
@@ -14,12 +16,16 @@ import { NotebookGridView } from './views/NotebookGridView.js';
 export class NotebookManager {
     constructor(container, options = {}) {
         this.container = container;
-        this.cells = [];
+        this.state = new ReactiveState({
+            cells: [],
+            viewMode: 'list'
+        });
+
         this.executionCount = 0;
         this.saveTimeout = null;
         this.storageKey = 'senars-notebook-content';
         this.defaultOnExecute = options.onExecute || null;
-        this.viewMode = 'list';
+
         this.viewContainer = document.createElement('div');
         this.viewContainer.style.cssText = 'height: 100%; width: 100%; position: relative;';
         this.container.appendChild(this.viewContainer);
@@ -28,120 +34,142 @@ export class NotebookManager {
         this.graphView = null;
         this.gridView = null;
 
-        this.switchView('list');
+        // Watch for view mode changes
+        this.state.watch('viewMode', (mode) => this._renderView(mode));
+
+        // Initial render
+        this._renderView('list');
+    }
+
+    get cells() {
+        return this.state.cells;
+    }
+
+    get viewMode() {
+        return this.state.viewMode;
     }
 
     switchView(mode, targetCellId = null) {
-        this.viewMode = mode;
+        this.state.viewMode = mode;
+        if (targetCellId) {
+            // Wait for render
+            setTimeout(() => {
+                const cell = this.state.cells.find(c => c.id === targetCellId);
+                if (cell) {
+                    cell.element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cell.element.style.borderColor = '#00ff9d';
+                    setTimeout(() => cell.element.style.borderColor = '#3c3c3c', 1000);
+                }
+            }, 100);
+        }
+    }
+
+    _renderView(mode) {
         this.viewContainer.innerHTML = '';
         this.viewContainer.className = `view-mode-${mode}`;
 
         if (mode === 'list') {
             this.viewContainer.style.overflowY = 'auto';
             this.viewContainer.style.display = 'block';
-            for (const cell of this.cells) {
+            for (const cell of this.state.cells) {
                 const el = cell.render();
                 this._addDnDListeners(el, cell);
                 this.viewContainer.appendChild(el);
             }
-            if (targetCellId) {
-                const cell = this.cells.find(c => c.id === targetCellId);
-                if (cell) {
-                    setTimeout(() => {
-                        cell.element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        cell.element.style.borderColor = '#00ff9d';
-                        setTimeout(() => cell.element.style.borderColor = '#3c3c3c', 1000);
-                    }, 100);
-                }
-            }
         } else if (mode === 'grid') {
-            this.gridView = new NotebookGridView(this.viewContainer, this.cells, (m, id) => this.switchView(m, id));
+            this.gridView = new NotebookGridView(this.viewContainer, this.state.cells, (m, id) => this.switchView(m, id));
             this.gridView.render(false);
         } else if (mode === 'icon') {
-            this.gridView = new NotebookGridView(this.viewContainer, this.cells, (m, id) => this.switchView(m, id));
+            this.gridView = new NotebookGridView(this.viewContainer, this.state.cells, (m, id) => this.switchView(m, id));
             this.gridView.render(true);
         } else if (mode === 'graph') {
              this.viewContainer.style.overflow = 'hidden';
-             this.graphView = new NotebookGraphView(this.viewContainer, this.cells, (m, id) => this.switchView(m, id));
+             this.graphView = new NotebookGraphView(this.viewContainer, this.state.cells, (m, id) => this.switchView(m, id));
              this.graphView.render();
         }
     }
 
     _addDnDListeners(el, cell) {
-        el.addEventListener('dragstart', (e) => {
-            this.dragSrcEl = el;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', cell.id);
-            el.style.opacity = '0.4';
-            el.classList.add('dragging');
-        });
+        el.addEventListener('dragstart', (e) => this._onDragStart(e, el, cell));
+        el.addEventListener('dragover', (e) => this._onDragOver(e, el));
+        el.addEventListener('dragenter', () => el.classList.add('drag-over'));
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+        el.addEventListener('dragend', (e) => this._onDragEnd(el));
+        el.addEventListener('drop', (e) => this._onDrop(e, cell));
+    }
 
-        el.addEventListener('dragover', (e) => {
-            if (e.preventDefault) e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            el.classList.add('drag-over');
-            return false;
-        });
+    _onDragStart(e, el, cell) {
+        this.dragSrcEl = el;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', cell.id);
+        el.style.opacity = '0.4';
+        el.classList.add('dragging');
+    }
 
-        el.addEventListener('dragenter', (e) => {
-            el.classList.add('drag-over');
-        });
+    _onDragOver(e, el) {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        el.classList.add('drag-over');
+        return false;
+    }
 
-        el.addEventListener('dragleave', (e) => {
-            el.classList.remove('drag-over');
-        });
+    _onDragEnd(el) {
+        el.style.opacity = '1';
+        el.classList.remove('dragging');
+        this.state.cells.forEach(c => c.element?.classList.remove('drag-over'));
+    }
 
-        el.addEventListener('dragend', (e) => {
-            el.style.opacity = '1';
-            el.classList.remove('dragging');
-            this.cells.forEach(c => c.element?.classList.remove('drag-over'));
-        });
+    _onDrop(e, targetCell) {
+        if (e.stopPropagation) e.stopPropagation();
 
-        el.addEventListener('drop', (e) => {
-            if (e.stopPropagation) e.stopPropagation();
+        const srcId = e.dataTransfer.getData('text/plain');
+        const srcCell = this.state.cells.find(c => c.id === srcId);
 
-            const srcId = e.dataTransfer.getData('text/plain');
-            const srcCell = this.cells.find(c => c.id === srcId);
-            const targetCell = cell;
+        if (srcCell && srcCell !== targetCell) {
+            const currentCells = [...this.state.cells];
+            const srcIndex = currentCells.indexOf(srcCell);
+            const targetIndex = currentCells.indexOf(targetCell);
 
-            if (srcCell && srcCell !== targetCell) {
-                const srcIndex = this.cells.indexOf(srcCell);
-                const targetIndex = this.cells.indexOf(targetCell);
+            currentCells.splice(srcIndex, 1);
+            currentCells.splice(targetIndex, 0, srcCell);
 
-                this.cells.splice(srcIndex, 1);
-                this.cells.splice(targetIndex, 0, srcCell);
+            this.state.cells = currentCells;
 
+            // DOM order update optimization for list mode is handled here manually
+            // though reactive update would handle it, this is smoother for drag
+            if (this.state.viewMode === 'list') {
                 if (srcIndex < targetIndex) {
                     targetCell.element.after(srcCell.element);
                 } else {
                     targetCell.element.before(srcCell.element);
                 }
-
-                this.triggerSave();
             }
-            return false;
-        });
+
+            this.triggerSave();
+        }
+        return false;
     }
 
     _updateGraphData() {
-        if (this.viewMode === 'graph') {
-             this.switchView('graph');
+        if (this.state.viewMode === 'graph') {
+             this._renderView('graph');
         }
     }
 
     addCell(cell) {
-        this.cells.push(cell);
+        this.state.cells = [...this.state.cells, cell];
 
-        if (this.viewMode === 'list') {
+        if (this.state.viewMode === 'list') {
             const el = cell.render();
             this._addDnDListeners(el, cell);
             this.viewContainer.appendChild(el);
             this.scrollToBottom();
         } else {
-             this.switchView(this.viewMode);
+             this._renderView(this.state.viewMode);
         }
 
         this.triggerSave();
+        eventBus.emit('notebook:cell:added', cell);
         return cell;
     }
 
@@ -198,32 +226,41 @@ export class NotebookManager {
     }
 
     removeCell(cell) {
-        const index = this.cells.indexOf(cell);
-        if (index > -1) this.cells.splice(index, 1);
+        const currentCells = [...this.state.cells];
+        const index = currentCells.indexOf(cell);
 
-        if (this.viewMode === 'list') {
+        if (index > -1) {
+            currentCells.splice(index, 1);
+            this.state.cells = currentCells;
+        }
+
+        if (this.state.viewMode === 'list') {
             cell.element?.remove();
         } else {
-             this.switchView(this.viewMode);
+             this._renderView(this.state.viewMode);
         }
 
         cell.destroy();
         this.triggerSave();
+        eventBus.emit('notebook:cell:removed', cell);
     }
 
     moveCellUp(cell) {
-        const index = this.cells.indexOf(cell);
-        if (index > 0) {
-            this.cells.splice(index, 1);
-            this.cells.splice(index - 1, 0, cell);
+        const currentCells = [...this.state.cells];
+        const index = currentCells.indexOf(cell);
 
-            if (this.viewMode === 'list') {
+        if (index > 0) {
+            currentCells.splice(index, 1);
+            currentCells.splice(index - 1, 0, cell);
+            this.state.cells = currentCells;
+
+            if (this.state.viewMode === 'list') {
                 const prev = cell.element.previousElementSibling;
                 if (prev) {
                     this.viewContainer.insertBefore(cell.element, prev);
                 }
             } else {
-                this.switchView(this.viewMode);
+                this._renderView(this.state.viewMode);
             }
             this.triggerSave();
         }
@@ -246,6 +283,8 @@ export class NotebookManager {
     }
 
     handleCellExecution(cell, options = {}) {
+        eventBus.emit('notebook:cell:executed', cell);
+
         if (options.advance) {
             const index = this.cells.indexOf(cell);
             let nextIndex = index + 1;
@@ -263,18 +302,21 @@ export class NotebookManager {
     }
 
     moveCellDown(cell) {
-        const index = this.cells.indexOf(cell);
-        if (index > -1 && index < this.cells.length - 1) {
-            this.cells.splice(index, 1);
-            this.cells.splice(index + 1, 0, cell);
+        const currentCells = [...this.state.cells];
+        const index = currentCells.indexOf(cell);
 
-            if (this.viewMode === 'list') {
+        if (index > -1 && index < currentCells.length - 1) {
+            currentCells.splice(index, 1);
+            currentCells.splice(index + 1, 0, cell);
+            this.state.cells = currentCells;
+
+            if (this.state.viewMode === 'list') {
                 const next = cell.element.nextElementSibling;
                 if (next) {
                     this.viewContainer.insertBefore(cell.element, next.nextElementSibling);
                 }
             } else {
-                this.switchView(this.viewMode);
+                this._renderView(this.state.viewMode);
             }
             this.triggerSave();
         }
@@ -285,19 +327,22 @@ export class NotebookManager {
             const newCell = this.createCodeCell(cell.content, cell.onExecute);
             this.removeCell(newCell);
 
-            const index = this.cells.indexOf(cell);
-            this.cells.splice(index + 1, 0, newCell);
+            const currentCells = [...this.state.cells];
+            const index = currentCells.indexOf(cell);
+            currentCells.splice(index + 1, 0, newCell);
+            this.state.cells = currentCells;
 
-            if (this.viewMode === 'list') {
+            if (this.state.viewMode === 'list') {
                 if (cell.element.nextElementSibling) {
                     this.viewContainer.insertBefore(newCell.render(), cell.element.nextElementSibling);
                 } else {
                     this.viewContainer.appendChild(newCell.render());
                 }
             } else {
-                this.switchView(this.viewMode);
+                this._renderView(this.state.viewMode);
             }
             this.triggerSave();
+            eventBus.emit('notebook:cell:added', newCell);
         }
     }
 
@@ -311,10 +356,13 @@ export class NotebookManager {
 
         if (newCell) {
             this.removeCell(newCell);
-            const index = this.cells.indexOf(referenceCell);
-            this.cells.splice(index + 1, 0, newCell);
 
-            if (this.viewMode === 'list') {
+            const currentCells = [...this.state.cells];
+            const index = currentCells.indexOf(referenceCell);
+            currentCells.splice(index + 1, 0, newCell);
+            this.state.cells = currentCells;
+
+            if (this.state.viewMode === 'list') {
                 if (referenceCell.element.nextElementSibling) {
                     this.viewContainer.insertBefore(newCell.render(), referenceCell.element.nextElementSibling);
                 } else {
@@ -322,9 +370,10 @@ export class NotebookManager {
                 }
                 newCell.focus();
             } else {
-                this.switchView(this.viewMode);
+                this._renderView(this.state.viewMode);
             }
             this.triggerSave();
+            eventBus.emit('notebook:cell:added', newCell);
         }
     }
 
@@ -342,8 +391,12 @@ export class NotebookManager {
     }
 
     clear() {
-        this.cells.forEach(cell => cell.destroy());
-        this.cells = [];
+        this.state.cells.forEach(cell => {
+            cell.destroy();
+            eventBus.emit('notebook:cell:removed', cell);
+        });
+        this.state.cells = [];
+        this.viewContainer.innerHTML = '';
         this.triggerSave();
     }
 

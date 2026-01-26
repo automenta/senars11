@@ -14,21 +14,31 @@ export class FilterToolbar {
         this.currentView = 'list';
         this.element = null;
         this.buttons = new Map();
+
+        // Reactive bindings
+        if (this.messageFilter.state) {
+            this.messageFilter.state.watch('modeMap', () => {
+                this.refresh();
+                this.onFilterChange();
+            });
+            this.messageFilter.state.watch('searchTerm', () => {
+                this.onFilterChange();
+            });
+        }
     }
 
     render() {
         this.element = FluentUI.create('div').class('filter-toolbar');
 
         // Search Input
-        this.element.child(
-            FluentUI.create('input')
-                .attr({ type: 'text', placeholder: '🔍 Search messages...', value: this.messageFilter.searchTerm || '' })
-                .class('filter-search-input')
-                .on('input', (e) => {
-                    this.messageFilter.setSearchTerm(e.target.value);
-                    this.onFilterChange();
-                })
-        );
+        const searchInput = FluentUI.create('input')
+            .attr({ type: 'text', placeholder: '🔍 Search messages...', value: this.messageFilter.searchTerm || '' })
+            .class('filter-search-input')
+            .on('input', (e) => {
+                this.messageFilter.setSearchTerm(e.target.value);
+            });
+
+        this.element.child(searchInput);
 
         // Category Buttons
         const catButtons = FluentUI.create('div').class('filter-btn-group');
@@ -37,9 +47,7 @@ export class FilterToolbar {
                 .class('filter-btn')
                 .attr({ 'data-category': id })
                 .on('click', () => {
-                    const newMode = this.messageFilter.cycleCategoryMode(id);
-                    this.updateButtonStyle(btn.dom, id, newMode);
-                    this.onFilterChange();
+                    this.messageFilter.cycleCategoryMode(id);
                 });
 
             this.updateButtonStyle(btn.dom, id, this.messageFilter.getCategoryMode(id));

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Agent REPL</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { padding: 20px; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
+        .chat-container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; height: 90vh; }
+        .messages { flex: 1; overflow-y: auto; border: 1px solid #333; padding: 10px; margin-bottom: 10px; background: #252526; border-radius: 4px; }
+        .message { margin-bottom: 8px; padding: 8px; border-radius: 4px; }
+        .message.user { background: #0e639c; align-self: flex-end; }
+        .message.agent { background: #2d2d2d; align-self: flex-start; }
+        .input-area { display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; background: #3c3c3c; color: white; border: 1px solid #333; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0062a3; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script type="module">
+        import { ReactiveState, EventBus, FluentUI, div, input, button } from './src/core/index.js';
+
+        class AgentChat {
+            constructor(container) {
+                this.container = container;
+                this.state = new ReactiveState({
+                    messages: [],
+                    inputText: ''
+                });
+
+                this.state.watch('messages', () => this.renderMessages());
+            }
+
+            initialize() {
+                this.render();
+                this.addMessage('agent', 'Hello! I am a simple agent. How can I help you?');
+            }
+
+            addMessage(role, text) {
+                this.state.messages = [...this.state.messages, { role, text, time: new Date() }];
+            }
+
+            sendMessage() {
+                const text = this.inputEl.value.trim();
+                if (!text) return;
+
+                this.addMessage('user', text);
+                this.inputEl.value = '';
+
+                // Simulate agent response
+                setTimeout(() => {
+                    this.addMessage('agent', `I received: "${text}". This is a simulated response.`);
+                }, 1000);
+            }
+
+            render() {
+                this.container.innerHTML = '';
+
+                const ui = div().class('chat-container').child(
+                    div().class('messages').id('messages-list'),
+                    div().class('input-area').child(
+                        this.inputEl = input()
+                            .attr('placeholder', 'Type a message...')
+                            .on('keydown', (e) => {
+                                if (e.key === 'Enter') this.sendMessage();
+                            })
+                            .build(),
+                        button('Send').on('click', () => this.sendMessage())
+                    )
+                );
+
+                ui.mount(this.container);
+                this.messagesList = document.getElementById('messages-list');
+                this.renderMessages();
+            }
+
+            renderMessages() {
+                if (!this.messagesList) return;
+                this.messagesList.innerHTML = '';
+
+                this.state.messages.forEach(msg => {
+                    div()
+                        .class('message', msg.role)
+                        .text(`${msg.role === 'agent' ? '🤖' : '👤'} ${msg.text}`)
+                        .mount(this.messagesList);
+                });
+
+                this.messagesList.scrollTop = this.messagesList.scrollHeight;
+            }
+        }
+
+        const app = new AgentChat(document.getElementById('app'));
+        app.initialize();
+    </script>
+</body>
+</html>

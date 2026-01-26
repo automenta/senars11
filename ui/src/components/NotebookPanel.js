@@ -5,6 +5,7 @@ import { MessageFilter } from '../notebook/MessageFilter.js';
 import { FilterToolbar } from '../notebook/FilterToolbar.js';
 import { EVENTS } from '../config/constants.js';
 import { FluentUI } from '../utils/FluentUI.js';
+import { eventBus } from '../core/EventBus.js';
 
 export class NotebookPanel extends Component {
     constructor(container) {
@@ -25,10 +26,17 @@ export class NotebookPanel extends Component {
     }
 
     setupEventListeners() {
-        document.addEventListener(EVENTS.NOTEBOOK_ADD_CELL, (e) => {
-            const { type, content } = e.detail;
+        // Listen to EventBus for add cell commands
+        eventBus.on('notebook:cmd:add-cell', (data) => {
+            const { type, content } = data;
             if (type === 'code') this.notebookManager.createCodeCell(content);
             else if (type === 'markdown') this.notebookManager.createMarkdownCell(content);
+        });
+
+        // Legacy DOM event support (bridged or direct)
+        document.addEventListener(EVENTS.NOTEBOOK_ADD_CELL, (e) => {
+            const { type, content } = e.detail;
+            eventBus.emit('notebook:cmd:add-cell', { type, content });
         });
     }
 
