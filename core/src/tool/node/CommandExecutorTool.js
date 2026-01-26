@@ -3,7 +3,7 @@
  * @description Tool for executing commands in a sandboxed environment
  */
 
-import {BaseTool} from './BaseTool.js';
+import { BaseTool } from '../BaseTool.js';
 import {exec} from 'child_process';
 import path from 'path';
 import os from 'os';

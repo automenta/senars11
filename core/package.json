@@ -2,7 +2,25 @@
   "name": "@senars/core",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/index.node.js",
+  "browser": {
+    "./src/index.node.js": "./src/index.browser.js",
+    "fs": false,
+    "path": false,
+    "os": false,
+    "child_process": false
+  },
+  "exports": {
+    ".": {
+      "node": "./src/index.node.js",
+      "browser": "./src/index.browser.js",
+      "default": "./src/index.js"
+    },
+    "./src/*": "./src/*.js"
+  },
+  "files": [
+    "src"
+  ],
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
     "@langchain/core": "^1.0.6",

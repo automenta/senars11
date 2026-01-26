@@ -3,8 +3,8 @@
  * @description Tool for web automation and web-based operations with safety features
  */
 
-import {BaseTool} from './BaseTool.js';
-import {Logger} from '../util/Logger.js';
+import { BaseTool } from '../BaseTool.js';
+import {Logger} from '../../util/Logger.js';
 
 /**
  * Tool for web automation including navigation, scraping, and basic interactions

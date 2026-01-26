@@ -3,7 +3,7 @@
  * @description Tool for file operations with safety validations
  */
 
-import {BaseTool} from './BaseTool.js';
+import { BaseTool } from '../BaseTool.js';
 import {promises as fs} from 'fs';
 import path from 'path';
 
