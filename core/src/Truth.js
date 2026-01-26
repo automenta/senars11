@@ -8,6 +8,18 @@ export class Truth {
         Object.freeze(this);
     }
 
+    static get TRUE() {
+        return Truth._TRUE || (Truth._TRUE = new Truth(1.0, TRUTH.DEFAULT_CONFIDENCE));
+    }
+
+    static get FALSE() {
+        return Truth._FALSE || (Truth._FALSE = new Truth(0.0, TRUTH.DEFAULT_CONFIDENCE));
+    }
+
+    static get NEUTRAL() {
+        return Truth._NEUTRAL || (Truth._NEUTRAL = new Truth(0.5, TRUTH.DEFAULT_CONFIDENCE));
+    }
+
     get f() {
         return this.frequency;
     }
@@ -49,8 +61,11 @@ export class Truth {
 
     // Truth operation methods using a more modular approach
     static deduction(t1, t2) {
-        return Truth.binaryOperation(t1, t2, (t, u) =>
-            new Truth(t.frequency * u.frequency, t.confidence * u.confidence));
+        return Truth.binaryOperation(t1, t2, (t, u) => {
+            const f = t.frequency * u.frequency;
+            const c = t.confidence * u.confidence;
+            return (f === 1.0 && c === TRUTH.DEFAULT_CONFIDENCE) ? Truth.TRUE : new Truth(f, c);
+        });
     }
 
     static induction(t1, t2) {
@@ -70,7 +85,7 @@ export class Truth {
 
     static revision(truth1, truth2) {
         if (!truth1 || !truth2) return truth1 || truth2;
-        if (truth1.equals(truth2)) return truth1;
+        if (truth1 === truth2 || truth1.equals(truth2)) return truth1;
 
         const {frequency: f1, confidence: c1} = truth1;
         const {frequency: f2, confidence: c2} = truth2;
@@ -83,7 +98,10 @@ export class Truth {
     }
 
     static negation(truth) {
-        return Truth.unaryOperation(truth, t => new Truth(1 - t.frequency, t.confidence));
+        return Truth.unaryOperation(truth, t => {
+            const f = 1 - t.frequency;
+            return (f === 0.0 && t.confidence === TRUTH.DEFAULT_CONFIDENCE) ? Truth.FALSE : new Truth(f, t.confidence);
+        });
     }
 
     static conversion(truth) {
