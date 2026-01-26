@@ -20,8 +20,8 @@ export const LayoutPresets = {
             content: [
                 {
                     type: 'component',
-                    componentName: 'replComponent',
-                    title: 'REPL',
+                    componentName: 'notebookComponent',
+                    title: 'NOTEBOOK',
                     width: 70
                 },
                 {
@@ -62,8 +62,8 @@ export const LayoutPresets = {
                     content: [
                         {
                             type: 'component',
-                            componentName: 'replComponent',
-                            title: 'REPL',
+                            componentName: 'notebookComponent',
+                            title: 'NOTEBOOK',
                             isClosable: false
                         },
                         {
@@ -107,8 +107,8 @@ export const LayoutPresets = {
                 content: [
                     {
                         type: 'component',
-                        componentName: 'replComponent',
-                        title: 'CONSOLE',
+                        componentName: 'notebookComponent',
+                        title: 'NOTEBOOK',
                         isClosable: false
                     },
                     {
@@ -164,8 +164,8 @@ export const LayoutPresets = {
                 },
                 {
                     type: 'component',
-                    componentName: 'replComponent',
-                    title: 'REPL',
+                    componentName: 'notebookComponent',
+                    title: 'NOTEBOOK',
                     width: 70,
                     isClosable: false
                 }

@@ -25,6 +25,13 @@ export class MemoryInspector extends Component {
         this.container.innerHTML = '';
         this.container.className = 'mi-container';
 
+        this._renderToolbar();
+        this._renderContentContainer();
+        this._setupListeners();
+        this.render();
+    }
+
+    _renderToolbar() {
         const toolbar = document.createElement('div');
         toolbar.className = 'mi-toolbar';
         toolbar.innerHTML = `
@@ -45,43 +52,44 @@ export class MemoryInspector extends Component {
         `;
         this.container.appendChild(toolbar);
         this.toolbar = toolbar;
+    }
 
+    _renderContentContainer() {
         this.contentContainer = document.createElement('div');
         this.contentContainer.id = 'mi-content';
         this.contentContainer.className = 'mi-content-container';
         this.container.appendChild(this.contentContainer);
-
-        this._setupListeners();
-        this.render();
     }
 
     _setupListeners() {
-        this.container.querySelector('#mi-filter-text').addEventListener('input', (e) => {
+        const getEl = (sel) => this.container.querySelector(sel);
+
+        getEl('#mi-filter-text').addEventListener('input', (e) => {
             this.filterText = e.target.value.toLowerCase();
             this.render();
         });
 
-        this.container.querySelector('#mi-filter-goals').addEventListener('change', (e) => {
+        getEl('#mi-filter-goals').addEventListener('change', (e) => {
             this.filters.hasGoals = e.target.checked;
             this.render();
         });
 
-        this.container.querySelector('#mi-filter-questions').addEventListener('change', (e) => {
+        getEl('#mi-filter-questions').addEventListener('change', (e) => {
             this.filters.hasQuestions = e.target.checked;
             this.render();
         });
 
-        this.container.querySelector('#mi-compact-view').addEventListener('change', (e) => {
+        getEl('#mi-compact-view').addEventListener('change', (e) => {
             this.listMode = e.target.checked ? 'compact' : 'full';
             this.render();
         });
 
-        this.container.querySelector('#mi-sort').addEventListener('change', (e) => {
+        getEl('#mi-sort').addEventListener('change', (e) => {
             this.sortField = e.target.value;
             this.render();
         });
 
-        this.container.querySelector('#mi-refresh').addEventListener('click', () => {
+        getEl('#mi-refresh').addEventListener('click', () => {
              document.dispatchEvent(new CustomEvent('senars:memory:refresh'));
         });
     }
@@ -109,10 +117,14 @@ export class MemoryInspector extends Component {
         this.contentContainer.innerHTML = '';
         this.toolbar.style.display = this.viewMode === 'list' ? 'flex' : 'none';
 
-        this.viewMode === 'list' ? this.renderList() : this.renderDetails();
+        if (this.viewMode === 'list') {
+            this._renderListView();
+        } else {
+            this._renderDetailsView();
+        }
     }
 
-    renderList() {
+    _renderListView() {
         const listDiv = document.createElement('div');
         listDiv.className = 'mi-list';
 
@@ -139,6 +151,66 @@ export class MemoryInspector extends Component {
         this.contentContainer.appendChild(listDiv);
     }
 
+    _renderDetailsView() {
+        const container = document.createElement('div');
+        container.className = 'mi-details';
+
+        const header = this._createDetailsHeader();
+        container.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'mi-details-content';
+
+        if (this.selectedConcept) {
+             this._renderConceptDetails(content);
+        }
+
+        container.appendChild(content);
+        this.contentContainer.appendChild(container);
+    }
+
+    _createDetailsHeader() {
+        const header = document.createElement('div');
+        header.className = 'mi-details-header';
+
+        const backBtn = document.createElement('button');
+        backBtn.innerHTML = '← Back';
+        backBtn.className = 'mi-back-btn';
+        backBtn.onclick = () => {
+            this.viewMode = 'list';
+            this.selectedConcept = null;
+            this.render();
+        };
+
+        const title = document.createElement('div');
+        title.className = 'mi-details-title';
+        title.textContent = this.selectedConcept?.term ?? 'Concept Details';
+
+        header.append(backBtn, title);
+        return header;
+    }
+
+    _renderConceptDetails(container) {
+        const wrapper = document.createElement('div');
+        wrapper.style.marginBottom = '20px';
+        new ConceptCard(wrapper, this.selectedConcept).render();
+        container.appendChild(wrapper);
+
+        const taskHeader = document.createElement('div');
+        taskHeader.textContent = 'TASKS';
+        taskHeader.className = 'mi-section-header';
+        container.appendChild(taskHeader);
+
+        if (this.selectedConcept.tasks?.length > 0) {
+            this.selectedConcept.tasks.forEach(task => new TaskCard(container, task).render());
+        } else {
+            const empty = document.createElement('div');
+            empty.textContent = 'No tasks in memory view.';
+            empty.style.color = 'var(--text-muted)';
+            container.appendChild(empty);
+        }
+    }
+
     _filterAndSortData() {
         return this.data.filter(c =>
             (!this.filterText || c.term.toLowerCase().includes(this.filterText)) &&
@@ -149,56 +221,6 @@ export class MemoryInspector extends Component {
             const valB = this._getValue(b, this.sortField);
             return (valA < valB ? -1 : 1) * (this.sortDirection === 'asc' ? 1 : -1);
         });
-    }
-
-    renderDetails() {
-        const container = document.createElement('div');
-        container.className = 'mi-details';
-
-        const header = document.createElement('div');
-        header.className = 'mi-details-header';
-
-        const backBtn = document.createElement('button');
-        backBtn.innerHTML = '← Back';
-        backBtn.onclick = () => {
-            this.viewMode = 'list';
-            this.selectedConcept = null;
-            this.render();
-        };
-
-        const title = document.createElement('div');
-        title.style.cssText = 'font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
-        title.textContent = this.selectedConcept?.term ?? 'Concept Details';
-
-        header.append(backBtn, title);
-        container.appendChild(header);
-
-        const content = document.createElement('div');
-        content.className = 'mi-details-content';
-
-        if (this.selectedConcept) {
-             const wrapper = document.createElement('div');
-             wrapper.style.marginBottom = '20px';
-             new ConceptCard(wrapper, this.selectedConcept).render();
-             content.appendChild(wrapper);
-
-             const taskHeader = document.createElement('div');
-             taskHeader.textContent = 'TASKS';
-             taskHeader.style.cssText = 'font-size:10px; color:var(--text-muted); margin-bottom:5px; font-weight:bold; letter-spacing:1px;';
-             content.appendChild(taskHeader);
-
-             if (this.selectedConcept.tasks?.length > 0) {
-                 this.selectedConcept.tasks.forEach(task => new TaskCard(content, task).render());
-             } else {
-                 const empty = document.createElement('div');
-                 empty.textContent = 'No tasks in memory view.';
-                 empty.style.color = 'var(--text-muted)';
-                 content.appendChild(empty);
-             }
-        }
-
-        container.appendChild(content);
-        this.contentContainer.appendChild(container);
     }
 
     _getValue(obj, field) {

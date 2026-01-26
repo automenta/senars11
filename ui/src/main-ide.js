@@ -1,30 +1,23 @@
 import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
-import { GoldenLayout } from 'golden-layout';
 import { LocalConnectionManager } from './connection/LocalConnectionManager.js';
 import { WebSocketManager } from './connection/WebSocketManager.js';
 import { ConnectionManager } from './connection/ConnectionManager.js';
-import { GraphPanel } from './components/GraphPanel.js';
-import { MemoryInspector } from './components/MemoryInspector.js';
-import { DerivationTree } from './components/DerivationTree.js';
-import { SystemMetricsPanel } from './components/SystemMetricsPanel.js';
-import { REPLPanel } from './components/REPLPanel.js';
-import { ExampleBrowser } from './components/ExampleBrowser.js';
 import { CommandProcessor } from './command/CommandProcessor.js';
-import { categorizeMessage } from './repl/MessageFilter.js';
 import { ThemeManager } from './components/ThemeManager.js';
-import { LMActivityIndicator } from './components/LMActivityIndicator.js';
-import { LayoutPresets } from './config/LayoutPresets.js';
 import { Logger } from './logging/Logger.js';
 import { StatusBar } from './components/StatusBar.js';
 import { DemoLibraryModal } from './components/DemoLibraryModal.js';
+import { LayoutManager } from './layout/LayoutManager.js';
+import { MessageRouter } from './messaging/MessageRouter.js';
 
 cytoscape.use(fcose);
 window.cytoscape = cytoscape;
 
 class SeNARSIDE {
     constructor() {
-        this.layout = null;
+        this.layoutManager = new LayoutManager(this, 'layout-root');
+        this.messageRouter = new MessageRouter(this);
         this.connection = null;
         this.connectionMode = 'local';
         this.components = new Map();
@@ -71,13 +64,21 @@ class SeNARSIDE {
         }));
     }
 
+    registerComponent(name, instance) {
+        this.components.set(name, instance);
+        if (name === 'graph') {
+            this.graphManager = instance.graphManager;
+        }
+    }
+
     async initialize() {
         this.logger.log(`Initializing SeNARS IDE (Layout: ${this.presetName})...`, 'system');
 
         this.statusBar = new StatusBar(document.getElementById('status-bar-root'));
         this.statusBar.initialize({ onModeSwitch: () => this.showConnectionModal() });
 
-        this.setupLayout();
+        this.layoutManager.initialize(this.presetName);
+
         await this.switchMode(this.connectionMode);
         this.setupKeyboardShortcuts();
 
@@ -91,126 +92,13 @@ class SeNARSIDE {
         const { concept } = e.detail;
         if (concept) {
              // Open Memory Inspector if available
-             const memoryComponent = this.layout.root.getItemsByFilter(item => item.config.componentName === 'memoryComponent')[0];
+             const memoryComponent = this.layoutManager.layout.root.getItemsByFilter(item => item.config.componentName === 'memoryComponent')[0];
              memoryComponent?.parent?.setActiveContentItem?.(memoryComponent);
         }
     }
 
-    setupLayout() {
-        const layoutRoot = document.getElementById('layout-root');
-        if (!layoutRoot) {
-            console.error('Layout root not found');
-            return;
-        }
-
-        this.layout = new GoldenLayout(layoutRoot);
-
-        // Register Component Factories
-        this.layout.registerComponentFactoryFunction('replComponent', (c) => this.createREPLComponent(c));
-        this.layout.registerComponentFactoryFunction('graphComponent', (c) => this.createGraphComponent(c));
-        this.layout.registerComponentFactoryFunction('memoryComponent', (c) => this.createMemoryComponent(c));
-        this.layout.registerComponentFactoryFunction('derivationComponent', (c) => this.createDerivationComponent(c));
-        this.layout.registerComponentFactoryFunction('metricsComponent', (c) => this.createMetricsComponent(c));
-        this.layout.registerComponentFactoryFunction('settingsComponent', (c) => this.createSettingsComponent(c));
-        this.layout.registerComponentFactoryFunction('examplesComponent', (c) => this.createExamplesComponent(c));
-
-        // Load Configuration
-        let config = LayoutPresets[this.presetName] || LayoutPresets.ide;
-
-        // Attempt to load user saved state if matches current preset
-        const savedState = localStorage.getItem(`senars-layout-${this.presetName}`);
-        if (savedState) {
-             try {
-                 // We could load the saved state, but GoldenLayout state saving can be finicky with component structure changes.
-                 // For now, we rely on presets. To enable persistence, uncomment:
-                 // config = JSON.parse(savedState);
-             } catch(e) { console.warn('Failed to load saved layout', e); }
-        }
-
-        this.layout.loadLayout(config);
-
-        // Save state on change
-        this.layout.on('stateChanged', () => {
-             if (this.layout.isInitialised) {
-                 localStorage.setItem(`senars-layout-${this.presetName}`, JSON.stringify(this.layout.toConfig()));
-             }
-        });
-
-        window.addEventListener('resize', () => this.layout.updateRootSize());
-    }
-
-    createREPLComponent(container) {
-        const replPanel = new REPLPanel(container.element);
-        // Defer initialization until app is ready or pass this
-        replPanel.initialize(this);
-        this.components.set('repl', replPanel);
-
-        // Hook up stats updates
-        this.updateStats();
-    }
-
-    createGraphComponent(container) {
-        const panel = new GraphPanel(container.element);
-        panel.initialize();
-        this.components.set('graph', panel);
-        this.graphManager = panel.graphManager;
-
-        if (this.commandProcessor) {
-            this.commandProcessor.graphManager = this.graphManager;
-            this.graphManager.setCommandProcessor(this.commandProcessor);
-        }
-
-        // Initialize LM Activity Indicator on Graph Container
-        if (panel.container) {
-            this.lmActivityIndicator = new LMActivityIndicator(panel.container);
-        }
-
-        container.on('resize', () => panel.resize());
-    }
-
-    createMemoryComponent(container) {
-        const panel = new MemoryInspector(container.element);
-        panel.initialize();
-        this.components.set('memory', panel);
-    }
-
-    createDerivationComponent(container) {
-        const panel = new DerivationTree(container.element);
-        panel.initialize();
-        this.components.set('derivation', panel);
-        container.on('resize', () => panel.resize?.());
-    }
-
-    createMetricsComponent(container) {
-        const panel = new SystemMetricsPanel(container.element);
-        panel.render();
-        this.components.set('metrics', panel);
-    }
-
-    createSettingsComponent(container) {
-        import('./components/SettingsPanel.js').then(({ SettingsPanel }) => {
-            const panel = new SettingsPanel(container.element);
-            panel.app = this;
-            panel.initialize();
-            this.components.set('settings', panel);
-        });
-    }
-
-    createExamplesComponent(container) {
-         const panel = new ExampleBrowser(container.element, {
-             onSelect: (node) => {
-                 if (node.type === 'file') {
-                     // Pass to REPL
-                     this.getNotebook()?.loadDemoFile(node.path, { autoRun: true, clearFirst: true });
-                 }
-             }
-         });
-         panel.initialize();
-         this.components.set('examples', panel);
-    }
-
     getNotebook() {
-        return this.components.get('repl')?.notebookManager;
+        return this.components.get('notebook')?.notebookManager;
     }
 
     async switchMode(mode) {
@@ -223,14 +111,14 @@ class SeNARSIDE {
 
         await this.connection.connect(mode === 'remote' ? this.serverUrl : undefined);
 
-        this.connection.subscribe('*', (message) => this.handleMessage(message));
+        this.connection.subscribe('*', (message) => this.messageRouter.handleMessage(message));
         this.connection.subscribe('connection.status', (status) => this.statusBar?.updateStatus(status));
 
         // Update CommandProcessor with new connection
         if (this.commandProcessor) {
             this.commandProcessor.connection = this.connection;
         } else {
-            // Check if we have a repl panel to hook logger
+            // Check if we have a repl panel to hook logger (now NotebookPanel)
             this.commandProcessor = new CommandProcessor(this.connection, this.logger, this.graphManager);
         }
 
@@ -266,103 +154,9 @@ class SeNARSIDE {
         }
     }
 
-    handleMessage(message) {
-        // Core handling logic from SeNARSUI.js + main-ide.js
-        this.messageCount++;
-        this.updateStats();
-
-        // 1. LM Activities
-        if (message.type === 'lm:prompt:start') this.lmActivityIndicator?.show();
-        if (message.type === 'lm:prompt:complete') this.lmActivityIndicator?.hide();
-        if (message.type === 'lm:error') this.lmActivityIndicator?.showError(message.payload?.error);
-
-        // 2. Notebook / REPL Handling
-        const notebook = this.getNotebook();
-        if (notebook) {
-            if (message.type === 'visualization') {
-                const { type, data, content } = message.payload;
-                if (type === 'markdown') {
-                    notebook.createMarkdownCell(content || data);
-                } else if (type === 'graph' || type === 'chart') {
-                     const widgetType = type === 'graph' ? 'GraphWidget' : 'ChartWidget';
-                     notebook.createWidgetCell(widgetType, data);
-                }
-            } else if (message.type === 'ui-command') {
-                const { command, args } = message.payload;
-                const fullCommand = `/${command} ${args}`;
-                this.logger.log(`System requested UI Command: ${fullCommand}`, 'system');
-                this.commandProcessor?.processCommand(fullCommand, true);
-            } else if (message.type === 'agent/prompt') {
-                const { question, id } = message.payload;
-                notebook.createPromptCell(question, (response) => {
-                     this.connection?.sendMessage('agent/response', { id, response });
-                });
-            } else {
-                // Default logging is handled by Logger -> REPLPanel adapter via this.logger
-                // But we need to feed the logger if the message is NOT handled there?
-                // Actually, ConnectionManager subscriptions are one way.
-                // SeNARSUI.js handled generic messages by categorizeMessage and logging.
-
-                // If message is generic result/thought, Logger adapter in REPLPanel handles it
-                // IF we log it.
-
-                // Let's explicitly log specific types that should appear in REPL
-                const logTypes = ['agent/result', 'agent/thought', 'error', 'system', 'reasoning'];
-                // Or use categorizeMessage
-                const category = categorizeMessage(message);
-                if (category !== 'unknown' && category !== 'concept' && category !== 'task' && category !== 'metrics') {
-                     // Check if it's already handled by specific logic
-                     // For now, we rely on REPLPanel's adapter. We just need to call this.logger.addLogEntry
-                     // But wait, the message comes from connection.
-
-                     let content = message.payload?.result || message.content || JSON.stringify(message.payload);
-                     // Avoid double logging if CommandProcessor already logged it (usually it logs inputs)
-
-                     // We can use a direct approach:
-                     // notebook.createResultCell(content, category, ...);
-                }
-            }
-        }
-
-        // 3. Components Updates
-        try {
-            const graphComp = this.components.get('graph');
-            // Handle specific graph events from SeNARSUI
-            if (message.type === 'reasoning:concept') graphComp?.graphManager?.updateGraph(message);
-            if (message.type === 'memory:focus:promote') graphComp?.graphManager?.animateGlow(message.payload?.id || message.payload?.nodeId, 1.0);
-            if (message.type === 'concept.created') graphComp?.graphManager?.animateFadeIn(message.payload?.id);
-            // Generic update
-            graphComp?.update(message);
-
-            const memComp = this.components.get('memory');
-            if (message.type === 'memorySnapshot') memComp?.update(message.payload);
-
-            const derComp = this.components.get('derivation');
-            if (message.type === 'reasoning:derivation') {
-                derComp?.addDerivation(message.payload);
-                // Also update graph if needed (SeNARSUI did both)
-                graphComp?.graphManager?.handleDerivation?.(message);
-            }
-
-            const metricsComp = this.components.get('metrics');
-            if (message.type === 'metrics:update' || message.type === 'metrics.updated') {
-                metricsComp?.update(message.payload);
-            }
-
-            if (message.payload?.cycle) {
-                this.cycleCount = message.payload.cycle;
-                this.updateStats();
-            }
-
-        } catch (e) {
-            console.error('Error updating components:', e);
-        }
-    }
-
     updateStats() {
-        // Update REPL Input stats if available
-        const repl = this.components.get('repl');
-        repl?.replInput?.updateCycles(this.cycleCount);
+        const notebook = this.components.get('notebook');
+        notebook?.notebookInput?.updateCycles(this.cycleCount);
 
         this.statusBar?.updateStats({
             cycles: this.cycleCount,

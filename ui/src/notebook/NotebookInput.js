@@ -4,7 +4,7 @@ import { Modal } from '../components/ui/Modal.js';
 import { Toolbar } from '../components/ui/Toolbar.js';
 import { Config } from '../config/Config.js';
 
-export class REPLInput {
+export class NotebookInput {
     constructor(container, options = {}) {
         this.container = container;
         this.onExecute = options.onExecute ?? (() => {});
@@ -23,7 +23,7 @@ export class REPLInput {
 
     render() {
         this.element = document.createElement('div');
-        this.element.className = 'repl-input-area';
+        this.element.className = 'notebook-input-area';
         this.element.style.cssText = 'padding: 10px; background: #252526; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px;';
 
         // Reasoner Controls (Top Bar)
@@ -215,7 +215,7 @@ export class REPLInput {
         this.onExecute(content);
         this.inputBox.setValue('');
 
-        const notebook = document.getElementById('repl-notebook');
+        const notebook = document.querySelector('.notebook-container'); // Changed from ID repl-notebook
         if (notebook) {
             setTimeout(() => notebook.scrollTop = notebook.scrollHeight, 100);
         }

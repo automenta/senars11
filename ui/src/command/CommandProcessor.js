@@ -134,10 +134,10 @@ export class CommandProcessor {
                 return null;
             };
 
-            const replItem = findItem(root, 'replComponent');
+            const notebookItem = findItem(root, 'notebookComponent');
 
-            // Traverse up to find the Row that contains the REPL (or its stack) and the Sidebar
-            let currentItem = replItem;
+            // Traverse up to find the Row that contains the Notebook (or its stack) and the Sidebar
+            let currentItem = notebookItem;
             let row = null;
 
             // REPL might be in a Stack, which is in a Row
@@ -162,11 +162,11 @@ export class CommandProcessor {
                         else item.width = w;
                     };
 
-                    if (mode === 'full-repl' || mode === 'collapse-sidebar') {
+                    if (mode === 'full-notebook' || mode === 'full-repl' || mode === 'collapse-sidebar') {
                         setWidth(currentItem, 100);
                         setWidth(sidebarItem, 0);
                         this.layout.updateSize();
-                        this.logger.log('Layout: Full REPL', 'info', '🖥️');
+                        this.logger.log('Layout: Full Notebook', 'info', '🖥️');
                         return true;
                     } else if (mode === 'standard') {
                         setWidth(currentItem, 70);

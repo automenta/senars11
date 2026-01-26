@@ -1,10 +1,10 @@
-import { REPLCell } from './REPLCell.js';
+import { Cell } from './Cell.js';
 import { WidgetFactory } from '../../components/widgets/WidgetFactory.js';
 
 /**
  * Widget cell for interactive components
  */
-export class WidgetCell extends REPLCell {
+export class WidgetCell extends Cell {
     constructor(widgetType, data = {}, notebookClass = null) {
         super('widget', data);
         this.widgetType = widgetType;

@@ -1,12 +1,12 @@
 import { Component } from './Component.js';
-import cytoscape from 'cytoscape';
+import { DerivationWidget } from './widgets/DerivationWidget.js';
 
 export class DerivationTree extends Component {
     constructor(container) {
         super(container);
-        this.cy = null;
         this.history = [];
         this.selectedDerivation = null;
+        this.widget = null;
     }
 
     initialize() {
@@ -30,12 +30,13 @@ export class DerivationTree extends Component {
         this.container.appendChild(wrapper);
 
         this.historyList = wrapper.querySelector('#dt-history');
-        this.graphContainer = wrapper.querySelector('#dt-graph');
+        const graphContainer = wrapper.querySelector('#dt-graph');
 
         wrapper.querySelector('#dt-export').addEventListener('click', () => this.exportHistory());
 
-        // Defer Cytoscape init to ensure container has dimensions
-        requestAnimationFrame(() => this._initCytoscape());
+        // Initialize Widget
+        this.widget = new DerivationWidget(graphContainer, null);
+        requestAnimationFrame(() => this.widget.render());
     }
 
     exportHistory() {
@@ -50,63 +51,6 @@ export class DerivationTree extends Component {
         a.download = `derivations-${new Date().toISOString()}.json`;
         a.click();
         URL.revokeObjectURL(url);
-    }
-
-    _initCytoscape() {
-        if (!this.graphContainer) return;
-
-        // Ensure container has size
-        if (this.graphContainer.clientWidth === 0 || this.graphContainer.clientHeight === 0) {
-            // Retry later
-            requestAnimationFrame(() => this._initCytoscape());
-            return;
-        }
-
-        try {
-            this.cy = cytoscape({
-                container: this.graphContainer,
-                style: [
-                    {
-                        selector: 'node',
-                        style: {
-                            'background-color': '#222', 'label': 'data(label)', 'color': '#e0e0e0',
-                            'font-family': 'monospace', 'font-size': '10px', 'text-valign': 'center', 'text-halign': 'center',
-                            'text-wrap': 'wrap', 'width': 'label', 'height': 'label', 'padding': '10px',
-                            'shape': 'round-rectangle', 'border-width': 1, 'border-color': '#333'
-                        }
-                    },
-                    {
-                        selector: 'node[type="rule"]',
-                        style: {'background-color': '#333', 'border-color': '#00bcd4', 'color': '#00bcd4'}
-                    },
-                    {
-                        selector: 'node[type="conclusion"]',
-                        style: {'border-color': '#00ff9d', 'color': '#00ff9d', 'font-weight': 'bold'}
-                    },
-                    {
-                        selector: 'edge',
-                        style: {'width': 1, 'line-color': '#444', 'target-arrow-color': '#444', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier'}
-                    }
-                ],
-                layout: { name: 'grid' }
-            });
-
-            this.cy.on('tap', 'node', (evt) => {
-                const data = evt.target.data();
-                if (data.type === 'conclusion' || data.type === 'premise') {
-                     const concept = {
-                         term: data.fullTerm || data.label,
-                         id: data.id
-                     };
-                     document.dispatchEvent(new CustomEvent('senars:concept:select', {
-                        detail: { concept }
-                     }));
-                }
-            });
-
-        } catch (e) {
-            console.error('DerivationTree: Failed to init Cytoscape', e);
-        }
     }
 
     addDerivation(data) {
@@ -138,57 +82,16 @@ export class DerivationTree extends Component {
     selectDerivation(data) {
         this.selectedDerivation = data;
         this.renderHistory();
-        this.renderGraph(data);
-    }
-
-    renderGraph(data) {
-        if (!this.cy || !data?.derived) return;
-        this.cy.elements().remove();
-
-        const { input, knowledge, derived, rule } = data;
-        const ruleId = 'rule';
-
-        this.cy.add({ group: 'nodes', data: { id: ruleId, label: rule || 'Rule', type: 'rule' } });
-
-        const addTermNode = (termData, type) => {
-            if (!termData) return null;
-            const id = 'node_' + Math.random().toString(36).substr(2, 9);
-            const label = termData.term || 'Unknown';
-            this.cy.add({
-                group: 'nodes',
-                data: {
-                    id: id,
-                    label: label.length > 20 ? label.substring(0, 18) + '..' : label,
-                    fullTerm: label,
-                    type: type
-                }
-            });
-            return id;
-        };
-
-        const derivedId = addTermNode(derived, 'conclusion');
-        this.cy.add({ group: 'edges', data: { source: ruleId, target: derivedId } });
-
-        if (input) {
-            const inputId = addTermNode(input, 'premise');
-            this.cy.add({ group: 'edges', data: { source: inputId, target: ruleId } });
-        }
-
-        if (knowledge) {
-            const knowId = addTermNode(knowledge, 'premise');
-            this.cy.add({ group: 'edges', data: { source: knowId, target: ruleId } });
-        }
-
-        this.cy.layout({
-            name: 'breadthfirst', directed: true, padding: 50,
-            spacingFactor: 1.5, animate: true
-        }).run();
+        this.widget?.setDerivation(data);
     }
 
     resize() {
-        if (this.cy) {
-            this.cy.resize();
-            this.cy.fit();
+        // Widget doesn't have explicit resize method but Cytoscape might need it if container resizes
+        // SimpleGraphWidget doesn't implement resize, but Cytoscape usually handles it if we call resize on it.
+        // DerivationWidget -> SimpleGraphWidget.cy
+        if (this.widget?.cy) {
+            this.widget.cy.resize();
+            this.widget.cy.fit();
         }
     }
 }

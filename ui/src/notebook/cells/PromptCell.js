@@ -1,9 +1,9 @@
-import { REPLCell } from './REPLCell.js';
+import { Cell } from './Cell.js';
 
 /**
  * Prompt cell for system requests
  */
-export class PromptCell extends REPLCell {
+export class PromptCell extends Cell {
     constructor(question, onResponse = null) {
         super('prompt', question);
         this.onResponse = onResponse;

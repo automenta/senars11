@@ -25,6 +25,9 @@ export class GraphPanel extends Component {
                 graphDetails: null
             });
             this.initialized = this.graphManager.initialize();
+            if (this.initialized) {
+                this.graphManager.setUpdatesEnabled(true);
+            }
         } catch (e) {
             console.error('Failed to initialize GraphManager:', e);
         }
@@ -105,7 +108,7 @@ export class GraphPanel extends Component {
     }
 
     update(message) {
-        this.graphManager?.initialized && this.graphManager.updateFromMessage(message);
+        this.initialized && this.graphManager?.updateFromMessage(message);
     }
 
     resize() {

@@ -3,6 +3,7 @@ import { SimpleGraphWidget } from './SimpleGraphWidget.js';
 import { TaskTreeWidget } from './TaskTreeWidget.js';
 import { TruthSlider } from './TruthSlider.js';
 import { MetricsWidget } from './MetricsWidget.js';
+import { DerivationWidget } from './DerivationWidget.js';
 
 export class WidgetFactory {
     static REGISTRY = {
@@ -11,12 +12,14 @@ export class WidgetFactory {
         'tree': TaskTreeWidget,
         'slider': TruthSlider,
         'metrics': MetricsWidget,
+        'derivation': DerivationWidget,
         'ChartWidget': ChartWidget,
         'SimpleGraphWidget': SimpleGraphWidget,
         'GraphWidget': SimpleGraphWidget,
         'TaskTreeWidget': TaskTreeWidget,
         'TruthSlider': TruthSlider,
-        'MetricsWidget': MetricsWidget
+        'MetricsWidget': MetricsWidget,
+        'DerivationWidget': DerivationWidget
     };
 
     static register(type, Class) {
